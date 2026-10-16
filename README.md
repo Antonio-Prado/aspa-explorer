@@ -1,6 +1,5 @@
 <p align="center">
-  <img src="assets/logo-light.svg#gitlab-light-mode-only" alt="ASPA Explorer" height="96">
-  <img src="assets/logo-dark.svg#gitlab-dark-mode-only" alt="ASPA Explorer" height="96">
+  <img src="assets/logo.svg" alt="ASPA Explorer" height="96">
 </p>
 
 <p align="center">
