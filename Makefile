@@ -1,6 +1,6 @@
-.PHONY: check js html nginx version
+.PHONY: check js html nginx version lint-security secrets
 
-check: js html nginx version
+check: js html nginx version lint-security
 
 js:
 	node --check site/app.js
@@ -15,3 +15,11 @@ nginx:
 
 version:
 	sh scripts/check-version.sh
+
+# Static analysis of the browser code: no innerHTML, eval and similar sinks.
+lint-security:
+	npx --yes eslint@9 --no-config-lookup -c eslint.config.mjs site/app.js site/footer.js
+
+# Secret scan of the whole git history (needs gitleaks: https://github.com/gitleaks/gitleaks).
+secrets:
+	gitleaks git --redact --no-banner .

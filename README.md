@@ -75,6 +75,7 @@ deploy/nginx/aspa.conf         nginx server blocks and proxy cache zone
 deploy/nginx/rpki-proxy.conf   proxy settings shared by the data endpoints
 deploy/nginx/security-headers.conf   security headers (server block and /client-ip)
 scripts/                       CI helpers: nginx check, version check, build info
+eslint.config.mjs              security rules for the browser code (no innerHTML, eval, ...)
 ```
 
 ## Deploy
@@ -86,7 +87,7 @@ scripts/                       CI helpers: nginx check, version check, build inf
 
 ## Development
 
-No build step and no dependencies. `make check` runs the same checks as the CI pipeline: JavaScript syntax, HTML validation, nginx configuration test and version consistency. Details in [CONTRIBUTING.md](CONTRIBUTING.md).
+No build step and no dependencies. `make check` runs the same checks as the CI pipeline: JavaScript syntax, HTML validation, nginx configuration test, version consistency and a security lint of the browser code. The pipeline also scans the git history for secrets (`make secrets`). Details in [CONTRIBUTING.md](CONTRIBUTING.md).
 
 Releases follow [Semantic Versioning](https://semver.org/); the version shown in the footer lives in [`site/version.json`](site/version.json) and must match the latest entry of the [changelog](CHANGELOG.md).
 

@@ -1,5 +1,6 @@
 stages:
   - lint
+  - security
 
 default:
   interruptible: true
@@ -39,3 +40,23 @@ version-consistency:
   image: alpine:3
   script:
     - sh scripts/check-version.sh
+
+# Security checks. GitLab's own SAST and Secret Detection need Docker runners and
+# the dependency scanning is an Ultimate feature, so the equivalents run as plain
+# commands (the images below are used by Docker runners; shell runners use the tools
+# installed on the host: node and gitleaks).
+js-security-lint:
+  stage: security
+  image: node:22-alpine
+  script:
+    - npx --yes eslint@9 --no-config-lookup -c eslint.config.mjs site/app.js site/footer.js
+
+secret-detection:
+  stage: security
+  image:
+    name: ghcr.io/gitleaks/gitleaks:v8.30.1
+    entrypoint: [""]
+  variables:
+    GIT_DEPTH: "0"
+  script:
+    - gitleaks git --redact --no-banner .
