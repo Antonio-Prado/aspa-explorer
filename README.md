@@ -39,6 +39,9 @@
     <td align="center"><sub>AS path check: verdict and hop-by-hop reasons</sub></td>
     <td align="center"><sub>Routes seen in BGP, checked against the ASPAs</sub></td>
   </tr>
+  <tr>
+    <td colspan="2" align="center"><img src="assets/screenshots/quality-dark.jpg" width="60%" alt="The ASPA quality section: errors, warnings and notes, with the ASPAs of each check"><br><sub>ASPA quality: what looks wrong in the ASPAs</sub></td>
+  </tr>
 </table>
 
 ## What is it
