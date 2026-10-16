@@ -24,12 +24,15 @@
 
 <table>
   <tr>
-    <td width="50%"><img src="assets/screenshots/lookup-light.jpg" alt="Looking up AS680: its own ASPA and the ASPAs that name it as a provider"></td>
+    <td width="50%"><img src="assets/screenshots/lookup-light.jpg" alt="Looking up AS680: its own ASPA and the ASPAs that name it as a provider, with the AS path check below"></td>
     <td width="50%"><img src="assets/screenshots/overview-dark.jpg" alt="Overview tiles and charts in the dark theme"></td>
   </tr>
   <tr>
-    <td align="center"><sub>Look up an AS</sub></td>
+    <td align="center"><sub>Look up an AS, check an AS path</sub></td>
     <td align="center"><sub>Overview, in the dark theme</sub></td>
+  </tr>
+  <tr>
+    <td colspan="2" align="center"><img src="assets/screenshots/pathcheck-dark.jpg" width="60%" alt="Checking the AS path 3356 1299 680: the verdict and the hop-by-hop table"><br><sub>AS path check: verdict and hop-by-hop reasons</sub></td>
   </tr>
 </table>
 
