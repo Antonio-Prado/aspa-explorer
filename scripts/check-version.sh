@@ -1,6 +1,7 @@
 #!/bin/sh
 # The version shown in the page footer (site/version.json) must match the latest
-# release in CHANGELOG.md.
+# release in CHANGELOG.md, and the pages must request their assets with ?v=<version>
+# (cache busting).
 set -eu
 
 root=$(cd "$(dirname "$0")/.." && pwd)
@@ -11,4 +12,12 @@ if [ -z "$changelog" ] || [ "$changelog" != "$shown" ]; then
   echo "version mismatch: CHANGELOG.md says '$changelog', site/version.json says '$shown'" >&2
   exit 1
 fi
+for page in index guide; do
+  for asset in style.css app.js footer.js; do
+    if ! grep -q "$asset?v=$shown\"" "$root/site/$page.html" && grep -q "/$asset" "$root/site/$page.html"; then
+      echo "site/$page.html: $asset is not requested with ?v=$shown" >&2
+      exit 1
+    fi
+  done
+done
 echo "version $shown"
