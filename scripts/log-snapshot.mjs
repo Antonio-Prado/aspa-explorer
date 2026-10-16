@@ -96,6 +96,41 @@ if (DRY) process.exit(0);
 if (!TOKEN) throw new Error('no token: set CI_JOB_TOKEN or MLFLOW_TOKEN');
 await detectAuth();
 
+// The same snapshot is appended to history.json on the `history` branch, the series that
+// the chart on the page reads (through the mirror on the public project). Needs a token
+// that can write to the repository: the project access token (MLFLOW_TOKEN) can, the job
+// token cannot. A failure here must not hide the model experiment run below, so it is
+// reported at the end.
+const HISTORY_FILE = process.env.ASPA_HISTORY_FILE || 'history.json';
+const HISTORY_BRANCH = process.env.ASPA_HISTORY_BRANCH || 'history';
+let historyError = null;
+try {
+  const project = API.replace(/\/ml\/mlflow\/api\/2\.0\/mlflow$/, '');
+  const file = `${project}/repository/files/${encodeURIComponent(HISTORY_FILE)}`;
+  const headers = { 'PRIVATE-TOKEN': TOKEN, 'Content-Type': 'application/json' };
+  const cur = await fetch(`${file}/raw?ref=${HISTORY_BRANCH}`, { headers });
+  if (!cur.ok) throw new Error(`reading ${HISTORY_FILE}: HTTP ${cur.status}`);
+  const rows = (await cur.json()).filter((r) => r.date !== day);
+  rows.push({ date: day, ...metrics, src: 'aspa' });
+  rows.sort((a, b) => a.date.localeCompare(b.date));
+  const put = await fetch(file, {
+    method: 'PUT',
+    headers,
+    body: JSON.stringify({
+      branch: HISTORY_BRANCH,
+      content: JSON.stringify(rows),
+      commit_message: `Snapshot ${day}: ${metrics.aspas} ASPAs`,
+      author_name: 'Antonio Prado',
+      author_email: 'antonio.prado@dei.unipd.it',
+    }),
+  });
+  if (!put.ok) throw new Error(`writing ${HISTORY_FILE}: HTTP ${put.status} ${(await put.text()).slice(0, 200)}`);
+  console.log(`history: ${rows.length} rows, last ${day}`);
+} catch (e) {
+  historyError = e;
+  console.error(`history not updated: ${e.message}`);
+}
+
 // Find or create the experiment.
 let exp = await call('GET', `experiments/get-by-name?experiment_name=${encodeURIComponent(EXPERIMENT)}`);
 let experimentId = exp.status === 200 ? exp.json.experiment.experiment_id : null;
@@ -114,3 +149,4 @@ await call('POST', 'runs/log-batch', {
 });
 await call('POST', 'runs/update', { run_id: runId, status: 'FINISHED', end_time: Date.now() });
 console.log(`logged run ${runId} in experiment ${EXPERIMENT} (${experimentId})`);
+if (historyError) throw historyError;

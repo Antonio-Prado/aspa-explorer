@@ -3,6 +3,8 @@
 // Data comes from Routinator via the same-origin proxy configured in nginx.
 const DATA_ASPAS = '/data/aspas.json';
 const DATA_STATUS = '/data/status.json';
+// Daily history of the ASPA counts: the `history` branch of the public project, through the GitLab API (CORS open).
+const DATA_HISTORY = 'https://gitlab.dei.unipd.it/api/v4/projects/5246/repository/files/history.json/raw?ref=history';
 const PAGE = 100;
 const RIR_NAMES = { afrinic: 'AFRINIC', apnic: 'APNIC', arin: 'ARIN', lacnic: 'LACNIC', ripe: 'RIPE NCC' };
 const RIR_ORDER = ['afrinic', 'apnic', 'arin', 'lacnic', 'ripe'];
@@ -165,6 +167,145 @@ function renderOverview(status) {
   $('meta').textContent = `${fmt.format(aspas.length)} ASPAs · last validation ${fmtDate(done)}` +
     (status && status.version ? ` · ${status.version.replace('/', ' ')}` : '');
 }
+
+
+/* ---------- adoption over time ---------- */
+// Stacked areas, one per RIR, bottom to top; the colours are the categorical slots in fixed order.
+const HIST_RIRS = ['ripe', 'arin', 'apnic', 'lacnic'];
+const HIST_SRC = { ripe: 'RIPE NCC RPKI archive', aspa: 'this validator' };
+const SVG_NS = 'http://www.w3.org/2000/svg';
+const svg = (tag, attrs, ...kids) => {
+  const n = document.createElementNS(SVG_NS, tag);
+  for (const [k, v] of Object.entries(attrs || {})) n.setAttribute(k, v);
+  n.append(...kids);
+  return n;
+};
+const fmtDayLong = (iso) => new Date(iso + 'T00:00:00Z').toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' });
+const dayMs = (iso) => Date.parse(iso + 'T00:00:00Z');
+function niceStep(max, ticks) {
+  const raw = max / ticks, mag = 10 ** Math.floor(Math.log10(raw));
+  return [1, 2, 2.5, 5, 10].map((m) => m * mag).find((v) => v >= raw);
+}
+
+let history = [];
+function drawHistory() {
+  const box = $('chart-history');
+  const rows = history;
+  if (!rows.length) return;
+  const W = Math.max(280, box.clientWidth), H = W < 520 ? 240 : 290;
+  const m = { l: 44, r: 10, t: 10, b: 24 };
+  const iw = W - m.l - m.r, ih = H - m.t - m.b;
+  const t0 = dayMs(rows[0].date), t1 = dayMs(rows[rows.length - 1].date);
+  const ymax = Math.max(...rows.map((r) => r.aspas));
+  const step = niceStep(ymax, 4), top = Math.ceil(ymax / step) * step;
+  const x = (iso) => m.l + (t1 === t0 ? 0 : iw * (dayMs(iso) - t0) / (t1 - t0));
+  const y = (v) => m.t + ih * (1 - v / top);
+
+  const g = svg('svg', { viewBox: `0 0 ${W} ${H}`, width: W, height: H, 'aria-hidden': 'true', focusable: 'false' });
+  for (let v = 0; v <= top; v += step) {
+    g.append(svg('line', { x1: m.l, x2: W - m.r, y1: y(v), y2: y(v), class: v ? 'grid' : 'axisline' }));
+    const t = svg('text', { x: m.l - 6, y: y(v) + 4, class: 'tick', 'text-anchor': 'end' });
+    t.textContent = fmt.format(v);
+    g.append(t);
+  }
+  const years = [];
+  for (let yr = new Date(t0).getUTCFullYear() + 1; Date.UTC(yr, 0, 1) <= t1; yr++) years.push(yr);
+  for (const yr of years) {
+    const iso = `${yr}-01-01`;
+    g.append(svg('line', { x1: x(iso), x2: x(iso), y1: m.t + ih, y2: m.t + ih + 4, class: 'axisline' }));
+    const t = svg('text', { x: x(iso), y: H - 6, class: 'tick', 'text-anchor': 'middle' });
+    t.textContent = String(yr);
+    g.append(t);
+  }
+  // cumulative tops, bottom series first
+  const acc = rows.map(() => 0);
+  HIST_RIRS.forEach((rir, i) => {
+    const lower = acc.slice();
+    rows.forEach((r, k) => { acc[k] += r['aspas_' + rir] || 0; });
+    const up = rows.map((r, k) => `${x(r.date).toFixed(1)},${y(acc[k]).toFixed(1)}`);
+    const down = rows.map((r, k) => `${x(r.date).toFixed(1)},${y(lower[k]).toFixed(1)}`).reverse();
+    g.append(svg('polygon', { points: up.concat(down).join(' '), class: `area s${i + 1}` }));
+  });
+  const cross = svg('g', { class: 'cross', visibility: 'hidden' },
+    svg('line', { y1: m.t, y2: m.t + ih, class: 'crossline' }));
+  g.append(cross);
+  box.replaceChildren(g);
+
+  const rowAt = (clientX) => {
+    const r = g.getBoundingClientRect();
+    const t = t0 + (t1 - t0) * Math.min(1, Math.max(0, (clientX - r.left - m.l) / iw));
+    let best = 0;
+    for (let k = 1; k < rows.length; k++) if (Math.abs(dayMs(rows[k].date) - t) < Math.abs(dayMs(rows[best].date) - t)) best = k;
+    return best;
+  };
+  const show = (k, clientX, clientY) => {
+    const r = rows[k], px = x(r.date);
+    cross.firstChild.setAttribute('x1', px); cross.firstChild.setAttribute('x2', px);
+    cross.setAttribute('visibility', 'visible');
+    const t = tip();
+    t.replaceChildren(el('strong', { text: `${fmt.format(r.aspas)} ASPAs` }),
+      el('span', { text: `${fmtDayLong(r.date)} · ${HIST_SRC[r.src] || r.src || ''}` }),
+      ...HIST_RIRS.filter((q) => r['aspas_' + q]).map((q) => el('span', { class: 'trow' }, `${rirName(q)} ${fmt.format(r['aspas_' + q])}`)));
+    t.hidden = false;
+    const b = box.getBoundingClientRect();
+    const cx = clientX !== undefined ? clientX : b.left + px, cy = clientY !== undefined ? clientY : b.top + m.t;
+    t.style.left = Math.max(8, Math.min(window.innerWidth - t.offsetWidth - 8, cx + 14)) + 'px';
+    t.style.top = Math.max(8, cy - t.offsetHeight - 12) + 'px';
+  };
+  const hide = () => { cross.setAttribute('visibility', 'hidden'); hideTip(); };
+  let cur = rows.length - 1;
+  box.onpointermove = (e) => { cur = rowAt(e.clientX); show(cur, e.clientX, e.clientY); };
+  box.onpointerleave = hide;
+  box.onfocus = () => show(cur);
+  box.onblur = hide;
+  box.onkeydown = (e) => {
+    const jump = { ArrowLeft: -1, ArrowRight: 1, PageDown: -30, PageUp: 30, Home: -1e9, End: 1e9 }[e.key];
+    if (jump === undefined) return;
+    e.preventDefault();
+    cur = Math.min(rows.length - 1, Math.max(0, cur + jump));
+    show(cur);
+  };
+}
+
+function renderHistory(rows) {
+  history = rows;
+  const first = rows[0], last = rows[rows.length - 1];
+  const box = $('chart-history');
+  box.setAttribute('role', 'img');
+  box.setAttribute('tabindex', '0');
+  box.setAttribute('aria-label', `ASPAs over time, from ${fmt.format(first.aspas)} on ${fmtDayLong(first.date)} to ${fmt.format(last.aspas)} on ${fmtDayLong(last.date)}. Use the left and right arrow keys to read single days; a table follows.`);
+  $('history-legend').replaceChildren(...HIST_RIRS.map((rir, i) => el('li', {},
+    el('span', { class: `sw s${i + 1}`, 'aria-hidden': 'true' }),
+    el('span', { class: 'lg', text: rirName(rir) }),
+    el('span', { class: 'lv', text: fmt.format(last['aspas_' + rir] || 0) }))));
+  $('history-note').textContent = `${fmtDayLong(first.date)} to ${fmtDayLong(last.date)}. ` +
+    'AFRINIC has published none so far. Days before the first snapshot of this site come from the RIPE NCC RPKI archive.';
+  // table view: the last day of each month
+  const byMonth = new Map();
+  for (const r of rows) byMonth.set(r.date.slice(0, 7), r);
+  const months = [...byMonth.values()].reverse();
+  $('history-rows').replaceChildren(...months.map((r) => el('tr', {},
+    el('th', { scope: 'row', text: fmtDayLong(r.date) }),
+    el('td', { text: fmt.format(r.aspas) }),
+    ...HIST_RIRS.map((q) => el('td', { text: fmt.format(r['aspas_' + q] || 0) })))));
+  drawHistory();
+}
+
+async function loadHistory() {
+  try {
+    const rows = (await getJson(DATA_HISTORY)).filter((r) => r && r.date && r.aspas >= 0)
+      .sort((a, b) => a.date.localeCompare(b.date));
+    if (rows.length < 2) throw new Error('not enough data');
+    renderHistory(rows);
+  } catch (err) {
+    $('chart-history').replaceChildren(el('p', { class: 'error', text: `The history is not available (${err.message}).` }));
+  }
+}
+let historyWidth = 0;
+new ResizeObserver(() => {
+  const w = $('chart-history') && $('chart-history').clientWidth;
+  if (w && w !== historyWidth) { historyWidth = w; drawHistory(); }
+}).observe(document.documentElement);
 
 
 /* ---------- AS path check ---------- */
@@ -387,4 +528,5 @@ document.addEventListener('DOMContentLoaded', () => {
   $('rir').addEventListener('change', applyFilter);
   $('more').addEventListener('click', showMore);
   load();
+  loadHistory();
 });

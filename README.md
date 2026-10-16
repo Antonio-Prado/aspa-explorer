@@ -48,7 +48,7 @@ The validator is a [Routinator](https://github.com/NLnetLabs/routinator) instanc
 
 - **Lookup:** type `AS680`, `as 680` or `680` to see the AS's own ASPA and every ASPA that names it as a provider. Each lookup has a shareable address (`/#AS680`).
 - **AS path check:** paste a path as your router shows it (neighbour first, origin last) and see whether it passes the ASPA verification procedure of the IETF draft (upstream or downstream), hop by hop, with the reason for a *Valid*, *Unknown* or *Invalid* verdict. It runs in the browser on the ASPA objects listed on the page, and a result can be shared with a link.
-- **Overview:** summary tiles and three charts: ASPAs per RIR, providers per ASPA, most-named providers.
+- **Overview:** summary tiles and four charts: ASPAs over time (daily, since October 2023), ASPAs per RIR, providers per ASPA, most-named providers.
 - **Table:** all ASPAs, filterable by AS number and RIR, 100 rows at a time.
 - **Built-in guide** in English, with an accessibility statement: <a href="https://aspa.ping6.it/guide.html" target="_blank" rel="noopener">read it on the site</a> (source: <a href="site/guide.html" target="_blank" rel="noopener"><code>site/guide.html</code></a>).
 - **Accessible:** keyboard operable, visible focus, skip link, light and dark themes, reduced-motion aware. Checked with axe-core in both themes (WCAG 2.2 AA rules) with no issues reported.

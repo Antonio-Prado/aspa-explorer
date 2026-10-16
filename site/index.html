@@ -7,16 +7,16 @@
 <meta name="description" content="Browse the validated ASPA (Autonomous System Provider Authorization) objects published in the RPKI.">
 <meta name="color-scheme" content="light dark">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
-<link rel="stylesheet" href="/style.css?v=1.4.4">
-<script src="/verify.js?v=1.4.4" defer></script>
-<script src="/app.js?v=1.4.4" defer></script>
-<script src="/footer.js?v=1.4.4" defer></script>
+<link rel="stylesheet" href="/style.css?v=1.5.0">
+<script src="/verify.js?v=1.5.0" defer></script>
+<script src="/app.js?v=1.5.0" defer></script>
+<script src="/footer.js?v=1.5.0" defer></script>
 </head>
 <body>
 <a class="skip" href="#main">Skip to main content</a>
 <header class="wrap masthead">
   <div class="top">
-    <h1><a class="homelink" href="/"><img class="brand" src="/img/logo-mark.svg?v=1.4.4" alt="" width="40" height="40"><span>ASPA Explorer</span></a></h1>
+    <h1><a class="homelink" href="/"><img class="brand" src="/img/logo-mark.svg?v=1.5.0" alt="" width="40" height="40"><span>ASPA Explorer</span></a></h1>
     <nav class="topnav" aria-label="Main"><a href="/guide.html">Guide</a></nav>
   </div>
   <p class="lede">Validated ASPA objects from the RPKI, as seen by the Routinator validator at <a href="https://rpki.ping6.it/ui/" target="_blank" rel="noopener">rpki.ping6.it<span class="sr-only"> (opens in a new tab)</span></a>.</p>
@@ -63,6 +63,22 @@
     <h2 id="overview-title">Overview</h2>
     <div class="tiles" id="tiles"></div>
     <div class="charts">
+      <figure class="card wide">
+        <figcaption><span class="t">ASPAs over time</span><span class="s">Validated ASPA objects per day, stacked by RIR</span></figcaption>
+        <ul class="legend" id="history-legend" aria-label="Legend, with the latest value"></ul>
+        <div class="linechart" id="chart-history"><p class="hint">Loading the history…</p></div>
+        <p class="hint" id="history-note"></p>
+        <details class="tableview">
+          <summary>Show as a table</summary>
+          <div class="table-wrap">
+            <table>
+              <caption class="sr-only">ASPAs on the last day of each month, in total and per RIR</caption>
+              <thead><tr><th scope="col">Day</th><th scope="col">Total</th><th scope="col">RIPE NCC</th><th scope="col">ARIN</th><th scope="col">APNIC</th><th scope="col">LACNIC</th></tr></thead>
+              <tbody id="history-rows"></tbody>
+            </table>
+          </div>
+        </details>
+      </figure>
       <figure class="card">
         <figcaption><span class="t">ASPAs by RIR</span><span class="s">Validated ASPA objects per trust anchor</span></figcaption>
         <div class="bars" id="chart-rir"></div>

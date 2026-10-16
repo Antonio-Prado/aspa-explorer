@@ -21,6 +21,7 @@
   --ok-bg: #e3f4ea; --ok-ink: #0d5c32;
   --warn-bg: #fff1d6; --warn-ink: #6b4200;
   --bad-bg: #fde4e4; --bad-ink: #8f1a1a;
+  --s1: #2a78d6; --s2: #eb6834; --s3: #1baf7a; --s4: #eda100;
   --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
 }
 @media (prefers-color-scheme: dark) {
@@ -47,6 +48,7 @@
     --ok-bg: #11301f; --ok-ink: #8be0ad;
     --warn-bg: #3a2a07; --warn-ink: #f4cb7a;
     --bad-bg: #3d1414; --bad-ink: #ffa3a3;
+    --s1: #3987e5; --s2: #d95926; --s3: #199e70; --s4: #c98500;
   }
 }
 :root[data-theme="dark"] {
@@ -72,6 +74,7 @@
   --ok-bg: #11301f; --ok-ink: #8be0ad;
   --warn-bg: #3a2a07; --warn-ink: #f4cb7a;
   --bad-bg: #3d1414; --bad-ink: #ffa3a3;
+  --s1: #3987e5; --s2: #d95926; --s3: #199e70; --s4: #c98500;
 }
 
 * { box-sizing: border-box; }
@@ -201,6 +204,31 @@ figcaption .s { display: block; color: var(--muted); font-size: 0.8125rem; }
 .col .val { font-size: 0.75rem; margin-bottom: 4px; font-variant-numeric: tabular-nums; }
 .col-axis { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 10px; margin-top: 6px; }
 .col-axis span { text-align: center; font-size: 0.75rem; color: var(--muted); }
+/* adoption over time */
+.linechart { position: relative; min-height: 240px; outline-offset: 2px; touch-action: pan-y; }
+.linechart svg { display: block; width: 100%; height: auto; }
+.linechart .grid { stroke: var(--grid); stroke-width: 1; }
+.linechart .axisline { stroke: var(--axis); stroke-width: 1; }
+.linechart .tick { fill: var(--muted); font-size: 11px; font-variant-numeric: tabular-nums; }
+.linechart .area { stroke: var(--surface); stroke-width: 1.5; stroke-linejoin: round; }
+.linechart .crossline { stroke: var(--ink-2); stroke-width: 1; stroke-dasharray: 3 3; }
+.s1 { fill: var(--s1); background: var(--s1); }
+.s2 { fill: var(--s2); background: var(--s2); }
+.s3 { fill: var(--s3); background: var(--s3); }
+.s4 { fill: var(--s4); background: var(--s4); }
+.legend { list-style: none; margin: 0 0 0.5rem; padding: 0; display: flex; flex-wrap: wrap; gap: 0.35rem 1.1rem; font-size: 0.8125rem; }
+.legend li { display: inline-flex; align-items: center; gap: 0.4rem; }
+.legend .sw { width: 10px; height: 10px; border-radius: 2px; flex: none; }
+.legend .lg { color: var(--ink-2); }
+.legend .lv { font-variant-numeric: tabular-nums; font-weight: 600; }
+.tip span { display: block; }
+.tip .trow { font-variant-numeric: tabular-nums; }
+.tableview { margin-top: 0.5rem; }
+.tableview summary { cursor: pointer; color: var(--accent); font-size: 0.875rem; }
+.tableview .table-wrap { max-height: 22rem; overflow: auto; margin-top: 0.5rem; }
+.tableview td, .tableview th[scope="row"] { font-variant-numeric: tabular-nums; text-align: right; }
+.tableview th[scope="row"] { text-align: left; font-weight: 400; white-space: nowrap; }
+
 .axis-title { text-align: center; font-size: 0.75rem; color: var(--muted); margin-top: 2px; }
 
 .tip {
