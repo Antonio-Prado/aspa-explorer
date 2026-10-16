@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- README and wiki: the credits section is replaced by a row of logos only.
+
 ## [1.2.4] - 2026-10-16
 
 ### Added

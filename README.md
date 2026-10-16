@@ -100,23 +100,16 @@ Releases follow [Semantic Versioning](https://semver.org/); the version shown in
 | [Wiki](https://gitlab.dei.unipd.it/Antonio-Prado/aspa-explorer/-/wikis/home) | user guide, accessibility, deployment |
 | [LICENSE](LICENSE) | MIT |
 
-## Credits
-
-<p align="center">
-  Powered by <a href="https://www.dei.unipd.it"><img src="assets/credits/dei-logo.png" alt="DEI, Department of Information Engineering, University of Padova" height="40" align="middle"></a>
-  &nbsp;&nbsp;&nbsp;
-  Served by <a href="https://www.freebsd.org"><img src="assets/credits/freebsd-logo.png" alt="FreeBSD" height="40" align="middle"></a>
-  &nbsp;&nbsp;&nbsp;
-  Validated by <a href="https://nlnetlabs.nl/projects/routinator/"><img src="assets/credits/routinator-wordmark.svg" alt="Routinator, by NLnet Labs" height="40" align="middle"></a>
-  &nbsp;&nbsp;&nbsp;
-  <img src="assets/credits/vi-logo.svg" alt="" height="32" align="middle"> Made with vi <code>:wq</code>
-</p>
-
-- **Powered by DEI:** the Department of Information Engineering (DEI), University of Padova, hosts the page and the validator behind it.
-- **Served by FreeBSD:** the FreeBSD logo is a trademark of The FreeBSD Foundation.
-- **Made with vi:** the little `vi` icon is original (vi has no official logo); `:wq` saves and quits.
-- **Validated by Routinator:** the data comes from [Routinator](https://github.com/NLnetLabs/routinator), the RPKI validator by NLnet Labs; the logo is theirs.
-
 ## License
 
 Released under the [MIT License](LICENSE).
+
+<p align="center">
+  <a href="https://www.dei.unipd.it"><img src="assets/credits/dei-logo.png" alt="DEI, Department of Information Engineering, University of Padova" height="40"></a>
+  &nbsp;&nbsp;&nbsp;
+  <a href="https://www.freebsd.org"><img src="assets/credits/freebsd-logo.png" alt="FreeBSD" height="40"></a>
+  &nbsp;&nbsp;&nbsp;
+  <a href="https://nlnetlabs.nl/projects/routinator/"><img src="assets/credits/routinator-wordmark.svg" alt="Routinator, by NLnet Labs" height="40"></a>
+  &nbsp;&nbsp;&nbsp;
+  <img src="assets/credits/vi-logo.svg" alt="vi" height="32">
+</p>
