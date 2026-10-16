@@ -105,4 +105,46 @@ test('parsePath rejects junk and flags AS_SETs', () => {
   assert.ok(!('path' in parsePath('<script>')));
 });
 
+
+// ---- site/history.js: events, replay and daily diff ----
+const { stateOf, replay, diff, applyDay, classify } = require('../site/history.js');
+const st = (obj) => new Map(Object.entries(obj));
+
+test('stateOf merges the objects of one customer and sorts providers numerically', () => {
+  const s = stateOf([{ customer: 'AS1', providers: ['AS10', 'AS2'] }, { customer: 'AS1', providers: ['AS2', 'AS3'] }, { customer: 'AS5', providers: ['AS0'] }]);
+  assert.deepEqual(s.get('AS1'), ['AS2', 'AS3', 'AS10']);
+  assert.deepEqual(s.get('AS5'), ['AS0']);
+});
+
+test('diff reports new, changed and removed ASPAs, and nothing when equal', () => {
+  const prev = st({ AS1: ['AS2'], AS3: ['AS4'], AS9: ['AS8'] });
+  const cur = st({ AS1: ['AS2'], AS3: ['AS4', 'AS5'], AS7: ['AS0'] });
+  assert.deepEqual(diff(prev, cur, '2026-01-02'), [['2026-01-02', 'AS3', ['AS4', 'AS5']], ['2026-01-02', 'AS7', ['AS0']], ['2026-01-02', 'AS9', null]]);
+  assert.deepEqual(diff(cur, cur, '2026-01-03'), []);
+});
+
+test('replay rebuilds the state of a day from the events', () => {
+  const ev = [['2026-01-01', 'AS1', ['AS2']], ['2026-01-02', 'AS1', ['AS2', 'AS3']], ['2026-01-02', 'AS4', ['AS0']], ['2026-01-03', 'AS1', null]];
+  assert.deepEqual([...replay(ev, '2026-01-01')], [['AS1', ['AS2']]]);
+  assert.deepEqual([...replay(ev, '2026-01-02')], [['AS1', ['AS2', 'AS3']], ['AS4', ['AS0']]]);
+  assert.deepEqual([...replay(ev)], [['AS4', ['AS0']]]);
+});
+
+test('applyDay is idempotent: a rerun on the same day replaces that day', () => {
+  const ev = [['2026-01-01', 'AS1', ['AS2']]];
+  const aspas = [{ customer: 'AS1', providers: ['AS2'] }, { customer: 'AS3', providers: ['AS4'] }];
+  const once = applyDay(ev, aspas, '2026-01-02');
+  const twice = applyDay(once, aspas, '2026-01-02');
+  assert.deepEqual(once, [['2026-01-01', 'AS1', ['AS2']], ['2026-01-02', 'AS3', ['AS4']]]);
+  assert.deepEqual(twice, once);
+});
+
+test('classify tells new, changed (with the providers added and dropped) and removed', () => {
+  const ev = [['d1', 'AS1', ['AS2', 'AS3']], ['d2', 'AS1', ['AS3', 'AS4']], ['d3', 'AS1', null], ['d4', 'AS1', ['AS2']]];
+  const k = classify(ev);
+  assert.deepEqual(k.map((e) => e.kind), ['new', 'changed', 'removed', 'new']);
+  assert.deepEqual([k[1].added, k[1].dropped], [['AS4'], ['AS2']]);
+  assert.deepEqual(k[2].dropped, ['AS3', 'AS4']);
+});
+
 console.log(`\n${passed} tests passed`);

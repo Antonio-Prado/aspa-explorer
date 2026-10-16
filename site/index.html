@@ -7,16 +7,18 @@
 <meta name="description" content="Browse the validated ASPA (Autonomous System Provider Authorization) objects published in the RPKI.">
 <meta name="color-scheme" content="light dark">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
-<link rel="stylesheet" href="/style.css?v=1.5.0">
-<script src="/verify.js?v=1.5.0" defer></script>
-<script src="/app.js?v=1.5.0" defer></script>
-<script src="/footer.js?v=1.5.0" defer></script>
+<link rel="alternate" type="application/atom+xml" title="ASPA Explorer: changes" href="/changes.atom">
+<link rel="stylesheet" href="/style.css?v=1.6.0">
+<script src="/verify.js?v=1.6.0" defer></script>
+<script src="/history.js?v=1.6.0" defer></script>
+<script src="/app.js?v=1.6.0" defer></script>
+<script src="/footer.js?v=1.6.0" defer></script>
 </head>
 <body>
 <a class="skip" href="#main">Skip to main content</a>
 <header class="wrap masthead">
   <div class="top">
-    <h1><a class="homelink" href="/"><img class="brand" src="/img/logo-mark.svg?v=1.5.0" alt="" width="40" height="40"><span>ASPA Explorer</span></a></h1>
+    <h1><a class="homelink" href="/"><img class="brand" src="/img/logo-mark.svg?v=1.6.0" alt="" width="40" height="40"><span>ASPA Explorer</span></a></h1>
     <nav class="topnav" aria-label="Main"><a href="/guide.html">Guide</a></nav>
   </div>
   <p class="lede">Validated ASPA objects from the RPKI, as seen by the Routinator validator at <a href="https://rpki.ping6.it/ui/" target="_blank" rel="noopener">rpki.ping6.it<span class="sr-only"> (opens in a new tab)</span></a>.</p>
@@ -59,21 +61,56 @@
     <div id="pathresult" aria-live="polite"></div>
   </section>
 
+  <section class="check card" aria-labelledby="live-title">
+    <h2 id="live-title">Check the routes seen in BGP</h2>
+    <form id="liveform" autocomplete="off">
+      <label for="liveq">A prefix or an AS number</label>
+      <div class="field">
+        <input id="liveq" name="liveq" type="text" inputmode="text" spellcheck="false" placeholder="e.g. 193.0.0.0/21 or AS3333" aria-describedby="live-hint">
+        <button type="submit">Check routes</button>
+      </div>
+      <p class="hint" id="live-hint">Fetches the routes that the RIPE RIS route collectors see right now (through RIPEstat) and applies the ASPA verification to every distinct AS path. For an AS, the routes it originates. Try
+        <a href="#routes=193.0.0.0%2F21">193.0.0.0/21</a> or <a href="#routes=AS3333">AS3333</a>.</p>
+    </form>
+    <div id="liveresult" aria-live="polite"></div>
+  </section>
+
   <section aria-labelledby="overview-title">
     <h2 id="overview-title">Overview</h2>
     <div class="tiles" id="tiles"></div>
     <div class="charts">
       <figure class="card wide">
-        <figcaption><span class="t">ASPAs over time</span><span class="s">Validated ASPA objects per day, stacked by RIR</span></figcaption>
+        <figcaption><span class="t">ASPAs over time</span><span class="s" id="history-sub">Validated ASPA objects per day, stacked by RIR</span></figcaption>
+        <div class="histctl">
+          <label>Show
+            <select id="hist-metric">
+              <option value="rir">ASPAs, by RIR</option>
+              <option value="total">ASPAs, total</option>
+              <option value="providers">Provider ASes</option>
+              <option value="median">Median providers per ASPA</option>
+              <option value="zero">No-provider ASPAs (AS0)</option>
+              <option value="coverage">Coverage of the ASes seen in BGP</option>
+            </select>
+          </label>
+          <label>Period
+            <select id="hist-range">
+              <option value="all">Since October 2023</option>
+              <option value="365">Last 12 months</option>
+              <option value="90">Last 90 days</option>
+            </select>
+          </label>
+          <label class="chk"><input type="checkbox" id="hist-log"> Logarithmic scale</label>
+        </div>
         <ul class="legend" id="history-legend"></ul>
         <div class="linechart" id="chart-history"><p class="hint">Loading the history…</p></div>
         <p class="hint" id="history-note"></p>
+        <p class="hint export">Download the daily data: <button type="button" class="linkish" id="dl-csv">CSV</button> or <button type="button" class="linkish" id="dl-json">JSON</button>.</p>
         <details class="tableview">
           <summary>Show as a table</summary>
-          <div class="table-wrap">
+          <div class="table-wrap" tabindex="0" role="region" aria-label="ASPAs at the end of each month">
             <table>
-              <caption class="sr-only">ASPAs on the last day of each month, in total and per RIR</caption>
-              <thead><tr><th scope="col">Day</th><th scope="col">Total</th><th scope="col">RIPE NCC</th><th scope="col">ARIN</th><th scope="col">APNIC</th><th scope="col">LACNIC</th></tr></thead>
+              <caption class="sr-only">ASPAs on the last day of each month: in total, per RIR, provider ASes, and the share of the ASes seen in BGP that have an ASPA</caption>
+              <thead><tr><th scope="col">Day</th><th scope="col">Total</th><th scope="col">RIPE NCC</th><th scope="col">ARIN</th><th scope="col">APNIC</th><th scope="col">LACNIC</th><th scope="col">Provider ASes</th><th scope="col">Coverage</th></tr></thead>
               <tbody id="history-rows"></tbody>
             </table>
           </div>
@@ -92,6 +129,12 @@
         <div class="bars" id="chart-prov"></div>
       </figure>
     </div>
+  </section>
+
+  <section aria-labelledby="changes-title">
+    <h2 id="changes-title">Recent changes</h2>
+    <p class="hint">ASPAs that appeared, changed their providers or disappeared in the last 14 days, as seen by this validator. Subscribe to the <a href="/changes.atom">Atom feed</a>.</p>
+    <div class="card changes" id="changes-body"><p class="hint">Loading the changes…</p></div>
   </section>
 
   <section aria-labelledby="all-title">

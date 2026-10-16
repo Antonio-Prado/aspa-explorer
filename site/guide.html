@@ -7,13 +7,13 @@
 <meta name="description" content="How to read and use the ASPA Explorer interface: lookup, overview charts, the table of all ASPAs and where the data comes from.">
 <meta name="color-scheme" content="light dark">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
-<link rel="stylesheet" href="/style.css?v=1.5.0">
-<script src="/footer.js?v=1.5.0" defer></script>
+<link rel="stylesheet" href="/style.css?v=1.6.0">
+<script src="/footer.js?v=1.6.0" defer></script>
 </head>
 <body>
 <a class="skip" href="#main">Skip to main content</a>
 <header class="wrap masthead">
-  <p class="back"><a class="brandlink" href="/" title="Back to ASPA Explorer"><img class="brand" src="/img/logo-mark.svg?v=1.5.0" alt="" width="40" height="40"><span>ASPA Explorer</span></a></p>
+  <p class="back"><a class="brandlink" href="/" title="Back to ASPA Explorer"><img class="brand" src="/img/logo-mark.svg?v=1.6.0" alt="" width="40" height="40"><span>ASPA Explorer</span></a></p>
   <h1>Guide</h1>
   <p class="lede">How the ASPA Explorer interface works, what each number means and where the data comes from.</p>
 </header>
@@ -26,6 +26,8 @@
       <li><a href="#overview">The overview</a></li>
       <li><a href="#table">The table of all ASPAs</a></li>
       <li><a href="#path-check">Checking an AS path</a></li>
+      <li><a href="#live-routes">Checking the routes seen in BGP</a></li>
+      <li><a href="#changes">Recent changes and the history of an AS</a></li>
       <li><a href="#links">Links and keyboard use</a></li>
       <li><a href="#data">Where the data comes from</a></li>
       <li><a href="#reading">Reading the results</a></li>
@@ -73,7 +75,7 @@
     <h3>The charts</h3>
     <dl>
       <dt>ASPAs over time</dt>
-      <dd>How many ASPAs were valid on each day since 12 October 2023, the day ASPA objects started to be validated, stacked by RIR (AFRINIC has published none so far). The legend shows today's value for each RIR. Hover over the chart, or focus it and use the left and right arrow keys (<kbd>Page Up</kbd>, <kbd>Page Down</kbd>, <kbd>Home</kbd> and <kbd>End</kbd> go further), to read a single day; <em>Show as a table</em> lists the last day of each month. The days up to 15 October 2026 are computed from the daily output of the <a href="https://ftp.ripe.net/rpki/" target="_blank" rel="noopener">RIPE NCC RPKI repository archive<span class="sr-only"> (opens in a new tab)</span></a>; from then on a daily snapshot of the validator behind this page is added. A few days with a partial or missing archive are left out, so the line may cross them in a straight stretch.</dd>
+      <dd>How the ASPAs evolved day by day since 12 October 2023, the day ASPA objects started to be validated. <em>Show</em> chooses what is drawn: the ASPAs stacked by RIR (AFRINIC has published none so far), their total, the provider ASes, the median number of providers per ASPA, the no-provider ASPAs (<code>AS0</code>), or the <em>coverage</em>, the share of the ASes seen by the RIPE RIS route collectors that have an ASPA (one sample a week before 16 October 2026). <em>Period</em> narrows the chart to the last 12 months or 90 days, and the logarithmic scale, available for the single-line charts, makes a small start and a steep rise readable together. Hover over the chart, or focus it and use the left and right arrow keys (<kbd>Page Up</kbd>, <kbd>Page Down</kbd>, <kbd>Home</kbd> and <kbd>End</kbd> go further), to read a single day; <em>Show as a table</em> lists the last day of each month, and the daily data can be downloaded as CSV or JSON. The days up to 15 October 2026 are computed from the daily output of the <a href="https://ftp.ripe.net/rpki/" target="_blank" rel="noopener">RIPE NCC RPKI repository archive<span class="sr-only"> (opens in a new tab)</span></a>; from then on a daily snapshot of the validator behind this page is added. A few days with a partial or missing archive are left out, so the line may cross them in a straight stretch.</dd>
       <dt>ASPAs by RIR</dt>
       <dd>How many ASPAs each trust anchor (AFRINIC, APNIC, ARIN, LACNIC, RIPE NCC) validates. Each ASPA is counted once, under the trust anchor of its first source object. The percentage in the tooltip is relative to all ASPAs.</dd>
       <dt>Providers per ASPA</dt>
@@ -118,6 +120,19 @@
     <p>Limits: repeated ASes (prepending) are removed before checking; paths with an AS_SET are not accepted (the procedure treats them as Invalid); the neighbour check and route-origin validation are not part of this tool; and the result reflects the validated ASPA snapshot shown on this page, not your own router's view. The procedure follows the IETF draft <a href="https://datatracker.ietf.org/doc/draft-ietf-sidrops-aspa-verification/" target="_blank" rel="noopener">BGP AS_PATH Verification Based on ASPA Objects<span class="sr-only"> (opens in a new tab)</span></a>, which is still work in progress.</p>
   </section>
 
+  <section aria-labelledby="live-routes">
+    <h2 id="live-routes">Checking the routes seen in BGP</h2>
+    <p>The <em>Check the routes seen in BGP</em> box takes a prefix (<code>193.0.0.0/21</code>) or an AS number (<code>AS3333</code>), fetches the routes that the <a href="https://ris.ripe.net/" target="_blank" rel="noopener">RIPE RIS<span class="sr-only"> (opens in a new tab)</span></a> route collectors see right now, and applies the ASPA verification to every distinct AS path. For an AS the routes are the ones it originates.</p>
+    <p>The result is a count of valid, unknown and invalid routes and a table of the distinct paths, invalid first, with the reason (the hop that is attested as wrong, or the ASes that publish no ASPA) and a link to the hop-by-hop check of that path. The downstream procedure is used, because most of the networks that feed a route collector send it their full table, as a provider does to a customer, and that includes routes they learned from their own providers (the upstream procedure would wrongly call those leaks). A path is invalid when it contains a valley: the climb from the origin and the descent from the neighbour do not meet. Paths with an AS_SET are left out. An AS that originates thousands of prefixes can have an answer too large to load: check one of its prefixes instead.</p>
+    <p><strong>Privacy.</strong> Unlike the AS path check, this box does send what you type, the prefix or the AS number, to <a href="https://stat.ripe.net/" target="_blank" rel="noopener">RIPEstat<span class="sr-only"> (opens in a new tab)</span></a> in your browser, and receives the routes from there; the page's own server does not see it.</p>
+  </section>
+
+  <section aria-labelledby="changes">
+    <h2 id="changes">Recent changes and the history of an AS</h2>
+    <p><em>Recent changes</em> lists, for each of the last 14 days, the ASPAs that appeared (<em>new</em>), changed their providers (the providers added are marked <code>+</code>, the ones dropped <code>−</code>) or disappeared. The same list is available as an <a href="/changes.atom">Atom feed</a>. Looking up an AS adds a <em>History</em> block with every change of its own ASPA and the day an ASPA first named it as a provider.</p>
+    <p>The changes since 12 October 2023 were reconstructed from the daily output of the <a href="https://ftp.ripe.net/rpki/" target="_blank" rel="noopener">RIPE NCC RPKI repository archive<span class="sr-only"> (opens in a new tab)</span></a>; since 16 October 2026 they come from the validator behind this page, which can show a brief disappearance when a repository was unreachable. An ASPA that already existed on 12 October 2023 is shown as new on that day.</p>
+  </section>
+
   <section aria-labelledby="links">
     <h2 id="links">Links and keyboard use</h2>
     <p>An AS-path check has its own address too, such as <code>https://aspa.ping6.it/#path=3356+680&amp;from=up</code> (<code>from=up</code> for a route received from a customer or a peer, <code>from=down</code> for one received from a provider).</p>
@@ -132,7 +147,7 @@
       <li>the list of valid ASPAs (<a href="https://rpki.ping6.it/jsonext?exclude=routeOrigins,routerKeys" target="_blank" rel="noopener">jsonext<span class="sr-only"> (opens in a new tab)</span></a>, route origins and router keys left out), and</li>
       <li>the validator status, which supplies the last validation time and the Routinator version.</li>
     </ul>
-    <p>The chart of ASPAs over time reads a third file, <code>history.json</code>, from the <code>history</code> branch of the <a href="https://gitlab.dei.unipd.it/Antonio-Prado/aspa-explorer/-/tree/history" target="_blank" rel="noopener">public project<span class="sr-only"> (opens in a new tab)</span></a>, where a daily job adds one row.</p>
+    <p>The chart of ASPAs over time and the changes read three more files, <code>history.json</code>, <code>events.json</code> and <code>changes.atom</code>, from the <code>history</code> branch of the <a href="https://gitlab.dei.unipd.it/Antonio-Prado/aspa-explorer/-/tree/history" target="_blank" rel="noopener">public project<span class="sr-only"> (opens in a new tab)</span></a>, where a daily job adds one row and the day's changes. The routes seen in BGP come from RIPEstat when you ask for them.</p>
     <p>The validator refreshes about every 10 minutes and the web server keeps its answer for 2 minutes, so a new ASPA can take a little while to show up here. The <em>last validation</em> time in the header tells you how fresh the data is.</p>
   </section>
 

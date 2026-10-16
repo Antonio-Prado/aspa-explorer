@@ -11,6 +11,10 @@
 // CI_PROJECT_ID). Outside CI set MLFLOW_API (the .../ml/mlflow/api/2.0/mlflow URL)
 // and MLFLOW_TOKEN.
 
+import { createRequire } from 'node:module';
+
+const { applyDay, classify } = createRequire(import.meta.url)('../site/history.js');
+
 const SITE = process.env.ASPA_SITE || 'https://aspa.ping6.it';
 const EXPERIMENT = process.env.ASPA_EXPERIMENT || 'aspa-adoption';
 const DRY = process.argv.includes('--dry-run');
@@ -83,6 +87,17 @@ const [data, status] = await Promise.all([
   getJson(`${SITE}/data/status.json`).catch(() => null),
 ]);
 const metrics = summarise(data);
+
+// Coverage: of the ASes seen by the RIPE RIS route collectors (RIPEstat, ris-asns), how many have an
+// ASPA. Left out, with a message, when RIPEstat does not answer.
+try {
+  const seen = (await getJson('https://stat.ripe.net/data/ris-asns/data.json?list_asns=true')).data.asns;
+  const customers = new Set((data.aspas || []).map((a) => a.customer));
+  metrics.bgp_ases = seen.length;
+  metrics.aspa_in_bgp = seen.filter((n) => customers.has(`AS${n}`)).length;
+} catch (e) {
+  console.error(`coverage not computed: ${e.message}`);
+}
 const now = Date.now();
 const day = new Date(now).toISOString().slice(0, 10);
 const params = {
@@ -96,36 +111,82 @@ if (DRY) process.exit(0);
 if (!TOKEN) throw new Error('no token: set CI_JOB_TOKEN or MLFLOW_TOKEN');
 await detectAuth();
 
-// The same snapshot is appended to history.json on the `history` branch, the series that
-// the chart on the page reads (through the mirror on the public project). Needs a token
-// that can write to the repository: the project access token (MLFLOW_TOKEN) can, the job
-// token cannot. A failure here must not hide the model experiment run below, so it is
-// reported at the end.
-const HISTORY_FILE = process.env.ASPA_HISTORY_FILE || 'history.json';
+// The same snapshot goes to the `history` branch, which the page reads through the mirror on the public
+// project (see site/history.js for the events): the day's row in history.json, the day's changes in
+// events.json and the Atom feed of the recent changes, in one commit. Needs a token that can write to
+// the repository: the project access token (MLFLOW_TOKEN) can, the job token cannot. A failure here
+// must not hide the model experiment run below, so it is reported at the end.
 const HISTORY_BRANCH = process.env.ASPA_HISTORY_BRANCH || 'history';
+const esc = (t) => String(t).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+
+function atomFeed(events) {
+  const kinds = classify(events);
+  const days = [...new Set(kinds.map((e) => e.date))].sort().reverse().slice(0, 30);
+  const entries = days.map((d) => {
+    const ev = kinds.filter((e) => e.date === d);
+    const n = (k) => ev.filter((e) => e.kind === k).length;
+    const what = (e) => (e.kind === 'new' ? `new, providers ${e.providers.join(', ')}`
+      : e.kind === 'removed' ? 'removed'
+        : `providers ${[...e.added.map((p) => `+${p}`), ...e.dropped.map((p) => `-${p}`)].join(' ')}`);
+    const items = ev.slice(0, 200).map((e) => `<li><a href="${SITE}/#${e.customer}">${e.customer}</a>: ${esc(what(e))}</li>`).join('');
+    const more = ev.length > 200 ? `<p>and ${ev.length - 200} more</p>` : '';
+    return `  <entry>
+    <id>tag:aspa.ping6.it,${d}:changes</id>
+    <title>${d}: ${n('new')} new, ${n('removed')} removed, ${n('changed')} changed</title>
+    <updated>${d}T06:30:00Z</updated>
+    <link rel="alternate" href="${SITE}/"/>
+    <content type="html">${esc(`<ul>${items}</ul>${more}`)}</content>
+  </entry>`;
+  });
+  return `<?xml version="1.0" encoding="utf-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+  <id>tag:aspa.ping6.it,2026:changes</id>
+  <title>ASPA Explorer: changes</title>
+  <subtitle>ASPAs that appeared, changed their providers or disappeared, day by day</subtitle>
+  <link rel="self" href="${SITE}/changes.atom"/>
+  <link rel="alternate" href="${SITE}/"/>
+  <updated>${days.length ? `${days[0]}T06:30:00Z` : new Date(now).toISOString()}</updated>
+${entries.join('\n')}
+</feed>
+`;
+}
+
 let historyError = null;
 try {
   const project = API.replace(/\/ml\/mlflow\/api\/2\.0\/mlflow$/, '');
-  const file = `${project}/repository/files/${encodeURIComponent(HISTORY_FILE)}`;
   const headers = { 'PRIVATE-TOKEN': TOKEN, 'Content-Type': 'application/json' };
-  const cur = await fetch(`${file}/raw?ref=${HISTORY_BRANCH}`, { headers });
-  if (!cur.ok) throw new Error(`reading ${HISTORY_FILE}: HTTP ${cur.status}`);
-  const rows = (await cur.json()).filter((r) => r.date !== day);
+  const read = async (name) => {
+    const r = await fetch(`${project}/repository/files/${encodeURIComponent(name)}/raw?ref=${HISTORY_BRANCH}`, { headers });
+    if (r.status === 404) return null;
+    if (!r.ok) throw new Error(`reading ${name}: HTTP ${r.status}`);
+    return r.text();
+  };
+  const [historyText, eventsText, feedText] = await Promise.all([read('history.json'), read('events.json'), read('changes.atom')]);
+  if (!historyText) throw new Error('history.json not found on the history branch');
+  const rows = JSON.parse(historyText).filter((r) => r.date !== day);
   rows.push({ date: day, ...metrics, src: 'aspa' });
   rows.sort((a, b) => a.date.localeCompare(b.date));
-  const put = await fetch(file, {
-    method: 'PUT',
+  const oldEvents = eventsText ? JSON.parse(eventsText) : [];
+  const events = applyDay(oldEvents, data.aspas || [], day);
+  const eventsJson = JSON.stringify(events);
+  const eventsChanged = eventsJson !== JSON.stringify(oldEvents);
+  const actions = [{ action: 'update', file_path: 'history.json', content: JSON.stringify(rows) }];
+  if (eventsChanged || eventsText === null) actions.push({ action: eventsText === null ? 'create' : 'update', file_path: 'events.json', content: eventsJson });
+  if (eventsChanged || feedText === null) actions.push({ action: feedText === null ? 'create' : 'update', file_path: 'changes.atom', content: atomFeed(events) });
+  const todays = events.filter((e) => e[0] === day).length;
+  const put = await fetch(`${project}/repository/commits`, {
+    method: 'POST',
     headers,
     body: JSON.stringify({
       branch: HISTORY_BRANCH,
-      content: JSON.stringify(rows),
-      commit_message: `Snapshot ${day}: ${metrics.aspas} ASPAs`,
+      commit_message: `Snapshot ${day}: ${metrics.aspas} ASPAs, ${todays} change${todays === 1 ? '' : 's'}`,
       author_name: 'Antonio Prado',
       author_email: 'antonio.prado@dei.unipd.it',
+      actions,
     }),
   });
-  if (!put.ok) throw new Error(`writing ${HISTORY_FILE}: HTTP ${put.status} ${(await put.text()).slice(0, 200)}`);
-  console.log(`history: ${rows.length} rows, last ${day}`);
+  if (!put.ok) throw new Error(`committing: HTTP ${put.status} ${(await put.text()).slice(0, 200)}`);
+  console.log(`history: ${rows.length} rows, ${todays} changes on ${day}, ${actions.length} files`);
 } catch (e) {
   historyError = e;
   console.error(`history not updated: ${e.message}`);

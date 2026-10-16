@@ -163,7 +163,7 @@ a.chip:hover { background: var(--chip-hover); }
 .linkish:hover { background: none; }
 
 /* overview */
-.tiles { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 12px; }
+.tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr)); gap: 12px; margin-bottom: 12px; }
 .tile { padding: 1rem 1.1rem; }
 .tile .label { color: var(--ink-2); font-size: 0.875rem; }
 .tile .value { font-size: 1.75rem; font-weight: 600; margin-top: 0.15rem; }
@@ -216,6 +216,25 @@ figcaption .s { display: block; color: var(--muted); font-size: 0.8125rem; }
 .s2 { fill: var(--s2); background: var(--s2); }
 .s3 { fill: var(--s3); background: var(--s3); }
 .s4 { fill: var(--s4); background: var(--s4); }
+.histctl { display: flex; flex-wrap: wrap; gap: 0.5rem 1.25rem; align-items: center; margin-bottom: 0.75rem; font-size: 0.875rem; }
+.histctl label { display: inline-flex; align-items: center; gap: 0.4rem; color: var(--ink-2); }
+.histctl select { font: inherit; padding: 0.3rem 0.5rem; }
+.histctl .chk.off { opacity: 0.55; }
+.linechart .line { fill: none; stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
+.linechart .line.s1 { stroke: var(--s1); }
+.linechart .fillarea { stroke: none; opacity: 0.14; }
+.export { margin-top: 0.25rem; }
+.changes { padding: 0.5rem 1.1rem; }
+.changes details { padding: 0.5rem 0; border-top: 1px solid var(--grid); }
+.changes details:first-child { border-top: 0; }
+.changes summary { cursor: pointer; padding: 0.15rem 0; }
+.changelist, .timeline { list-style: none; margin: 0.4rem 0 0.2rem; padding: 0; display: grid; gap: 0.3rem; font-size: 0.875rem; }
+.changelist li, .timeline li { display: flex; flex-wrap: wrap; gap: 0.2rem 0.5rem; align-items: baseline; }
+.changelist li > span, .timeline li { color: var(--ink-2); }
+.timeline time { font-variant-numeric: tabular-nums; color: var(--ink); font-weight: 600; }
+.res-hist { margin-top: 1rem; padding-top: 0.75rem; border-top: 1px solid var(--grid); }
+.res-hist h4 { margin: 0 0 0.4rem; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted); }
+.res-hist p { margin: 0 0 0.6rem; }
 .legend { list-style: none; margin: 0 0 0.5rem; padding: 0; display: flex; flex-wrap: wrap; gap: 0.35rem 1.1rem; font-size: 0.8125rem; }
 .legend li { display: inline-flex; align-items: center; gap: 0.4rem; }
 .legend .sw { width: 10px; height: 10px; border-radius: 2px; flex: none; }
@@ -226,8 +245,10 @@ figcaption .s { display: block; color: var(--muted); font-size: 0.8125rem; }
 .tableview { margin-top: 0.5rem; }
 .tableview summary { cursor: pointer; color: var(--accent); font-size: 0.875rem; }
 .tableview .table-wrap { max-height: 22rem; overflow: auto; margin-top: 0.5rem; }
-.tableview td, .tableview th[scope="row"] { font-variant-numeric: tabular-nums; text-align: right; }
-.tableview th[scope="row"] { text-align: left; font-weight: 400; white-space: nowrap; }
+/* the day on the left, every number under its heading, both aligned to the right edge of the column */
+.tableview th, .tableview td { vertical-align: middle; font-variant-numeric: tabular-nums; }
+.tableview thead th:not(:first-child), .tableview td { text-align: right; }
+.tableview tbody th[scope="row"] { text-align: left; white-space: nowrap; font-size: inherit; text-transform: none; letter-spacing: 0; font-weight: 400; color: var(--ink-2); }
 
 .axis-title { text-align: center; font-size: 0.75rem; color: var(--muted); margin-top: 2px; }
 
@@ -268,6 +289,7 @@ td.rir { color: var(--ink-2); white-space: nowrap; }
 
 @media (max-width: 760px) {
   .tiles { grid-template-columns: 1fr 1fr; }
+  .tile:last-child:nth-child(odd) { grid-column: 1 / -1; }
   .charts { grid-template-columns: 1fr; }
   .res-grid { grid-template-columns: 1fr; }
   .columns { gap: 4px; }
@@ -351,3 +373,29 @@ main:focus { outline: none; }
 .checks td.hop.yes { color: var(--ok-ink); }
 .checks td.hop.no { color: var(--bad-ink); }
 .checks td.hop.na { color: var(--warn-ink); }
+
+/* routes seen in BGP */
+.live-tiles { grid-template-columns: repeat(3, 1fr); margin: 0.75rem 0; }
+.live-tiles .tile.v-valid .value { color: var(--ok-ink); }
+.live-tiles .tile.v-unknown .value { color: var(--warn-ink); }
+.live-tiles .tile.v-invalid .value { color: var(--bad-ink); }
+.badge { display: inline-block; padding: 0.1rem 0.5rem; border-radius: 999px; font-size: 0.75rem; font-weight: 600; }
+.badge.v-valid { background: var(--ok-bg); color: var(--ok-ink); }
+.badge.v-unknown { background: var(--warn-bg); color: var(--warn-ink); }
+.badge.v-invalid { background: var(--bad-bg); color: var(--bad-ink); }
+table.live .pathcell { overflow-wrap: anywhere; font-size: 0.8125rem; }
+table.live th.num, table.live td.num { text-align: right; font-variant-numeric: tabular-nums; }
+@media (max-width: 760px) {
+  .live-tiles { grid-template-columns: 1fr; }
+}
+/* the chart controls fit a 320 px screen; the coloured tiles keep a readable contrast */
+.histctl label { min-width: 0; max-width: 100%; }
+.histctl select { min-width: 0; max-width: 100%; }
+@media (max-width: 760px) {
+  .histctl label:not(.chk) { width: 100%; }
+  .histctl label:not(.chk) select { flex: 1; }
+}
+.live-tiles .tile.v-valid { color: var(--ok-ink); }
+.live-tiles .tile.v-unknown { color: var(--warn-ink); }
+.live-tiles .tile.v-invalid { color: var(--bad-ink); }
+.live-tiles .tile .label, .live-tiles .tile .note { color: inherit; }
