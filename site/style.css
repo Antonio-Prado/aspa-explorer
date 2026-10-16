@@ -252,6 +252,7 @@ td.rir { color: var(--ink-2); white-space: nowrap; }
 /* footer: build line and credits */
 .build { margin: 0.75rem 0 0; max-width: none; color: var(--muted); }
 .build .item::before { content: "·" / ""; margin: 0 0.5em; }
+.build .item.first::before { content: none; }
 .build .item[hidden] { display: none; }
 .build .ver { font-weight: 700; padding: 0 0.4em; border-radius: 4px; background: var(--wash); box-shadow: 0 0 0 1px var(--ring); text-decoration: none; }
 .build .ver:hover { text-decoration: underline; }

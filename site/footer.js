@@ -1,7 +1,7 @@
 'use strict';
 
 // Site footer shared by all pages. Two rows:
-//   1. source project, release, last commit, accessibility, visitor's address
+//   1. release, last commit, accessibility, visitor's address
 //   2. credits: Powered by DEI, Served by FreeBSD, Made with vi
 // The release comes from /version.json (same origin, always available). When the
 // GitLab project can be read without signing in, the latest tag and the last
@@ -26,25 +26,31 @@
   const link = (href, ...children) => el('a', { href, rel: 'noopener' }, ...children);
   const logo = (src, alt, w, h) => el('img', { src, alt, width: w, height: h });
 
-  // Row 1. Items other than the project link are separated by CSS; the ones that
-  // depend on remote data stay hidden until their data is known.
+  // Row 1, as in the other sites of the family: release, last commit, accessibility,
+  // visitor's address. The release and the commit are links (the commit always goes to
+  // the project). Items that depend on remote data stay hidden until their data is known;
+  // separators are drawn by CSS, and the first visible item gets no leading separator.
   const item = (hidden, ...children) => {
     const span = el('span', { class: 'item' }, ...children);
     span.hidden = hidden;
     return span;
   };
-  const releaseLink = link(PROJECT, '');
-  releaseLink.className = 'ver';
+  const versionText = el('strong', { class: 'ver' }, '');
+  const releaseLink = link(`${PROJECT}/-/releases`, 'Release ', versionText);
   const commitLink = link(PROJECT, '');
   const ipValue = el('span', { class: 'ip' });
-  const releaseItem = item(true, 'Release ', releaseLink);
-  const commitItem = item(true, 'Last commit ', commitLink);
+  const releaseItem = item(true, releaseLink);
+  const commitItem = item(true, commitLink);
   const ipItem = item(true, 'Your IP: ', ipValue);
-  const build = el('p', { class: 'build' },
-    'Source: ', link(PROJECT, PATH),
-    releaseItem, commitItem,
-    item(false, link('/guide.html#accessibility', 'Accessibility')),
-    ipItem);
+  const items = [releaseItem, commitItem, item(false, link('/guide.html#accessibility', 'Accessibility')), ipItem];
+  const build = el('p', { class: 'build' }, ...items);
+  const refresh = () => {
+    let first = true;
+    for (const it of items) {
+      it.classList.toggle('first', first && !it.hidden);
+      if (!it.hidden) first = false;
+    }
+  };
 
   // Row 2. Logos are links; the vi icon is decorative (the text next to it says it all).
   const credits = el('ul', { class: 'credits', 'aria-label': 'Credits' },
@@ -55,14 +61,26 @@
     el('li', {}, logo('/img/vi-logo.svg?v=1', '', 28, 28), ' Made with vi ', el('code', {}, ':wq')));
 
   footer.append(build, credits);
+  refresh();
 
   const showRelease = (tag, fromApi) => {
     if (showRelease.api && !fromApi) return;
     if (fromApi) showRelease.api = true;
     const v = tag.replace(/^v/, '');
-    releaseLink.textContent = `v${v}`;
+    versionText.textContent = `v${v}`;
     releaseLink.href = `${PROJECT}/-/releases/v${v}`;
     releaseItem.hidden = false;
+    refresh();
+  };
+
+  // Commit date and time as YYYYMMDDhhmmss, in Italian time
+  const stamp = (d) => {
+    const parts = {};
+    new Intl.DateTimeFormat('en-GB', {
+      timeZone: 'Europe/Rome', year: 'numeric', month: '2-digit', day: '2-digit',
+      hour: '2-digit', minute: '2-digit', second: '2-digit', hourCycle: 'h23',
+    }).formatToParts(d).forEach((x) => { parts[x.type] = x.value; });
+    return parts.year + parts.month + parts.day + parts.hour + parts.minute + parts.second;
   };
 
   const getJson = async (url, opts) => {
@@ -89,10 +107,10 @@
     .then((c) => {
       const sha = String((c && c.id) || '');
       if (!/^[0-9a-f]{40}$/.test(sha)) return;
-      const day = c.committed_date ? ' · ' + String(c.committed_date).slice(0, 10) : '';
-      commitLink.textContent = sha.slice(0, 7) + day;
-      commitLink.href = `${PROJECT}/-/commit/${sha}`;
+      const when = c.committed_date ? new Date(c.committed_date) : null;
+      commitLink.textContent = 'Last commit ' + sha.slice(0, 7) + (when && !isNaN(when) ? '@' + stamp(when) : '');
       commitItem.hidden = false;
+      refresh();
     })
     .catch(() => { /* as above */ });
 
@@ -103,6 +121,7 @@
       if (!/^[0-9A-Fa-f.:]{2,45}$/.test(ip)) return;
       ipValue.textContent = ip;
       ipItem.hidden = false;
+      refresh();
     })
     .catch(() => { /* endpoint not available */ });
 })();
