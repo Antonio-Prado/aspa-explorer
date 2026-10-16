@@ -7,13 +7,13 @@
 <meta name="description" content="How to read and use the ASPA Explorer interface: lookup, overview charts, the table of all ASPAs and where the data comes from.">
 <meta name="color-scheme" content="light dark">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
-<link rel="stylesheet" href="/style.css?v=1.3.0">
-<script src="/footer.js?v=1.3.0" defer></script>
+<link rel="stylesheet" href="/style.css?v=1.3.1">
+<script src="/footer.js?v=1.3.1" defer></script>
 </head>
 <body>
 <a class="skip" href="#main">Skip to main content</a>
 <header class="wrap masthead">
-  <p class="back"><a class="brandlink" href="/" title="Back to ASPA Explorer"><img class="brand" src="/img/logo-mark.svg?v=1.3.0" alt="" width="40" height="40"><span>ASPA Explorer</span></a></p>
+  <p class="back"><a class="brandlink" href="/" title="Back to ASPA Explorer"><img class="brand" src="/img/logo-mark.svg?v=1.3.1" alt="" width="40" height="40"><span>ASPA Explorer</span></a></p>
   <h1>Guide</h1>
   <p class="lede">How the ASPA Explorer interface works, what each number means and where the data comes from.</p>
 </header>
@@ -101,9 +101,9 @@
 
   <section aria-labelledby="data">
     <h2 id="data">Where the data comes from</h2>
-    <p>The data comes from <a href="https://github.com/NLnetLabs/routinator">Routinator</a>, the RPKI validator run at <code>rpki.ping6.it</code>. It validates the RPKI repositories of all five RIRs and the page reads two of its outputs:</p>
+    <p>The data comes from <a href="https://github.com/NLnetLabs/routinator" target="_blank" rel="noopener">Routinator<span class="sr-only"> (opens in a new tab)</span></a>, the RPKI validator run at <code>rpki.ping6.it</code>. It validates the RPKI repositories of all five RIRs and the page reads two of its outputs:</p>
     <ul>
-      <li>the list of valid ASPAs (<a href="https://rpki.ping6.it:8323/jsonext?exclude=routeOrigins,routerKeys">jsonext</a>, route origins and router keys left out), and</li>
+      <li>the list of valid ASPAs (<a href="https://rpki.ping6.it:8323/jsonext?exclude=routeOrigins,routerKeys" target="_blank" rel="noopener">jsonext<span class="sr-only"> (opens in a new tab)</span></a>, route origins and router keys left out), and</li>
       <li>the validator status, which supplies the last validation time and the Routinator version.</li>
     </ul>
     <p>The validator refreshes about every 10 minutes and the web server keeps its answer for 2 minutes, so a new ASPA can take a little while to show up here. The <em>last validation</em> time in the header tells you how fresh the data is.</p>
@@ -126,7 +126,7 @@
 
   <section aria-labelledby="accessibility">
     <h2 id="accessibility">Accessibility</h2>
-    <p>ASPA Explorer is built to be usable by everyone, including people who use a keyboard, a screen reader, magnification or high-contrast settings. The target is conformance with the <a href="https://www.w3.org/TR/WCAG21/">Web Content Accessibility Guidelines (WCAG) 2.1</a> at level AA. The pages have been checked with the axe-core automated testing tool in both the light and the dark theme, with no issues reported. They have not been audited by an independent body or tested with screen-reader users, so there may be gaps that an automated tool cannot find.</p>
+    <p>ASPA Explorer is built to be usable by everyone, including people who use a keyboard, a screen reader, magnification or high-contrast settings. The target is conformance with the <a href="https://www.w3.org/TR/WCAG21/" target="_blank" rel="noopener">Web Content Accessibility Guidelines (WCAG) 2.1<span class="sr-only"> (opens in a new tab)</span></a> at level AA. The pages have been checked with the axe-core automated testing tool in both the light and the dark theme, with no issues reported. They have not been audited by an independent body or tested with screen-reader users, so there may be gaps that an automated tool cannot find.</p>
     <h3>What is in place</h3>
     <ul>
       <li><strong>Keyboard.</strong> Every control can be reached and used with <kbd>Tab</kbd>, <kbd>Shift</kbd>+<kbd>Tab</kbd>, <kbd>Enter</kbd> and <kbd>Space</kbd>. The focused element has a visible outline. A <em>Skip to main content</em> link appears first when you press <kbd>Tab</kbd>.</li>
@@ -155,10 +155,10 @@
   <section aria-labelledby="credits">
     <h2 id="credits">Credits</h2>
     <ul>
-      <li><strong>Powered by DEI.</strong> ASPA Explorer and the validator behind it run at the Department of Information Engineering (DEI), University of Padova. The logo is that of the department and links to <a href="https://www.dei.unipd.it">www.dei.unipd.it</a>.</li>
-      <li><strong>Served by FreeBSD.</strong> The FreeBSD logo is a trademark of The FreeBSD Foundation and links to <a href="https://www.freebsd.org">www.freebsd.org</a>.</li>
+      <li><strong>Powered by DEI.</strong> ASPA Explorer and the validator behind it run at the Department of Information Engineering (DEI), University of Padova. The logo is that of the department and links to <a href="https://www.dei.unipd.it" target="_blank" rel="noopener">www.dei.unipd.it<span class="sr-only"> (opens in a new tab)</span></a>.</li>
+      <li><strong>Served by FreeBSD.</strong> The FreeBSD logo is a trademark of The FreeBSD Foundation and links to <a href="https://www.freebsd.org" target="_blank" rel="noopener">www.freebsd.org<span class="sr-only"> (opens in a new tab)</span></a>.</li>
       <li><strong>Made with vi.</strong> The little <code>vi</code> icon is original (vi has no official logo). <code>:wq</code> is the vi command to save and quit.</li>
-      <li><strong>Validated by Routinator.</strong> The ASPA data comes from <a href="https://nlnetlabs.nl/projects/routinator/">Routinator</a>, the RPKI validator by NLnet Labs. The Routinator logo is theirs and links to the project page.</li>
+      <li><strong>Validated by Routinator.</strong> The ASPA data comes from <a href="https://nlnetlabs.nl/projects/routinator/" target="_blank" rel="noopener">Routinator<span class="sr-only"> (opens in a new tab)</span></a>, the RPKI validator by NLnet Labs. The Routinator logo (the rocket) is theirs and links to the project page.</li>
     </ul>
   </section>
 </main>

@@ -69,7 +69,7 @@
     el('li', {}, 'Served by ',
       link('https://www.freebsd.org', logo('/img/freebsd-logo.png?v=1', 'FreeBSD', 97, 28))),
     el('li', {}, 'Validated by ',
-      link('https://nlnetlabs.nl/projects/routinator/', logo('/img/routinator-wordmark.svg?v=1', 'Routinator, by NLnet Labs', 171, 28))),
+      link('https://nlnetlabs.nl/projects/routinator/', logo('/img/routinator-avatar.png?v=1', '', 28, 28), el('span', {}, 'Routinator'))),
     el('li', {}, logo('/img/vi-logo.svg?v=1', '', 28, 28), ' Made with vi ', el('code', {}, ':wq')));
 
   footer.append(build, credits);

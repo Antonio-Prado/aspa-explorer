@@ -262,10 +262,12 @@ td.rir { color: var(--ink-2); white-space: nowrap; }
 .build .ip { overflow-wrap: anywhere; font-family: var(--mono); font-size: 0.92em; }
 .credits { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem 1.25rem; margin: 0.75rem 0 0; padding: 0; list-style: none; color: var(--muted); }
 .credits li { display: inline-flex; align-items: center; gap: 0.35rem; white-space: nowrap; }
-.credits a { display: inline-flex; border-radius: 4px; }
+.credits a { display: inline-flex; align-items: center; gap: 0.35rem; border-radius: 4px; }
+.credits a span { color: var(--ink); font-weight: 600; }
 .credits img { display: block; height: 28px; width: auto; }
 /* both logos have dark text on a transparent background: keep them readable in dark mode */
 .credits a img { background: #fff; padding: 2px 6px; border-radius: 4px; box-sizing: content-box; }
+.credits a img[src*="avatar"] { background: none; padding: 0; border-radius: 50%; }
 .credits code { font-size: inherit; color: inherit; }
 @media (max-width: 760px) {
   .toc ol { columns: 1; }

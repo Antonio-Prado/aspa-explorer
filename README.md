@@ -109,7 +109,7 @@ Released under the [MIT License](LICENSE).
   &nbsp;&nbsp;&nbsp;
   <a href="https://www.freebsd.org"><img src="assets/credits/freebsd-logo.png" alt="FreeBSD" height="40"></a>
   &nbsp;&nbsp;&nbsp;
-  <a href="https://nlnetlabs.nl/projects/routinator/"><img src="assets/credits/routinator-wordmark.svg" alt="Routinator, by NLnet Labs" height="40"></a>
+  <a href="https://nlnetlabs.nl/projects/routinator/"><img src="assets/credits/routinator-avatar.png" alt="Routinator, by NLnet Labs" height="40"></a>
   &nbsp;&nbsp;&nbsp;
   <img src="assets/credits/vi-logo.svg" alt="vi" height="32">
 </p>

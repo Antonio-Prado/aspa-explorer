@@ -176,8 +176,8 @@ function renderLookup(as) {
   const head = el('div', { class: 'res-head' },
     el('h3', { text: as }),
     el('span', { class: 'links' },
-      el('a', { href: `https://bgp.tools/as/${n}`, rel: 'noopener', target: '_blank', text: 'bgp.tools' }), ' · ',
-      el('a', { href: `https://stat.ripe.net/app/launchpad/AS${n}`, rel: 'noopener', target: '_blank', text: 'RIPEstat' })));
+      el('a', { href: `https://bgp.tools/as/${n}`, rel: 'noopener', target: '_blank' }, 'bgp.tools', el('span', { class: 'sr-only', text: ' (opens in a new tab)' })), ' · ',
+      el('a', { href: `https://stat.ripe.net/app/launchpad/AS${n}`, rel: 'noopener', target: '_blank' }, 'RIPEstat', el('span', { class: 'sr-only', text: ' (opens in a new tab)' }))));
 
   const left = el('div', {}, el('h4', { text: 'Its own ASPA' }));
   if (own) {
