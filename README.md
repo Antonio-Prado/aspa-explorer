@@ -11,7 +11,6 @@
 </p>
 
 <p align="center">
-  <a href="https://gitlab.dei.unipd.it/Antonio-Prado/aspa-explorer/-/pipelines" target="_blank" rel="noopener"><img alt="pipeline status" src="https://gitlab.dei.unipd.it/Antonio-Prado/aspa-explorer/badges/main/pipeline.svg"></a>
   <a href="https://gitlab.dei.unipd.it/Antonio-Prado/aspa-explorer/-/releases" target="_blank" rel="noopener"><img alt="latest release" src="https://gitlab.dei.unipd.it/Antonio-Prado/aspa-explorer/-/badges/release.svg"></a>
 </p>
 
@@ -23,6 +22,8 @@
   <a href="CHANGELOG.md" target="_blank" rel="noopener">Changelog</a> ·
   <a href="CONTRIBUTING.md" target="_blank" rel="noopener">Contributing</a>
 </p>
+
+<p align="center"><sub>This is the public, read-only mirror of the project's development repository. To report a problem or suggest a change, write to <a href="mailto:antonio.prado@dei.unipd.it">antonio.prado@dei.unipd.it</a>.</sub></p>
 
 <table>
   <tr>

@@ -4,7 +4,7 @@ Thanks for your interest in ASPA Explorer.
 
 ## Reporting problems and ideas
 
-Open an issue using one of the templates. For anything security-related, follow [SECURITY.md](SECURITY.md) instead of opening a public issue.
+Development happens in a private repository of the Department of Information Engineering (group `internet_routing_sec`); the public repository is a read-only mirror of it, with issues and merge requests switched off. Send problems and ideas by email to antonio.prado@dei.unipd.it. For anything security-related, follow [SECURITY.md](SECURITY.md).
 
 ## Development
 
@@ -19,6 +19,12 @@ make check
 To preview the page with real data, serve `site/` behind nginx with the configuration in `deploy/nginx/`, or point a local server at a Routinator instance that exposes `/jsonext` and `/api/v1/status`.
 
 The pipeline also runs two security checks: `make lint-security` (ESLint rules that forbid `innerHTML`, `eval` and similar sinks in `site/*.js`) and `make secrets` (a [gitleaks](https://github.com/gitleaks/gitleaks) scan of the whole git history).
+
+## Repositories and publication
+
+- The internal project (`internet_routing_sec/aspa-explorer`) holds the development, the CI, the pipeline schedules, the wiki and the releases.
+- A push mirror copies `main` and the tags to the public project (`Antonio-Prado/aspa-explorer`) on every push; work-in-progress branches are not mirrored.
+- Releases and the wiki are not covered by the mirror. The job `publish-release` (every `v*` tag, which is a protected tag) creates the release in both projects, and `mirror-wiki` (daily schedule, `SCHEDULE=wiki`) copies the wiki. Both use `MIRROR_TOKEN`, a project access token of the public project (scopes `api` and `write_repository`, role Maintainer) stored as a masked and protected CI variable. It expires after one year, together with the token used inside the mirror's URL: renew both.
 
 ## Scheduled jobs
 

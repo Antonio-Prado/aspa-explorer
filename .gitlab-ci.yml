@@ -1,6 +1,7 @@
 stages:
   - lint
   - security
+  - publish
 
 default:
   interruptible: true
@@ -97,3 +98,21 @@ aspa-snapshot:
     - if: ($CI_PIPELINE_SOURCE == "schedule" || $CI_PIPELINE_SOURCE == "web" || $CI_PIPELINE_SOURCE == "api") && $SCHEDULE == "snapshot"
   script:
     - node scripts/log-snapshot.mjs
+
+# Publication to the public mirror. The push mirror copies branches and tags; releases and
+# the wiki are published through the API of the public project (MIRROR_TOKEN).
+publish-release:
+  stage: publish
+  tags: [aspa]
+  rules:
+    - if: $CI_COMMIT_TAG
+  script:
+    - node scripts/publish-release.mjs
+
+mirror-wiki:
+  stage: publish
+  tags: [aspa]
+  rules:
+    - if: ($CI_PIPELINE_SOURCE == "schedule" || $CI_PIPELINE_SOURCE == "web" || $CI_PIPELINE_SOURCE == "api") && $SCHEDULE == "wiki"
+  script:
+    - sh scripts/mirror-wiki.sh
