@@ -7,11 +7,12 @@
 <meta name="description" content="Browse the validated ASPA (Autonomous System Provider Authorization) objects published in the RPKI.">
 <meta name="color-scheme" content="light dark">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
-<link rel="stylesheet" href="/style.css?v=1.1.1">
-<script src="/app.js?v=1.1.1" defer></script>
-<script src="/footer.js?v=1.1.1" defer></script>
+<link rel="stylesheet" href="/style.css?v=1.2.0">
+<script src="/app.js?v=1.2.0" defer></script>
+<script src="/footer.js?v=1.2.0" defer></script>
 </head>
 <body>
+<a class="skip" href="#main">Skip to main content</a>
 <header class="wrap masthead">
   <h1>ASPA Explorer</h1>
   <p class="lede">Validated ASPA objects from the RPKI, as seen by the Routinator validator at <a href="https://rpki.ping6.it:8323/ui/">rpki.ping6.it</a>.</p>
@@ -19,8 +20,9 @@
   <p class="nav"><a href="/guide.html">How to read this page</a></p>
 </header>
 
-<main class="wrap">
+<main class="wrap" id="main" tabindex="-1">
   <section class="lookup card" aria-labelledby="lookup-title">
+    <h2 class="sr-only">Look up an AS</h2>
     <form id="lookup" autocomplete="off">
       <label id="lookup-title" for="asn">Look up an autonomous system</label>
       <div class="field">
@@ -61,6 +63,7 @@
     </div>
     <div class="table-wrap card">
       <table>
+        <caption class="sr-only">All validated ASPAs: customer AS, its providers and the RIR</caption>
         <thead><tr><th scope="col">Customer AS</th><th scope="col">Providers</th><th scope="col">RIR</th></tr></thead>
         <tbody id="rows"></tbody>
       </table>

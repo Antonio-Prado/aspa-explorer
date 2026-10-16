@@ -13,7 +13,8 @@ Live instance: <https://aspa.ping6.it/> (DEI, University of Padova).
 
 ## Features
 
-- Built-in [user guide](site/guide.html) (English) and a footer link to this project with the running version.
+- Built-in [user guide](site/guide.html) (English, with an accessibility statement) and a footer with the project link, release and credits.
+- Accessibility: checked with axe-core in the light and dark themes (WCAG 2.2 AA rules), keyboard operable, reduced-motion aware.
 - Look up an AS: its own ASPA and every ASPA that names it as a provider (deep link `#AS680`).
 - Summary tiles and charts: ASPAs per RIR, providers per ASPA, most-named providers.
 - Filterable table of all ASPAs.
@@ -27,6 +28,7 @@ site/                  static files (index.html, guide.html, style.css, app.js, 
 scripts/               CI helper scripts (nginx and version checks)
 deploy/nginx/aspa.conf       nginx server blocks and proxy cache zone
 deploy/nginx/rpki-proxy.conf proxy settings shared by the data endpoints
+deploy/nginx/security-headers.conf security headers (included by the server block and /client-ip)
 ```
 
 ## How it works
@@ -41,7 +43,7 @@ The page fetches two same-origin JSON files, which nginx proxies to Routinator a
 ## Deploy
 
 1. Copy `site/*` to the web root (e.g. `/usr/local/www/aspa`).
-2. Copy `deploy/nginx/aspa.conf` into nginx's `conf.d/` and `deploy/nginx/rpki-proxy.conf` next to `nginx.conf`. Adjust the listen IP, server name, TLS certificate paths and the Routinator host in `rpki-proxy.conf`.
+2. Copy `deploy/nginx/aspa.conf` into nginx's `conf.d/`, and `deploy/nginx/rpki-proxy.conf` and `deploy/nginx/security-headers.conf` next to `nginx.conf`. Adjust the listen IP, server name, TLS certificate paths and the Routinator host in `rpki-proxy.conf`.
 3. Make sure the Routinator HTTP(S) port is reachable from the web server, then `nginx -t && nginx -s reload`.
 
 ## Development

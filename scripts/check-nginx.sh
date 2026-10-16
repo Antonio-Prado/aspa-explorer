@@ -9,13 +9,14 @@ trap 'rm -rf "$work"' EXIT
 mkdir -p "$work/tls" "$work/cache" "$work/www"
 openssl req -x509 -newkey rsa:2048 -nodes -days 1 -subj "/CN=aspa.test" \
   -keyout "$work/tls/key.pem" -out "$work/tls/fullchain.pem" 2>/dev/null
-cp "$root/site/"* "$work/www/"
+cp -R "$root/site/." "$work/www/"
 
 # Point the production paths at the temporary directory and listen on loopback
 # using unprivileged ports (nginx -t also tries to bind the sockets).
 sed -e "s|/usr/local/etc/nginx/tls|$work/tls|g" \
     -e "s|/usr/local/www/aspa|$work/www|g" \
     -e "s|/usr/local/etc/nginx/rpki-proxy.conf|$root/deploy/nginx/rpki-proxy.conf|g" \
+    -e "s|/usr/local/etc/nginx/security-headers.conf|$root/deploy/nginx/security-headers.conf|g" \
     -e "s|/var/cache/nginx/aspa|$work/cache|g" \
     -e "s|192\.0\.2\.10|127.0.0.1|g" \
     -e "s|127\.0\.0\.1:8080;|127.0.0.1:18080;|" \

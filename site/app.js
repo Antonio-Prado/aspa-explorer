@@ -102,7 +102,7 @@ function barChart(container, rows, opts) {
     fill.style.width = `calc((100% - 4.5rem) * ${r.value / max})`;
     const share = total ? ` · ${(100 * r.value / total).toFixed(1)}% of ${opts.totalLabel}` : '';
     const row = el(r.href ? 'a' : 'div', {
-      class: 'bar-row', href: r.href, tabindex: r.href ? undefined : '0',
+      class: 'bar-row', href: r.href, tabindex: r.href ? undefined : '0', role: r.href ? undefined : 'img',
       'aria-label': `${r.label}: ${fmt.format(r.value)}`,
     },
       el('span', { class: 'lbl' + (opts.mono ? ' mono' : ''), text: r.label }),
@@ -119,7 +119,7 @@ function columnChart(container, bins) {
   for (const b of bins) {
     const fill = el('span', { class: 'fill' });
     fill.style.height = `calc((100% - 1.4rem) * ${b.value / max})`;
-    const col = el('div', { class: 'col', tabindex: '0', 'aria-label': `${b.label} providers: ${fmt.format(b.value)} ASPAs` },
+    const col = el('div', { class: 'col', tabindex: '0', role: 'img', 'aria-label': `${b.label} providers: ${fmt.format(b.value)} ASPAs` },
       el('span', { class: 'val', text: fmt.format(b.value) }), fill);
     withTip(col, fmt.format(b.value) + ' ASPAs', `${b.label} provider${b.label === '1' ? '' : 's'} · ${(100 * b.value / total).toFixed(1)}%`);
     cols.append(col);
@@ -214,7 +214,7 @@ function lookupFromHash() {
   $('asn').value = as;
   if (aspas.length) {
     renderLookup(as);
-    $('result').scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+    $('result').scrollIntoView({ block: 'nearest', behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
   }
 }
 

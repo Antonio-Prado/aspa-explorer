@@ -1,10 +1,12 @@
 'use strict';
 
-// Build line in the page footer: link to the GitLab project with the version number.
-// The version comes from /version.json (same origin, always available). When the
-// project is readable without signing in, the latest tag and the last commit are
-// read from the GitLab API on every page load and replace/extend it; otherwise
-// the API answers with an error and the static information stays.
+// Site footer shared by all pages. Two rows:
+//   1. source project, release, last commit, accessibility, visitor's address
+//   2. credits: Powered by DEI, Served by FreeBSD, Made with vi
+// The release comes from /version.json (same origin, always available). When the
+// GitLab project can be read without signing in, the latest tag and the last
+// commit are read from the GitLab API on every page load; otherwise the API
+// answers with an error and the static information stays.
 (() => {
   const HOST = 'https://gitlab.dei.unipd.it';
   const PATH = 'Antonio-Prado/aspa-explorer';
@@ -15,44 +17,52 @@
   const footer = document.querySelector('footer.foot');
   if (!footer) return;
 
-  const p = document.createElement('p');
-  p.className = 'build';
-  const link = (href) => {
-    const a = document.createElement('a');
-    a.rel = 'noopener';
-    if (href) a.href = href;
-    return a;
+  const el = (tag, attrs, ...children) => {
+    const node = document.createElement(tag);
+    for (const [k, v] of Object.entries(attrs || {})) node.setAttribute(k, v);
+    node.append(...children);
+    return node;
   };
-  // Items that appear only when their data is known; the separator is drawn by CSS.
-  const item = () => {
-    const span = document.createElement('span');
-    span.className = 'item';
-    span.hidden = true;
+  const link = (href, ...children) => el('a', { href, rel: 'noopener' }, ...children);
+  const logo = (src, alt, w, h) => el('img', { src, alt, width: w, height: h });
+
+  // Row 1. Items other than the project link are separated by CSS; the ones that
+  // depend on remote data stay hidden until their data is known.
+  const item = (hidden, ...children) => {
+    const span = el('span', { class: 'item' }, ...children);
+    span.hidden = hidden;
     return span;
   };
-  const project = link(PROJECT);
-  project.textContent = PATH;
-  const version = link();
-  version.className = 'ver';
-  const commit = link();
-  const versionItem = item();
-  const commitItem = item();
-  versionItem.append(version);
-  commitItem.append(commit);
-  p.append('Source: ', project, versionItem, commitItem);
-  footer.append(p);
+  const releaseLink = link(PROJECT, '');
+  releaseLink.className = 'ver';
+  const commitLink = link(PROJECT, '');
+  const ipValue = el('span', { class: 'ip' });
+  const releaseItem = item(true, 'Release ', releaseLink);
+  const commitItem = item(true, 'Last commit ', commitLink);
+  const ipItem = item(true, 'Your IP: ', ipValue);
+  const build = el('p', { class: 'build' },
+    'Source: ', link(PROJECT, PATH),
+    releaseItem, commitItem,
+    item(false, link('/guide.html#accessibility', 'Accessibility')),
+    ipItem);
 
-  const show = (node, text, href) => {
-    node.textContent = text;
-    node.href = href;
-    node.parentNode.hidden = false;
-  };
-  let fromApi = false; // the GitLab answer wins over the static file whatever arrives first
-  const setVersion = (tag, api) => {
-    if (fromApi && !api) return;
-    if (api) fromApi = true;
+  // Row 2. Logos are links; the vi icon is decorative (the text next to it says it all).
+  const credits = el('ul', { class: 'credits', 'aria-label': 'Credits' },
+    el('li', {}, 'Powered by ',
+      link('https://www.dei.unipd.it', logo('/img/dei-logo.png?v=1', 'DEI, Department of Information Engineering, University of Padova', 111, 28))),
+    el('li', {}, 'Served by ',
+      link('https://www.freebsd.org', logo('/img/freebsd-logo.png?v=1', 'FreeBSD', 97, 28))),
+    el('li', {}, logo('/img/vi-logo.svg?v=1', '', 28, 28), ' Made with vi ', el('code', {}, ':wq')));
+
+  footer.append(build, credits);
+
+  const showRelease = (tag, fromApi) => {
+    if (showRelease.api && !fromApi) return;
+    if (fromApi) showRelease.api = true;
     const v = tag.replace(/^v/, '');
-    show(version, `v${v}`, `${PROJECT}/-/tags/v${v}`);
+    releaseLink.textContent = `v${v}`;
+    releaseLink.href = `${PROJECT}/-/releases/v${v}`;
+    releaseItem.hidden = false;
   };
 
   const getJson = async (url, opts) => {
@@ -61,16 +71,16 @@
     return r.json();
   };
 
-  // Static version first: works even when the GitLab project is not public.
+  // Static release first: works even when the GitLab project is not public.
   getJson('/version.json', { cache: 'no-cache' })
-    .then((d) => { if (d && VERSION.test('v' + d.version)) setVersion(String(d.version)); })
+    .then((d) => { if (d && VERSION.test('v' + d.version)) showRelease(String(d.version), false); })
     .catch(() => { /* no version file */ });
 
   // Latest tag (highest version) from GitLab, if reachable.
   getJson(`${API}/repository/tags?order_by=version&sort=desc&per_page=1`)
     .then((tags) => {
       const tag = tags && tags[0] && String(tags[0].name || '');
-      if (tag && VERSION.test(tag)) setVersion(tag, true);
+      if (tag && VERSION.test(tag)) showRelease(tag, true);
     })
     .catch(() => { /* project not readable without signing in, or GitLab unreachable */ });
 
@@ -80,7 +90,19 @@
       const sha = String((c && c.id) || '');
       if (!/^[0-9a-f]{40}$/.test(sha)) return;
       const day = c.committed_date ? ' · ' + String(c.committed_date).slice(0, 10) : '';
-      show(commit, `commit ${sha.slice(0, 7)}${day}`, `${PROJECT}/-/commit/${sha}`);
+      commitLink.textContent = sha.slice(0, 7) + day;
+      commitLink.href = `${PROJECT}/-/commit/${sha}`;
+      commitItem.hidden = false;
     })
     .catch(() => { /* as above */ });
+
+  // The visitor's own address as the server sees it; hidden if the request fails.
+  getJson('/client-ip', { cache: 'no-store' })
+    .then((d) => {
+      const ip = String((d && d.ip) || '');
+      if (!/^[0-9A-Fa-f.:]{2,45}$/.test(ip)) return;
+      ipValue.textContent = ip;
+      ipItem.hidden = false;
+    })
+    .catch(() => { /* endpoint not available */ });
 })();

@@ -7,17 +7,18 @@
 <meta name="description" content="How to read and use the ASPA Explorer interface: lookup, overview charts, the table of all ASPAs and where the data comes from.">
 <meta name="color-scheme" content="light dark">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
-<link rel="stylesheet" href="/style.css?v=1.1.1">
-<script src="/footer.js?v=1.1.1" defer></script>
+<link rel="stylesheet" href="/style.css?v=1.2.0">
+<script src="/footer.js?v=1.2.0" defer></script>
 </head>
 <body>
+<a class="skip" href="#main">Skip to main content</a>
 <header class="wrap masthead">
   <p class="back"><a href="/">&larr; Back to ASPA Explorer</a></p>
   <h1>Guide</h1>
   <p class="lede">How the ASPA Explorer interface works, what each number means and where the data comes from.</p>
 </header>
 
-<main class="wrap prose">
+<main class="wrap prose" id="main" tabindex="-1">
   <nav class="toc card" aria-label="Contents">
     <ol>
       <li><a href="#what">What you are looking at</a></li>
@@ -28,7 +29,9 @@
       <li><a href="#data">Where the data comes from</a></li>
       <li><a href="#reading">Reading the results</a></li>
       <li><a href="#trouble">If something does not load</a></li>
+      <li><a href="#accessibility">Accessibility</a></li>
       <li><a href="#about">About this page</a></li>
+      <li><a href="#credits">Credits</a></li>
     </ol>
   </nav>
 
@@ -121,10 +124,42 @@
     <p>If the page shows <em>Could not load the ASPA data</em>, the validator is probably restarting. Wait a minute and reload. If it persists, the error text in the message shows which request failed.</p>
   </section>
 
+  <section aria-labelledby="accessibility">
+    <h2 id="accessibility">Accessibility</h2>
+    <p>ASPA Explorer is built to be usable by everyone, including people who use a keyboard, a screen reader, magnification or high-contrast settings. The target is conformance with the <a href="https://www.w3.org/TR/WCAG21/">Web Content Accessibility Guidelines (WCAG) 2.1</a> at level AA. The pages have been checked with the axe-core automated testing tool in both the light and the dark theme, with no issues reported. They have not been audited by an independent body or tested with screen-reader users, so there may be gaps that an automated tool cannot find.</p>
+    <h3>What is in place</h3>
+    <ul>
+      <li><strong>Keyboard.</strong> Every control can be reached and used with <kbd>Tab</kbd>, <kbd>Shift</kbd>+<kbd>Tab</kbd>, <kbd>Enter</kbd> and <kbd>Space</kbd>. The focused element has a visible outline. A <em>Skip to main content</em> link appears first when you press <kbd>Tab</kbd>.</li>
+      <li><strong>Structure.</strong> Pages use landmarks (header, main, footer) and a single heading hierarchy. The table has a caption and column headers, and every form field has a label.</li>
+      <li><strong>Charts.</strong> Each bar or column can take keyboard focus, carries its label and value as text, and shows its tooltip on focus as well as on hover. The exact numbers are also in the table and in the lookup results, so no information depends on seeing the chart.</li>
+      <li><strong>Colour.</strong> Text meets the WCAG AA contrast ratio in the light and the dark theme, which follow your system setting. Colour is never the only way something is shown.</li>
+      <li><strong>Screen readers.</strong> Lookup results are announced when they appear. Decorative images are hidden from assistive technology and meaningful ones have a text alternative.</li>
+      <li><strong>Zoom and small screens.</strong> The layout reflows without horizontal scrolling down to a width of 320 pixels, which is what a desktop window shows at 400% zoom.</li>
+      <li><strong>Motion.</strong> If your system asks for reduced motion, the page does not animate scrolling.</li>
+    </ul>
+    <h3>Known limitations</h3>
+    <ul>
+      <li>The tables and chips can be long: a large provider set or the 100-row table pages are tiring to read with a screen reader. Use the lookup or the AS filter to narrow them down.</li>
+      <li>The outside links (bgp.tools, RIPEstat) and the validator's raw JSON are not under this project's control.</li>
+    </ul>
+    <h3>Feedback</h3>
+    <p>If you meet a barrier, please tell us: open an issue in the project repository, or write to <a href="mailto:antonio@prado.it">antonio@prado.it</a> saying which page, what you were trying to do, and which browser and assistive technology you use. Reports are read and answered.</p>
+  </section>
+
   <section aria-labelledby="about">
     <h2 id="about">About this page</h2>
-    <p>ASPA Explorer is a small static page with no external dependencies and no cookies: your lookups happen in your browser and are not sent anywhere. The footer links to the project on the DEI GitLab and shows the version of the page you are using; when the project is readable it also shows the last commit.</p>
+    <p>ASPA Explorer is a small static page with no external dependencies and no cookies: your lookups happen in your browser and are not sent anywhere. The only thing this site learns about you is what any web server learns from a request; the footer shows the address your request came from, as the server sees it. The footer links to the project on the DEI GitLab and shows the release you are using; when the project is readable it also shows the last commit.</p>
     <p>The source code, the changelog and instructions to report a problem are in the project repository.</p>
+  </section>
+
+  <section aria-labelledby="credits">
+    <h2 id="credits">Credits</h2>
+    <ul>
+      <li><strong>Powered by DEI.</strong> ASPA Explorer and the validator behind it run at the Department of Information Engineering (DEI), University of Padova. The logo is that of the department and links to <a href="https://www.dei.unipd.it">www.dei.unipd.it</a>.</li>
+      <li><strong>Served by FreeBSD.</strong> The FreeBSD logo is a trademark of The FreeBSD Foundation and links to <a href="https://www.freebsd.org">www.freebsd.org</a>.</li>
+      <li><strong>Made with vi.</strong> The little <code>vi</code> icon is original (vi has no official logo). <code>:wq</code> is the vi command to save and quit.</li>
+      <li><strong>Data.</strong> <a href="https://github.com/NLnetLabs/routinator">Routinator</a> by NLnet Labs.</li>
+    </ul>
   </section>
 </main>
 
