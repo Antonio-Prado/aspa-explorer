@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.4.4] - 2026-10-16
+
+### Changed
+- The logo and the title in the page header now link to the home page: a click reloads it without any search or path check appended to the URL.
+
 ## [1.4.3] - 2026-10-16
 
 ### Fixed
