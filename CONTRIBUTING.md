@@ -24,7 +24,7 @@ The pipeline also runs two security checks: `make lint-security` (ESLint rules t
 
 Two jobs run only from pipeline schedules (variable `SCHEDULE`), on the runner of the host that serves the page:
 
-- `host-package-audit` (weekly, `SCHEDULE=audit`): `pkg audit` on the host, including the FreeBSD base system. The job fails, and GitLab sends the usual pipeline-failure email, when an installed package has a known vulnerability. A daily root cron job refreshes the vulnerability database (`deploy/freebsd/`).
+- `host-package-audit` (weekly, `SCHEDULE=audit`): `pkg audit` on the host, including the FreeBSD base system. The job fails, and GitLab sends the usual pipeline-failure email, when an installed package has a known vulnerability for which the repository already offers a fix; vulnerabilities without a fix yet only produce a warning. A daily root cron job refreshes the vulnerability database (`deploy/freebsd/`).
 - `aspa-snapshot` (daily, `SCHEDULE=snapshot`): logs the number of ASPAs, provider ASes and the split per RIR as a run of the project's model experiment, so *Analyze > Model experiments* charts the adoption of ASPA over time (`scripts/log-snapshot.mjs`).
 
 The snapshot job needs the CI variable `MLFLOW_TOKEN` (a project access token with the `api` scope, role Developer; masked and protected), because the model experiments API does not accept the CI job token. The token expires after one year.

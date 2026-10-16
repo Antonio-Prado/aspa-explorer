@@ -80,6 +80,9 @@ secret-detection:
 host-package-audit:
   stage: security
   tags: [aspa]
+  # exit status 3: vulnerabilities that no package update fixes yet (a warning)
+  allow_failure:
+    exit_codes: 3
   rules:
     - if: ($CI_PIPELINE_SOURCE == "schedule" || $CI_PIPELINE_SOURCE == "web" || $CI_PIPELINE_SOURCE == "api") && $SCHEDULE == "audit"
   script:

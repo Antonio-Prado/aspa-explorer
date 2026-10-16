@@ -1,6 +1,9 @@
 #!/bin/sh
-# Fail when a package installed on this host (the FreeBSD base system included) has a
-# known vulnerability, using the VuXML database that `pkg audit` reads.
+# Report known vulnerabilities of the packages installed on this host (the FreeBSD base
+# system included), using the VuXML database that `pkg audit` reads.
+#
+# Exit status: 0 nothing found; 1 a fix is available (fail); 2 database missing; 3 only
+# vulnerabilities without a fix yet (warning); 4 the database has not been refreshed.
 #
 # Runs as an unprivileged user on the CI runner host. The database is refreshed by
 # root (`pkg audit -F`, see the daily periodic scripts); this script only reads it and
@@ -34,12 +37,26 @@ report=$(pkg audit 2>&1)
 rc=$?
 echo "$report"
 echo
-if [ "$rc" -ne 0 ]; then
-  echo "FAILED: $(echo "$report" | tail -n 1)"
-  echo "Update the affected packages (pkg upgrade) and run the audit again."
+
+if [ "$rc" -eq 0 ]; then
+  if [ "$stale" -ne 0 ]; then
+    exit 4
+  fi
+  echo "OK: no known vulnerabilities in the installed packages"
+  exit 0
+fi
+
+# A vulnerable package for which the repository already offers a newer version can be
+# fixed right away; `pkg upgrade -n` marks it "(vulnerable!)".
+fixable=$(pkg upgrade -n 2>/dev/null | grep '(vulnerable!)')
+if [ -n "$fixable" ]; then
+  echo "FIXABLE: the repository already offers a fix for:"
+  echo "$fixable"
+  echo "Run 'pkg upgrade' on the host."
   exit 1
 fi
-if [ "$stale" -ne 0 ]; then
-  exit 3
-fi
-echo "OK: no known vulnerabilities in the installed packages"
+
+# Known vulnerabilities, but no fixed version in the repository yet: nothing to apply,
+# only to watch (the CI job passes with a warning).
+echo "WARNING: $(echo "$report" | tail -n 1) No fixed package is available in the repository yet; check again after the next package build."
+exit 3
