@@ -6,7 +6,7 @@ Only the latest release and the `main` branch receive fixes.
 
 ## Reporting a vulnerability
 
-Please do not open a public issue. Send an email to **antonio@prado.it** with a description of the problem and, if possible, steps to reproduce it. You can expect an acknowledgement within a few working days.
+Please do not open a public issue. Send an email to **antonio.prado@dei.unipd.it** with a description of the problem and, if possible, steps to reproduce it. You can expect an acknowledgement within a few working days.
 
 ## Scope notes
 

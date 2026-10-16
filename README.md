@@ -47,7 +47,7 @@ The validator is a [Routinator](https://github.com/NLnetLabs/routinator) instanc
 ## Features
 
 - **Lookup:** type `AS680`, `as 680` or `680` to see the AS's own ASPA and every ASPA that names it as a provider. Each lookup has a shareable address (`/#AS680`).
-- **AS path check:** paste a path as your router shows it (neighbour first, origin last) and see whether it passes the ASPA verification procedure of the IETF draft (upstream or downstream), hop by hop, with the reason for a *Valid*, *Unknown* or *Invalid* verdict. It runs in the browser on the ASPA objects listed on the page.
+- **AS path check:** paste a path as your router shows it (neighbour first, origin last) and see whether it passes the ASPA verification procedure of the IETF draft (upstream or downstream), hop by hop, with the reason for a *Valid*, *Unknown* or *Invalid* verdict. It runs in the browser on the ASPA objects listed on the page, and a result can be shared with a link.
 - **Overview:** summary tiles and three charts: ASPAs per RIR, providers per ASPA, most-named providers.
 - **Table:** all ASPAs, filterable by AS number and RIR, 100 rows at a time.
 - **Built-in guide** in English, with an accessibility statement: <a href="https://aspa.ping6.it/guide.html" target="_blank" rel="noopener">read it on the site</a> (source: <a href="site/guide.html" target="_blank" rel="noopener"><code>site/guide.html</code></a>).
@@ -113,8 +113,10 @@ assets/                        logo (SVG), screenshots and credit logos used in 
 deploy/nginx/aspa.conf         nginx server blocks and proxy cache zone
 deploy/nginx/rpki-proxy.conf   proxy settings shared by the data endpoints
 deploy/nginx/security-headers.conf   security headers (server block and /client-ip)
-scripts/                       CI helpers: nginx check, version check, build info,
-                               package audit, ASPA snapshot logging
+scripts/                       CI helpers and jobs: nginx check, version check, unit tests of the
+                               path verification, build info, package audit, ASPA snapshot,
+                               release and wiki publishing
+.gitlab-ci.yml                 the CI pipeline (checks, security, scheduled and publishing jobs)
 deploy/freebsd/                daily refresh of the pkg vulnerability database
 eslint.config.mjs              security rules for the browser code (no innerHTML, eval, ...)
 ```

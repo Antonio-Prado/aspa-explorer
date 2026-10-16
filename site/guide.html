@@ -7,13 +7,13 @@
 <meta name="description" content="How to read and use the ASPA Explorer interface: lookup, overview charts, the table of all ASPAs and where the data comes from.">
 <meta name="color-scheme" content="light dark">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
-<link rel="stylesheet" href="/style.css?v=1.4.0">
-<script src="/footer.js?v=1.4.0" defer></script>
+<link rel="stylesheet" href="/style.css?v=1.4.1">
+<script src="/footer.js?v=1.4.1" defer></script>
 </head>
 <body>
 <a class="skip" href="#main">Skip to main content</a>
 <header class="wrap masthead">
-  <p class="back"><a class="brandlink" href="/" title="Back to ASPA Explorer"><img class="brand" src="/img/logo-mark.svg?v=1.4.0" alt="" width="40" height="40"><span>ASPA Explorer</span></a></p>
+  <p class="back"><a class="brandlink" href="/" title="Back to ASPA Explorer"><img class="brand" src="/img/logo-mark.svg?v=1.4.1" alt="" width="40" height="40"><span>ASPA Explorer</span></a></p>
   <h1>Guide</h1>
   <p class="lede">How the ASPA Explorer interface works, what each number means and where the data comes from.</p>
 </header>
@@ -118,6 +118,7 @@
 
   <section aria-labelledby="links">
     <h2 id="links">Links and keyboard use</h2>
+    <p>An AS-path check has its own address too, such as <code>https://aspa.ping6.it/#path=3356+680&amp;from=up</code> (<code>from=up</code> for a route received from a customer or a peer, <code>from=down</code> for one received from a provider).</p>
     <p>Each lookup has its own address: <code>https://aspa.ping6.it/#AS680</code> opens the page already showing AS680, so you can bookmark or share a result. The same works for any AS number.</p>
     <p>Everything can be used from the keyboard: the lookup field, filters, chips, chart bars and the buttons are all reachable with <kbd>Tab</kbd>, and the tooltips follow the focus. The page follows your system's light or dark setting and adapts to narrow screens.</p>
   </section>
@@ -155,8 +156,8 @@
       <li><strong>Keyboard.</strong> Every control can be reached and used with <kbd>Tab</kbd>, <kbd>Shift</kbd>+<kbd>Tab</kbd>, <kbd>Enter</kbd> and <kbd>Space</kbd>. The focused element has a visible outline. A <em>Skip to main content</em> link appears first when you press <kbd>Tab</kbd>.</li>
       <li><strong>Structure.</strong> Pages use landmarks (header, main, footer) and a single heading hierarchy. The table has a caption and column headers, and every form field has a label.</li>
       <li><strong>Charts.</strong> Each bar or column can take keyboard focus, carries its label and value as text, and shows its tooltip on focus as well as on hover. The exact numbers are also in the table and in the lookup results, so no information depends on seeing the chart.</li>
-      <li><strong>Colour.</strong> Text meets the WCAG AA contrast ratio in the light and the dark theme, which follow your system setting. Colour is never the only way something is shown.</li>
-      <li><strong>Screen readers.</strong> Lookup results are announced when they appear. Links in the footer open in a new tab and say so in their accessible name. Decorative images are hidden from assistive technology and meaningful ones have a text alternative.</li>
+      <li><strong>Colour.</strong> Text and controls meet the WCAG AA contrast ratio in the light and the dark theme, which follow your system setting. Colour is never the only way something is shown.</li>
+      <li><strong>Screen readers.</strong> Lookup and path-check results are announced when they appear. Links in the footer open in a new tab and say so in their accessible name. Decorative images are hidden from assistive technology and meaningful ones have a text alternative.</li>
       <li><strong>Zoom and small screens.</strong> The layout reflows without horizontal scrolling down to a width of 320 pixels, which is what a desktop window shows at 400% zoom.</li>
       <li><strong>Motion.</strong> If your system asks for reduced motion, the page does not animate scrolling.</li>
     </ul>
@@ -166,7 +167,7 @@
       <li>The outside links (bgp.tools, RIPEstat) and the validator's raw JSON are not under this project's control.</li>
     </ul>
     <h3>Feedback</h3>
-    <p>If you meet a barrier, please tell us: open an issue in the project repository, or write to <a href="mailto:antonio@prado.it">antonio@prado.it</a> saying which page, what you were trying to do, and which browser and assistive technology you use. Reports are read and answered.</p>
+    <p>If you meet a barrier, please tell us: open an issue in the project repository, or write to <a href="mailto:antonio.prado@dei.unipd.it">antonio.prado@dei.unipd.it</a> saying which page, what you were trying to do, and which browser and assistive technology you use. Reports are read and answered.</p>
   </section>
 
   <section aria-labelledby="about">
