@@ -532,14 +532,12 @@ function pathVerdict(v, missing) {
   return `Even in the best case the up-ramp (at most ${v.maxUp} of ${v.N} ASes, from the origin ${first}) and the down-ramp (at most ${v.maxDown}, from the neighbour ${last}) do not meet: part of the path is a valley, which is how a route leak or a forged path segment looks.`;
 }
 
-function renderPathCheck(text, direction) {
-  const out = $('pathresult');
+// The verdict and the hop-by-hop table of a path, as nodes: shown in the AS path box and, for a route,
+// under its row in the table of the routes seen in BGP.
+function pathCheckNodes(text, direction) {
   const parsed = AspaVerify.parsePath(text);
-  if (parsed.error) { out.replaceChildren(el('p', { class: 'error', text: parsed.error })); return; }
-  if (!aspas.length) {
-    out.replaceChildren(el('p', { class: 'error', text: 'The ASPA data is still loading; try again in a moment.' }));
-    return;
-  }
+  if (parsed.error) return [el('p', { class: 'error', text: parsed.error })];
+  if (!aspas.length) return [el('p', { class: 'error', text: 'The ASPA data is still loading; try again in a moment.' })];
   const v = AspaVerify.verify(aspaSets, parsed.path, direction);
   const missing = [...new Set(v.path.filter((as) => !aspaSets.has(as)))];
   const kids = [
@@ -564,7 +562,11 @@ function renderPathCheck(text, direction) {
     if (down) ramps.push(`Down-ramp, from the neighbour: ${v.minDown} AS${v.minDown === 1 ? '' : 'es'} certain, up to ${v.maxDown} possible.`);
     kids.push(el('p', { class: 'src', text: ramps.join(' ') + ` The path has ${v.N} ASes.` }));
   }
-  out.replaceChildren(...kids);
+  return kids;
+}
+
+function renderPathCheck(text, direction) {
+  $('pathresult').replaceChildren(...pathCheckNodes(text, direction));
 }
 
 /* ---------- routes seen in BGP ---------- */
@@ -656,12 +658,26 @@ async function renderLiveRoutes(text) {
   const tbody = el('tbody');
   const draw = (n) => {
     tbody.replaceChildren(...rows.slice(0, n).map((r) => {
-      const detail = `#path=${encodeURIComponent(r.shown.join(' '))}&from=down`;
-      return el('tr', {},
+      const text = r.shown.join(' ');
+      const btn = el('button', { type: 'button', class: 'linkish', 'aria-expanded': 'false', text: 'details' });
+      const tr = el('tr', {},
         el('td', {}, el('span', { class: 'badge v-' + r.result.toLowerCase(), text: r.result })),
         el('td', { class: 'mono pathcell' }, r.shown.map((x) => 'AS' + x).join(' ')),
         el('td', { class: 'num', text: fmt.format(r.routes) }),
-        el('td', {}, r.why ? r.why + ' · ' : '', el('a', { href: detail, text: 'details' })));
+        el('td', {}, r.why ? r.why + ' · ' : '', btn));
+      // the hop-by-hop check opens under the row that was clicked, where the reader is looking
+      let open = null;
+      btn.addEventListener('click', () => {
+        if (open) { open.remove(); open = null; btn.setAttribute('aria-expanded', 'false'); btn.textContent = 'details'; return; }
+        open = el('tr', { class: 'detailrow' }, el('td', { colspan: '4' }, ...pathCheckNodes(text, 'down'),
+          el('p', { class: 'hint' }, el('a', { href: `#path=${encodeURIComponent(text)}&from=down`, text: 'Open this path in the AS path check' }), ' (a link you can share).')));
+        tr.after(open);
+        // bring the details into view only if the row was near the bottom of the screen
+        open.scrollIntoView({ block: 'nearest', behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
+        btn.setAttribute('aria-expanded', 'true');
+        btn.textContent = 'hide details';
+      });
+      return tr;
     }));
     if (rows.length > n) {
       tbody.append(el('tr', {}, el('td', { colspan: '4' }, el('button', { type: 'button', class: 'linkish', text: `Show all ${fmt.format(rows.length)} paths`, onclick: () => draw(rows.length) }))));

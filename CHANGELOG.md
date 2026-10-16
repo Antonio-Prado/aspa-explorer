@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.6.2] - 2026-10-16
+
+### Changed
+- Routes seen in BGP: the *details* of a path now open right under the row that was clicked (and close again with *hide details*), instead of appearing in the AS path box at the top of the page. If the row is near the bottom of the screen the page scrolls just enough to show them, and a link opens the same path in the AS path check.
+
 ## [1.6.1] - 2026-10-16
 
 ### Changed

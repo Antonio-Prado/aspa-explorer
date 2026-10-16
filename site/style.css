@@ -399,3 +399,9 @@ table.live th.num, table.live td.num { text-align: right; font-variant-numeric: 
 .live-tiles .tile.v-unknown { color: var(--warn-ink); }
 .live-tiles .tile.v-invalid { color: var(--bad-ink); }
 .live-tiles .tile .label, .live-tiles .tile .note { color: inherit; }
+
+/* the hop-by-hop check opened under a route */
+table.live .detailrow td { background: var(--wash); padding: 0.75rem 0.9rem 0.9rem; }
+table.live .detailrow .verdict { margin-top: 0; }
+table.live .detailrow .table-wrap { margin-top: 0.5rem; }
+table.live .detailrow .hint { color: var(--ink-2); }
