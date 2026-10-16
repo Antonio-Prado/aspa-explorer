@@ -1,3 +1,10 @@
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="assets/logo-dark.svg">
+    <img src="assets/logo-light.svg" alt="ASPA Explorer" height="96">
+  </picture>
+</p>
+
 # ASPA Explorer
 
 A small static web page to browse the validated **ASPA** (Autonomous System Provider Authorization) objects published in the RPKI, as seen by a [Routinator](https://github.com/NLnetLabs/routinator) validator.
@@ -14,6 +21,7 @@ Live instance: <https://aspa.ping6.it/> (DEI, University of Padova).
 ## Layout
 
 ```
+assets/                logo (SVG)
 site/                  static files (index.html, style.css, app.js, favicon.svg)
 deploy/nginx/aspa.conf       nginx server blocks and proxy cache zone
 deploy/nginx/rpki-proxy.conf proxy settings shared by the data endpoints

@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 420 128" role="img" aria-label="ASPA Explorer">
+<title>ASPA Explorer</title>
+<g><rect width="128" height="128" rx="28" fill="#2a78d6"/>
+<path d="M64 88V66M64 66L38 44M64 66L90 44" fill="none" stroke="#fff" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>
+<circle cx="38" cy="36" r="12" fill="#fff"/><circle cx="90" cy="36" r="12" fill="#fff"/>
+<circle cx="64" cy="94" r="15" fill="#fff"/>
+<path d="M57 94l5 5 9-10" fill="none" stroke="#2a78d6" stroke-width="5.5" stroke-linecap="round" stroke-linejoin="round"/></g>
+<text x="152" y="70" font-family="Inter, 'Helvetica Neue', Arial, sans-serif" font-size="46" font-weight="700" fill="#ffffff">ASPA</text>
+<text x="152" y="108" font-family="Inter, 'Helvetica Neue', Arial, sans-serif" font-size="30" font-weight="500" letter-spacing="1" fill="#9a9890">Explorer</text>
+</svg>
