@@ -33,3 +33,18 @@ The page fetches two same-origin JSON files, which nginx proxies to Routinator a
 1. Copy `site/*` to the web root (e.g. `/usr/local/www/aspa`).
 2. Copy `deploy/nginx/aspa.conf` into nginx's `conf.d/` and `deploy/nginx/rpki-proxy.conf` next to `nginx.conf`. Adjust the listen IP, server name, TLS certificate paths and the Routinator host in `rpki-proxy.conf`.
 3. Make sure the Routinator HTTP(S) port is reachable from the web server, then `nginx -t && nginx -s reload`.
+
+## Development
+
+No build step, no dependencies. `make check` runs the same checks as the CI pipeline (JavaScript syntax, HTML validation, nginx configuration test). See [CONTRIBUTING.md](CONTRIBUTING.md).
+
+## Project documents
+
+- [CHANGELOG.md](CHANGELOG.md): release history
+- [CONTRIBUTING.md](CONTRIBUTING.md): how to contribute
+- [SECURITY.md](SECURITY.md): how to report a vulnerability
+- [LICENSE](LICENSE): MIT
+
+## License
+
+Released under the [MIT License](LICENSE).

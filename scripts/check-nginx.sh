@@ -1,0 +1,33 @@
+#!/bin/sh
+# Test the nginx configuration in deploy/nginx with a throwaway certificate.
+set -eu
+
+root=$(cd "$(dirname "$0")/.." && pwd)
+work=$(mktemp -d)
+trap 'rm -rf "$work"' EXIT
+
+mkdir -p "$work/tls" "$work/cache" "$work/www"
+openssl req -x509 -newkey rsa:2048 -nodes -days 1 -subj "/CN=aspa.test" \
+  -keyout "$work/tls/key.pem" -out "$work/tls/fullchain.pem" 2>/dev/null
+cp "$root/site/"* "$work/www/"
+
+# Point the production paths at the temporary directory and listen on loopback.
+sed -e "s|/usr/local/etc/nginx/tls|$work/tls|g" \
+    -e "s|/usr/local/www/aspa|$work/www|g" \
+    -e "s|/usr/local/etc/nginx/rpki-proxy.conf|$root/deploy/nginx/rpki-proxy.conf|g" \
+    -e "s|/var/cache/nginx/aspa|$work/cache|g" \
+    -e "s|192\.0\.2\.10|127.0.0.1|g" \
+    -e "s|127\.0\.0\.1:8080;|127.0.0.1:18080;|" \
+    "$root/deploy/nginx/aspa.conf" > "$work/aspa.conf"
+
+cat > "$work/nginx.conf" <<CONF
+pid $work/nginx.pid;
+error_log $work/error.log;
+events {}
+http {
+  access_log off;
+  include $work/aspa.conf;
+}
+CONF
+
+nginx -t -c "$work/nginx.conf" -e "$work/error.log"
