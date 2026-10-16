@@ -57,11 +57,45 @@ The validator is a [Routinator](https://github.com/NLnetLabs/routinator) instanc
 ## How it works
 
 ```mermaid
-flowchart LR
-  B["Browser"] -- "static page, /data/*.json" --> N["nginx<br/>cache 2 min, TLS verification"]
-  N -- "/jsonext, /api/v1/status" --> R["Routinator<br/>rpki.ping6.it"]
-  R -- "validates" --> T["RPKI repositories<br/>of the five RIRs"]
+sequenceDiagram
+    autonumber
+    actor V as Visitor
+    participant B as :Browser
+    participant N as aspa.ping6.it :nginx
+    participant R as rpki.ping6.it :Routinator
+    participant T as :RPKI repositories
+
+    V->>B: open the page
+    B->>+N: GET / (page, scripts, styles)
+    N-->>-B: static files
+
+    par ASPA objects
+        B->>+N: GET /data/aspas.json
+        alt response in the cache (less than 2 minutes old)
+            N-->>B: cached JSON
+        else cache miss
+            N->>+R: GET /jsonext?exclude=routeOrigins,routerKeys
+            R-->>-N: valid ASPA objects (JSON)
+            N-->>B: JSON, stored in the cache
+        end
+        deactivate N
+    and validator status
+        B->>+N: GET /data/status.json
+        N->>+R: GET /api/v1/status
+        R-->>-N: status (JSON)
+        N-->>-B: status (JSON)
+    end
+
+    B->>B: render overview, table, lookup and path check
+
+    loop about every 10 minutes
+        R->>+T: fetch the repositories of the five RIRs
+        T-->>-R: signed RPKI objects
+        R->>R: validate, keep the valid ASPAs
+    end
 ```
+
+The diagram above is a UML sequence diagram: the visitor's browser gets the static page from nginx and then the data, which nginx serves from its 2-minute cache or fetches from Routinator, while Routinator validates the RPKI repositories on its own schedule.
 
 The page fetches two same-origin JSON files, which nginx proxies to Routinator and caches:
 
