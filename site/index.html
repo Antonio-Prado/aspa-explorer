@@ -107,13 +107,13 @@
         <p class="hint export">Download the daily data: <button type="button" class="linkish" id="dl-csv">CSV</button> or <button type="button" class="linkish" id="dl-json">JSON</button>.</p>
         <details class="tableview">
           <summary>Show as a table</summary>
-          <div class="table-wrap" tabindex="0" role="region" aria-label="ASPAs at the end of each month">
+          <section class="table-wrap" tabindex="0" aria-label="ASPAs at the end of each month">
             <table>
               <caption class="sr-only">ASPAs on the last day of each month: in total, per RIR, provider ASes, and the share of the ASes seen in BGP that have an ASPA</caption>
               <thead><tr><th scope="col">Day</th><th scope="col">Total</th><th scope="col">RIPE NCC</th><th scope="col">ARIN</th><th scope="col">APNIC</th><th scope="col">LACNIC</th><th scope="col">Provider ASes</th><th scope="col">Coverage</th></tr></thead>
               <tbody id="history-rows"></tbody>
             </table>
-          </div>
+          </section>
         </details>
       </figure>
       <figure class="card">

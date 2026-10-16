@@ -668,7 +668,7 @@ async function renderLiveRoutes(text) {
     }
   };
   draw(40);
-  kids.push(el('div', { class: 'table-wrap card', tabindex: '0', role: 'region', 'aria-label': 'Distinct AS paths of the routes' }, el('table', { class: 'checks live' },
+  kids.push(el('section', { class: 'table-wrap card', tabindex: '0', 'aria-label': 'Distinct AS paths of the routes' }, el('table', { class: 'checks live' },
     el('caption', { class: 'sr-only', text: 'Distinct AS paths of the routes, invalid first, with the verdict of the upstream ASPA verification' }),
     el('thead', {}, el('tr', {}, el('th', { scope: 'col', text: 'Verdict' }), el('th', { scope: 'col', text: 'AS path, as a router shows it' }),
       el('th', { scope: 'col', class: 'num', text: 'Routes' }), el('th', { scope: 'col', text: 'Why' }))),
