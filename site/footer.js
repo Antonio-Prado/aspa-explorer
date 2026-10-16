@@ -2,7 +2,7 @@
 
 // Site footer shared by all pages. Two rows:
 //   1. release, last commit, accessibility, visitor's address
-//   2. credits: Powered by DEI, Served by FreeBSD, Made with vi
+//   2. credits: Powered by DEI, Served by FreeBSD, Validated by Routinator, Made with vi
 // The release comes from /version.json and the commit the running page was built
 // from comes from /build.json (written at deploy time by scripts/build-info.sh);
 // both are same-origin and available even when the GitLab project is private.
@@ -62,6 +62,8 @@
       link('https://www.dei.unipd.it', logo('/img/dei-logo.png?v=1', 'DEI, Department of Information Engineering, University of Padova', 111, 28))),
     el('li', {}, 'Served by ',
       link('https://www.freebsd.org', logo('/img/freebsd-logo.png?v=1', 'FreeBSD', 97, 28))),
+    el('li', {}, 'Validated by ',
+      link('https://nlnetlabs.nl/projects/routinator/', logo('/img/routinator-wordmark.svg?v=1', 'Routinator, by NLnet Labs', 171, 28))),
     el('li', {}, logo('/img/vi-logo.svg?v=1', '', 28, 28), ' Made with vi ', el('code', {}, ':wq')));
 
   footer.append(build, credits);
