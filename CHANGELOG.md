@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.6.1] - 2026-10-16
+
+### Changed
+- The table of all ASPAs shows 20 rows at a time instead of 100; the button under it reads *Show 20 more*.
+
 ## [1.6.0] - 2026-10-16
 
 ### Added
