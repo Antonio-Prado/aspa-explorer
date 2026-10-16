@@ -3,10 +3,12 @@
 // Site footer shared by all pages. Two rows:
 //   1. release, last commit, accessibility, visitor's address
 //   2. credits: Powered by DEI, Served by FreeBSD, Made with vi
-// The release comes from /version.json (same origin, always available). When the
-// GitLab project can be read without signing in, the latest tag and the last
-// commit are read from the GitLab API on every page load; otherwise the API
-// answers with an error and the static information stays.
+// The release comes from /version.json and the commit the running page was built
+// from comes from /build.json (written at deploy time by scripts/build-info.sh);
+// both are same-origin and available even when the GitLab project is private.
+// When the project can be read without signing in, the latest tag and the last
+// commit are also read from the GitLab API on every page load and take precedence;
+// otherwise the API answers with an error and the static information stays.
 (() => {
   const HOST = 'https://gitlab.dei.unipd.it';
   const PATH = 'Antonio-Prado/aspa-explorer';
@@ -102,16 +104,25 @@
     })
     .catch(() => { /* project not readable without signing in, or GitLab unreachable */ });
 
-  // Last commit on main, if reachable.
+  const showCommit = (sha, iso, fromApi) => {
+    if (!/^[0-9a-f]{40}$/.test(sha)) return;
+    if (showCommit.api && !fromApi) return;
+    if (fromApi) showCommit.api = true;
+    const when = iso ? new Date(iso) : null;
+    commitLink.textContent = 'Last commit ' + sha.slice(0, 7) + (when && !isNaN(when) ? '@' + stamp(when) : '');
+    commitLink.href = PROJECT;
+    commitItem.hidden = false;
+    refresh();
+  };
+
+  // Commit the running page was built from.
+  getJson('/build.json', { cache: 'no-cache' })
+    .then((d) => { if (d) showCommit(String(d.commit || ''), d.date, false); })
+    .catch(() => { /* no build file */ });
+
+  // Last commit on main from GitLab, if reachable.
   getJson(`${API}/repository/commits/main`)
-    .then((c) => {
-      const sha = String((c && c.id) || '');
-      if (!/^[0-9a-f]{40}$/.test(sha)) return;
-      const when = c.committed_date ? new Date(c.committed_date) : null;
-      commitLink.textContent = 'Last commit ' + sha.slice(0, 7) + (when && !isNaN(when) ? '@' + stamp(when) : '');
-      commitItem.hidden = false;
-      refresh();
-    })
+    .then((c) => { if (c) showCommit(String(c.id || ''), c.committed_date, true); })
     .catch(() => { /* as above */ });
 
   // The visitor's own address as the server sees it; hidden if the request fails.
