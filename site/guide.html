@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ASPA Explorer guide</title>
+<meta name="description" content="How to read and use the ASPA Explorer interface: lookup, overview charts, the table of all ASPAs and where the data comes from.">
+<meta name="color-scheme" content="light dark">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/style.css">
+<script src="/footer.js" defer></script>
+</head>
+<body>
+<header class="wrap masthead">
+  <p class="back"><a href="/">&larr; Back to ASPA Explorer</a></p>
+  <h1>Guide</h1>
+  <p class="lede">How the ASPA Explorer interface works, what each number means and where the data comes from.</p>
+</header>
+
+<main class="wrap prose">
+  <nav class="toc card" aria-label="Contents">
+    <ol>
+      <li><a href="#what">What you are looking at</a></li>
+      <li><a href="#lookup">Looking up an AS</a></li>
+      <li><a href="#overview">The overview</a></li>
+      <li><a href="#table">The table of all ASPAs</a></li>
+      <li><a href="#links">Links and keyboard use</a></li>
+      <li><a href="#data">Where the data comes from</a></li>
+      <li><a href="#reading">Reading the results</a></li>
+      <li><a href="#trouble">If something does not load</a></li>
+      <li><a href="#about">About this page</a></li>
+    </ol>
+  </nav>
+
+  <section aria-labelledby="what">
+    <h2 id="what">What you are looking at</h2>
+    <p>An <strong>ASPA</strong> (Autonomous System Provider Authorization) is a signed object published in the RPKI. In it, a <em>customer</em> AS lists the ASes that are allowed to act as its upstream <em>providers</em>. Routers that validate AS paths use these lists to spot route leaks and some forged paths.</p>
+    <p>ASPA Explorer shows every ASPA that a Routinator validator currently considers valid. Nothing here is edited or interpreted: the page reads the validator's output and presents it so you can search it and see the big picture.</p>
+    <p>At the top of the page a line summarises the data: the number of ASPAs, the time of the last validation run (always in UTC) and the version of the validator that produced it.</p>
+  </section>
+
+  <section aria-labelledby="lookup">
+    <h2 id="lookup">Looking up an AS</h2>
+    <p>Type an AS number in the box at the top and press <em>Look up</em>. All of these are accepted: <code>AS680</code>, <code>as 680</code> and <code>680</code>. AS numbers go up to 4294967295. Anything else shows a short hint instead of a result.</p>
+    <p>The result has a header with the AS number and two outside links, <em>bgp.tools</em> and <em>RIPEstat</em>, that open in a new tab. Below it are two columns:</p>
+    <dl>
+      <dt>Its own ASPA</dt>
+      <dd>The providers that this AS authorizes, shown as clickable chips. For each ASPA object the page also lists the RIR (the trust anchor it comes from), its validity period (<em>not before</em> to <em>not after</em>) and the repository address of the signed object. If the AS has not published an ASPA the page says so: its upstream relationships cannot be verified.</dd>
+      <dt>Named as a provider</dt>
+      <dd>Every ASPA, from any customer, that lists this AS as a provider, with the number of such ASPAs. The list is empty for ASes that nobody names as a provider.</dd>
+    </dl>
+    <p>Long lists are cut after a few dozen chips; use <em>+N more</em> to expand them. Click any chip to jump to that AS.</p>
+    <p>An <code>AS0 · no providers</code> chip is not a link. It is the way an AS declares that it has no upstream providers at all, as networks at the top of the hierarchy do.</p>
+  </section>
+
+  <section aria-labelledby="overview">
+    <h2 id="overview">The overview</h2>
+    <h3>The four tiles</h3>
+    <dl>
+      <dt>ASPAs</dt>
+      <dd>Customer ASes that have a valid ASPA.</dd>
+      <dt>Provider ASes</dt>
+      <dd>Distinct ASes that appear as a provider in at least one ASPA. <code>AS0</code> is not counted.</dd>
+      <dt>Median providers</dt>
+      <dd>The middle value of the number of providers per ASPA, with the size of the largest provider set underneath.</dd>
+      <dt>No-provider ASPAs</dt>
+      <dd>ASPAs whose only provider is <code>AS0</code>.</dd>
+    </dl>
+    <h3>The three charts</h3>
+    <dl>
+      <dt>ASPAs by RIR</dt>
+      <dd>How many ASPAs each trust anchor (AFRINIC, APNIC, ARIN, LACNIC, RIPE NCC) validates. Each ASPA is counted once, under the trust anchor of its first source object. The percentage in the tooltip is relative to all ASPAs.</dd>
+      <dt>Providers per ASPA</dt>
+      <dd>A column chart of how many providers each customer declares, from 1 to 9 and then <em>10+</em>. An ASPA with <code>AS0</code> counts as one provider.</dd>
+      <dt>Most-named providers</dt>
+      <dd>The ten ASes that appear in the most ASPAs as a provider. Select a bar to look that AS up.</dd>
+    </dl>
+    <p>Hover over a bar or column, or move the keyboard focus onto it, to see the exact value in a tooltip.</p>
+  </section>
+
+  <section aria-labelledby="table">
+    <h2 id="table">The table of all ASPAs</h2>
+    <p>The table lists every ASPA in order of customer AS number, with the customer, its providers and the RIR.</p>
+    <ul>
+      <li><strong>Filter by AS number</strong> shows the ASPAs where that AS is the customer <em>or</em> one of the providers. It needs a complete AS number; partial numbers or text are not searched, and the counter tells you so.</li>
+      <li><strong>All RIRs</strong> restricts the table to one trust anchor. It combines with the AS filter.</li>
+      <li>The counter shows how many ASPAs match.</li>
+      <li>The table shows 100 rows at a time. Use <em>Show N more</em> under it to load the next batch. Provider sets longer than eight entries can be expanded with <em>+N more</em>.</li>
+      <li>Every AS in the table is a link to its lookup.</li>
+    </ul>
+  </section>
+
+  <section aria-labelledby="links">
+    <h2 id="links">Links and keyboard use</h2>
+    <p>Each lookup has its own address: <code>https://aspa.ping6.it/#AS680</code> opens the page already showing AS680, so you can bookmark or share a result. The same works for any AS number.</p>
+    <p>Everything can be used from the keyboard: the lookup field, filters, chips, chart bars and the buttons are all reachable with <kbd>Tab</kbd>, and the tooltips follow the focus. The page follows your system's light or dark setting and adapts to narrow screens.</p>
+  </section>
+
+  <section aria-labelledby="data">
+    <h2 id="data">Where the data comes from</h2>
+    <p>The data comes from <a href="https://github.com/NLnetLabs/routinator">Routinator</a>, the RPKI validator run at <code>rpki.ping6.it</code>. It validates the RPKI repositories of all five RIRs and the page reads two of its outputs:</p>
+    <ul>
+      <li>the list of valid ASPAs (<a href="https://rpki.ping6.it:8323/jsonext?exclude=routeOrigins,routerKeys">jsonext</a>, route origins and router keys left out), and</li>
+      <li>the validator status, which supplies the last validation time and the Routinator version.</li>
+    </ul>
+    <p>The validator refreshes about every 10 minutes and the web server keeps its answer for 2 minutes, so a new ASPA can take a little while to show up here. The <em>last validation</em> time in the header tells you how fresh the data is.</p>
+  </section>
+
+  <section aria-labelledby="reading">
+    <h2 id="reading">Reading the results</h2>
+    <ul>
+      <li><strong>No ASPA is not an error.</strong> Many ASes have not published one yet. It only means the page has nothing to show for them.</li>
+      <li>The page shows what <strong>this validator</strong> sees. Another validator, or the same one a few minutes later, may differ slightly.</li>
+      <li>An ASPA lists providers for one customer. It says nothing about peers, and it does not check any specific BGP route: that is done by routers that use these objects.</li>
+      <li>Validity dates are those in the signed object. An expired ASPA is not shown, because the validator discards it.</li>
+    </ul>
+  </section>
+
+  <section aria-labelledby="trouble">
+    <h2 id="trouble">If something does not load</h2>
+    <p>If the page shows <em>Could not load the ASPA data</em>, the validator is probably restarting. Wait a minute and reload. If it persists, the error text in the message shows which request failed.</p>
+  </section>
+
+  <section aria-labelledby="about">
+    <h2 id="about">About this page</h2>
+    <p>ASPA Explorer is a small static page with no external dependencies and no cookies: your lookups happen in your browser and are not sent anywhere. The footer links to the project on the DEI GitLab and shows the version of the page you are using; when the project is readable it also shows the last commit.</p>
+    <p>The source code, the changelog and instructions to report a problem are in the project repository.</p>
+  </section>
+</main>
+
+<footer class="wrap foot">
+  <p><a href="/">&larr; Back to ASPA Explorer</a></p>
+</footer>
+</body>
+</html>

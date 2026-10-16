@@ -9,12 +9,14 @@
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <link rel="stylesheet" href="/style.css">
 <script src="/app.js" defer></script>
+<script src="/footer.js" defer></script>
 </head>
 <body>
 <header class="wrap masthead">
   <h1>ASPA Explorer</h1>
   <p class="lede">Validated ASPA objects from the RPKI, as seen by the Routinator validator at <a href="https://rpki.ping6.it:8323/ui/">rpki.ping6.it</a>.</p>
   <p class="meta" id="meta">Loading data…</p>
+  <p class="nav"><a href="/guide.html">How to read this page</a></p>
 </header>
 
 <main class="wrap">
@@ -69,7 +71,7 @@
 
 <footer class="wrap foot">
   <p>An <strong>ASPA</strong> (Autonomous System Provider Authorization) is a signed RPKI object in which a customer AS lists the ASes allowed to act as its upstream providers. Routers use these lists to detect route leaks and some forged AS paths. A provider set of <code>AS0</code> means the AS declares it has no upstream providers.</p>
-  <p>Data: Routinator, refreshed about every 10 minutes. Raw JSON: <a href="https://rpki.ping6.it:8323/jsonext?exclude=routeOrigins,routerKeys">jsonext</a> · <a href="https://rpki.ping6.it:8323/json?exclude=routeOrigins,routerKeys">json</a>.</p>
+  <p>Data: Routinator, refreshed about every 10 minutes. Raw JSON: <a href="https://rpki.ping6.it:8323/jsonext?exclude=routeOrigins,routerKeys">jsonext</a> · <a href="https://rpki.ping6.it:8323/json?exclude=routeOrigins,routerKeys">json</a>. <a href="/guide.html">Guide</a>.</p>
 </footer>
 
 <div class="tip" id="tip" role="tooltip" hidden></div>

@@ -13,6 +13,7 @@ Live instance: <https://aspa.ping6.it/> (DEI, University of Padova).
 
 ## Features
 
+- Built-in [user guide](site/guide.html) (English) and a footer link to this project with the running version.
 - Look up an AS: its own ASPA and every ASPA that names it as a provider (deep link `#AS680`).
 - Summary tiles and charts: ASPAs per RIR, providers per ASPA, most-named providers.
 - Filterable table of all ASPAs.
@@ -22,7 +23,8 @@ Live instance: <https://aspa.ping6.it/> (DEI, University of Padova).
 
 ```
 assets/                logo (SVG)
-site/                  static files (index.html, style.css, app.js, favicon.svg)
+site/                  static files (index.html, guide.html, style.css, app.js, footer.js, version.json, favicon.svg)
+scripts/               CI helper scripts (nginx and version checks)
 deploy/nginx/aspa.conf       nginx server blocks and proxy cache zone
 deploy/nginx/rpki-proxy.conf proxy settings shared by the data endpoints
 ```

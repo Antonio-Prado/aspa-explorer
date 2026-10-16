@@ -224,3 +224,28 @@ td.rir { color: var(--ink-2); white-space: nowrap; }
   .columns { gap: 4px; }
   .col-axis { gap: 4px; }
 }
+
+/* guide page */
+.back { margin: 0 0 0.75rem; font-size: 0.875rem; }
+.nav { margin: 0.5rem 0 0; font-size: 0.875rem; }
+.prose { padding-bottom: 1rem; }
+.prose > * { max-width: 46rem; }
+.prose h3 { font-size: 1rem; margin: 1.5rem 0 0.5rem; }
+.prose p, .prose li, .prose dd { line-height: 1.6; }
+.prose dt { font-weight: 600; margin-top: 0.75rem; }
+.prose dd { margin: 0.15rem 0 0 0; color: var(--ink-2); }
+.prose ul { padding-left: 1.25rem; }
+.prose kbd { font-family: var(--mono); font-size: 0.85em; padding: 1px 5px; border-radius: 4px; background: var(--chip); box-shadow: 0 0 0 1px var(--ring); }
+.toc { padding: 0.75rem 1.25rem; }
+.toc ol { margin: 0; padding-left: 1.25rem; columns: 2; column-gap: 2rem; }
+.toc li { padding: 1px 0; break-inside: avoid; }
+
+/* footer build line: project link, version, last commit */
+.build { margin-top: 0.75rem; color: var(--muted); }
+.build .item::before { content: "·"; margin: 0 0.5em; }
+.build .item[hidden] { display: none; }
+.build .ver { font-weight: 700; padding: 0 0.4em; border-radius: 4px; background: var(--wash); box-shadow: 0 0 0 1px var(--ring); text-decoration: none; }
+.build .ver:hover { text-decoration: underline; }
+@media (max-width: 760px) {
+  .toc ol { columns: 1; }
+}
