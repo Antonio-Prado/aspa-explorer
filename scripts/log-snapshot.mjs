@@ -1,0 +1,97 @@
+// Log a snapshot of the ASPA data as a run of a GitLab "model experiment".
+//
+// GitLab exposes an MLflow-compatible API for experiment tracking; here an
+// "experiment" is the time series of the ASPA data and every run is one snapshot,
+// so the project's Analyze > Model experiments page charts the adoption of ASPA
+// over time. Plain HTTP calls, no MLflow client needed (Node.js 18+).
+//
+//   node scripts/log-snapshot.mjs --dry-run     print the metrics, send nothing
+//
+// In CI the job token authenticates the calls (CI_JOB_TOKEN, CI_API_V4_URL,
+// CI_PROJECT_ID). Outside CI set MLFLOW_API (the .../ml/mlflow/api/2.0/mlflow URL)
+// and MLFLOW_TOKEN.
+
+const SITE = process.env.ASPA_SITE || 'https://aspa.ping6.it';
+const EXPERIMENT = process.env.ASPA_EXPERIMENT || 'aspa-adoption';
+const DRY = process.argv.includes('--dry-run');
+const API = process.env.MLFLOW_API ||
+  `${process.env.CI_API_V4_URL}/projects/${process.env.CI_PROJECT_ID}/ml/mlflow/api/2.0/mlflow`;
+const TOKEN = process.env.MLFLOW_TOKEN || process.env.CI_JOB_TOKEN;
+const RIRS = ['afrinic', 'apnic', 'arin', 'lacnic', 'ripe'];
+
+const getJson = async (url) => {
+  const r = await fetch(url, { headers: { Accept: 'application/json' } });
+  if (!r.ok) throw new Error(`${url}: HTTP ${r.status}`);
+  return r.json();
+};
+
+// Same definitions as the page (site/app.js): customer ASes with a valid ASPA,
+// distinct providers (AS0 excluded), median set size, AS0-only ASPAs, per trust anchor.
+function summarise(data) {
+  const aspas = data.aspas || [];
+  const sizes = aspas.map((a) => a.providers.length).sort((x, y) => x - y);
+  const providers = new Set();
+  let zero = 0;
+  const perRir = Object.fromEntries(RIRS.map((r) => [r, 0]));
+  for (const a of aspas) {
+    if (a.providers.length === 1 && a.providers[0] === 'AS0') zero++;
+    for (const p of a.providers) if (p !== 'AS0') providers.add(p);
+    const tal = (a.source && a.source[0] && a.source[0].tal) || a.ta;
+    if (tal in perRir) perRir[tal]++;
+  }
+  return {
+    aspas: aspas.length,
+    provider_ases: providers.size,
+    median_providers: sizes.length ? sizes[Math.floor((sizes.length - 1) / 2)] : 0,
+    largest_provider_set: sizes[sizes.length - 1] || 0,
+    no_provider_aspas: zero,
+    ...Object.fromEntries(RIRS.map((r) => [`aspas_${r}`, perRir[r]])),
+  };
+}
+
+const call = async (method, path, body) => {
+  const r = await fetch(`${API}/${path}`, {
+    method,
+    headers: { Authorization: `Bearer ${TOKEN}`, 'Content-Type': 'application/json' },
+    body: body ? JSON.stringify(body) : undefined,
+  });
+  const text = await r.text();
+  if (!r.ok && r.status !== 404) throw new Error(`${method} ${path}: HTTP ${r.status} ${text.slice(0, 200)}`);
+  return { status: r.status, json: text ? JSON.parse(text) : {} };
+};
+
+const [data, status] = await Promise.all([
+  getJson(`${SITE}/data/aspas.json`),
+  getJson(`${SITE}/data/status.json`).catch(() => null),
+]);
+const metrics = summarise(data);
+const now = Date.now();
+const day = new Date(now).toISOString().slice(0, 10);
+const params = {
+  source: SITE,
+  validator: (status && status.version) || 'unknown',
+  last_validation: (status && status.lastUpdateDone) || 'unknown',
+};
+console.log(`${day}`, metrics, params);
+if (!metrics.aspas) throw new Error('no ASPAs in the data: not logging an empty snapshot');
+if (DRY) process.exit(0);
+if (!TOKEN) throw new Error('no token: set CI_JOB_TOKEN or MLFLOW_TOKEN');
+
+// Find or create the experiment.
+let exp = await call('GET', `experiments/get-by-name?experiment_name=${encodeURIComponent(EXPERIMENT)}`);
+let experimentId = exp.status === 200 ? exp.json.experiment.experiment_id : null;
+if (!experimentId) experimentId = (await call('POST', 'experiments/create', { name: EXPERIMENT })).json.experiment_id;
+
+// One run per snapshot.
+const tags = [{ key: 'mlflow.runName', value: `${day} ${new Date(now).toISOString().slice(11, 16)}Z` }];
+if (process.env.CI_COMMIT_SHA) tags.push({ key: 'commit', value: process.env.CI_COMMIT_SHA });
+if (process.env.CI_PIPELINE_URL) tags.push({ key: 'pipeline', value: process.env.CI_PIPELINE_URL });
+const run = (await call('POST', 'runs/create', { experiment_id: experimentId, start_time: now, tags })).json.run;
+const runId = run.info.run_id;
+await call('POST', 'runs/log-batch', {
+  run_id: runId,
+  metrics: Object.entries(metrics).map(([key, value]) => ({ key, value, timestamp: now, step: 0 })),
+  params: Object.entries(params).map(([key, value]) => ({ key, value: String(value) })),
+});
+await call('POST', 'runs/update', { run_id: runId, status: 'FINISHED', end_time: Date.now() });
+console.log(`logged run ${runId} in experiment ${EXPERIMENT} (${experimentId})`);

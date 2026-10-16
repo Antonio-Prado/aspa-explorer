@@ -1,0 +1,11 @@
+#!/bin/sh
+# Refresh the VuXML database read by `pkg audit` and record the time of the last
+# successful check. Run daily by root from cron (see pkg-audit-refresh.cron); the
+# weekly host-package-audit CI job reads the result.
+err=$(/usr/local/sbin/pkg audit -F -q 2>&1 >/dev/null)
+if echo "$err" | grep -qiE 'fail|error|unable|cannot|resolve|timed out'; then
+  echo "$err" | logger -t pkg-audit-refresh
+  exit 1
+fi
+touch /var/db/pkg/vuln.xml.checked
+chmod 644 /var/db/pkg/vuln.xml.checked

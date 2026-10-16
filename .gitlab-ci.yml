@@ -5,6 +5,11 @@ stages:
 default:
   interruptible: true
 
+# Scheduled pipelines only run the jobs of their own SCHEDULE (see the end of the file).
+.regular:
+  rules:
+    - if: $CI_PIPELINE_SOURCE != "schedule" && $SCHEDULE == null
+
 workflow:
   rules:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
@@ -14,6 +19,7 @@ workflow:
     - if: $CI_COMMIT_TAG
 
 js-syntax:
+  extends: .regular
   stage: lint
   image: node:22-alpine
   script:
@@ -21,12 +27,14 @@ js-syntax:
     - node --check site/footer.js
 
 html-validate:
+  extends: .regular
   stage: lint
   image: node:22-alpine
   script:
     - npx --yes html-validate@9 site/index.html site/guide.html
 
 nginx-config:
+  extends: .regular
   stage: lint
   image: nginx:stable-alpine
   before_script:
@@ -36,6 +44,7 @@ nginx-config:
     - sh scripts/check-nginx.sh
 
 version-consistency:
+  extends: .regular
   stage: lint
   image: alpine:3
   script:
@@ -46,12 +55,14 @@ version-consistency:
 # commands (the images below are used by Docker runners; shell runners use the tools
 # installed on the host: node and gitleaks).
 js-security-lint:
+  extends: .regular
   stage: security
   image: node:22-alpine
   script:
     - npx --yes eslint@9 --no-config-lookup -c eslint.config.mjs site/app.js site/footer.js
 
 secret-detection:
+  extends: .regular
   stage: security
   image:
     name: ghcr.io/gitleaks/gitleaks:v8.30.1
@@ -60,3 +71,26 @@ secret-detection:
     GIT_DEPTH: "0"
   script:
     - gitleaks git --redact --no-banner .
+
+# Scheduled jobs. Pipeline schedules set the SCHEDULE variable; a pipeline started by
+# hand (web or API) with the same variable runs the same job.
+
+# Weekly: known vulnerabilities in the packages of the host that runs the runner (nginx,
+# Node.js, the runner itself, the base system). Needs the runner of that host.
+host-package-audit:
+  stage: security
+  tags: [aspa]
+  rules:
+    - if: ($CI_PIPELINE_SOURCE == "schedule" || $CI_PIPELINE_SOURCE == "web" || $CI_PIPELINE_SOURCE == "api") && $SCHEDULE == "audit"
+  script:
+    - sh scripts/pkg-audit.sh
+
+# Daily: a snapshot of the ASPA data, logged as a run of the project's model experiment
+# (Analyze > Model experiments) to chart the adoption of ASPA over time.
+aspa-snapshot:
+  stage: security
+  tags: [aspa]
+  rules:
+    - if: ($CI_PIPELINE_SOURCE == "schedule" || $CI_PIPELINE_SOURCE == "web" || $CI_PIPELINE_SOURCE == "api") && $SCHEDULE == "snapshot"
+  script:
+    - node scripts/log-snapshot.mjs

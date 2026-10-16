@@ -77,7 +77,9 @@ assets/                        logo (SVG), screenshots and credit logos used in 
 deploy/nginx/aspa.conf         nginx server blocks and proxy cache zone
 deploy/nginx/rpki-proxy.conf   proxy settings shared by the data endpoints
 deploy/nginx/security-headers.conf   security headers (server block and /client-ip)
-scripts/                       CI helpers: nginx check, version check, build info
+scripts/                       CI helpers: nginx check, version check, build info,
+                               package audit, ASPA snapshot logging
+deploy/freebsd/                daily refresh of the pkg vulnerability database
 eslint.config.mjs              security rules for the browser code (no innerHTML, eval, ...)
 ```
 
@@ -90,7 +92,7 @@ eslint.config.mjs              security rules for the browser code (no innerHTML
 
 ## Development
 
-No build step and no dependencies. `make check` runs the same checks as the CI pipeline: JavaScript syntax, HTML validation, nginx configuration test, version consistency and a security lint of the browser code. The pipeline also scans the git history for secrets (`make secrets`). Details in <a href="CONTRIBUTING.md" target="_blank" rel="noopener">CONTRIBUTING.md</a>.
+No build step and no dependencies. `make check` runs the same checks as the CI pipeline: JavaScript syntax, HTML validation, nginx configuration test, version consistency and a security lint of the browser code. The pipeline also scans the git history for secrets (`make secrets`). Scheduled jobs audit the packages of the host weekly and log a daily snapshot of the ASPA data to the project's *Model experiments* (adoption over time); see [CONTRIBUTING.md](CONTRIBUTING.md). Details in <a href="CONTRIBUTING.md" target="_blank" rel="noopener">CONTRIBUTING.md</a>.
 
 Releases follow [Semantic Versioning](https://semver.org/); the version shown in the footer lives in <a href="site/version.json" target="_blank" rel="noopener"><code>site/version.json</code></a> and must match the latest entry of the <a href="CHANGELOG.md" target="_blank" rel="noopener">changelog</a>.
 

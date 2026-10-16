@@ -1,0 +1,6 @@
+# Daily refresh of the vulnerability database used by `pkg audit`.
+# Install as /usr/local/etc/cron.d/pkg-audit-refresh, with the script as
+# /usr/local/sbin/pkg-audit-refresh (mode 755, owner root).
+SHELL=/bin/sh
+PATH=/etc:/bin:/sbin:/usr/bin:/usr/sbin:/usr/local/bin:/usr/local/sbin
+40	5	*	*	*	root	/usr/local/sbin/pkg-audit-refresh
