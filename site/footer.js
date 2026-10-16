@@ -51,7 +51,9 @@
   const commitItem = item(true, commitLink);
   const ipItem = item(true, 'Your IP: ', ipLink);
   const items = [releaseItem, commitItem, item(false, link('/guide.html#accessibility', 'Accessibility')), ipItem];
-  const build = el('p', { class: 'build' }, ...items);
+  // A space between the items gives the browser a place to break the line on narrow screens
+  const build = el('p', { class: 'build' });
+  items.forEach((it, i) => { if (i) build.append(' '); build.append(it); });
   const refresh = () => {
     let first = true;
     for (const it of items) {
