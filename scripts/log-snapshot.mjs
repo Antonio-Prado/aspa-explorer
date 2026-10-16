@@ -49,10 +49,28 @@ function summarise(data) {
   };
 }
 
+// GitLab accepts a personal/project access token as a bearer token, and a CI job token
+// as the JOB-TOKEN header or as the password of the user gitlab-ci-token: find which one
+// this instance accepts for the model experiments API.
+const authStyles = [
+  { name: 'bearer', headers: { Authorization: `Bearer ${TOKEN}` } },
+  { name: 'job-token', headers: { 'JOB-TOKEN': TOKEN } },
+  { name: 'basic', headers: { Authorization: `Basic ${Buffer.from(`gitlab-ci-token:${TOKEN}`).toString('base64')}` } },
+];
+let auth = authStyles[0];
+const detectAuth = async () => {
+  for (const style of authStyles) {
+    const r = await fetch(`${API}/experiments/list`, { headers: style.headers });
+    console.log(`auth ${style.name}: HTTP ${r.status}`);
+    if (r.ok) { auth = style; return; }
+  }
+  throw new Error('the token is not accepted by the model experiments API');
+};
+
 const call = async (method, path, body) => {
   const r = await fetch(`${API}/${path}`, {
     method,
-    headers: { Authorization: `Bearer ${TOKEN}`, 'Content-Type': 'application/json' },
+    headers: { ...auth.headers, 'Content-Type': 'application/json' },
     body: body ? JSON.stringify(body) : undefined,
   });
   const text = await r.text();
@@ -76,6 +94,7 @@ console.log(`${day}`, metrics, params);
 if (!metrics.aspas) throw new Error('no ASPAs in the data: not logging an empty snapshot');
 if (DRY) process.exit(0);
 if (!TOKEN) throw new Error('no token: set CI_JOB_TOKEN or MLFLOW_TOKEN');
+await detectAuth();
 
 // Find or create the experiment.
 let exp = await call('GET', `experiments/get-by-name?experiment_name=${encodeURIComponent(EXPERIMENT)}`);
