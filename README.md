@@ -17,6 +17,7 @@
 
 <p align="center">
   <a href="https://aspa.ping6.it/">Live site</a> ·
+  <a href="https://rpki.ping6.it/">Validator</a> ·
   <a href="https://aspa.ping6.it/guide.html">Guide</a> ·
   <a href="https://gitlab.dei.unipd.it/Antonio-Prado/aspa-explorer/-/wikis/home">Wiki</a> ·
   <a href="CHANGELOG.md">Changelog</a> ·
@@ -39,6 +40,8 @@
 An **ASPA** (Autonomous System Provider Authorization) is a signed RPKI object in which a *customer* AS lists the ASes that may act as its upstream *providers*. Routers use these lists to detect route leaks and some forged AS paths.
 
 ASPA Explorer shows every ASPA that the validator currently considers valid, so you can search it and see the big picture. It runs at <https://aspa.ping6.it/> (Department of Information Engineering, University of Padova).
+
+The validator is a [Routinator](https://github.com/NLnetLabs/routinator) instance run at **[rpki.ping6.it](https://rpki.ping6.it/)**, which also publishes its own web UI (<https://rpki.ping6.it/ui/>) and the raw ASPA data (<https://rpki.ping6.it/jsonext?exclude=routeOrigins,routerKeys>).
 
 ## Features
 
