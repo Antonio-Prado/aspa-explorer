@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.7.1] - 2026-10-16
+
+### Fixed
+- *Open this path in the AS path check* (under a route) now scrolls the page up to the AS path box, where the result appears, instead of leaving the reader where they were; clicking it a second time works too. The same applies to any link that fills the AS path box or the routes box from elsewhere on the page.
+
 ## [1.7.0] - 2026-10-16
 
 ### Added

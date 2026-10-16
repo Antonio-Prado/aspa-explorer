@@ -767,7 +767,11 @@ async function renderLiveRoutes(text) {
       btn.addEventListener('click', () => {
         if (open) { open.remove(); open = null; btn.setAttribute('aria-expanded', 'false'); btn.textContent = 'details'; return; }
         open = el('tr', { class: 'detailrow' }, el('td', { colspan: '4' }, ...pathCheckNodes(text, 'down'),
-          el('p', { class: 'hint' }, el('a', { href: `#path=${encodeURIComponent(text)}&from=down`, text: 'Open this path in the AS path check' }), ' (a link you can share).')));
+          el('p', { class: 'hint' }, el('a', {
+            href: `#path=${encodeURIComponent(text)}&from=down`,
+            text: 'Open this path in the AS path check',
+            onclick: (e) => { if (location.hash === e.currentTarget.getAttribute('href')) { e.preventDefault(); lookupFromHash(); } },
+          }), ' (a link you can share).')));
         tr.after(open);
         // bring the details into view only if the row was near the bottom of the screen
         open.scrollIntoView({ block: 'nearest', behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
@@ -845,6 +849,16 @@ function renderLookup(as) {
   renderAsQuality(as);
 }
 
+// Bring a box into view when a link elsewhere on the page fills it: only when it is not already near
+// the top of the screen, so a click inside the box does not make the page jump.
+function revealBox(id) {
+  const node = $(id) && ($(id).closest('section') || $(id));
+  if (!node) return;
+  const r = node.getBoundingClientRect();
+  if (r.top >= 0 && r.top < window.innerHeight * 0.5) return;
+  node.scrollIntoView({ block: 'start', behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
+}
+
 function lookupFromHash() {
   const hash = location.hash.slice(1);
   if (hash.startsWith('path=')) {
@@ -853,12 +867,14 @@ function lookupFromHash() {
     $('aspath').value = q.get('path') || '';
     $('from').value = direction;
     renderPathCheck($('aspath').value, direction);
+    revealBox('check-title');
     return;
   }
   if (hash.startsWith('routes=')) {
     const res = decodeURIComponent(hash.slice(7));
     $('liveq').value = res;
     renderLiveRoutes(res);
+    revealBox('live-title');
     return;
   }
   const as = normalizeAsn(decodeURIComponent(location.hash.slice(1)));
