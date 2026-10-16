@@ -24,15 +24,20 @@
 
 <table>
   <tr>
-    <td width="50%"><img src="assets/screenshots/lookup-light.jpg" alt="Looking up AS680: its own ASPA and the ASPAs that name it as a provider, with the AS path check below"></td>
+    <td width="50%"><img src="assets/screenshots/lookup-light.jpg" alt="Looking up AS680: its own ASPA and the ASPAs that name it as a provider, with its history and the AS path check below"></td>
     <td width="50%"><img src="assets/screenshots/overview-dark.jpg" alt="Overview tiles and charts in the dark theme"></td>
   </tr>
   <tr>
-    <td align="center"><sub>Look up an AS, check an AS path</sub></td>
+    <td align="center"><sub>Look up an AS, with its history</sub></td>
     <td align="center"><sub>Overview, in the dark theme</sub></td>
   </tr>
   <tr>
-    <td colspan="2" align="center"><img src="assets/screenshots/pathcheck-dark.jpg" width="60%" alt="Checking the AS path 3356 1299 680: the verdict and the hop-by-hop table"><br><sub>AS path check: verdict and hop-by-hop reasons</sub></td>
+    <td width="50%"><img src="assets/screenshots/pathcheck-dark.jpg" alt="Checking the AS path 3356 1299 680: the verdict and the hop-by-hop table"></td>
+    <td width="50%"><img src="assets/screenshots/routes-dark.jpg" alt="The routes seen in BGP for AS8283, checked against the ASPAs: valid, unknown and invalid, with the distinct AS paths"></td>
+  </tr>
+  <tr>
+    <td align="center"><sub>AS path check: verdict and hop-by-hop reasons</sub></td>
+    <td align="center"><sub>Routes seen in BGP, checked against the ASPAs</sub></td>
   </tr>
 </table>
 
@@ -48,7 +53,9 @@ The validator is a [Routinator](https://github.com/NLnetLabs/routinator) instanc
 
 - **Lookup:** type `AS680`, `as 680` or `680` to see the AS's own ASPA and every ASPA that names it as a provider. Each lookup has a shareable address (`/#AS680`).
 - **AS path check:** paste a path as your router shows it (neighbour first, origin last) and see whether it passes the ASPA verification procedure of the IETF draft (upstream or downstream), hop by hop, with the reason for a *Valid*, *Unknown* or *Invalid* verdict. It runs in the browser on the ASPA objects listed on the page, and a result can be shared with a link.
-- **Overview:** summary tiles and four charts: ASPAs over time (daily, since October 2023), ASPAs per RIR, providers per ASPA, most-named providers.
+- **Routes seen in BGP:** for a prefix or an AS, the routes that the RIPE RIS collectors see (through RIPEstat), each distinct AS path checked with the downstream procedure: how many routes are valid, unknown or invalid, and the paths with a valley. This box sends the prefix or the AS to RIPEstat; the guide says so.
+- **Overview:** summary tiles (with the coverage: the share of the ASes seen in BGP that have an ASPA) and four charts: ASPAs over time (daily since October 2023, by RIR, provider ASes, median providers, no-provider ASPAs or coverage, over any period, with a logarithmic scale and CSV/JSON download), ASPAs per RIR, providers per ASPA, most-named providers.
+- **Changes:** the ASPAs that appeared, changed or disappeared in the last 14 days, an Atom feed of them (`/changes.atom`), and the history of one AS in its lookup. The series is rebuilt from the RIPE NCC RPKI archive (`tools/backfill-history.py`) and extended every day by the `aspa-snapshot` job.
 - **Table:** all ASPAs, filterable by AS number and RIR, 100 rows at a time.
 - **Built-in guide** in English, with an accessibility statement: <a href="https://aspa.ping6.it/guide.html" target="_blank" rel="noopener">read it on the site</a> (source: <a href="site/guide.html" target="_blank" rel="noopener"><code>site/guide.html</code></a>).
 - **Accessible:** keyboard operable, visible focus, skip link, light and dark themes, reduced-motion aware. Checked with axe-core in both themes (WCAG 2.2 AA rules) with no issues reported.
