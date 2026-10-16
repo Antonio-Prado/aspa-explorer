@@ -42,10 +42,14 @@
   const versionText = el('strong', { class: 'ver' }, '');
   const releaseLink = link(`${PROJECT}/-/releases`, 'Release ', versionText);
   const commitLink = link(PROJECT, '');
+  // The address links to RIPEstat (it works for any RIR). Nothing is sent to a third
+  // party unless the visitor follows the link.
   const ipValue = el('span', { class: 'ip' });
+  const ipLink = link('https://stat.ripe.net/', ipValue);
+  ipLink.title = 'Look up this address in RIPEstat';
   const releaseItem = item(true, releaseLink);
   const commitItem = item(true, commitLink);
-  const ipItem = item(true, 'Your IP: ', ipValue);
+  const ipItem = item(true, 'Your IP: ', ipLink);
   const items = [releaseItem, commitItem, item(false, link('/guide.html#accessibility', 'Accessibility')), ipItem];
   const build = el('p', { class: 'build' }, ...items);
   const refresh = () => {
@@ -135,6 +139,7 @@
       const ip = String((d && d.ip) || '');
       if (!/^[0-9A-Fa-f.:]{2,45}$/.test(ip)) return;
       ipValue.textContent = ip;
+      ipLink.href = `https://stat.ripe.net/resource/${encodeURIComponent(ip)}`;
       ipItem.hidden = false;
       refresh();
     })
