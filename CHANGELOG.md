@@ -15,6 +15,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 - README, guide and wiki mention the Routinator instance at rpki.ping6.it.
 
+### Changed
+- README and wiki: links to project files, releases and the wiki open in a new tab; the guide link points to the live guide.
+
 ### Added
 - CI security checks: `js-security-lint` (ESLint rules against `innerHTML`, `eval` and similar sinks, `eslint.config.mjs`) and `secret-detection` (gitleaks over the whole git history). Also available locally as `make lint-security` and `make secrets`.
 

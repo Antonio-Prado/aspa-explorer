@@ -7,21 +7,21 @@
 
 <p align="center">
   <strong>Browse the validated ASPA objects of the RPKI, in the browser.</strong><br>
-  A small static page on top of a <a href="https://github.com/NLnetLabs/routinator">Routinator</a> validator.
+  A small static page on top of a <a href="https://github.com/NLnetLabs/routinator" target="_blank" rel="noopener">Routinator</a> validator.
 </p>
 
 <p align="center">
-  <a href="https://gitlab.dei.unipd.it/Antonio-Prado/aspa-explorer/-/pipelines"><img alt="pipeline status" src="https://gitlab.dei.unipd.it/Antonio-Prado/aspa-explorer/badges/main/pipeline.svg"></a>
-  <a href="https://gitlab.dei.unipd.it/Antonio-Prado/aspa-explorer/-/releases"><img alt="latest release" src="https://gitlab.dei.unipd.it/Antonio-Prado/aspa-explorer/-/badges/release.svg"></a>
+  <a href="https://gitlab.dei.unipd.it/Antonio-Prado/aspa-explorer/-/pipelines" target="_blank" rel="noopener"><img alt="pipeline status" src="https://gitlab.dei.unipd.it/Antonio-Prado/aspa-explorer/badges/main/pipeline.svg"></a>
+  <a href="https://gitlab.dei.unipd.it/Antonio-Prado/aspa-explorer/-/releases" target="_blank" rel="noopener"><img alt="latest release" src="https://gitlab.dei.unipd.it/Antonio-Prado/aspa-explorer/-/badges/release.svg"></a>
 </p>
 
 <p align="center">
-  <a href="https://aspa.ping6.it/">Live site</a> ·
-  <a href="https://rpki.ping6.it/">Validator</a> ·
-  <a href="https://aspa.ping6.it/guide.html">Guide</a> ·
-  <a href="https://gitlab.dei.unipd.it/Antonio-Prado/aspa-explorer/-/wikis/home">Wiki</a> ·
-  <a href="CHANGELOG.md">Changelog</a> ·
-  <a href="CONTRIBUTING.md">Contributing</a>
+  <a href="https://aspa.ping6.it/" target="_blank" rel="noopener">Live site</a> ·
+  <a href="https://rpki.ping6.it/" target="_blank" rel="noopener">Validator</a> ·
+  <a href="https://aspa.ping6.it/guide.html" target="_blank" rel="noopener">Guide</a> ·
+  <a href="https://gitlab.dei.unipd.it/Antonio-Prado/aspa-explorer/-/wikis/home#" target="_blank" rel="noopener">Wiki</a> ·
+  <a href="CHANGELOG.md" target="_blank" rel="noopener">Changelog</a> ·
+  <a href="CONTRIBUTING.md" target="_blank" rel="noopener">Contributing</a>
 </p>
 
 <table>
@@ -48,7 +48,7 @@ The validator is a [Routinator](https://github.com/NLnetLabs/routinator) instanc
 - **Lookup:** type `AS680`, `as 680` or `680` to see the AS's own ASPA and every ASPA that names it as a provider. Each lookup has a shareable address (`/#AS680`).
 - **Overview:** summary tiles and three charts: ASPAs per RIR, providers per ASPA, most-named providers.
 - **Table:** all ASPAs, filterable by AS number and RIR, 100 rows at a time.
-- **Built-in guide** in English, with an accessibility statement: [`site/guide.html`](site/guide.html).
+- **Built-in guide** in English, with an accessibility statement: <a href="https://aspa.ping6.it/guide.html" target="_blank" rel="noopener">read it on the site</a> (source: <a href="site/guide.html" target="_blank" rel="noopener"><code>site/guide.html</code></a>).
 - **Accessible:** keyboard operable, visible focus, skip link, light and dark themes, reduced-motion aware. Checked with axe-core in both themes (WCAG 2.2 AA rules) with no issues reported.
 - **No build step, no dependencies, no cookies.** Strict Content-Security-Policy; remote data goes into the page only through `textContent`.
 
@@ -90,30 +90,30 @@ eslint.config.mjs              security rules for the browser code (no innerHTML
 
 ## Development
 
-No build step and no dependencies. `make check` runs the same checks as the CI pipeline: JavaScript syntax, HTML validation, nginx configuration test, version consistency and a security lint of the browser code. The pipeline also scans the git history for secrets (`make secrets`). Details in [CONTRIBUTING.md](CONTRIBUTING.md).
+No build step and no dependencies. `make check` runs the same checks as the CI pipeline: JavaScript syntax, HTML validation, nginx configuration test, version consistency and a security lint of the browser code. The pipeline also scans the git history for secrets (`make secrets`). Details in <a href="CONTRIBUTING.md" target="_blank" rel="noopener">CONTRIBUTING.md</a>.
 
-Releases follow [Semantic Versioning](https://semver.org/); the version shown in the footer lives in [`site/version.json`](site/version.json) and must match the latest entry of the [changelog](CHANGELOG.md).
+Releases follow [Semantic Versioning](https://semver.org/); the version shown in the footer lives in <a href="site/version.json" target="_blank" rel="noopener"><code>site/version.json</code></a> and must match the latest entry of the <a href="CHANGELOG.md" target="_blank" rel="noopener">changelog</a>.
 
 ## Project documents
 
 | | |
 |---|---|
-| [CHANGELOG.md](CHANGELOG.md) | release history |
-| [CONTRIBUTING.md](CONTRIBUTING.md) | how to contribute |
-| [SECURITY.md](SECURITY.md) | how to report a vulnerability |
-| [Wiki](https://gitlab.dei.unipd.it/Antonio-Prado/aspa-explorer/-/wikis/home) | user guide, accessibility, deployment |
-| [LICENSE](LICENSE) | MIT |
+| <a href="CHANGELOG.md" target="_blank" rel="noopener">CHANGELOG.md</a> | release history |
+| <a href="CONTRIBUTING.md" target="_blank" rel="noopener">CONTRIBUTING.md</a> | how to contribute |
+| <a href="SECURITY.md" target="_blank" rel="noopener">SECURITY.md</a> | how to report a vulnerability |
+| <a href="https://gitlab.dei.unipd.it/Antonio-Prado/aspa-explorer/-/wikis/home#" target="_blank" rel="noopener">Wiki</a> | user guide, accessibility, deployment |
+| <a href="LICENSE" target="_blank" rel="noopener">LICENSE</a> | MIT |
 
 ## License
 
-Released under the [MIT License](LICENSE).
+Released under the <a href="LICENSE" target="_blank" rel="noopener">MIT License</a>.
 
 <p align="center">
-  <a href="https://www.dei.unipd.it"><img src="assets/credits/dei-logo.png" alt="DEI, Department of Information Engineering, University of Padova" height="40"></a>
+  <a href="https://www.dei.unipd.it" target="_blank" rel="noopener"><img src="assets/credits/dei-logo.png" alt="DEI, Department of Information Engineering, University of Padova" height="40"></a>
   &nbsp;&nbsp;&nbsp;
-  <a href="https://www.freebsd.org"><img src="assets/credits/freebsd-logo.png" alt="FreeBSD" height="40"></a>
+  <a href="https://www.freebsd.org" target="_blank" rel="noopener"><img src="assets/credits/freebsd-logo.png" alt="FreeBSD" height="40"></a>
   &nbsp;&nbsp;&nbsp;
-  <a href="https://nlnetlabs.nl/projects/routinator/"><img src="assets/credits/routinator-avatar.png" alt="Routinator, by NLnet Labs" height="40"></a>
+  <a href="https://nlnetlabs.nl/projects/routinator/" target="_blank" rel="noopener"><img src="assets/credits/routinator-avatar.png" alt="Routinator, by NLnet Labs" height="40"></a>
   &nbsp;&nbsp;&nbsp;
   <img src="assets/credits/vi-logo.svg" alt="vi" height="32">
 </p>
