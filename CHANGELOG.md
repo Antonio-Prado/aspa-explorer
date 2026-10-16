@@ -12,7 +12,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 - HTML validation errors: uppercase `DOCTYPE` and explicit `type` on the search input.
-- CI nginx check no longer requires `apk`, so it also runs on shell runners.
+- CI nginx check no longer requires `apk`, so it also runs on shell runners, and uses unprivileged ports.
 
 ## [1.0.0] - 2026-10-16
 
