@@ -147,4 +147,40 @@ test('classify tells new, changed (with the providers added and dropped) and rem
   assert.deepEqual(k[2].dropped, ['AS3', 'AS4']);
 });
 
+// ---- site/quality.js: quality checks on the ASPAs ----
+const quality = require('../site/quality.js');
+const A = (customer, providers, notAfter) => ({ customer, providers, source: notAfter ? [{ validity: { notAfter } }] : [] });
+const kinds = (list) => list.map((f) => `${f.kind}:${f.customer}`).sort();
+const NOW = Date.parse('2026-10-16T00:00:00Z');
+
+test('quality: AS0 with other providers, self-listing and reserved providers are errors', () => {
+  const f = quality.check([A('AS1', ['AS0', 'AS2']), A('AS3', ['AS3', 'AS4']), A('AS5', ['AS64512', 'AS6']), A('AS7', ['AS0'])], { now: NOW });
+  assert.deepEqual(kinds(f), ['as0-mixed:AS1', 'reserved-provider:AS5', 'self-provider:AS3']);
+  assert.ok(f.every((x) => x.severity === 'error'));
+});
+
+test('quality: mutual providers are reported on both ASPAs, one-way ones are not', () => {
+  const f = quality.check([A('AS1', ['AS2']), A('AS2', ['AS1']), A('AS3', ['AS1'])], { now: NOW });
+  assert.deepEqual(kinds(f), ['mutual:AS1', 'mutual:AS2']);
+});
+
+test('quality: BGP visibility checks run only when the unseen set is known', () => {
+  const data = [A('AS1', ['AS2', 'AS9']), A('AS8', ['AS2'])];
+  assert.deepEqual(kinds(quality.check(data, { now: NOW })), []);
+  const f = quality.check(data, { now: NOW, unseen: new Set(['AS9', 'AS8']) });
+  assert.deepEqual(kinds(f), ['customer-unseen:AS8', 'provider-unseen:AS1']);
+});
+
+test('quality: an ASPA that expires within the window, and a very large provider set', () => {
+  const big = Array.from({ length: 30 }, (_, i) => `AS${100 + i}`);
+  const f = quality.check([A('AS1', ['AS2'], '2026-10-20T00:00:00Z'), A('AS3', ['AS2'], '2027-10-20T00:00:00Z'), A('AS4', big)], { now: NOW });
+  assert.deepEqual(kinds(f), ['expiring:AS1', 'large-set:AS4']);
+  assert.match(f.find((x) => x.kind === 'expiring').detail, /expires in 4 days/);
+});
+
+test('quality: reserved ranges', () => {
+  for (const as of ['AS23456', 'AS64496', 'AS64512', 'AS65535', 'AS65551', 'AS4200000000', 'AS4294967295']) assert.ok(quality.reserved(as), as);
+  for (const as of ['AS1', 'AS3333', 'AS65552', 'AS4199999999']) assert.ok(!quality.reserved(as), as);
+});
+
 console.log(`\n${passed} tests passed`);

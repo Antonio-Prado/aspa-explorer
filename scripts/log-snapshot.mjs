@@ -90,11 +90,16 @@ const metrics = summarise(data);
 
 // Coverage: of the ASes seen by the RIPE RIS route collectors (RIPEstat, ris-asns), how many have an
 // ASPA. Left out, with a message, when RIPEstat does not answer.
+let visibility = null;   // the ASes of the ASPAs that the collectors do not see, for the quality checks
 try {
   const seen = (await getJson('https://stat.ripe.net/data/ris-asns/data.json?list_asns=true')).data.asns;
   const customers = new Set((data.aspas || []).map((a) => a.customer));
   metrics.bgp_ases = seen.length;
   metrics.aspa_in_bgp = seen.filter((n) => customers.has(`AS${n}`)).length;
+  const seenSet = new Set(seen.map((n) => `AS${n}`));
+  const named = new Set((data.aspas || []).flatMap((a) => [a.customer, ...a.providers]));
+  named.delete('AS0');
+  visibility = { seen: seen.length, unseen: [...named].filter((as) => !seenSet.has(as)).sort((a, b) => Number(a.slice(2)) - Number(b.slice(2))) };
 } catch (e) {
   console.error(`coverage not computed: ${e.message}`);
 }
@@ -105,7 +110,7 @@ const params = {
   validator: (status && status.version) || 'unknown',
   last_validation: (status && status.lastUpdateDone) || 'unknown',
 };
-console.log(`${day}`, metrics, params);
+console.log(`${day}`, metrics, params, visibility ? `${visibility.unseen.length} ASes of the ASPAs not seen in BGP` : 'no visibility data');
 if (!metrics.aspas) throw new Error('no ASPAs in the data: not logging an empty snapshot');
 if (DRY) process.exit(0);
 if (!TOKEN) throw new Error('no token: set CI_JOB_TOKEN or MLFLOW_TOKEN');
@@ -173,6 +178,10 @@ try {
   const actions = [{ action: 'update', file_path: 'history.json', content: JSON.stringify(rows) }];
   if (eventsChanged || eventsText === null) actions.push({ action: eventsText === null ? 'create' : 'update', file_path: 'events.json', content: eventsJson });
   if (eventsChanged || feedText === null) actions.push({ action: feedText === null ? 'create' : 'update', file_path: 'changes.atom', content: atomFeed(events) });
+  if (visibility) {
+    const visText = await read('visibility.json');
+    actions.push({ action: visText === null ? 'create' : 'update', file_path: 'visibility.json', content: JSON.stringify({ date: day, ...visibility }) });
+  }
   const todays = events.filter((e) => e[0] === day).length;
   const put = await fetch(`${project}/repository/commits`, {
     method: 'POST',

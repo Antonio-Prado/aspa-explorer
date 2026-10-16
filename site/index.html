@@ -11,6 +11,7 @@
 <link rel="stylesheet" href="/style.css?v=1.6.2">
 <script src="/verify.js?v=1.6.2" defer></script>
 <script src="/history.js?v=1.6.2" defer></script>
+<script src="/quality.js?v=1.6.2" defer></script>
 <script src="/app.js?v=1.6.2" defer></script>
 <script src="/footer.js?v=1.6.2" defer></script>
 </head>
@@ -135,6 +136,13 @@
     <h2 id="changes-title">Recent changes</h2>
     <p class="hint">ASPAs that appeared, changed their providers or disappeared in the last 14 days, as seen by this validator. Subscribe to the <a href="/changes.atom">Atom feed</a>.</p>
     <div class="card changes" id="changes-body"><p class="hint">Loading the changes…</p></div>
+  </section>
+
+  <section aria-labelledby="quality-title">
+    <h2 id="quality-title">ASPA quality</h2>
+    <p class="hint">Checks on the ASPAs listed here that point at likely mistakes: contradictions, private AS numbers, ASes that list each other as provider, providers that no collector sees in BGP, ASPAs about to expire. The counts are ASPAs, and each finding can be opened.</p>
+    <div class="tiles quality-tiles" id="quality-tiles"></div>
+    <div class="card changes" id="quality-body"><p class="hint">Checking the ASPAs…</p></div>
   </section>
 
   <section aria-labelledby="all-title">

@@ -405,3 +405,17 @@ table.live .detailrow td { background: var(--wash); padding: 0.75rem 0.9rem 0.9r
 table.live .detailrow .verdict { margin-top: 0; }
 table.live .detailrow .table-wrap { margin-top: 0.5rem; }
 table.live .detailrow .hint { color: var(--ink-2); }
+
+/* ASPA quality, and the neighbours of an origin */
+.quality-tiles { grid-template-columns: repeat(3, 1fr); margin: 0.75rem 0; }
+.quality-tiles .sev-error .value { color: var(--bad-ink); }
+.quality-tiles .sev-warning .value { color: var(--warn-ink); }
+.badge.sev-error { background: var(--bad-bg); color: var(--bad-ink); }
+.badge.sev-warning { background: var(--warn-bg); color: var(--warn-ink); }
+.badge.sev-note { background: var(--chip); color: var(--ink-2); }
+.badge.nb-listed { background: var(--ok-bg); color: var(--ok-ink); }
+.badge.nb-not-listed { background: var(--warn-bg); color: var(--warn-ink); }
+.badge.nb-no-ASPA, .badge.nb-no-aspa { background: var(--chip); color: var(--ink-2); }
+.subhead { margin: 1.25rem 0 0.5rem; font-size: 1rem; }
+table.nb th.num, table.nb td.num { text-align: right; font-variant-numeric: tabular-nums; }
+@media (max-width: 760px) { .quality-tiles { grid-template-columns: 1fr; } }

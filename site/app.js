@@ -4,6 +4,7 @@
 const DATA_ASPAS = '/data/aspas.json';
 const DATA_STATUS = '/data/status.json';
 // Daily history of the ASPA counts: the `history` branch of the public project, through the GitLab API (CORS open).
+const DATA_VISIBILITY = 'https://gitlab.dei.unipd.it/api/v4/projects/5246/repository/files/visibility.json/raw?ref=history';
 const DATA_EVENTS = 'https://gitlab.dei.unipd.it/api/v4/projects/5246/repository/files/events.json/raw?ref=history';
 const DATA_HISTORY = 'https://gitlab.dei.unipd.it/api/v4/projects/5246/repository/files/history.json/raw?ref=history';
 const PAGE = 20;
@@ -429,6 +430,64 @@ new ResizeObserver(() => {
 }).observe(document.documentElement);
 
 
+/* ---------- ASPA quality ---------- */
+// Findings of site/quality.js on the ASPAs listed on the page; the checks that need to know which ASes
+// appear in BGP use visibility.json (written daily by the snapshot job) and are skipped without it.
+let findings = [];
+let unseen = null;
+const SEVERITY = { error: 'Error', warning: 'Warning', note: 'Note' };
+
+function computeQuality() {
+  findings = AspaQuality.check(aspas.map((a) => ({ customer: a.customer, providers: a.providers, source: a.source })), { unseen, now: Date.now() });
+}
+
+function renderQuality() {
+  const body = $('quality-body');
+  const tiles = $('quality-tiles');
+  const affected = (sev) => new Set(findings.filter((f) => f.severity === sev).map((f) => f.customer)).size;
+  tiles.replaceChildren(...['error', 'warning', 'note'].map((sev) => el('div', { class: `tile card sev-${sev}` },
+    el('div', { class: 'label', text: sev === 'note' ? 'Notes' : `${SEVERITY[sev]}s` }),
+    el('div', { class: 'value', text: fmt.format(affected(sev)) }),
+    el('div', { class: 'note', text: `ASPA${affected(sev) === 1 ? '' : 's'} with ${sev === 'note' ? 'a note' : sev === 'error' ? 'an error' : 'a warning'}` }))));
+  const groups = AspaQuality.ORDER.map((kind) => ({ kind, list: findings.filter((f) => f.kind === kind) })).filter((g) => g.list.length);
+  const kids = groups.map((g, i) => {
+    const info = AspaQuality.KINDS[g.kind];
+    const ul = el('ul', { class: 'changelist' });
+    const draw = (n) => {
+      ul.replaceChildren(...g.list.slice(0, n).map((f) => el('li', {}, asChip(f.customer), ' ', el('span', { text: f.detail }))));
+      if (g.list.length > n) ul.append(el('li', {}, el('button', { type: 'button', class: 'linkish', text: `Show all ${fmt.format(g.list.length)}`, onclick: () => draw(g.list.length) })));
+    };
+    draw(20);
+    return el('details', { open: i === 0 && info.severity === 'error' },
+      el('summary', {}, el('span', { class: `badge sev-${info.severity}`, text: SEVERITY[info.severity] }), ' ', el('strong', { text: info.title }), ` · ${fmt.format(g.list.length)}`),
+      el('p', { class: 'hint', text: info.why }), ul);
+  });
+  if (!kids.length) kids.push(el('p', { class: 'hint', text: 'No issue found.' }));
+  if (!unseen) kids.push(el('p', { class: 'hint', text: 'The checks that need to know which ASes appear in BGP are not available at the moment.' }));
+  body.replaceChildren(...kids);
+}
+
+async function loadVisibility() {
+  try { unseen = new Set((await getJson(DATA_VISIBILITY)).unseen); } catch (err) { unseen = null; }
+}
+
+function renderAsQuality(as) {
+  const box = $('as-quality');
+  if (!box || !as) return;
+  const mine = findings.filter((f) => f.customer === as);
+  const out = [el('h4', { text: 'Quality' })];
+  if (!byCustomer.has(as)) out.push(el('p', { text: `${as} has no ASPA to check.` }));
+  else if (!mine.length) out.push(el('p', { text: `No issue found in the ASPA of ${as}${unseen ? '' : ' (the checks that need BGP visibility are not available at the moment)'}.` }));
+  else {
+    out.push(el('ul', { class: 'timeline' }, ...mine.map((f) => el('li', {},
+      el('span', { class: `badge sev-${f.severity}`, text: SEVERITY[f.severity] }), ' ',
+      el('span', { text: `${AspaQuality.KINDS[f.kind].title}: ${as} ${f.detail}` })))));
+  }
+  out.push(el('p', {}, el('a', { href: `#routes=${as}`, text: `Check the routes ${as} originates` }), ' against the ASPAs, and compare its neighbours with its providers.'));
+  box.replaceChildren(...out);
+}
+
+
 /* ---------- changes: recent days and the history of one AS ---------- */
 // events.json (see history.js) classified into new / changed / removed; null until it has loaded
 let changes = null;
@@ -630,6 +689,40 @@ function checkRoutes(routes) {
 }
 const compressBgp = (p) => p.filter((n, i) => i === 0 || n !== p[i - 1]);
 
+// The AS right before the origin in each path, compared with the providers in the ASPA of the origin.
+function neighbourPanel(origin, rows) {
+  const as = 'AS' + origin;
+  const byN = new Map();
+  for (const r of rows) {
+    if (r.shown.length < 2 || r.shown[r.shown.length - 1] !== origin) continue;
+    const n = 'AS' + r.shown[r.shown.length - 2];
+    const e = byN.get(n) || { routes: 0, Valid: 0, Unknown: 0, Invalid: 0 };
+    e.routes += r.routes; e[r.result] += r.routes;
+    byN.set(n, e);
+  }
+  if (!byN.size) return null;
+  const listed = aspaSets.get(as);
+  const list = [...byN].sort((a, b) => b[1].routes - a[1].routes);
+  const status = (n) => (!listed ? 'no ASPA' : listed.has(n) ? 'listed' : 'not listed');
+  const unlisted = list.filter(([n]) => listed && !listed.has(n));
+  const notSeen = listed ? [...listed].filter((p) => p !== 'AS0' && !byN.has(p)) : [];
+  const head = el('tr', {}, ...['Neighbour', 'Routes', `In the ASPA of ${as}`, 'Valid', 'Unknown', 'Invalid'].map((t, i) => el('th', { scope: 'col', class: i === 1 || i > 2 ? 'num' : undefined, text: t })));
+  const trs = list.slice(0, 15).map(([n, e]) => el('tr', {},
+    el('td', {}, asChip(n)), el('td', { class: 'num', text: fmt.format(e.routes) }),
+    el('td', {}, el('span', { class: 'badge nb-' + status(n).replace(' ', '-'), text: status(n) })),
+    el('td', { class: 'num', text: fmt.format(e.Valid) }), el('td', { class: 'num', text: fmt.format(e.Unknown) }), el('td', { class: 'num', text: fmt.format(e.Invalid) })));
+  const notes = [];
+  if (!listed) notes.push(`${as} has no ASPA. These are the networks next to it in the routes; the ones that are its providers are the ones to list.`);
+  else if (unlisted.length) notes.push(`${fmt.format(unlisted.length)} neighbour${unlisted.length === 1 ? ' is' : 's are'} not in the ASPA of ${as}. A neighbour that is a peer or a customer should not be there; one that is a provider should, and the routes through it are then not proven.`);
+  if (notSeen.length) notes.push(`Listed but not seen next to ${as} in these routes: ${notSeen.slice(0, 8).join(', ')}${notSeen.length > 8 ? ` and ${notSeen.length - 8} more` : ''} (a backup provider, or one the collectors do not see).`);
+  return el('div', {},
+    el('h3', { class: 'subhead', text: `Neighbours of ${as} in these routes` }),
+    el('section', { class: 'table-wrap card', tabindex: '0', 'aria-label': `Neighbours of ${as} in the routes` }, el('table', { class: 'checks live nb' },
+      el('caption', { class: 'sr-only', text: `The AS before ${as} in the paths, how many routes go through it and whether the ASPA of ${as} lists it` }),
+      el('thead', {}, head), el('tbody', {}, ...trs))),
+    ...notes.map((t) => el('p', { class: 'hint', text: t })));
+}
+
 async function renderLiveRoutes(text) {
   const out = $('liveresult');
   const q = parseLiveQuery(text);
@@ -689,6 +782,14 @@ async function renderLiveRoutes(text) {
     el('thead', {}, el('tr', {}, el('th', { scope: 'col', text: 'Verdict' }), el('th', { scope: 'col', text: 'AS path, as a router shows it' }),
       el('th', { scope: 'col', class: 'num', text: 'Routes' }), el('th', { scope: 'col', text: 'Why' }))),
     tbody)));
+  const origins = new Map();
+  for (const r of rows) if (r.shown.length > 1) origins.set(r.shown[r.shown.length - 1], (origins.get(r.shown[r.shown.length - 1]) || 0) + r.routes);
+  const total = [...origins.values()].reduce((a, b) => a + b, 0);
+  for (const [origin, n] of [...origins].sort((a, b) => b[1] - a[1]).slice(0, 2)) {
+    if (n < total * 0.1) continue;
+    const panel = neighbourPanel(origin, rows);
+    if (panel) kids.push(panel);
+  }
   kids.push(el('p', { class: 'hint', text: 'The verification is the downstream procedure, because the networks that feed a route collector mostly send their full table, as a provider would; a feeder that sends only its customers\' routes passes it too. Paths with an AS_SET are skipped. ASPAs are the validated ones listed on this page.' }));
   out.replaceChildren(...kids);
 }
@@ -734,9 +835,10 @@ function renderLookup(as) {
     right.append(el('p', { text: `No ASPA names ${as} as a provider.` }));
   }
 
-  out.replaceChildren(head, el('div', { class: 'res-grid' }, left, right), el('div', { class: 'res-hist', id: 'as-history' }));
+  out.replaceChildren(head, el('div', { class: 'res-grid' }, left, right), el('div', { class: 'res-hist', id: 'as-history' }), el('div', { class: 'res-hist', id: 'as-quality' }));
   lookupAs = as;
   renderAsHistory(as);
+  renderAsQuality(as);
 }
 
 function lookupFromHash() {
@@ -825,6 +927,9 @@ async function load() {
       ...tals.map((t) => el('option', { value: t, text: rirName(t) })));
     renderOverview(status);
     addCoverageTile();
+    await loadVisibility();
+    computeQuality();
+    renderQuality();
     applyFilter();
     lookupFromHash();
   } catch (err) {
