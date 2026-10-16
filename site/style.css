@@ -277,6 +277,7 @@ td.rir { color: var(--ink-2); white-space: nowrap; }
 /* both logos have dark text on a transparent background: keep them readable in dark mode */
 .credits a img { background: #fff; padding: 2px 6px; border-radius: 4px; box-sizing: content-box; }
 .credits a img[src*="avatar"] { background: none; padding: 0; border-radius: 50%; }
+.credits a img[src*="vi-logo"] { background: none; padding: 0; }
 .credits code { font-size: inherit; color: inherit; }
 @media (max-width: 760px) {
   .toc ol { columns: 1; }

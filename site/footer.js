@@ -62,7 +62,7 @@
     }
   };
 
-  // Row 2. Logos are links; the vi icon is decorative (the text next to it says it all).
+  // Row 2. Logos are links; the vi icon is original, so it links to the Wikipedia article on vi.
   const credits = el('ul', { class: 'credits', 'aria-label': 'Credits' },
     el('li', {}, 'Powered by ',
       link('https://www.dei.unipd.it', logo('/img/dei-logo.png?v=1', 'DEI, Department of Information Engineering, University of Padova', 111, 28))),
@@ -70,7 +70,9 @@
       link('https://www.freebsd.org', logo('/img/freebsd-logo.png?v=1', 'FreeBSD', 97, 28))),
     el('li', {}, 'Validated by ',
       link('https://nlnetlabs.nl/projects/routinator/', logo('/img/routinator-avatar.png?v=1', '', 28, 28), el('span', {}, 'Routinator'))),
-    el('li', {}, logo('/img/vi-logo.svg?v=1', '', 28, 28), ' Made with vi ', el('code', {}, ':wq')));
+    el('li', {}, 'Made with ',
+      link('https://en.wikipedia.org/wiki/Vi_(text_editor)', logo('/img/vi-logo.svg?v=1', '', 28, 28), el('span', {}, 'vi')),
+      ' ', el('code', {}, ':wq')));
 
   footer.append(build, credits);
   refresh();
