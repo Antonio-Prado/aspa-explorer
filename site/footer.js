@@ -25,7 +25,9 @@
     node.append(...children);
     return node;
   };
-  const link = (href, ...children) => el('a', { href, rel: 'noopener' }, ...children);
+  // Every footer link opens in a new tab; screen-reader users are told so (WCAG G201).
+  const link = (href, ...children) => el('a', { href, target: '_blank', rel: 'noopener' }, ...children,
+    el('span', { class: 'sr-only' }, ' (opens in a new tab)'));
   const logo = (src, alt, w, h) => el('img', { src, alt, width: w, height: h });
 
   // Row 1, as in the other sites of the family: release, last commit, accessibility,

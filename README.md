@@ -70,7 +70,7 @@ The page fetches two same-origin JSON files, which nginx proxies to Routinator a
 ```
 site/                          the web root: index.html, guide.html, style.css, app.js,
                                footer.js, version.json, favicon.svg, img/
-assets/                        logo (SVG) and screenshots used in this README
+assets/                        logo (SVG), screenshots and credit logos used in this README
 deploy/nginx/aspa.conf         nginx server blocks and proxy cache zone
 deploy/nginx/rpki-proxy.conf   proxy settings shared by the data endpoints
 deploy/nginx/security-headers.conf   security headers (server block and /client-ip)
@@ -102,7 +102,18 @@ Releases follow [Semantic Versioning](https://semver.org/); the version shown in
 
 ## Credits
 
-Data from [Routinator](https://github.com/NLnetLabs/routinator) by NLnet Labs. Powered by the Department of Information Engineering (DEI), University of Padova; served by [FreeBSD](https://www.freebsd.org). The FreeBSD logo is a trademark of The FreeBSD Foundation.
+<p align="center">
+  Powered by <a href="https://www.dei.unipd.it"><img src="assets/credits/dei-logo.png" alt="DEI, Department of Information Engineering, University of Padova" height="40" align="middle"></a>
+  &nbsp;&nbsp;&nbsp;
+  Served by <a href="https://www.freebsd.org"><img src="assets/credits/freebsd-logo.png" alt="FreeBSD" height="40" align="middle"></a>
+  &nbsp;&nbsp;&nbsp;
+  <img src="assets/credits/vi-logo.svg" alt="" height="32" align="middle"> Made with vi <code>:wq</code>
+</p>
+
+- **Powered by DEI:** the Department of Information Engineering (DEI), University of Padova, hosts the page and the validator behind it.
+- **Served by FreeBSD:** the FreeBSD logo is a trademark of The FreeBSD Foundation.
+- **Made with vi:** the little `vi` icon is original (vi has no official logo); `:wq` saves and quits.
+- **Data:** [Routinator](https://github.com/NLnetLabs/routinator) by NLnet Labs.
 
 ## License
 
