@@ -10,6 +10,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - Project logo (`assets/`), used in the README and as the site favicon.
 
+### Fixed
+- HTML validation errors: uppercase `DOCTYPE` and explicit `type` on the search input.
+- CI nginx check no longer requires `apk`, so it also runs on shell runners.
+
 ## [1.0.0] - 2026-10-16
 
 ### Added
