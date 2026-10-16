@@ -13,6 +13,7 @@ const fmt = new Intl.NumberFormat('en-US');
 let aspas = [];            // [{customer, providers, source}] sorted by customer number
 let byCustomer = new Map(); // 'AS123' -> aspa
 let byProvider = new Map(); // 'AS123' -> ['AS456', ...] customers naming it
+let aspaSets = new Map();   // 'AS123' -> Set of its providers, for the path checker
 let shown = 0;
 let filtered = [];
 
@@ -165,6 +166,71 @@ function renderOverview(status) {
     (status && status.version ? ` · ${status.version.replace('/', ' ')}` : '');
 }
 
+
+/* ---------- AS path check ---------- */
+const HOP_CLASS = { 'Provider+': 'yes', 'Not Provider+': 'no', 'No Attestation': 'na' };
+
+function hopCell(customer, provider, outcome) {
+  const text = outcome === 'No Attestation' ? `${customer} has no ASPA`
+    : `${customer} ${outcome === 'Provider+' ? 'lists' : 'does not list'} ${provider}`;
+  return el('td', { class: 'hop ' + HOP_CLASS[outcome] }, text);
+}
+
+function pathVerdict(v, missing) {
+  const first = v.path[0];
+  const last = v.path[v.N - 1];
+  if (v.N <= 1) return 'A path with a single AS is valid: there is nothing to check.';
+  if (v.result === 'Valid') {
+    return v.direction === 'up'
+      ? `Every hop from the origin ${first} to the neighbour ${last} is attested as customer to provider.`
+      : 'The up-ramp and the down-ramp together cover the whole path: it has the shape of a valley-free route that a provider can send (an uphill run, at most one lateral hop, then a downhill run).';
+  }
+  if (v.result === 'Unknown') {
+    return 'Nothing in the ASPAs contradicts the path, but some ASes publish no ASPA, so it cannot be proven valid'
+      + (missing.length ? `: ${missing.join(', ')}.` : '.');
+  }
+  if (v.direction === 'up') {
+    const i = v.maxUp;
+    return `${v.path[i - 1]} publishes an ASPA that does not list ${v.path[i]} as a provider, so the route is not a plain climb from the origin to the neighbour.`;
+  }
+  return `Even in the best case the up-ramp (at most ${v.maxUp} of ${v.N} ASes, from the origin ${first}) and the down-ramp (at most ${v.maxDown}, from the neighbour ${last}) do not meet: part of the path is a valley, which is how a route leak or a forged path segment looks.`;
+}
+
+function renderPathCheck(text, direction) {
+  const out = $('pathresult');
+  const parsed = AspaVerify.parsePath(text);
+  if (parsed.error) { out.replaceChildren(el('p', { class: 'error', text: parsed.error })); return; }
+  if (!aspas.length) {
+    out.replaceChildren(el('p', { class: 'error', text: 'The ASPA data is still loading; try again in a moment.' }));
+    return;
+  }
+  const v = AspaVerify.verify(aspaSets, parsed.path, direction);
+  const missing = [...new Set(v.path.filter((as) => !aspaSets.has(as)))];
+  const kids = [
+    el('p', { class: 'verdict v-' + v.result.toLowerCase() }, el('strong', { text: v.result }), ' ', pathVerdict(v, missing)),
+    el('p', { class: 'src' }, `Path from the origin to the neighbour${v.path.length < parsed.path.length ? ' (prepending removed)' : ''}: ${v.path.join(' → ')}`),
+  ];
+  if (v.N > 1) {
+    const down = direction === 'down';
+    const head = el('tr', {}, el('th', { scope: 'col', text: 'Hop' }), el('th', { scope: 'col', text: 'Uphill check' }));
+    if (down) head.append(el('th', { scope: 'col', text: 'Downhill check' }));
+    const rows = [];
+    for (let i = 1; i < v.N; i++) {
+      const row = el('tr', {}, el('th', { scope: 'row', text: `${v.path[i - 1]} → ${v.path[i]}` }),
+        hopCell(v.path[i - 1], v.path[i], v.up[i]));
+      if (down) row.append(hopCell(v.path[i], v.path[i - 1], v.down[i + 1]));
+      rows.push(row);
+    }
+    kids.push(el('div', { class: 'table-wrap card' }, el('table', { class: 'checks' },
+      el('caption', { class: 'sr-only', text: 'ASPA checks for each hop, from the origin towards the neighbour' }),
+      el('thead', {}, head), el('tbody', {}, ...rows))));
+    const ramps = [`Up-ramp, from the origin: ${v.minUp} AS${v.minUp === 1 ? '' : 'es'} certain, up to ${v.maxUp} possible.`];
+    if (down) ramps.push(`Down-ramp, from the neighbour: ${v.minDown} AS${v.minDown === 1 ? '' : 'es'} certain, up to ${v.maxDown} possible.`);
+    kids.push(el('p', { class: 'src', text: ramps.join(' ') + ` The path has ${v.N} ASes.` }));
+  }
+  out.replaceChildren(...kids);
+}
+
 /* ---------- lookup ---------- */
 function renderLookup(as) {
   const out = $('result');
@@ -209,6 +275,15 @@ function renderLookup(as) {
 }
 
 function lookupFromHash() {
+  const hash = location.hash.slice(1);
+  if (hash.startsWith('path=')) {
+    const q = new URLSearchParams(hash);
+    const direction = q.get('from') === 'up' ? 'up' : 'down';
+    $('aspath').value = q.get('path') || '';
+    $('from').value = direction;
+    renderPathCheck($('aspath').value, direction);
+    return;
+  }
   const as = normalizeAsn(decodeURIComponent(location.hash.slice(1)));
   if (!as) return;
   $('asn').value = as;
@@ -265,6 +340,7 @@ async function load() {
       tal: (a.source && a.source[0] && a.source[0].tal) || a.ta || '?',
     })).sort((x, y) => asNum(x.customer) - asNum(y.customer));
     byCustomer = new Map(aspas.map((a) => [a.customer, a]));
+    aspaSets = new Map(aspas.map((a) => [a.customer, new Set(a.providers)]));
     byProvider = new Map();
     for (const a of aspas) {
       for (const p of a.providers) {
@@ -298,6 +374,13 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     if (location.hash === '#' + as) lookupFromHash();
     else location.hash = as;
+  });
+  $('pathform').addEventListener('submit', (e) => {
+    e.preventDefault();
+    const q = new URLSearchParams({ path: $('aspath').value.trim(), from: $('from').value });
+    const hash = '#' + q.toString();
+    if (location.hash === hash) lookupFromHash();
+    else location.hash = hash;
   });
   window.addEventListener('hashchange', lookupFromHash);
   $('filter').addEventListener('input', applyFilter);

@@ -26,6 +26,14 @@ js-syntax:
   script:
     - node --check site/app.js
     - node --check site/footer.js
+    - node --check site/verify.js
+
+unit-tests:
+  extends: .regular
+  stage: lint
+  image: node:22-alpine
+  script:
+    - node scripts/test-verify.mjs
 
 html-validate:
   extends: .regular
@@ -60,7 +68,7 @@ js-security-lint:
   stage: security
   image: node:22-alpine
   script:
-    - npx --yes eslint@9 --no-config-lookup -c eslint.config.mjs site/app.js site/footer.js
+    - npx --yes eslint@9 --no-config-lookup -c eslint.config.mjs site/app.js site/footer.js site/verify.js
 
 secret-detection:
   extends: .regular

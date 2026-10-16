@@ -18,6 +18,9 @@
   --track: #f0efec;
   --chip: #f0efec;
   --chip-hover: #e1e0d9;
+  --ok-bg: #e3f4ea; --ok-ink: #0d5c32;
+  --warn-bg: #fff1d6; --warn-ink: #6b4200;
+  --bad-bg: #fde4e4; --bad-ink: #8f1a1a;
   --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
 }
 @media (prefers-color-scheme: dark) {
@@ -41,6 +44,9 @@
     --track: #242422;
     --chip: #262624;
     --chip-hover: #333331;
+    --ok-bg: #11301f; --ok-ink: #8be0ad;
+    --warn-bg: #3a2a07; --warn-ink: #f4cb7a;
+    --bad-bg: #3d1414; --bad-ink: #ffa3a3;
   }
 }
 :root[data-theme="dark"] {
@@ -63,6 +69,9 @@
   --track: #242422;
   --chip: #262624;
   --chip-hover: #333331;
+  --ok-bg: #11301f; --ok-ink: #8be0ad;
+  --warn-bg: #3a2a07; --warn-ink: #f4cb7a;
+  --bad-bg: #3d1414; --bad-ink: #ffa3a3;
 }
 
 * { box-sizing: border-box; }
@@ -288,3 +297,25 @@ main:focus { outline: none; }
 .brandlink { display: inline-flex; align-items: center; gap: 0.6rem; font-size: 1.05rem; font-weight: 700; color: var(--ink); text-decoration: none; }
 .brandlink:hover span { text-decoration: underline; }
 .back { margin-bottom: 1rem; }
+
+/* AS path check */
+.check { margin-top: 1.25rem; }
+.check h2 { margin: 0 0 0.75rem; font-size: 1.05rem; }
+.check .field { flex-wrap: wrap; max-width: 44rem; }
+.check .field + .field { margin-top: 0.6rem; }
+.check label.inline { display: inline-block; margin: 0; white-space: nowrap; align-self: center; }
+.check select { flex: 1; min-width: 12rem; }
+.verdict { margin: 1rem 0 0.5rem; padding: 0.6rem 0.9rem; border-radius: 8px; border: 1px solid currentColor; }
+.verdict strong { margin-right: 0.35rem; text-transform: uppercase; letter-spacing: 0.04em; }
+.v-valid { background: var(--ok-bg); color: var(--ok-ink); }
+.v-unknown { background: var(--warn-bg); color: var(--warn-ink); }
+.v-invalid { background: var(--bad-bg); color: var(--bad-ink); }
+.checks th, .checks td { overflow-wrap: anywhere; }
+.checks th[scope="row"] { font-family: var(--mono); font-size: 0.85rem; font-weight: 500; }
+.checks { width: 100%; }
+.checks td.hop.yes::before { content: "✓ "; }
+.checks td.hop.no::before { content: "✗ "; }
+.checks td.hop.na::before { content: "? "; }
+.checks td.hop.yes { color: var(--ok-ink); }
+.checks td.hop.no { color: var(--bad-ink); }
+.checks td.hop.na { color: var(--warn-ink); }

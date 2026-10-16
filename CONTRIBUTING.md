@@ -18,6 +18,8 @@ make check
 
 To preview the page with real data, serve `site/` behind nginx with the configuration in `deploy/nginx/`, or point a local server at a Routinator instance that exposes `/jsonext` and `/api/v1/status`.
 
+The ASPA path verification (`site/verify.js`) is a pure module with unit tests (`make test`, `scripts/test-verify.mjs`); the tests include the worked examples of the paper that the procedure is based on. Change the procedure only together with its tests.
+
 The pipeline also runs two security checks: `make lint-security` (ESLint rules that forbid `innerHTML`, `eval` and similar sinks in `site/*.js`) and `make secrets` (a [gitleaks](https://github.com/gitleaks/gitleaks) scan of the whole git history).
 
 ## Repositories and publication

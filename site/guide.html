@@ -7,13 +7,13 @@
 <meta name="description" content="How to read and use the ASPA Explorer interface: lookup, overview charts, the table of all ASPAs and where the data comes from.">
 <meta name="color-scheme" content="light dark">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
-<link rel="stylesheet" href="/style.css?v=1.3.3">
-<script src="/footer.js?v=1.3.3" defer></script>
+<link rel="stylesheet" href="/style.css?v=1.4.0">
+<script src="/footer.js?v=1.4.0" defer></script>
 </head>
 <body>
 <a class="skip" href="#main">Skip to main content</a>
 <header class="wrap masthead">
-  <p class="back"><a class="brandlink" href="/" title="Back to ASPA Explorer"><img class="brand" src="/img/logo-mark.svg?v=1.3.3" alt="" width="40" height="40"><span>ASPA Explorer</span></a></p>
+  <p class="back"><a class="brandlink" href="/" title="Back to ASPA Explorer"><img class="brand" src="/img/logo-mark.svg?v=1.4.0" alt="" width="40" height="40"><span>ASPA Explorer</span></a></p>
   <h1>Guide</h1>
   <p class="lede">How the ASPA Explorer interface works, what each number means and where the data comes from.</p>
 </header>
@@ -25,6 +25,7 @@
       <li><a href="#lookup">Looking up an AS</a></li>
       <li><a href="#overview">The overview</a></li>
       <li><a href="#table">The table of all ASPAs</a></li>
+      <li><a href="#path-check">Checking an AS path</a></li>
       <li><a href="#links">Links and keyboard use</a></li>
       <li><a href="#data">Where the data comes from</a></li>
       <li><a href="#reading">Reading the results</a></li>
@@ -91,6 +92,28 @@
       <li>The table shows 100 rows at a time. Use <em>Show N more</em> under it to load the next batch. Provider sets longer than eight entries can be expanded with <em>+N more</em>.</li>
       <li>Every AS in the table is a link to its lookup.</li>
     </ul>
+  </section>
+
+  <section aria-labelledby="path-check">
+    <h2 id="path-check">Checking an AS path</h2>
+    <p>The <em>Check an AS path</em> box applies the ASPA verification procedure to a path and shows why it passes or fails. It runs in your browser, on the ASPA objects listed on the page: nothing you type is sent anywhere.</p>
+    <p>Paste the path as your router shows it, with the <strong>neighbour first and the origin last</strong>, for example <code>3356 1299 680</code> (a leading <code>AS</code> is optional). Then say where the route comes from:</p>
+    <dl>
+      <dt>A provider (downstream check)</dt>
+      <dd>The route was received from a provider. A valid path climbs from the origin through customer-to-provider hops, may have one lateral hop at the top, and then descends. The verdict combines an <em>up-ramp</em> (counted from the origin) and a <em>down-ramp</em> (counted from the neighbour).</dd>
+      <dt>A customer or a peer (upstream check)</dt>
+      <dd>The route was received from a customer or a peer. Every hop, from the origin to the neighbour, must be a customer-to-provider hop.</dd>
+    </dl>
+    <p>For each pair of adjacent ASes the table shows whether the customer's ASPA lists the other AS as a provider: <em>lists</em> (✓), <em>does not list</em> (✗), or <em>has no ASPA</em> (?). An AS whose ASPA contains only <code>AS0</code> declares that it has no providers.</p>
+    <dl>
+      <dt>Valid</dt>
+      <dd>The attested hops are enough to show that the path has the expected shape.</dd>
+      <dt>Unknown</dt>
+      <dd>No hop is attested as wrong, but some ASes publish no ASPA, so the path cannot be proven valid.</dd>
+      <dt>Invalid</dt>
+      <dd>At least one hop is attested as not customer-to-provider where the procedure needs it to be: the path contains a valley, which is how a route leak or a forged path segment looks.</dd>
+    </dl>
+    <p>Limits: repeated ASes (prepending) are removed before checking; paths with an AS_SET are not accepted (the procedure treats them as Invalid); the neighbour check and route-origin validation are not part of this tool; and the result reflects the validated ASPA snapshot shown on this page, not your own router's view. The procedure follows the IETF draft <a href="https://datatracker.ietf.org/doc/draft-ietf-sidrops-aspa-verification/" target="_blank" rel="noopener">BGP AS_PATH Verification Based on ASPA Objects<span class="sr-only"> (opens in a new tab)</span></a>, which is still work in progress.</p>
   </section>
 
   <section aria-labelledby="links">
