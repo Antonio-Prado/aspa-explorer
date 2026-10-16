@@ -7,13 +7,13 @@
 <meta name="description" content="How to read and use the ASPA Explorer interface: lookup, overview charts, the table of all ASPAs and where the data comes from.">
 <meta name="color-scheme" content="light dark">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
-<link rel="stylesheet" href="/style.css?v=1.6.2">
-<script src="/footer.js?v=1.6.2" defer></script>
+<link rel="stylesheet" href="/style.css?v=1.7.0">
+<script src="/footer.js?v=1.7.0" defer></script>
 </head>
 <body>
 <a class="skip" href="#main">Skip to main content</a>
 <header class="wrap masthead">
-  <p class="back"><a class="brandlink" href="/" title="Back to ASPA Explorer"><img class="brand" src="/img/logo-mark.svg?v=1.6.2" alt="" width="40" height="40"><span>ASPA Explorer</span></a></p>
+  <p class="back"><a class="brandlink" href="/" title="Back to ASPA Explorer"><img class="brand" src="/img/logo-mark.svg?v=1.7.0" alt="" width="40" height="40"><span>ASPA Explorer</span></a></p>
   <h1>Guide</h1>
   <p class="lede">How the ASPA Explorer interface works, what each number means and where the data comes from.</p>
 </header>
@@ -28,6 +28,7 @@
       <li><a href="#path-check">Checking an AS path</a></li>
       <li><a href="#live-routes">Checking the routes seen in BGP</a></li>
       <li><a href="#changes">Recent changes and the history of an AS</a></li>
+      <li><a href="#quality">ASPA quality</a></li>
       <li><a href="#links">Links and keyboard use</a></li>
       <li><a href="#data">Where the data comes from</a></li>
       <li><a href="#reading">Reading the results</a></li>
@@ -133,6 +134,27 @@
     <p>The changes since 12 October 2023 were reconstructed from the daily output of the <a href="https://ftp.ripe.net/rpki/" target="_blank" rel="noopener">RIPE NCC RPKI repository archive<span class="sr-only"> (opens in a new tab)</span></a>; since 16 October 2026 they come from the validator behind this page, which can show a brief disappearance when a repository was unreachable. An ASPA that already existed on 12 October 2023 is shown as new on that day.</p>
   </section>
 
+  <section aria-labelledby="quality">
+    <h2 id="quality">ASPA quality</h2>
+    <p>The <em>ASPA quality</em> section runs checks on every ASPA listed on the page and shows how many ASPAs have an <strong>error</strong> (something that cannot be right), a <strong>warning</strong> (very likely worth fixing) or a <strong>note</strong> (worth a look). Each group opens into the list of ASPAs, with a short explanation of why it matters. The checks are:</p>
+    <dl>
+      <dt>AS0 together with other providers (error)</dt>
+      <dd><code>AS0</code> means <em>no provider</em>; listed next to real providers the ASPA contradicts itself.</dd>
+      <dt>An AS listed as its own provider, or a private or reserved provider AS number (error)</dt>
+      <dd>Such an entry has no meaning: no real path goes through a private, documentation or reserved AS number.</dd>
+      <dt>Two ASes that list each other as provider (warning)</dt>
+      <dd>A customer-to-provider link has a direction. When both ASes list each other (siblings may do it on purpose) a path can climb and descend over that link, which weakens the detection of route leaks.</dd>
+      <dt>A provider not seen in BGP (warning)</dt>
+      <dd>The RIPE RIS collectors see no route through that AS: a typo, a retired AS, or an AS that announces nothing.</dd>
+      <dt>An ASPA that expires within 30 days (warning)</dt>
+      <dd>When the signed object expires the ASPA disappears and the AS's routes go back to <em>unknown</em> until a new one is published.</dd>
+      <dt>A customer not seen in BGP, or a provider set of 30 or more ASes (notes)</dt>
+      <dd>An AS the collectors do not see may announce only where they do not look; with a very large provider set almost any path through the AS is accepted.</dd>
+    </dl>
+    <p>The checks that need to know which ASes appear in BGP use a list refreshed every day (<code>visibility.json</code>, from the RIPEstat call <em>ris-asns</em>) and are left out when it cannot be loaded. A finding is a reason to look, not a verdict: a mutual pair may be intentional, and an AS can be absent from the collectors for good reasons. In the lookup, the <em>Quality</em> block lists the findings of that AS's own ASPA.</p>
+    <p>In <em>Check the routes seen in BGP</em>, a table of the <strong>neighbours</strong> of the origin lists the AS right before the origin in each path, how many routes go through it, whether the origin's ASPA lists it, and how many of those routes are valid, unknown or invalid. It also shows the providers that are listed but not seen. A neighbour that is a peer or a customer is not meant to be in an ASPA, so <em>not listed</em> is a gap only for a neighbour that is a provider; the invalid routes through not-listed neighbours are the ones to look at first.</p>
+  </section>
+
   <section aria-labelledby="links">
     <h2 id="links">Links and keyboard use</h2>
     <p>An AS-path check has its own address too, such as <code>https://aspa.ping6.it/#path=3356+680&amp;from=up</code> (<code>from=up</code> for a route received from a customer or a peer, <code>from=down</code> for one received from a provider).</p>
@@ -147,7 +169,7 @@
       <li>the list of valid ASPAs (<a href="https://rpki.ping6.it/jsonext?exclude=routeOrigins,routerKeys" target="_blank" rel="noopener">jsonext<span class="sr-only"> (opens in a new tab)</span></a>, route origins and router keys left out), and</li>
       <li>the validator status, which supplies the last validation time and the Routinator version.</li>
     </ul>
-    <p>The chart of ASPAs over time and the changes read three more files, <code>history.json</code>, <code>events.json</code> and <code>changes.atom</code>, from the <code>history</code> branch of the <a href="https://gitlab.dei.unipd.it/Antonio-Prado/aspa-explorer/-/tree/history" target="_blank" rel="noopener">public project<span class="sr-only"> (opens in a new tab)</span></a>, where a daily job adds one row and the day's changes. The routes seen in BGP come from RIPEstat when you ask for them.</p>
+    <p>The chart of ASPAs over time, the changes and the quality checks read four more files, <code>history.json</code>, <code>events.json</code>, <code>changes.atom</code> and <code>visibility.json</code>, from the <code>history</code> branch of the <a href="https://gitlab.dei.unipd.it/Antonio-Prado/aspa-explorer/-/tree/history" target="_blank" rel="noopener">public project<span class="sr-only"> (opens in a new tab)</span></a>, where a daily job adds one row and the day's changes. The routes seen in BGP come from RIPEstat when you ask for them.</p>
     <p>The validator refreshes about every 10 minutes and the web server keeps its answer for 2 minutes, so a new ASPA can take a little while to show up here. The <em>last validation</em> time in the header tells you how fresh the data is.</p>
   </section>
 

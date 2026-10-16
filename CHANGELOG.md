@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.7.0] - 2026-10-16
+
+### Added
+- ASPA quality: checks on every ASPA (AS0 together with other providers, an AS listed as its own provider, a private or reserved provider, two ASes listing each other, a provider not seen in BGP, an ASPA that expires within 30 days, a customer not seen in BGP, a provider set of 30 or more) with counts and lists in a new section, and a *Quality* block in the lookup. The checks are in `site/quality.js`, with tests.
+- In the routes check, a table of the neighbours of the origin: the AS before the origin in each path, its routes, whether the ASPA of the origin lists it and how many of those routes are valid, unknown or invalid, with the providers that are listed but not seen.
+- The daily job also writes `visibility.json` (the ASes of the ASPAs that the RIPE RIS collectors do not see) on the `history` branch.
+
 ## [1.6.2] - 2026-10-16
 
 ### Changed
