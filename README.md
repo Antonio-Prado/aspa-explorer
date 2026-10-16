@@ -152,5 +152,5 @@ Released under the <a href="LICENSE" target="_blank" rel="noopener">MIT License<
   &nbsp;&nbsp;&nbsp;
   <a href="https://nlnetlabs.nl/projects/routinator/" target="_blank" rel="noopener"><img src="assets/credits/routinator-avatar.png" alt="Routinator, by NLnet Labs" height="40"></a>
   &nbsp;&nbsp;&nbsp;
-  <img src="assets/credits/vi-logo.svg" alt="vi" height="32">
+  <a href="https://en.wikipedia.org/wiki/Vi_(text_editor)" target="_blank" rel="noopener"><img src="assets/credits/vi-logo.svg" alt="vi, the text editor" height="32"></a>
 </p>
