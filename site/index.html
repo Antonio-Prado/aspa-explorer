@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ASPA Explorer</title>
+<meta name="description" content="Browse the validated ASPA (Autonomous System Provider Authorization) objects published in the RPKI.">
+<meta name="color-scheme" content="light dark">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/style.css">
+<script src="/app.js" defer></script>
+</head>
+<body>
+<header class="wrap masthead">
+  <h1>ASPA Explorer</h1>
+  <p class="lede">Validated ASPA objects from the RPKI, as seen by the Routinator validator at <a href="https://rpki.ping6.it:8323/ui/">rpki.ping6.it</a>.</p>
+  <p class="meta" id="meta">Loading data…</p>
+</header>
+
+<main class="wrap">
+  <section class="lookup card" aria-labelledby="lookup-title">
+    <form id="lookup" autocomplete="off">
+      <label id="lookup-title" for="asn">Look up an autonomous system</label>
+      <div class="field">
+        <input id="asn" name="asn" inputmode="text" spellcheck="false" placeholder="AS number, e.g. AS680" aria-describedby="lookup-hint">
+        <button type="submit">Look up</button>
+      </div>
+      <p class="hint" id="lookup-hint">Shows the AS's own ASPA and every ASPA that names it as a provider. Try
+        <a href="#AS680">AS680</a>, <a href="#AS12779">AS12779</a>, <a href="#AS1299">AS1299</a> or <a href="#AS6939">AS6939</a>.</p>
+    </form>
+    <div id="result" aria-live="polite"></div>
+  </section>
+
+  <section aria-labelledby="overview-title">
+    <h2 id="overview-title">Overview</h2>
+    <div class="tiles" id="tiles"></div>
+    <div class="charts">
+      <figure class="card">
+        <figcaption><span class="t">ASPAs by RIR</span><span class="s">Validated ASPA objects per trust anchor</span></figcaption>
+        <div class="bars" id="chart-rir"></div>
+      </figure>
+      <figure class="card">
+        <figcaption><span class="t">Providers per ASPA</span><span class="s">How many provider ASes each customer AS declares</span></figcaption>
+        <div class="colchart" id="chart-size"></div>
+      </figure>
+      <figure class="card wide">
+        <figcaption><span class="t">Most-named providers</span><span class="s">Number of ASPAs listing the AS as a provider · select one to look it up</span></figcaption>
+        <div class="bars" id="chart-prov"></div>
+      </figure>
+    </div>
+  </section>
+
+  <section aria-labelledby="all-title">
+    <h2 id="all-title">All ASPAs</h2>
+    <div class="filters">
+      <input id="filter" type="search" inputmode="text" spellcheck="false" placeholder="Filter by AS number" aria-label="Filter by AS number (customer or provider)">
+      <select id="rir" aria-label="Filter by RIR"><option value="">All RIRs</option></select>
+      <span class="count" id="count"></span>
+    </div>
+    <div class="table-wrap card">
+      <table>
+        <thead><tr><th scope="col">Customer AS</th><th scope="col">Providers</th><th scope="col">RIR</th></tr></thead>
+        <tbody id="rows"></tbody>
+      </table>
+    </div>
+    <button type="button" class="more" id="more" hidden>Show more</button>
+  </section>
+</main>
+
+<footer class="wrap foot">
+  <p>An <strong>ASPA</strong> (Autonomous System Provider Authorization) is a signed RPKI object in which a customer AS lists the ASes allowed to act as its upstream providers. Routers use these lists to detect route leaks and some forged AS paths. A provider set of <code>AS0</code> means the AS declares it has no upstream providers.</p>
+  <p>Data: Routinator, refreshed about every 10 minutes. Raw JSON: <a href="https://rpki.ping6.it:8323/jsonext?exclude=routeOrigins,routerKeys">jsonext</a> · <a href="https://rpki.ping6.it:8323/json?exclude=routeOrigins,routerKeys">json</a>.</p>
+</footer>
+
+<div class="tip" id="tip" role="tooltip" hidden></div>
+</body>
+</html>
