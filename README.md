@@ -85,6 +85,7 @@ The validator is a [Routinator](https://github.com/NLnetLabs/routinator) instanc
   - *possible tromboning*: the domestic routes that cross another country, a candidate in the sense of the literature to be confirmed with traceroutes.
 
   Evidence and tromboning are readings of the routes of the moment, with their limits stated in the page, not verdicts.
+- **Live and graph:** under the routes of an AS, the updates that RIPE RIS Live hands out as they arrive, each one checked with the ASPAs (a leak shows up here while it happens); in the lookup, the neighbourhood of an AS drawn as a graph (`site/graph.js`).
 - **Writing your ASPA:** an examples page with the rules, five cases, the common mistakes and a checker that reviews a list of providers and compares it with the published ASPA.
 
 **Follow**
@@ -98,6 +99,7 @@ The validator is a [Routinator](https://github.com/NLnetLabs/routinator) instanc
 - **Overview:** summary tiles on the home page, with the coverage (the share of the ASes seen in BGP that have an ASPA).
 - **Statistics:** the charts of the ASPAs (over time since October 2023 by RIR, provider ASes, median providers, no-provider ASPAs or coverage, over any period, with a logarithmic scale and CSV/JSON download; per RIR; providers per ASPA; most-named providers) and the adoption: who has an ASPA by size of the network, RIR and country, and the 100 largest transit networks.
 - **Route leaks today:** every route of three RIPE RIS collectors checked with the downstream ASPA verification once a day (`scripts/build-leaks.mjs`, a small MRT reader in `scripts/mrt.mjs`), the places of valley grouped and told apart with the CAIDA relationships into possible leaks and ASPAs that seem to miss a provider, also as `/api/v1/leaks.json`.
+- **Validators compared:** the ASPAs of this site's Routinator and of two rpki-client validators (the project's console and Cloudflare's), side by side every hour (`scripts/build-validators.mjs`), with the ASPAs on which they differ, also as `/api/v1/validators.json`.
 - **Quality:** checks on every ASPA (AS0 mixed with other providers, a private or reserved provider, two ASes listing each other, providers no collector sees in BGP, expiring objects, very large provider sets) with counts and lists, a *Quality* block in the lookup and a *check now* link on the ASes that list each other.
 - **Status:** a page and a dot in the menu that say how fresh each piece of data is (validator, API files, daily history, BGP visibility, adoption numbers, notifications).
 - **Download:** the whole list of ASPAs as CSV or JSON, for one RIR or all.

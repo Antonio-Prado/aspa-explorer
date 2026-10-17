@@ -438,8 +438,94 @@ function trombonePanel(origin, tr) {
       el('tbody', {}, ...list.map(([a, e]) => el('tr', {}, el('td', {}, asChip('AS' + a)), el('td', { text: countryName(e.cc) }),
         el('td', { text: e.outsideRegion ? 'another region' : 'same region' }), el('td', { class: 'num', text: fmt.format(e.paths) }), el('td', { class: 'num', text: fmt.format(e.feeders) })))))));
   }
+  const atlas = el('p', { class: 'hint' });
+  kids.push(atlas);
+  getJson(`https://atlas.ripe.net/api/v2/probes/?country_code=${encodeURIComponent(tr.country)}&status=1&page_size=1&fields=id`)
+    .then((c) => getJson(`https://atlas.ripe.net/api/v2/probes/?asn_v4=${origin}&status=1&page_size=1&fields=id`).then((n) => ({ c: c.count, n: n.count })))
+    .then(({ c, n }) => { atlas.textContent = `To measure it: RIPE Atlas has ${fmt.format(c)} connected probes in ${home}${n ? ` and ${fmt.format(n)} in ${as}` : ''}. With the RIPE Atlas tools (an API key and some credits are needed), a traceroute from probes of the country towards an address of one of the prefixes of ${as} is, for example, \`ripe-atlas measure traceroute --target <address> --from-country ${tr.country} --probes 5\`; then look at the country and the delay of each hop.`; })
+    .catch(() => { /* the line is simply not shown */ });
   kids.push(el('p', { class: 'hint', text: 'A lead, not proof. The literature calls a route a trombone when it starts and ends in the same country and crosses another, and measures it with traceroutes. From BGP only the candidate is visible, and the country where an AS is registered is not where it works: a transit network registered in the United States has points of presence in Europe, and an exchange point can keep a route local while the networks on it are registered abroad. To confirm one, measure the path (a traceroute from a probe in the country, for instance with RIPE Atlas) and look at the latency.' }));
   return el('div', {}, ...kids);
+}
+
+
+// The neighbourhood of an AS as a graph (site/graph.js): the providers of its ASPA, the ASPAs that name it, and,
+// on request, the neighbours that the routes show, with the evidence about each (site/evidence.js).
+function graphBlock(as) {
+  const box = el('div', { class: 'graph' });
+  const status = el('span', { class: 'hint' });
+  let observed = [];
+  const own = byCustomer.get(as);
+  const draw = () => AspaGraph.draw(box, AspaGraph.layout({
+    as, providers: own ? own.providers.filter((p) => p !== 'AS0') : [], customers: byProvider.get(as) || [], observed,
+  }), (id) => '#' + id);
+  const btn = el('button', { type: 'button', class: 'linkish', text: 'Add the neighbours that the routes show' });
+  btn.addEventListener('click', async () => {
+    btn.disabled = true; status.textContent = ' Reading the routes…';
+    try {
+      const data = await fetchRoutes(as);
+      const routes = data.bgp_state || [];
+      const ctx = await getEvidenceCtx();
+      const ev = AspaEvidence.analyse(routes, asNum(as), ctx || {});
+      observed = [...ev].map(([n, e]) => ({ asn: 'AS' + n, label: e.label === 'provider' || e.label === 'weak' ? e.label : 'none', paths: e.paths })).sort((x, y) => y.paths - x.paths);
+      draw();
+      status.textContent = ` ${fmt.format(routes.length)} routes read; the six most seen neighbours that the ASPA does not list are drawn on the right.`;
+    } catch (err) { status.textContent = ` Could not read the routes (${err.message}).`; }
+    btn.disabled = false;
+  });
+  const swatch = (cls, text) => el('li', {}, el('span', { class: `sw-graph ${cls}`, 'aria-hidden': 'true' }), ' ', text);
+  const det = el('details', { class: 'embed', id: 'as-graph' },
+    el('summary', { text: 'Show its neighbourhood as a graph' }), box,
+    el('p', { class: 'hint' }, btn, status),
+    el('ul', { class: 'graph-legend' },
+      swatch('n-provider', 'a provider listed in its ASPA (arrow from the customer)'), swatch('n-customer', 'an AS whose ASPA lists it as a provider'),
+      swatch('n-mutual', 'two ASes that list each other'), swatch('n-seen-provider', 'seen in the routes, looks like a provider, not in its ASPA'),
+      swatch('n-seen', 'seen in the routes, no evidence (a peer, a customer, or not enough routes)')));
+  det.addEventListener('toggle', () => { if (det.open && !box.firstChild) draw(); });
+  return det;
+}
+
+// Watch the updates of an AS live (site/live.js) and check each announcement with the ASPAs as it arrives.
+function livePanel(origin) {
+  const as = 'AS' + origin, MAX = 300, MAX_MS = 5 * 60e3, ROWS = 15;
+  const counts = { Valid: 0, Unknown: 0, Invalid: 0 };
+  let seen = 0, watcher = null, timer = null;
+  const status = el('p', { class: 'src', 'aria-live': 'polite', text: 'Not started.' });
+  const tally = el('p', { class: 'src' });
+  const tbody = el('tbody');
+  const mode = el('select', { id: 'live-mode', 'aria-label': 'Which updates' },
+    el('option', { value: 'origin', text: `announced by ${as}` }), el('option', { value: 'through', text: `going through ${as}` }));
+  const btn = el('button', { type: 'button', text: 'Start' });
+  const stop = () => { if (watcher) watcher.stop(); watcher = null; clearTimeout(timer); btn.textContent = 'Start'; };
+  const sayTally = () => { tally.textContent = `${fmt.format(seen)} announcement${seen === 1 ? '' : 's'} checked: ${counts.Valid} valid, ${counts.Unknown} unknown, ${counts.Invalid} invalid.`; };
+  const onAnnouncement = (a) => {
+    if (seen >= MAX) { stop(); status.textContent = `Stopped after ${MAX} announcements.`; return; }
+    seen++;
+    const v = AspaVerify.verify(aspaSets, [...a.path].reverse().map((n) => 'AS' + n), 'down');
+    counts[v.result]++;
+    const row = el('tr', {},
+      el('td', { text: new Date().toLocaleTimeString('en-GB') }), el('td', { class: 'mono', text: 'AS' + a.peer }), el('td', { class: 'mono', text: a.prefix }),
+      el('td', { class: 'mono pathcell', text: compressBgp(a.path).map((n) => 'AS' + n).join(' ') }),
+      el('td', {}, el('span', { class: 'badge v-' + v.result.toLowerCase(), text: v.result })));
+    tbody.prepend(row);
+    while (tbody.children.length > ROWS) tbody.lastChild.remove();
+    sayTally();
+  };
+  btn.addEventListener('click', () => {
+    if (watcher) { stop(); return; }
+    seen = 0; counts.Valid = counts.Unknown = counts.Invalid = 0; tbody.replaceChildren(); sayTally();
+    watcher = AspaLive.watch(origin, mode.value, { announcement: onAnnouncement, status: (t) => { status.textContent = t; } });
+    btn.textContent = 'Stop';
+    timer = setTimeout(() => { stop(); status.textContent = 'Stopped after five minutes.'; }, MAX_MS);
+  });
+  return el('div', {},
+    el('h3', { class: 'subhead', text: 'Watch the updates live' }),
+    el('p', { class: 'hint', text: `Opens a connection from your browser to RIPE RIS Live (wss://ris-live.ripe.net), which hands out the BGP updates that the route collectors receive as they arrive, and checks every announcement with the ASPAs. It stops after five minutes or ${MAX} announcements. RIPE sees your address, as for any site you visit; nothing goes through this site.` }),
+    el('p', { class: 'field' }, el('label', { for: 'live-mode', class: 'inline', text: 'Updates ' }), mode, btn),
+    status, tally,
+    el('section', { class: 'table-wrap card', tabindex: '0', 'aria-label': 'The last announcements and their verdicts' }, el('table', { class: 'checks live' },
+      el('caption', { class: 'sr-only', text: `The last ${ROWS} announcements of RIS Live that involve ${as}, newest first, with the verdict of the ASPA verification` }),
+      el('thead', {}, el('tr', {}, ...['Time', 'Feeder', 'Prefix', 'AS path, as a router shows it', 'Verdict'].map((t) => el('th', { scope: 'col', text: t })))), tbody)));
 }
 
 // What the evidence needs besides the routes: the Tier-1 clique and the exchange-point ASes, from the daily
@@ -664,6 +750,7 @@ async function renderLiveRoutes(text) {
     if (panel) { kids.push(panel); usedEvidence = usedEvidence || Boolean(ev); }
     if (lookupAs) { const tp = trombonePanel(origin, AspaTromboning.analyse(routes, origin, lookupAs, { ixp: ctx ? ctx.ixp : new Set() })); if (tp) kids.push(tp); }
   }
+  if (q.kind === 'as') kids.push(livePanel(asNum(q.label)));
   if (usedEvidence) kids.push(el('p', { class: 'hint', text: `Evidence: a neighbour counts as a provider of the origin when the route passes through it up to a Tier-1 network (the clique of ${ctx.source}). A peer, or a provider that is not asked to carry the route upwards, passes upwards only what it learned from its customers. Weak: seen by few feeders or on a small share of the paths. No evidence is not proof of a peer: the collectors see only part of the Internet, and paths of two ASes say nothing. The routes are the last RIB dump of the collectors, which can be up to eight hours old.` }));
   kids.push(el('section', { class: 'table-wrap card', tabindex: '0', 'aria-label': 'Distinct AS paths of the routes' }, el('table', { class: 'checks live' },
     el('caption', { class: 'sr-only', text: 'Distinct AS paths of the routes, invalid first, with the verdict of the upstream ASPA verification' }),
@@ -676,6 +763,9 @@ async function renderLiveRoutes(text) {
 
 
 /* ---------- lookup ---------- */
+// the graph sits in a block of its own, like the history and the quality
+function graphHolder(as) { return el('div', { class: 'res-hist' }, el('h4', { text: 'Neighbourhood' }), graphBlock(as)); }
+
 function renderLookup(as) {
   const out = $('result');
   if (!as) { out.replaceChildren(); lookupAs = null; return; }
@@ -715,7 +805,7 @@ function renderLookup(as) {
     right.append(el('p', { text: `No ASPA names ${as} as a provider.` }));
   }
 
-  out.replaceChildren(head, el('div', { class: 'res-grid' }, left, right), el('div', { class: 'res-hist', id: 'as-history' }), el('div', { class: 'res-hist', id: 'as-quality' }), shareBlock(as));
+  out.replaceChildren(head, el('div', { class: 'res-grid' }, left, right), el('div', { class: 'res-hist', id: 'as-history' }), el('div', { class: 'res-hist', id: 'as-quality' }), graphHolder(as), shareBlock(as));
   document.title = `${as} · ASPA Explorer`;
   const canon = document.querySelector('link[rel="canonical"]');
   if (canon) canon.setAttribute('href', `${location.origin}/as/${as}`);

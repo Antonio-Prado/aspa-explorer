@@ -7,18 +7,19 @@
 <meta name="description" content="Statistics of the ASPAs: how many over time, by RIR, providers per ASPA, the most-named providers, and who has published one, by size of the network, RIR and country.">
 <meta name="color-scheme" content="light dark">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
-<link rel="stylesheet" href="/style.css?v=1.17.1">
-<script src="/stats.js?v=1.17.1" defer></script>
-<script src="/adoption.js?v=1.17.1" defer></script>
-<script src="/leaks.js?v=1.17.1" defer></script>
-<script src="/status-checks.js?v=1.17.1" defer></script>
-<script src="/footer.js?v=1.17.1" defer></script>
+<link rel="stylesheet" href="/style.css?v=1.18.0">
+<script src="/stats.js?v=1.18.0" defer></script>
+<script src="/adoption.js?v=1.18.0" defer></script>
+<script src="/leaks.js?v=1.18.0" defer></script>
+<script src="/validators.js?v=1.18.0" defer></script>
+<script src="/status-checks.js?v=1.18.0" defer></script>
+<script src="/footer.js?v=1.18.0" defer></script>
 </head>
 <body>
 <a class="skip" href="#main">Skip to main content</a>
 <header class="wrap masthead">
   <div class="top">
-    <p class="back"><a class="brandlink" href="/" title="Back to ASPA Explorer"><img class="brand" src="/img/logo-mark.svg?v=1.17.1" alt="" width="40" height="40"><span>ASPA Explorer</span></a></p>
+    <p class="back"><a class="brandlink" href="/" title="Back to ASPA Explorer"><img class="brand" src="/img/logo-mark.svg?v=1.18.0" alt="" width="40" height="40"><span>ASPA Explorer</span></a></p>
     <nav class="topnav" aria-label="Main"><a href="/">Home</a><a href="/statistics.html" aria-current="page">Statistics</a><a href="/examples.html">Examples</a><a href="/api.html">API</a><a href="/guide.html">Guide</a><a href="/status.html">Status</a></nav>
   </div>
   <h1>Statistics</h1>
@@ -150,6 +151,20 @@
       </table>
     </section>
     <p class="hint" id="leaks-note"></p>
+  </section>
+
+  <section aria-labelledby="val-title">
+    <h2 id="val-title">Validators compared</h2>
+    <p class="hint" id="val-sub">Loading…</p>
+    <div class="tiles" id="val-tiles"></div>
+    <section class="card table-wrap" tabindex="0" aria-label="Table of the ASPAs on which the validators differ">
+      <table class="checks live">
+        <caption class="sr-only">ASPAs on which the validators differ: the providers that each of them has, and a possible reason</caption>
+        <thead id="val-head"></thead>
+        <tbody id="val-rows"></tbody>
+      </table>
+    </section>
+    <p class="hint" id="val-note"></p>
   </section>
 
   <p class="hint" id="sources"></p>

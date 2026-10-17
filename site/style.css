@@ -509,3 +509,34 @@ table.live .detailrow td { white-space: normal; }
 table.live .detailrow .table-wrap { max-width: 100%; }
 table.live td { overflow-wrap: anywhere; }
 .tile.v-invalid .note, .tile.v-unknown .note { color: inherit; }
+
+/* the neighbourhood graph */
+.graph { overflow-x: auto; }
+.graph-svg { display: block; width: 100%; max-width: 840px; height: auto; margin: 0 auto; }
+.graph-svg .node rect { fill: var(--chip); stroke: var(--axis); stroke-width: 1; }
+.graph-svg .node text { fill: var(--ink); font: 600 13px var(--mono); }
+.graph-svg a.node { cursor: pointer; }
+.graph-svg a.node:hover rect, .graph-svg a.node:focus-visible rect { stroke: var(--accent); stroke-width: 2; }
+.graph-svg .n-center rect { fill: var(--btn); stroke: none; }
+.graph-svg .n-center text { fill: var(--btn-ink); }
+.graph-svg .n-provider rect { fill: var(--ok-bg); stroke: var(--ok-ink); }
+.graph-svg .n-customer rect { fill: var(--wash); stroke: var(--bar); }
+.graph-svg .n-mutual rect { fill: var(--bad-bg); stroke: var(--bad-ink); }
+.graph-svg .n-seen-provider rect { fill: var(--warn-bg); stroke: var(--warn-ink); stroke-dasharray: 4 3; }
+.graph-svg .n-seen-weak rect, .graph-svg .n-seen rect { fill: var(--track); stroke: var(--axis); stroke-dasharray: 4 3; }
+.graph-svg .n-more rect { fill: none; stroke: none; }
+.graph-svg .n-more text { fill: var(--muted); font-weight: 400; }
+.graph-svg .edge { stroke: var(--ink-2); stroke-width: 1.5; fill: none; }
+.graph-svg .e-provider { stroke: var(--ok-ink); }
+.graph-svg .e-customer { stroke: var(--bar); }
+.graph-svg .e-mutual { stroke: var(--bad-ink); stroke-width: 2; }
+.graph-svg .e-seen-provider { stroke: var(--warn-ink); stroke-dasharray: 5 4; }
+.graph-svg .e-seen, .graph-svg .e-seen-weak { stroke: var(--axis); stroke-dasharray: 5 4; }
+.graph-svg .arrowhead { fill: var(--ink-2); }
+.graph-legend { display: flex; flex-wrap: wrap; gap: 0.35rem 1.1rem; margin: 0.5rem 0 0; padding: 0; list-style: none; font-size: 0.8125rem; color: var(--ink-2); }
+.sw-graph { display: inline-block; width: 0.9rem; height: 0.9rem; border-radius: 3px; border: 1px solid var(--axis); vertical-align: -2px; }
+.sw-graph.n-provider { background: var(--ok-bg); border-color: var(--ok-ink); }
+.sw-graph.n-customer { background: var(--wash); border-color: var(--bar); }
+.sw-graph.n-mutual { background: var(--bad-bg); border-color: var(--bad-ink); }
+.sw-graph.n-seen-provider { background: var(--warn-bg); border-color: var(--warn-ink); border-style: dashed; }
+.sw-graph.n-seen { background: var(--track); border-style: dashed; }

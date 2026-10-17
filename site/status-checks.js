@@ -64,6 +64,12 @@
       const t = Date.parse(l.generated);
       return { state: byAge(now - t, 36 * HOUR, 3 * DAY), at: t, extra: `${l.places.toLocaleString('en-US')} places of valley in ${Math.round(l.total.routes / 1e6)} million routes` };
     } },
+    { name: 'Validators compared', expected: 'every hour', run: async (now) => {
+      const v = await get('/api/v1/validators.json');
+      const t = Date.parse(v.generated);
+      const reached = v.sources.filter((s) => !s.error).length;
+      return { state: reached < v.sources.length ? 'late' : byAge(now - t, 3 * HOUR, 12 * HOUR), at: t, extra: `${reached} of ${v.sources.length} validators read, ${v.differences_total} difference${v.differences_total === 1 ? '' : 's'}` };
+    } },
     { name: 'Notifications', expected: 'checks the validator every 10 minutes', run: async (now) => {
       const h = await get('/api/v1/subscriptions/health');
       const t = h.last_poll ? Date.parse(h.last_poll) : 0;

@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.18.0] - 2026-10-17
+
+### Added
+- **Validators compared** on the statistics page: every hour `scripts/build-validators.mjs` reads the ASPAs of this site's Routinator and of two rpki-client validators (the project's console, `console.rpki-client.org`, and Cloudflare's, `rpki.cloudflare.com`), taking only the head and the tail of their 100 MB exports, and compares them. The section shows the counts and the build time of each, how many customers have the same providers in all of them, and the ASPAs on which they differ with a possible reason (the AS0 next to other providers that the profile forbids, a different moment, an object that fails in one of them), and `/api/v1/validators.json`. On the first run 3,585 of 3,592 ASPAs were identical. A check in the status page.
+- **Watch the updates live** under the routes of an AS: a WebSocket from the browser to RIPE RIS Live (`site/live.js`), every announcement checked with the ASPAs as it arrives (the last fifteen, with totals), for the updates announced by the AS or going through it; it stops after five minutes or 300 announcements. The Content-Security-Policy allows `wss://ris-live.ripe.net`.
+- **The neighbourhood as a graph** in the lookup (`site/graph.js`): providers above, the ASPAs that name the AS below, two ASes that list each other as one red box, and on request the neighbours that the routes show, with their evidence. Every box links to the lookup of that AS.
+- **RIPE Atlas** in the possible-tromboning table: how many probes are connected in the country and in the AS, and the `ripe-atlas measure traceroute` command to confirm a candidate with a measurement. The Content-Security-Policy allows `https://atlas.ripe.net`.
+- Tests: `scripts/test-validators.mjs`, `scripts/test-graph.mjs`, `scripts/test-live.mjs`.
+
 ## [1.17.1] - 2026-10-17
 
 ### Fixed
