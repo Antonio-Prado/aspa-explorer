@@ -77,6 +77,16 @@ export function parseRelationships(text) {
   return customers;
 }
 
+// The header of the CAIDA file names the Tier-1 clique ("# input clique: 174 209 ...") and the exchange-point
+// ASes ("# IXP ASes: ..."): both are used by the page to read the routes seen in BGP.
+export function parseCaidaHeader(text) {
+  const list = (key) => {
+    const line = text.split('\n').find((l) => l.startsWith(`# ${key}:`));
+    return line ? line.split(':')[1].trim().split(/\s+/).map(Number).filter((n) => Number.isInteger(n) && n > 0) : [];
+  };
+  return { clique: list('input clique'), ixp: list('IXP ASes') };
+}
+
 // size of the customer cone (the AS itself included) of every AS that has customers
 export function coneSizes(customers) {
   const sizes = new Map();
@@ -174,13 +184,17 @@ async function main() {
   for (const [rir, url] of Object.entries(DELEGATED)) ranges.push(...parseDelegated(await readFile(await cached(url, join(cache, `delegated-${rir}`), 20 * 3600e3), 'utf8'), rir));
   const caida = await latestCaida();
   const bz = await cached(caida.url, join(cache, `as-rel2-${caida.date}.bz2`), 30 * 86400e3);
-  const rel = parseRelationships((await run('bunzip2', ['-c', bz], { maxBuffer: 512 * 1024 * 1024 })).stdout);
+  const relText = (await run('bunzip2', ['-c', bz], { maxBuffer: 512 * 1024 * 1024 })).stdout;
+  const rel = parseRelationships(relText);
+  const header = parseCaidaHeader(relText);
   const cones = coneSizes(rel);
 
   const out = aggregate({ seen, aspa, where: registry(ranges), cones });
   const doc = {
     generated: new Date().toISOString().replace(/\.\d+Z$/, 'Z'),
     sources: { aspas: 'Routinator, rpki.ping6.it', bgp: 'RIPE RIS collectors, through RIPEstat (ris-asns)', registry: 'delegation files of the five RIRs', size: `CAIDA AS Relationships, serial-2, ${caida.date}` },
+    clique: header.clique,
+    ixp: header.ixp,
     ...out,
   };
   const tmp = `${outFile}.tmp`;

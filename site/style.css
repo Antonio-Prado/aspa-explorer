@@ -481,3 +481,10 @@ table.live thead th { white-space: nowrap; }
 .tabpanel:focus-visible { outline-offset: -2px; }
 .foot .build { max-width: none; }
 .foot .build .item { white-space: nowrap; }
+td.muted { color: var(--muted); }
+
+/* the dot next to Status in the menu */
+.status-dot { display: inline-block; width: 0.6rem; height: 0.6rem; margin-left: 0.4rem; border-radius: 50%; background: var(--muted); vertical-align: baseline; box-shadow: 0 0 0 1px var(--ring); }
+.status-dot.ok { background: #1f9d55; }
+.status-dot.warn { background: #d97706; }
+.status-dot.down { background: #d92d20; }

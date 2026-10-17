@@ -136,7 +136,7 @@ function renderQuality() {
     const info = AspaQuality.KINDS[g.kind];
     const ul = el('ul', { class: 'changelist' });
     const draw = (n) => {
-      ul.replaceChildren(...g.list.slice(0, n).map((f) => el('li', {}, asChip(f.customer), ' ', el('span', { text: f.detail }))));
+      ul.replaceChildren(...g.list.slice(0, n).map((f) => el('li', {}, asChip(f.customer), ' ', el('span', { text: f.detail }), g.kind === 'mutual' ? el('span', {}, ' · ', el('a', { href: `#routes=${f.customer}`, text: 'who is the provider?' })) : null)));
       if (g.list.length > n) ul.append(el('li', {}, el('button', { type: 'button', class: 'linkish', text: `Show all ${fmt.format(g.list.length)}`, onclick: () => draw(g.list.length) })));
     };
     draw(20);
@@ -163,7 +163,8 @@ function renderAsQuality(as) {
   else {
     out.push(el('ul', { class: 'timeline' }, ...mine.map((f) => el('li', {},
       el('span', { class: `badge sev-${f.severity}`, text: SEVERITY[f.severity] }), ' ',
-      el('span', { text: `${AspaQuality.KINDS[f.kind].title}: ${as} ${f.detail}` })))));
+      el('span', { text: `${AspaQuality.KINDS[f.kind].title}: ${as} ${f.detail}` }),
+      f.kind === 'mutual' ? el('span', {}, ' · check now: ', ...f.providers.slice(0, 3).flatMap((p) => [el('a', { href: `#routes=${p}`, text: p }), ' ']), el('a', { href: `#routes=${as}`, text: as })) : null))));
   }
   out.push(el('p', {}, el('a', { href: `#routes=${as}`, text: `Check the routes ${as} originates` }), ' against the ASPAs, and compare its neighbours with its providers.'));
   box.replaceChildren(...out);
@@ -371,8 +372,21 @@ function checkRoutes(routes) {
 }
 const compressBgp = (p) => p.filter((n, i) => i === 0 || n !== p[i - 1]);
 
-// The AS right before the origin in each path, compared with the providers in the ASPA of the origin.
-function neighbourPanel(origin, rows) {
+// What the evidence needs besides the routes: the Tier-1 clique and the exchange-point ASes, from the daily
+// adoption numbers. null when they are not available (the evidence is then left out).
+let evidenceCtx;
+async function getEvidenceCtx() {
+  if (evidenceCtx !== undefined) return evidenceCtx;
+  try {
+    const d = await getJson('/api/v1/adoption.json');
+    evidenceCtx = d.clique && d.clique.length ? { clique: new Set(d.clique), ixp: new Set(d.ixp || []), source: (d.sources && d.sources.size) || 'CAIDA' } : null;
+  } catch { return null; }
+  return evidenceCtx;
+}
+
+// The AS right before the origin in each path, compared with the providers in the ASPA of the origin and,
+// when the routes allow it, with the evidence of who its providers are (site/evidence.js).
+function neighbourPanel(origin, rows, ev) {
   const as = 'AS' + origin;
   const byN = new Map();
   for (const r of rows) {
@@ -388,10 +402,20 @@ function neighbourPanel(origin, rows) {
   const status = (n) => (!listed ? 'no ASPA' : listed.has(n) ? 'listed' : 'not listed');
   const unlisted = list.filter(([n]) => listed && !listed.has(n));
   const notSeen = listed ? [...listed].filter((p) => p !== 'AS0' && !byN.has(p)) : [];
-  const head = el('tr', {}, ...['Neighbour', 'Routes', `In the ASPA of ${as}`, 'Valid', 'Unknown', 'Invalid'].map((t, i) => el('th', { scope: 'col', class: i === 1 || i > 2 ? 'num' : undefined, text: t })));
+  const evOf = (n) => (ev ? ev.get(Number(n.slice(2))) : null);
+  const cols = ['Neighbour', 'Routes', `In the ASPA of ${as}`, ...(ev ? ['Evidence'] : []), 'Valid', 'Unknown', 'Invalid'];
+  const numCol = (i) => i === 1 || i >= (ev ? 4 : 3);
+  const head = el('tr', {}, ...cols.map((t, i) => el('th', { scope: 'col', class: numCol(i) ? 'num' : undefined, text: t })));
+  const evCell = (n) => {
+    const x = evOf(n);
+    if (!x || x.label === 'few' || x.label === 'none') return el('td', { class: 'muted', text: '–', title: !x || x.label === 'few' ? 'too few paths to tell' : 'no route of this AS goes through it to a Tier-1: no evidence' });
+    const title = `${fmt.format(x.viaT1)} of ${fmt.format(x.informative)} paths reach a Tier-1 through it, seen by ${fmt.format(x.feeders)} feeder${x.feeders === 1 ? '' : 's'}`;
+    return el('td', {}, el('span', { class: 'badge ' + (x.label === 'provider' ? 'v-valid' : 'v-unknown'), text: x.label, title }));
+  };
   const trs = list.slice(0, 15).map(([n, e]) => el('tr', {},
     el('td', {}, asChip(n)), el('td', { class: 'num', text: fmt.format(e.routes) }),
     el('td', {}, el('span', { class: 'badge nb-' + status(n).replace(' ', '-'), text: status(n) })),
+    ...(ev ? [evCell(n)] : []),
     el('td', { class: 'num', text: fmt.format(e.Valid) }), el('td', { class: 'num', text: fmt.format(e.Unknown) }), el('td', { class: 'num', text: fmt.format(e.Invalid) })));
   const notes = [];
   if (!listed) notes.push(`${as} has no ASPA. These are the networks next to it in the routes; the ones that are its providers are the ones to list.`);
@@ -399,6 +423,12 @@ function neighbourPanel(origin, rows) {
     if (unlisted.length) notes.push(`${fmt.format(unlisted.length)} neighbour${unlisted.length === 1 ? ' is' : 's are'} not in the ASPA of ${as}. That is expected for peers and customers, which an ASPA does not list; it is a gap only for a neighbour that is a provider of ${as}.`);
     const bad = unlisted.filter(([, e]) => e.Invalid > 0);
     if (bad.length) notes.push(`Invalid routes come through ${bad.slice(0, 6).map(([n, e]) => `${n} (${fmt.format(e.Invalid)})`).join(', ')}${bad.length > 6 ? ` and ${bad.length - 6} more` : ''}: look at those first.`);
+  }
+  if (ev) {
+    const strong = list.filter(([n]) => (evOf(n) || {}).label === 'provider').map(([n]) => n);
+    if (!listed && strong.length) notes.push(`Routes of ${as} go through ${strong.slice(0, 6).join(', ')}${strong.length > 6 ? ` and ${strong.length - 6} more` : ''} up to a Tier-1: they look like its providers, the ones to list in its ASPA.`);
+    const missing = strong.filter((n) => listed && !listed.has(n));
+    if (missing.length) notes.push(`${missing.join(', ')} ${missing.length === 1 ? 'seems' : 'seem'} to be ${missing.length === 1 ? 'a provider' : 'providers'} of ${as} that its ASPA does not list: where the ASPA is checked, the routes that go through ${missing.length === 1 ? 'it' : 'them'} do not pass.`);
   }
   if (notSeen.length) notes.push(`Listed but not seen next to ${as} in these routes: ${notSeen.slice(0, 8).join(', ')}${notSeen.length > 8 ? ` and ${notSeen.length - 8} more` : ''} (a backup provider, or one the collectors do not see).`);
   return el('div', {},
@@ -548,19 +578,24 @@ async function renderLiveRoutes(text) {
     }
   };
   draw(40);
+  // the neighbours of the origin come before the long table of paths
+  const origins = new Map();
+  for (const r of rows) if (r.shown.length > 1) origins.set(r.shown[r.shown.length - 1], (origins.get(r.shown[r.shown.length - 1]) || 0) + r.routes);
+  const total = [...origins.values()].reduce((a, b) => a + b, 0);
+  const ctx = await getEvidenceCtx();
+  let usedEvidence = false;
+  for (const [origin, n] of [...origins].sort((a, b) => b[1] - a[1]).slice(0, 2)) {
+    if (n < total * 0.1) continue;
+    const ev = ctx ? AspaEvidence.analyse(routes, origin, ctx) : null;
+    const panel = neighbourPanel(origin, rows, ev);
+    if (panel) { kids.push(panel); usedEvidence = usedEvidence || Boolean(ev); }
+  }
+  if (usedEvidence) kids.push(el('p', { class: 'hint', text: `Evidence: a neighbour counts as a provider of the origin when the route passes through it up to a Tier-1 network (the clique of ${ctx.source}). A peer, or a provider that is not asked to carry the route upwards, passes upwards only what it learned from its customers. Weak: seen by few feeders or on a small share of the paths. No evidence is not proof of a peer: the collectors see only part of the Internet, and paths of two ASes say nothing. The routes are the last RIB dump of the collectors, which can be up to eight hours old.` }));
   kids.push(el('section', { class: 'table-wrap card', tabindex: '0', 'aria-label': 'Distinct AS paths of the routes' }, el('table', { class: 'checks live' },
     el('caption', { class: 'sr-only', text: 'Distinct AS paths of the routes, invalid first, with the verdict of the upstream ASPA verification' }),
     el('thead', {}, el('tr', {}, el('th', { scope: 'col', text: 'Verdict' }), el('th', { scope: 'col', text: 'AS path, as a router shows it' }),
       el('th', { scope: 'col', class: 'num', text: 'Routes' }), el('th', { scope: 'col', text: 'Why' }))),
     tbody)));
-  const origins = new Map();
-  for (const r of rows) if (r.shown.length > 1) origins.set(r.shown[r.shown.length - 1], (origins.get(r.shown[r.shown.length - 1]) || 0) + r.routes);
-  const total = [...origins.values()].reduce((a, b) => a + b, 0);
-  for (const [origin, n] of [...origins].sort((a, b) => b[1] - a[1]).slice(0, 2)) {
-    if (n < total * 0.1) continue;
-    const panel = neighbourPanel(origin, rows);
-    if (panel) kids.push(panel);
-  }
   kids.push(el('p', { class: 'hint', text: 'The verification is the downstream procedure, because the networks that feed a route collector mostly send their full table, as a provider would; a feeder that sends only its customers\' routes passes it too. Paths with an AS_SET are skipped. ASPAs are the validated ones listed on this page; the ROAs are the ones this validator has validated.' }));
   out.replaceChildren(...kids);
 }

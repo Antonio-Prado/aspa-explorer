@@ -3,8 +3,8 @@
 </p>
 
 <p align="center">
-  <strong>Browse the validated ASPA objects of the RPKI, in the browser.</strong><br>
-  A small static page on top of a <a href="https://github.com/NLnetLabs/routinator" target="_blank" rel="noopener">Routinator</a> validator.
+  <strong>Explore, check and follow the ASPA objects of the RPKI.</strong><br>
+  A web page, a small API and a notification service on top of a <a href="https://github.com/NLnetLabs/routinator" target="_blank" rel="noopener">Routinator</a> validator: lookups, AS path and route checks, statistics, feeds, badges and notifications.
 </p>
 
 <p align="center">
@@ -55,13 +55,16 @@
     <td align="center"><sub>Adoption: by size, RIR and country, and the largest transit networks</sub></td>
     <td align="center"><sub>Examples with a checker, and the status page</sub></td>
   </tr>
+  <tr>
+    <td colspan="2" align="center"><img src="assets/screenshots/evidence-dark.jpg" width="60%" alt="The neighbours of AS12779 in the routes seen in BGP: which are in its ASPA, which look like providers from the routes, and the note that AS60798 seems to be a provider its ASPA does not list"><br><sub>Neighbours of an origin: the evidence of who its providers are</sub></td>
+  </tr>
 </table>
 
 ## What is it
 
 An **ASPA** (Autonomous System Provider Authorization) is a signed RPKI object in which a *customer* AS lists the ASes that may act as its upstream *providers*. Routers use these lists to detect route leaks and some forged AS paths.
 
-ASPA Explorer shows every ASPA that the validator currently considers valid, so you can search it and see the big picture. It runs at <https://aspa.ping6.it/> (Department of Information Engineering, University of Padova).
+ASPA Explorer shows every ASPA that the validator currently considers valid, so you can search it, check AS paths and the routes seen in BGP against it, follow its changes and see the big picture. It runs at <https://aspa.ping6.it/> (Department of Information Engineering, University of Padova).
 
 The validator is a [Routinator](https://github.com/NLnetLabs/routinator) instance run at **[rpki.ping6.it](https://rpki.ping6.it/)**, which also publishes its own web UI (<https://rpki.ping6.it/ui/>) and the raw ASPA data (<https://rpki.ping6.it/jsonext?exclude=routeOrigins,routerKeys>).
 
@@ -70,6 +73,7 @@ The validator is a [Routinator](https://github.com/NLnetLabs/routinator) instanc
 - **Lookup:** type `AS680`, `as 680` or `680` to see the AS's own ASPA and every ASPA that names it as a provider. Each lookup has a shareable address (`/#AS680`).
 - **AS path check:** paste a path as your router shows it (neighbour first, origin last) and see whether it passes the ASPA verification procedure of the IETF draft (upstream or downstream), hop by hop, with the reason for a *Valid*, *Unknown* or *Invalid* verdict. It runs in the browser on the ASPA objects listed on the page, and a result can be shared with a link.
 - **Routes seen in BGP:** for a prefix or an AS, the routes that the RIPE RIS collectors see (through RIPEstat), each distinct AS path checked with the downstream procedure: how many routes are valid, unknown or invalid, and the paths with a valley. This box sends the prefix or the AS to RIPEstat; the guide says so.
+- **Who is the provider:** in the neighbours of an origin, an evidence column says which neighbours look like its providers because its routes go on through them to a Tier-1 network, and which of them its ASPA does not list. It is a reading of the routes of the moment, with its limits stated, not a verdict.
 - **Origin validation:** the same box checks every prefix and origin of those routes against the ROAs of the validator (valid, not found, invalid with the reason), asked of the page's own server, not of a third party.
 - **A page, a badge and a feed for every AS:** `/as/AS3333` opens the page on that AS, `/badge/AS3333.svg` is a badge with its number of providers (Markdown and HTML to paste are in the lookup), and `/feed/AS3333.atom` lists the changes of its ASPA and of the ASPAs that add or drop it as a provider.
 - **Notifications:** subscribe an e-mail address (confirmed through a link, DKIM-signed mails with a one-click unsubscribe) or a webhook (verified by a challenge, signed with HMAC-SHA256, public https addresses only) to the changes of an AS. The service is `notifier/`, a small Node.js program with SQLite.
@@ -82,7 +86,7 @@ The validator is a [Routinator](https://github.com/NLnetLabs/routinator) instanc
 - **Download:** the whole list of ASPAs as CSV or JSON, for one RIR or all (`/api/v1/aspas.csv`, `/api/v1/aspas.json`, and a form on the API page).
 - **Built-in guide** in English, with an accessibility statement: <a href="https://aspa.ping6.it/guide.html" target="_blank" rel="noopener">read it on the site</a> (source: <a href="site/guide.html" target="_blank" rel="noopener"><code>site/guide.html</code></a>).
 - **Accessible:** keyboard operable, visible focus, skip link, light and dark themes, reduced-motion aware. Checked with axe-core in both themes (WCAG 2.2 AA rules) with no issues reported.
-- **No build step, no dependencies, no cookies.** Strict Content-Security-Policy; remote data goes into the page only through `textContent`.
+- **Plain code, no dependencies, no cookies.** The page is static JavaScript with no build step; the services behind the API, the adoption numbers and the notifications are small Node.js programs that use no package. Strict Content-Security-Policy; remote data goes into the page only through `textContent`.
 
 ## How it works
 

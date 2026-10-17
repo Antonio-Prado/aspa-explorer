@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.15.0] - 2026-10-17
+
+### Added
+- **A dot next to *Status* in the menu of every page**: green when all the checks of the status page are green, red when all are red, orange otherwise (a late check counts as not green). It has a text for screen readers and a tooltip, and the result is kept for a minute so that moving between pages does not repeat the checks. The checks moved to the new `site/status-checks.js`, shared with the status page (`scripts/test-status.mjs`).
+- **Evidence of who is the provider** in the neighbours table of *Routes seen in BGP*: a neighbour whose route to the origin goes on up to a Tier-1 (path `T1 N origin`) is a provider of the origin, because a peer or a provider that is not asked to carry it upwards would not pass it up. Labels *provider* (at least three feeders and a fifth of the informative paths), *weak*, or none; paths of two ASes are ignored and exchange-point ASes are left out. The table says when the ASPA of the origin does not list a neighbour that is a provider with strong evidence, or, with no ASPA, which are the ones to list. The new `site/evidence.js` has tests (`scripts/test-evidence.mjs`).
+- The daily adoption numbers carry the Tier-1 clique and the exchange-point ASes, read from the header of the CAIDA file.
+- *Mutual* findings of the quality checks link to a *check now* that opens the routes of the ASes involved.
+
+### Changed
+- The neighbours table comes before the long table of paths in the routes result.
+- The README tagline and the descriptions of the projects no longer say that the site is only a small static page.
+
 ## [1.13.1] - 2026-10-17
 
 ### Changed

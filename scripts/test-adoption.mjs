@@ -1,6 +1,6 @@
 // Unit tests for scripts/build-adoption.mjs (no dependencies). Run with: node scripts/test-adoption.mjs
 import assert from 'node:assert/strict';
-import { parseDelegated, registry, parseRelationships, coneSizes, aggregate, tierOf } from './build-adoption.mjs';
+import { parseDelegated, registry, parseRelationships, coneSizes, aggregate, tierOf, parseCaidaHeader } from './build-adoption.mjs';
 
 let passed = 0;
 const test = (name, fn) => { fn(); passed++; console.log('ok  ', name); };
@@ -65,5 +65,10 @@ test('aggregation: by RIR, country, size; the largest networks', () => {
   assert.deepEqual(a.top_transit.map((t) => [t.asn, t.cone, t.aspa]), [['AS1', 5, true], ['AS2', 3, false], ['AS4', 3, true]]);
   assert.equal(a.top_transit_with_aspa, 2);
   assert.equal(a.top_transit[0].providers, 0);
+});
+test('the clique and the exchange points come from the header of the CAIDA file', () => {
+  const h = parseCaidaHeader('# source:topology|BGP|20261001\n# input clique: 174 209 3356\n# IXP ASes: 1200 4635\n1|2|-1|bgp\n');
+  assert.deepEqual(h, { clique: [174, 209, 3356], ixp: [1200, 4635] });
+  assert.deepEqual(parseCaidaHeader('1|2|-1|bgp\n'), { clique: [], ixp: [] });
 });
 console.log(`${passed} tests passed`);
