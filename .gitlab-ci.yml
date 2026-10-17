@@ -69,15 +69,6 @@ html-validate:
   script:
     - npx --yes html-validate@9 site/index.html site/guide.html site/guida.html site/api.html site/subscription.html site/statistics.html site/status.html site/examples.html
 
-accessibility:
-  extends: .regular
-  stage: lint
-  # Chromium comes with the image; the Playwright package has to be the same version.
-  image: mcr.microsoft.com/playwright:v1.49.1-noble
-  script:
-    - npm install --no-save --no-audit --no-fund playwright@1.49.1 axe-core@4.10.2
-    - node scripts/test-a11y.mjs
-
 nginx-config:
   extends: .regular
   stage: lint

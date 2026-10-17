@@ -54,7 +54,7 @@ test:
 	node scripts/test-status.mjs
 	node --disable-warning=ExperimentalWarning scripts/test-notify.mjs
 
-# Accessibility and 320 px check in a real browser (needs Chromium: `npx playwright install chromium`); the CI runs it in the Playwright image
+# Accessibility and 320 px check in a real browser (Chromium, through Playwright; the GitHub copy runs it after each change)
 a11y:
 	npm install --no-save --no-audit --no-fund playwright@1.49.1 axe-core@4.10.2
 	node scripts/test-a11y.mjs
