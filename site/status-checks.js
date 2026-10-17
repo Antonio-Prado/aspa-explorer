@@ -59,6 +59,11 @@
       const t = Date.parse(a.generated);
       return { state: byAge(now - t, 36 * HOUR, 3 * DAY), at: t, extra: `${a.pct}% of the networks seen have an ASPA` };
     } },
+    { name: 'Route leaks (table dumps)', expected: 'once a day', run: async (now) => {
+      const l = await get('/api/v1/leaks.json');
+      const t = Date.parse(l.generated);
+      return { state: byAge(now - t, 36 * HOUR, 3 * DAY), at: t, extra: `${l.places.toLocaleString('en-US')} places of valley in ${Math.round(l.total.routes / 1e6)} million routes` };
+    } },
     { name: 'Notifications', expected: 'checks the validator every 10 minutes', run: async (now) => {
       const h = await get('/api/v1/subscriptions/health');
       const t = h.last_poll ? Date.parse(h.last_poll) : 0;

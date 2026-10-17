@@ -97,6 +97,7 @@ The validator is a [Routinator](https://github.com/NLnetLabs/routinator) instanc
 
 - **Overview:** summary tiles on the home page, with the coverage (the share of the ASes seen in BGP that have an ASPA).
 - **Statistics:** the charts of the ASPAs (over time since October 2023 by RIR, provider ASes, median providers, no-provider ASPAs or coverage, over any period, with a logarithmic scale and CSV/JSON download; per RIR; providers per ASPA; most-named providers) and the adoption: who has an ASPA by size of the network, RIR and country, and the 100 largest transit networks.
+- **Route leaks today:** every route of three RIPE RIS collectors checked with the downstream ASPA verification once a day (`scripts/build-leaks.mjs`, a small MRT reader in `scripts/mrt.mjs`), the places of valley grouped and told apart with the CAIDA relationships into possible leaks and ASPAs that seem to miss a provider, also as `/api/v1/leaks.json`.
 - **Quality:** checks on every ASPA (AS0 mixed with other providers, a private or reserved provider, two ASes listing each other, providers no collector sees in BGP, expiring objects, very large provider sets) with counts and lists, a *Quality* block in the lookup and a *check now* link on the ASes that list each other.
 - **Status:** a page and a dot in the menu that say how fresh each piece of data is (validator, API files, daily history, BGP visibility, adoption numbers, notifications).
 - **Download:** the whole list of ASPAs as CSV or JSON, for one RIR or all.

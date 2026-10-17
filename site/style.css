@@ -508,3 +508,4 @@ td.muted { color: var(--muted); }
 table.live .detailrow td { white-space: normal; }
 table.live .detailrow .table-wrap { max-width: 100%; }
 table.live td { overflow-wrap: anywhere; }
+.tile.v-invalid .note, .tile.v-unknown .note { color: inherit; }

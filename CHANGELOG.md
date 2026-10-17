@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.17.1] - 2026-10-17
+
+### Fixed
+- The leaks file keeps the most seen places of each kind (leaks, gaps, unclear) and not the first 150 overall, which left only a few possible leaks in it; the notes in the tiles of invalid and unknown have enough contrast on their background.
+
+## [1.17.0] - 2026-10-17
+
+### Added
+- **Route leaks today** on the statistics page: once a day `scripts/build-leaks.mjs` reads the table dumps of three RIPE RIS collectors (`rrc00`, `rrc01`, `rrc03`, with the small MRT reader `scripts/mrt.mjs`), checks every route with the downstream ASPA verification and groups the paths that the ASPAs prove to have a valley by the place of the valley. A place is told apart by what the CAIDA relationships say of the first AS after the climb: a peer or a customer means a *possible leak*, a provider means that the ASPA of the AS before it *seems to miss a provider*, no relation leaves it *unclear*. Two tables (possible route leaks, ASPAs that seem to miss a provider), the totals, and `/api/v1/leaks.json`. About 55 million routes take 75 seconds and 340 MB per collector. `scripts/test-leaks.mjs` tests the reader and the grouping.
+- A check of the freshness of the leaks in the status page and in its dot.
+
 ## [1.16.2] - 2026-10-17
 
 ### Fixed

@@ -7,17 +7,18 @@
 <meta name="description" content="Statistics of the ASPAs: how many over time, by RIR, providers per ASPA, the most-named providers, and who has published one, by size of the network, RIR and country.">
 <meta name="color-scheme" content="light dark">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
-<link rel="stylesheet" href="/style.css?v=1.16.2">
-<script src="/stats.js?v=1.16.2" defer></script>
-<script src="/adoption.js?v=1.16.2" defer></script>
-<script src="/status-checks.js?v=1.16.2" defer></script>
-<script src="/footer.js?v=1.16.2" defer></script>
+<link rel="stylesheet" href="/style.css?v=1.17.1">
+<script src="/stats.js?v=1.17.1" defer></script>
+<script src="/adoption.js?v=1.17.1" defer></script>
+<script src="/leaks.js?v=1.17.1" defer></script>
+<script src="/status-checks.js?v=1.17.1" defer></script>
+<script src="/footer.js?v=1.17.1" defer></script>
 </head>
 <body>
 <a class="skip" href="#main">Skip to main content</a>
 <header class="wrap masthead">
   <div class="top">
-    <p class="back"><a class="brandlink" href="/" title="Back to ASPA Explorer"><img class="brand" src="/img/logo-mark.svg?v=1.16.2" alt="" width="40" height="40"><span>ASPA Explorer</span></a></p>
+    <p class="back"><a class="brandlink" href="/" title="Back to ASPA Explorer"><img class="brand" src="/img/logo-mark.svg?v=1.17.1" alt="" width="40" height="40"><span>ASPA Explorer</span></a></p>
     <nav class="topnav" aria-label="Main"><a href="/">Home</a><a href="/statistics.html" aria-current="page">Statistics</a><a href="/examples.html">Examples</a><a href="/api.html">API</a><a href="/guide.html">Guide</a><a href="/status.html">Status</a></nav>
   </div>
   <h1>Statistics</h1>
@@ -124,6 +125,31 @@
       </table>
     </section>
     <button type="button" class="more" id="cc-more" hidden>Show more</button>
+  </section>
+
+  <section aria-labelledby="leaks-title">
+    <h2 id="leaks-title">Route leaks today</h2>
+    <p class="hint" id="leaks-sub">Loading…</p>
+    <div class="tiles" id="leaks-tiles"></div>
+    <h3 class="subhead">Possible route leaks</h3>
+    <p class="hint">Places of valley where the first AS after the climb is, for CAIDA, a peer or a customer of the AS before it: it passed on up a route that it should not have.</p>
+    <section class="card table-wrap" tabindex="0" aria-label="Table of the possible route leaks">
+      <table class="checks live">
+        <caption class="sr-only">Possible route leaks: the place of the valley, the ASes inside it, and the feeders and origins that see it</caption>
+        <thead><tr><th scope="col">Valley between</th><th scope="col">ASes in the valley</th><th scope="col">CAIDA says of the first</th><th scope="col" class="num">Routes</th><th scope="col" class="num">Feeders</th><th scope="col" class="num">Origins</th><th scope="col">Example</th></tr></thead>
+        <tbody id="leak-rows"></tbody>
+      </table>
+    </section>
+    <h3 class="subhead">ASPAs that seem to miss a provider</h3>
+    <p class="hint">Places of valley where the first AS after the climb is, for CAIDA, a provider of the AS before it: the ASPA of that AS does not list it, so valid routes through it look like valleys. The owners are the ones to tell.</p>
+    <section class="card table-wrap" tabindex="0" aria-label="Table of the ASPAs that seem to miss a provider">
+      <table class="checks live">
+        <caption class="sr-only">ASPAs that do not list an AS that CAIDA gives as a provider of the customer, with the feeders that see routes through it</caption>
+        <thead><tr><th scope="col">ASPA of</th><th scope="col">seems to miss</th><th scope="col" class="num">Places</th><th scope="col" class="num">Routes</th><th scope="col" class="num">Feeders</th></tr></thead>
+        <tbody id="gap-rows"></tbody>
+      </table>
+    </section>
+    <p class="hint" id="leaks-note"></p>
   </section>
 
   <p class="hint" id="sources"></p>

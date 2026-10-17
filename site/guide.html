@@ -7,15 +7,15 @@
 <meta name="description" content="How to read and use the ASPA Explorer interface: lookup, path and route checks, statistics, notifications, the API and where the data comes from.">
 <meta name="color-scheme" content="light dark">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
-<link rel="stylesheet" href="/style.css?v=1.16.2">
-<script src="/status-checks.js?v=1.16.2" defer></script>
-<script src="/footer.js?v=1.16.2" defer></script>
+<link rel="stylesheet" href="/style.css?v=1.17.1">
+<script src="/status-checks.js?v=1.17.1" defer></script>
+<script src="/footer.js?v=1.17.1" defer></script>
 </head>
 <body>
 <a class="skip" href="#main">Skip to main content</a>
 <header class="wrap masthead">
   <div class="top">
-    <p class="back"><a class="brandlink" href="/" title="Back to ASPA Explorer"><img class="brand" src="/img/logo-mark.svg?v=1.16.2" alt="" width="40" height="40"><span>ASPA Explorer</span></a></p>
+    <p class="back"><a class="brandlink" href="/" title="Back to ASPA Explorer"><img class="brand" src="/img/logo-mark.svg?v=1.17.1" alt="" width="40" height="40"><span>ASPA Explorer</span></a></p>
     <nav class="topnav" aria-label="Main"><a href="/">Home</a><a href="/statistics.html">Statistics</a><a href="/examples.html">Examples</a><a href="/api.html">API</a><a href="/guide.html" aria-current="page">Guide</a><a href="/status.html">Status</a></nav>
   </div>
   <h1>Guide</h1>
@@ -172,6 +172,13 @@
       <li><strong>by country</strong>, the country recorded in those files: where the number was registered, not necessarily where the network operates. Only countries with a minimum number of networks are listed by default, because a percentage of a handful of networks says little;</li>
       <li><strong>the 100 largest networks</strong> by cone, each with its ASPA state, and a switch to show only those without one.</li>
     </ul>
+    <h3 id="leaks">Route leaks today</h3>
+    <p>Below the adoption, the statistics page checks <strong>every route of three RIPE RIS collectors</strong> (rrc00, rrc01 and rrc03: tens of millions of routes in their table dumps) with the downstream ASPA verification, once a day, and groups the ones that the ASPAs prove to contain a valley by the place of the valley. A valley is a route that came down from a provider or a peer and went up again. Two tables tell the places apart by what the CAIDA relationships say of the first AS after the climb, the AS right after the part of the path that the ASPAs show to go up from the origin:</p>
+    <ul>
+      <li><strong>Possible route leaks:</strong> that AS is a peer or a customer of the AS before it, and it passed the route on up. It is the AS in the valley to look at.</li>
+      <li><strong>ASPAs that seem to miss a provider:</strong> that AS is a provider of the AS before it, which has an ASPA that does not list it: valid routes through it look like valleys. The owner of that ASPA is the one to tell. Most of the places are of this kind.</li>
+    </ul>
+    <p>Places with no relation in the dataset are counted but not listed. The relations are inferred from observed routes, so they can be out of date, and a place is a candidate, not a verdict. The ASPAs prove a valley only where they are published: a large share of the routes cross an AS without an ASPA and stay <em>unknown</em>. A leak seen by one feeder only can be a leak at the feeder itself. The same file is available as <a href="/api/v1/leaks.json">JSON</a>.</p>
     <p>The adoption numbers are rebuilt once a day and available as <a href="/api/v1/adoption.json">JSON</a>. ASPAs of networks that the collectors do not see are not counted. The page used to be called <em>Adoption</em>.</p>
   </section>
 
@@ -182,7 +189,7 @@
 
   <section aria-labelledby="status">
     <h2 id="status">Status</h2>
-    <p>The <a href="/status.html">status page</a> (the last item of the menu at the top) shows when each part was last updated: the validator, the per-AS files of the API, the daily history, the BGP visibility file used by the quality checks, the adoption numbers and the notification service. A part is <em>late</em> when it is older than expected and <em>down</em> when it is much older or does not answer. The page checks from your browser, so it shows what you would get, and refreshes every minute. The same checks give the <strong>dot next to <em>Status</em> in the menu</strong> of every page: green when all the checks are green, red when all are red, orange otherwise (a late check counts as not green). The result is kept for a minute, so moving between pages does not repeat the checks.</p>
+    <p>The <a href="/status.html">status page</a> (the last item of the menu at the top) shows when each part was last updated: the validator, the per-AS files of the API, the daily history, the BGP visibility file used by the quality checks, the adoption numbers, the route leaks and the notification service. A part is <em>late</em> when it is older than expected and <em>down</em> when it is much older or does not answer. The page checks from your browser, so it shows what you would get, and refreshes every minute. The same checks give the <strong>dot next to <em>Status</em> in the menu</strong> of every page: green when all the checks are green, red when all are red, orange otherwise (a late check counts as not green). The result is kept for a minute, so moving between pages does not repeat the checks.</p>
   </section>
 
   <section aria-labelledby="share">
