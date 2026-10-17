@@ -7,10 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.27.0] - 2026-10-17
+
+### Changed
+- The route leaks are read from 30 collectors instead of 18: sixteen of RIPE RIS (rrc00, 01, 03, 04, 05, 06, 07, 10, 11, 12, 14, 15, 16, 19, 21 and 23) and fourteen of RouteViews (Oregon, route-views3 and 4, London, Palo Alto, Tokyo, New York, Perth, Atlanta, Singapore, Johannesburg, Sao Paulo, Sydney and Equinix). The history of the leaks is rebuilt with them, so the numbers before and after are comparable only once the rebuild is done.
+
 ## [1.26.2] - 2026-10-17
 
 ### Changed
-- The countries of the measurement of the tromboning are written with their names (Tunisia, not TN).
+- The countries of the measurement of the tromboning are written with their names (Tunisia, not TN). The versions 1.26.0 and 1.26.1 were deployed and then folded into this one: they have no tag.
 
 ## [1.26.1] - 2026-10-17
 

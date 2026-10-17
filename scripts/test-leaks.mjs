@@ -118,8 +118,8 @@ await test('the history keeps one row a day, in order, and a rerun replaces the 
 await test('the table dump of a collector: the latest, or the one of a day', () => {
   assert.equal(dumpUrl('rrc10'), 'https://data.ris.ripe.net/rrc10/latest-bview.gz');
   assert.equal(dumpUrl('rrc10', '20261010'), 'https://data.ris.ripe.net/rrc10/2026.10/bview.20261010.0000.gz');
-  assert.equal(COLLECTORS.split(',').filter(isRis).length, 10);
-  assert.equal(COLLECTORS.split(',').filter((c) => !isRis(c)).length, 8);
+  assert.equal(COLLECTORS.split(',').filter(isRis).length, 16);
+  assert.equal(COLLECTORS.split(',').filter((c) => !isRis(c)).length, 14);
   assert.equal(dumpUrl('route-views2', '20261010'), 'https://archive.routeviews.org/bgpdata/2026.10/RIBS/rib.20261010.0000.bz2');
   assert.equal(dumpUrl('route-views.sg', '20261010'), 'https://archive.routeviews.org/route-views.sg/bgpdata/2026.10/RIBS/rib.20261010.0000.bz2');
   assert.equal(rvListing('route-views3', '2026.10'), 'https://archive.routeviews.org/route-views3/bgpdata/2026.10/RIBS/');

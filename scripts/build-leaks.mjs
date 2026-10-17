@@ -10,7 +10,7 @@
 //
 // Inputs (environment, with defaults for the production host):
 //   ASPA_DATA        URL or file of Routinator's jsonext     http://127.0.0.1:8080/data/aspas.json
-//   LEAKS_COLLECTORS comma separated collectors              ten of RIPE RIS and eight of RouteViews (COLLECTORS below)
+//   LEAKS_COLLECTORS comma separated collectors              sixteen of RIPE RIS and fourteen of RouteViews (COLLECTORS below)
 //   LEAKS_EVENTS     URL or file of the history of changes   the events.json of the history branch (only with --day)
 //   LEAKS_ADOPTION   file with the Tier-1 clique and the IXP ASes (adoption.json), next to OUT_FILE
 //
@@ -28,9 +28,9 @@ import { readRib, openDump } from './mrt.mjs';
 
 const { verify } = createRequire(import.meta.url)('../site/verify.js');
 if (net.setDefaultAutoSelectFamilyAttemptTimeout) net.setDefaultAutoSelectFamilyAttemptTimeout(3000);
-// RIPE RIS: Amsterdam, London, Amsterdam, Geneva, Milan, New York, Frankfurt, Sao Paulo, Johannesburg, Singapore.
-// RouteViews (University of Oregon, other peers than RIS): Oregon, route-views3 and 4, Singapore, Johannesburg, Sao Paulo, Sydney, Equinix.
-export const COLLECTORS = 'rrc00,rrc01,rrc03,rrc04,rrc10,rrc11,rrc12,rrc15,rrc19,rrc23,route-views2,route-views3,route-views4,route-views.sg,route-views.napafrica,route-views2.saopaulo,route-views.sydney,route-views.eqix';
+// RIPE RIS (16): Amsterdam, London, Amsterdam, Geneva, Vienna, Tokyo, Stockholm, Milan, New York, Frankfurt, Palo Alto, Sao Paulo, Miami, Johannesburg, Paris, Singapore.
+// RouteViews (14; University of Oregon, other peers than RIS): Oregon, route-views3 and 4, London, Palo Alto, Tokyo, New York, Perth, Atlanta, Singapore, Johannesburg, Sao Paulo, Sydney, Equinix.
+export const COLLECTORS = 'rrc00,rrc01,rrc03,rrc04,rrc05,rrc06,rrc07,rrc10,rrc11,rrc12,rrc14,rrc15,rrc16,rrc19,rrc21,rrc23,route-views2,route-views3,route-views4,route-views.linx,route-views.isc,route-views.wide,route-views.ny,route-views.perth,route-views.telxatl,route-views.sg,route-views.napafrica,route-views2.saopaulo,route-views.sydney,route-views.eqix';
 export const isRis = (collector) => /^rrc\d+$/.test(collector);
 // The table dump of a collector: the latest one, or the one of 00:00 UTC of a day (YYYYMMDD).
 // For RouteViews the latest one has to be found in the listing of the month (pickLatestRib).
