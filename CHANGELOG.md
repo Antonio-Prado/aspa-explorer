@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.25.1] - 2026-10-17
+
+### Changed
+- The result of the measurement of the tromboning is a headline (*No trombone seen*, *No trombone on most paths*, *Longer than it should be*, *Trombone*) in a box, with the median, the range and the bands under it, and what the measurement cannot tell: a short detour inside Europe cannot be told apart from a far target inside the country. When almost no probe gets within 10 ms of the target, it says so.
+
 ## [1.25.0] - 2026-10-17
 
 ### Removed

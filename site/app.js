@@ -518,7 +518,7 @@ function measureBlock(origin, tr, routes) {
       status.textContent = `Traceroute towards ${target.address}, in ${target.prefix} of ${as}, from ${results.length} probe${results.length === 1 ? '' : 's'} in ${home}.`;
       const all = AspaTraceroute.aggregate(results);
       const sorted = [...results].sort((a, b) => (b.net === null ? -1 : b.net) - (a.net === null ? -1 : a.net));
-      out.replaceChildren(...(all ? [el('p', { class: 'verdict-' + all.verdict, text: aggregateText(all, results.length, home) })] : []),
+      out.replaceChildren(...(all ? [resultBox(all, results.length, home)] : []),
         probeTable(sorted, all, target));
     } catch (err) {
       status.textContent = `The measurement did not work: ${err.message}.`;
@@ -530,15 +530,30 @@ function measureBlock(origin, tr, routes) {
     status, out);
 }
 
-// The probes together, in a sentence: the median round trip, the range and how many are normal, longer than they should be, or a trombone.
-function aggregateText(a, total, home) {
-  const ms = (v) => `${v < 10 ? v.toFixed(1) : Math.round(v)} ms`;
+// The result of the measurement, as a headline and what stands behind it: the median round trip, the range, how many probes are in each band,
+// and what the measurement cannot tell.
+function resultBox(a, total, home) {
+  const ms = (v) => (v < 1 ? '<1 ms' : `${v < 10 ? v.toFixed(1) : Math.round(v)} ms`);
+  const c = a.counts, out = c.long + c.trombone;
+  let kind, headline;
+  if (a.verdict === 'trombone') { kind = 'trombone'; headline = 'Trombone'; }
+  else if (a.verdict === 'long') { kind = 'long'; headline = 'Longer than it should be'; }
+  else if (c.trombone) { kind = 'long'; headline = 'No trombone on most paths'; }
+  else if (c.long) { kind = 'ok'; headline = 'No trombone seen'; }
+  else { kind = 'ok'; headline = 'No trombone seen'; }
   const parts = [];
-  if (a.counts.ok) parts.push(`${a.counts.ok} normal`);
-  if (a.counts.long) parts.push(`${a.counts.long} longer than it should be`);
-  if (a.counts.trombone) parts.push(`${a.counts.trombone} ${a.counts.trombone === 1 ? 'a trombone' : 'trombones'}`);
-  const verdict = { ok: 'Most of the probes reach it at a normal delay for a route inside the country.', long: 'The median is longer than it should be inside a country: many routes probably go abroad.', trombone: 'The median is a trombone: most routes cross an ocean or go round Europe twice.' }[a.verdict];
-  return `${a.n} of ${total} probes in ${home} answered. Median round trip, from the first public address: ${ms(a.median)} (from ${ms(a.min)} to ${ms(a.max)}). ${parts.join(', ')}. ${verdict} A probe on a mobile network or far from the target weighs as much as the others, so look at the median and not at a single probe.`;
+  if (c.ok) parts.push(`${c.ok} normal`);
+  if (c.long) parts.push(`${c.long} longer than it should be`);
+  if (c.trombone) parts.push(`${c.trombone} ${c.trombone === 1 ? 'a trombone' : 'trombones'}`);
+  const lines = [`${a.n} of ${total} probes in ${home} answered. Median round trip, from the first public address: ${ms(a.median)} (from ${ms(a.min)} to ${ms(a.max)}). ${parts.join(', ')}.`];
+  if (a.verdict === 'trombone') lines.push('Most of the routes cross an ocean, or go round Europe twice: 100 ms or more is not a delay between two points of one country.');
+  else if (a.verdict === 'long') lines.push('The median is longer than it should be inside a country (50 ms): many routes probably go abroad, but not as far as an ocean.');
+  else if (c.trombone) lines.push(`${c.trombone === 1 ? 'One probe is' : `${c.trombone} probes are`} at 100 ms or more: look at ${c.trombone === 1 ? 'it' : 'them'} in the table, it can be the probe (a mobile network, for instance) or its route.`);
+  else lines.push('No probe is at 100 ms or more, the delay of a packet that crosses an ocean.');
+  const notes = ['What this does not tell: a short detour inside Europe (a few tens of milliseconds) cannot be told apart from a target that is far inside the country, and the probes are only a sample of where the traffic comes from.'];
+  if (a.verdict === 'ok' && a.near / a.n < 0.25) notes.unshift(`Only ${a.near} of the ${a.n} probes get within 10 ms of the target: it is far from them, inside the country, or the last part of its network is long.`);
+  return el('div', { class: `result r-${kind}`, role: 'group', 'aria-label': 'Result of the measurement' },
+    el('p', { class: 'headline', text: headline }), ...lines.map((x) => el('p', { text: x })), ...notes.map((x) => el('p', { class: 'hint', text: x })));
 }
 
 // One row for each probe, the slowest first, with the median at the top; the hops of a probe open under its row.

@@ -98,7 +98,8 @@
     const median = nets.length % 2 ? nets[mid] : (nets[mid - 1] + nets[mid]) / 2;
     const counts = { ok: 0, long: 0, trombone: 0 };
     for (const s of done) counts[s.verdict]++;
-    return { n: done.length, median, min: nets[0], max: nets[nets.length - 1], counts, verdict: median >= TROMBONE_MS ? 'trombone' : median > LONG_DELAY_MS ? 'long' : 'ok' };
+    const near = nets.filter((x) => x < 10).length;       // probes that are close to the target
+    return { n: done.length, median, min: nets[0], max: nets[nets.length - 1], counts, near, verdict: median >= TROMBONE_MS ? 'trombone' : median > LONG_DELAY_MS ? 'long' : 'ok' };
   }
 
   const api = { hostIn, targetOf, isPrivate, summarise, aggregate, LONG_DELAY_MS, TROMBONE_MS, JUMP_MS };

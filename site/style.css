@@ -557,3 +557,11 @@ table.live td { overflow-wrap: anywhere; }
 .aslink:hover, .aslink:focus-visible { color: var(--accent); text-decoration-color: currentColor; }
 table.live tr.median th, table.live tr.median td { font-weight: 600; background: var(--wash); }
 table.live th.probe { font-weight: 400; text-align: left; }
+
+/* the result of the measurement of the tromboning: a headline, then what stands behind it */
+.result { border-left: 4px solid var(--grid); background: var(--wash); border-radius: 6px; padding: 0.75rem 1rem; margin: 0.75rem 0; }
+.result p { margin: 0.35rem 0; }
+.result .headline { font-size: 1.25rem; font-weight: 600; margin: 0 0 0.25rem; }
+.result.r-ok { border-left-color: var(--s3); }
+.result.r-long { border-left-color: var(--s4); }
+.result.r-trombone { border-left-color: var(--s2); }
