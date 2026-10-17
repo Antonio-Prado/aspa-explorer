@@ -211,5 +211,5 @@ Released under the <a href="LICENSE" target="_blank" rel="noopener">MIT License<
   &nbsp;&nbsp;&nbsp;
   <a href="https://en.wikipedia.org/wiki/Vi_(text_editor)" target="_blank" rel="noopener"><img src="assets/credits/vi-logo.svg" alt="vi, the text editor" height="32"></a>
   &nbsp;&nbsp;&nbsp;
-  <sub><em>Inspired by passion</em> ❤️</sub>
+  ❤️
 </p>
