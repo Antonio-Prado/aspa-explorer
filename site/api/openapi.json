@@ -2,75 +2,489 @@
   "openapi": "3.1.0",
   "info": {
     "title": "ASPA Explorer API",
-    "version": "1.0.0",
+    "version": "1.1.0",
     "description": "ASPA objects validated by Routinator at rpki.ping6.it, their history and quality, for any AS. Open data, read-only, no key.",
-    "contact": { "email": "antonio.prado@dei.unipd.it" },
-    "license": { "name": "MIT", "identifier": "MIT" }
+    "contact": {
+      "email": "antonio.prado@dei.unipd.it"
+    },
+    "license": {
+      "name": "MIT",
+      "identifier": "MIT"
+    }
   },
-  "servers": [{ "url": "https://aspa.ping6.it" }],
+  "servers": [
+    {
+      "url": "https://aspa.ping6.it"
+    }
+  ],
   "paths": {
     "/api/v1/as/{number}": {
       "get": {
         "summary": "The ASPA, history and quality of one AS",
-        "parameters": [{ "name": "number", "in": "path", "required": true, "description": "AS number, without the AS prefix (32-bit)", "schema": { "type": "integer", "minimum": 1, "maximum": 4294967295 }, "example": 8283 }],
+        "parameters": [
+          {
+            "name": "number",
+            "in": "path",
+            "required": true,
+            "description": "AS number, without the AS prefix (32-bit)",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 4294967295
+            },
+            "example": 8283
+          }
+        ],
         "responses": {
-          "200": { "description": "The AS. An AS with no ASPA, now or ever, has aspa.published false and empty lists.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/As" } } } },
-          "404": { "description": "Not a valid AS number" }
+          "200": {
+            "description": "The AS. An AS with no ASPA, now or ever, has aspa.published false and empty lists.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/As"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not a valid AS number"
+          }
         }
       }
     },
     "/badge/AS{number}.svg": {
       "get": {
         "summary": "A badge with the number of providers in the ASPA of the AS",
-        "parameters": [{ "name": "number", "in": "path", "required": true, "schema": { "type": "integer", "minimum": 1, "maximum": 4294967295 }, "example": 8283 }],
-        "responses": { "200": { "description": "SVG image", "content": { "image/svg+xml": { "schema": { "type": "string" } } } }, "404": { "description": "Not a valid AS number" } }
+        "parameters": [
+          {
+            "name": "number",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 4294967295
+            },
+            "example": 8283
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "SVG image",
+            "content": {
+              "image/svg+xml": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not a valid AS number"
+          }
+        }
       }
     },
     "/feed/AS{number}.atom": {
       "get": {
         "summary": "Atom feed of the latest 100 changes that concern the AS",
-        "parameters": [{ "name": "number", "in": "path", "required": true, "schema": { "type": "integer", "minimum": 1, "maximum": 4294967295 }, "example": 8283 }],
-        "responses": { "200": { "description": "Atom 1.0 feed", "content": { "application/atom+xml": { "schema": { "type": "string" } } } }, "404": { "description": "Not a valid AS number" } }
+        "parameters": [
+          {
+            "name": "number",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 4294967295
+            },
+            "example": 8283
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Atom 1.0 feed",
+            "content": {
+              "application/atom+xml": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not a valid AS number"
+          }
+        }
       }
     },
     "/api/v1/meta.json": {
       "get": {
         "summary": "When the per-AS files were built",
-        "responses": { "200": { "description": "Build information", "content": { "application/json": { "schema": { "type": "object", "properties": { "generated": { "type": "string", "format": "date-time" }, "aspas": { "type": "integer" }, "ases": { "type": "integer" }, "events": { "type": "integer" } } } } } } }
+        "responses": {
+          "200": {
+            "description": "Build information",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "generated": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "aspas": {
+                      "type": "integer"
+                    },
+                    "ases": {
+                      "type": "integer"
+                    },
+                    "events": {
+                      "type": "integer"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
       }
     },
     "/data/aspas.json": {
       "get": {
         "summary": "All valid ASPAs (Routinator jsonext, route origins and router keys left out)",
-        "responses": { "200": { "description": "Routinator JSON", "content": { "application/json": { "schema": { "type": "object" } } } } }
+        "responses": {
+          "200": {
+            "description": "Routinator JSON",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/subscriptions": {
+      "post": {
+        "summary": "Subscribe an e-mail address or a webhook to the changes of one AS",
+        "description": "E-mail: a confirmation message is sent and the subscription starts when its link is confirmed (the answer is the same whether or not the address was already subscribed). Webhook: the address is called with a verification challenge it must repeat; on success the answer carries the signing secret, once.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "kind",
+                  "target",
+                  "asn"
+                ],
+                "properties": {
+                  "kind": {
+                    "enum": [
+                      "email",
+                      "webhook"
+                    ]
+                  },
+                  "target": {
+                    "type": "string",
+                    "description": "An e-mail address, or an https address with a public host name"
+                  },
+                  "asn": {
+                    "type": "string",
+                    "example": "AS3333"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Webhook subscribed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "const": "active"
+                    },
+                    "asn": {
+                      "type": "string"
+                    },
+                    "secret": {
+                      "type": "string"
+                    },
+                    "unsubscribe": {
+                      "type": "string",
+                      "format": "uri"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "202": {
+            "description": "E-mail: confirmation requested"
+          },
+          "400": {
+            "description": "Invalid input or failed webhook verification"
+          },
+          "409": {
+            "description": "Webhook already subscribed"
+          },
+          "429": {
+            "description": "Too many requests"
+          }
+        }
+      }
+    },
+    "/api/v1/subscriptions/confirm": {
+      "post": {
+        "summary": "Confirm an e-mail subscription with the token of the link",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "token"
+                ],
+                "properties": {
+                  "token": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Active"
+          },
+          "404": {
+            "description": "The link is not valid any more"
+          }
+        }
+      }
+    },
+    "/api/v1/subscriptions/unsubscribe": {
+      "post": {
+        "summary": "Cancel a subscription (also the target of List-Unsubscribe and of the unsubscribe field of a webhook)",
+        "parameters": [
+          {
+            "name": "token",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Cancelled (also when it already was)"
+          }
+        }
       }
     }
   },
   "components": {
     "schemas": {
-      "Asn": { "type": "string", "pattern": "^AS[0-9]{1,10}$", "example": "AS8283" },
+      "Asn": {
+        "type": "string",
+        "pattern": "^AS[0-9]{1,10}$",
+        "example": "AS8283"
+      },
       "As": {
         "type": "object",
-        "required": ["asn", "number", "aspa", "provider_of", "quality", "history", "named_as_provider_history", "links"],
+        "required": [
+          "asn",
+          "number",
+          "aspa",
+          "provider_of",
+          "quality",
+          "history",
+          "named_as_provider_history",
+          "links"
+        ],
         "properties": {
-          "asn": { "$ref": "#/components/schemas/Asn" },
-          "number": { "type": "integer" },
-          "generated": { "type": "string", "format": "date-time" },
+          "asn": {
+            "$ref": "#/components/schemas/Asn"
+          },
+          "number": {
+            "type": "integer"
+          },
+          "generated": {
+            "type": "string",
+            "format": "date-time"
+          },
           "aspa": {
             "type": "object",
             "properties": {
-              "published": { "type": "boolean" },
-              "providers": { "type": "array", "items": { "$ref": "#/components/schemas/Asn" }, "description": "[\"AS0\"] declares no provider" },
-              "no_providers": { "type": "boolean" },
-              "sources": { "type": "array", "items": { "type": "object", "properties": { "trust_anchor": { "type": ["string", "null"] }, "valid_from": { "type": ["string", "null"], "format": "date-time" }, "valid_until": { "type": ["string", "null"], "format": "date-time" }, "uri": { "type": ["string", "null"] } } } }
+              "published": {
+                "type": "boolean"
+              },
+              "providers": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/Asn"
+                },
+                "description": "[\"AS0\"] declares no provider"
+              },
+              "no_providers": {
+                "type": "boolean"
+              },
+              "sources": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "trust_anchor": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "valid_from": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "format": "date-time"
+                    },
+                    "valid_until": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "format": "date-time"
+                    },
+                    "uri": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    }
+                  }
+                }
+              }
             }
           },
-          "provider_of": { "type": "array", "items": { "$ref": "#/components/schemas/Asn" }, "description": "ASes whose ASPA names this AS as a provider" },
-          "seen_in_bgp": { "type": ["boolean", "null"] },
-          "quality": { "type": "array", "items": { "type": "object", "properties": { "kind": { "type": "string" }, "severity": { "enum": ["error", "warning", "note"] }, "detail": { "type": "string" } } } },
-          "history": { "type": "array", "items": { "type": "object", "properties": { "date": { "type": "string", "format": "date" }, "kind": { "enum": ["new", "changed", "removed"] }, "providers": { "type": "array", "items": { "$ref": "#/components/schemas/Asn" } }, "added": { "type": "array", "items": { "$ref": "#/components/schemas/Asn" } }, "dropped": { "type": "array", "items": { "$ref": "#/components/schemas/Asn" } } } } },
-          "named_as_provider_history": { "type": "array", "items": { "type": "object", "properties": { "date": { "type": "string", "format": "date" }, "customer": { "$ref": "#/components/schemas/Asn" }, "action": { "enum": ["added", "dropped"] } } } },
-          "links": { "type": "object", "properties": { "page": { "type": "string", "format": "uri" }, "badge": { "type": "string", "format": "uri" }, "feed": { "type": "string", "format": "uri" } } }
+          "provider_of": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Asn"
+            },
+            "description": "ASes whose ASPA names this AS as a provider"
+          },
+          "seen_in_bgp": {
+            "type": [
+              "boolean",
+              "null"
+            ]
+          },
+          "quality": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "kind": {
+                  "type": "string"
+                },
+                "severity": {
+                  "enum": [
+                    "error",
+                    "warning",
+                    "note"
+                  ]
+                },
+                "detail": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "history": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "date": {
+                  "type": "string",
+                  "format": "date"
+                },
+                "kind": {
+                  "enum": [
+                    "new",
+                    "changed",
+                    "removed"
+                  ]
+                },
+                "providers": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Asn"
+                  }
+                },
+                "added": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Asn"
+                  }
+                },
+                "dropped": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Asn"
+                  }
+                }
+              }
+            }
+          },
+          "named_as_provider_history": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "date": {
+                  "type": "string",
+                  "format": "date"
+                },
+                "customer": {
+                  "$ref": "#/components/schemas/Asn"
+                },
+                "action": {
+                  "enum": [
+                    "added",
+                    "dropped"
+                  ]
+                }
+              }
+            }
+          },
+          "links": {
+            "type": "object",
+            "properties": {
+              "page": {
+                "type": "string",
+                "format": "uri"
+              },
+              "badge": {
+                "type": "string",
+                "format": "uri"
+              },
+              "feed": {
+                "type": "string",
+                "format": "uri"
+              }
+            }
+          }
         }
       }
     }

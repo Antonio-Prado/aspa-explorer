@@ -9,21 +9,22 @@
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <link rel="canonical" href="https://aspa.ping6.it/">
 <link rel="alternate" type="application/atom+xml" title="ASPA Explorer: changes" href="/changes.atom">
-<link rel="stylesheet" href="/style.css?v=1.8.0">
-<script src="/verify.js?v=1.8.0" defer></script>
-<script src="/history.js?v=1.8.0" defer></script>
-<script src="/quality.js?v=1.8.0" defer></script>
-<script src="/app.js?v=1.8.0" defer></script>
-<script src="/footer.js?v=1.8.0" defer></script>
+<link rel="stylesheet" href="/style.css?v=1.9.0">
+<script src="/verify.js?v=1.9.0" defer></script>
+<script src="/history.js?v=1.9.0" defer></script>
+<script src="/quality.js?v=1.9.0" defer></script>
+<script src="/app.js?v=1.9.0" defer></script>
+<script src="/footer.js?v=1.9.0" defer></script>
 </head>
 <body>
 <a class="skip" href="#main">Skip to main content</a>
 <header class="wrap masthead">
   <div class="top">
-    <h1><a class="homelink" href="/"><img class="brand" src="/img/logo-mark.svg?v=1.8.0" alt="" width="40" height="40"><span>ASPA Explorer</span></a></h1>
+    <h1><a class="homelink" href="/"><img class="brand" src="/img/logo-mark.svg?v=1.9.0" alt="" width="40" height="40"><span>ASPA Explorer</span></a></h1>
     <nav class="topnav" aria-label="Main"><a href="/api.html">API</a><a href="/guide.html">Guide</a></nav>
   </div>
   <p class="lede">Validated ASPA objects from the RPKI, as seen by the Routinator validator at <a href="https://rpki.ping6.it/ui/" target="_blank" rel="noopener">rpki.ping6.it<span class="sr-only"> (opens in a new tab)</span></a>.</p>
+  <p class="lede">An <strong>ASPA</strong> (Autonomous System Provider Authorization) is a signed RPKI object in which a customer AS lists the ASes allowed to act as its upstream providers. Routers use these lists to detect route leaks and some forged AS paths. A provider set of <code>AS0</code> means the AS declares it has no upstream providers.</p>
   <p class="meta" id="meta">Loading data…</p>
 </header>
 
@@ -165,7 +166,6 @@
 </main>
 
 <footer class="wrap foot">
-  <p>An <strong>ASPA</strong> (Autonomous System Provider Authorization) is a signed RPKI object in which a customer AS lists the ASes allowed to act as its upstream providers. Routers use these lists to detect route leaks and some forged AS paths. A provider set of <code>AS0</code> means the AS declares it has no upstream providers.</p>
   <p>Data: Routinator, refreshed about every 10 minutes. Raw JSON: <a href="https://rpki.ping6.it/jsonext?exclude=routeOrigins,routerKeys" target="_blank" rel="noopener">jsonext<span class="sr-only"> (opens in a new tab)</span></a> · <a href="https://rpki.ping6.it/json?exclude=routeOrigins,routerKeys" target="_blank" rel="noopener">json<span class="sr-only"> (opens in a new tab)</span></a>.</p>
 </footer>
 

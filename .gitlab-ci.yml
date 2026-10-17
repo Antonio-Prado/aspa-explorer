@@ -30,6 +30,7 @@ js-syntax:
     - node --check site/history.js
     - node --check site/quality.js
     - node --check scripts/build-api.mjs
+    - for f in notifier/*.mjs; do node --check "$f"; done
 
 unit-tests:
   extends: .regular
@@ -38,13 +39,14 @@ unit-tests:
   script:
     - node scripts/test-verify.mjs
     - node scripts/test-api.mjs
+    - node scripts/test-notify.mjs
 
 html-validate:
   extends: .regular
   stage: lint
   image: node:22-alpine
   script:
-    - npx --yes html-validate@9 site/index.html site/guide.html site/api.html
+    - npx --yes html-validate@9 site/index.html site/guide.html site/api.html site/subscription.html
 
 nginx-config:
   extends: .regular

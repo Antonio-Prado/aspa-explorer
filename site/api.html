@@ -7,13 +7,13 @@
 <meta name="description" content="A small public API: the ASPA, its history and its quality for any AS, a badge and an Atom feed per AS. Open data, no key.">
 <meta name="color-scheme" content="light dark">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
-<link rel="stylesheet" href="/style.css?v=1.8.0">
-<script src="/footer.js?v=1.8.0" defer></script>
+<link rel="stylesheet" href="/style.css?v=1.9.0">
+<script src="/footer.js?v=1.9.0" defer></script>
 </head>
 <body>
 <a class="skip" href="#main">Skip to main content</a>
 <header class="wrap masthead">
-  <p class="back"><a class="brandlink" href="/" title="Back to ASPA Explorer"><img class="brand" src="/img/logo-mark.svg?v=1.8.0" alt="" width="40" height="40"><span>ASPA Explorer</span></a></p>
+  <p class="back"><a class="brandlink" href="/" title="Back to ASPA Explorer"><img class="brand" src="/img/logo-mark.svg?v=1.9.0" alt="" width="40" height="40"><span>ASPA Explorer</span></a></p>
   <h1>API</h1>
   <p class="lede">The data of this page for any AS, as JSON, a badge and an Atom feed. Open, read-only, no key.</p>
 </header>
@@ -24,6 +24,7 @@
       <li><a href="#as">One AS</a></li>
       <li><a href="#badge">Badge</a></li>
       <li><a href="#feed">Atom feed</a></li>
+      <li><a href="#subscriptions">Subscriptions and webhooks</a></li>
       <li><a href="#all">Everything at once</a></li>
       <li><a href="#rules">Freshness and fair use</a></li>
     </ol>
@@ -64,6 +65,24 @@
   <section aria-labelledby="feed">
     <h2 id="feed">Atom feed</h2>
     <p><code>GET https://aspa.ping6.it/feed/AS8283.atom</code> lists the latest 100 changes that concern the AS: its own ASPA (new, changed, removed) and the ASPAs of others that add or drop it as a provider. Add it to a feed reader to be told when something changes. A feed for an AS with no history is valid and empty; it fills when something happens. The feed of all changes is <a href="/changes.atom">/changes.atom</a>.</p>
+  </section>
+
+  <section aria-labelledby="subscriptions">
+    <h2 id="subscriptions">Subscriptions and webhooks</h2>
+    <p><code>POST https://aspa.ping6.it/api/v1/subscriptions</code> with a JSON body <code>{"kind": "webhook", "target": "https://example.org/hook", "asn": "AS3333"}</code> (or <code>"kind": "email"</code> with an address, which then has to be confirmed through a link sent to it). The same events as in the <a href="#feed">feed</a>. A few requests an hour are allowed per visitor.</p>
+    <p>For a webhook, the service first calls the address with <code>{"type": "verification", "challenge": "…", "asn": "AS3333", "unsubscribe": "…"}</code>; reply with a 2xx status and a body that contains the challenge. The answer to the subscription then has the <code>secret</code>, once. A delivery looks like this:</p>
+    <pre><code>POST /hook
+X-ASPA-Timestamp: 1792224830
+X-ASPA-Signature: sha256=…      HMAC-SHA256(secret, timestamp + "." + body), hex
+
+{"type": "aspa.change", "asn": "AS3333", "relation": "own",
+ "text": "The ASPA of AS3333 added AS1299. It now lists 3 providers: AS174, AS1299, AS3356.",
+ "time": "2026-10-17T10:00:00.000Z",
+ "change": {"customer": "AS3333", "kind": "changed", "providers": ["AS174", "AS1299", "AS3356"], "added": ["AS1299"], "dropped": []},
+ "page": "https://aspa.ping6.it/as/AS3333",
+ "unsubscribe": "https://aspa.ping6.it/api/v1/subscriptions/unsubscribe?token=…"}</code></pre>
+    <p><code>relation</code> is <code>own</code> for a change of the ASPA of the AS and <code>provider</code> when another ASPA adds or drops it; <code>kind</code> is <code>new</code>, <code>changed</code> or <code>removed</code>. Check the signature and reject a timestamp more than a few minutes old. Deliveries are not retried; five failures in a row switch the webhook off. To stop, send a <code>POST</code> to the <code>unsubscribe</code> address.</p>
+    <p>Webhook addresses must be <code>https</code> with a public host name; the service refuses names that resolve to private or local addresses, does not follow redirects and waits five seconds at most.</p>
   </section>
 
   <section aria-labelledby="all">

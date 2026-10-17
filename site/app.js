@@ -945,6 +945,50 @@ function copyField(label, value) {
   return el('div', { class: 'copy-row' }, el('span', { class: 'copy-label', text: label }), input, btn);
 }
 
+// "Get notified": an e-mail address (confirmed by a link) or a webhook (confirmed by a challenge).
+function notifyForm(as) {
+  const kind = el('select', { id: 'nf-kind', 'aria-label': 'How to be notified' },
+    el('option', { value: 'email', text: 'E-mail' }), el('option', { value: 'webhook', text: 'Webhook' }));
+  const target = el('input', { id: 'nf-target', type: 'text', inputmode: 'email', spellcheck: 'false', autocomplete: 'email', placeholder: 'you@example.org', 'aria-label': 'E-mail address or webhook address', required: '' });
+  // a field that people do not see and bots fill
+  const trap = el('input', { type: 'text', name: 'website', tabindex: '-1', autocomplete: 'off', class: 'hp', 'aria-hidden': 'true' });
+  const msg = el('div', { class: 'hint', 'aria-live': 'polite' });
+  const btn = el('button', { type: 'submit', text: 'Subscribe' });
+  kind.addEventListener('change', () => {
+    const hook = kind.value === 'webhook';
+    target.placeholder = hook ? 'https://example.org/hooks/aspa' : 'you@example.org';
+    target.inputMode = hook ? 'url' : 'email';
+    target.autocomplete = hook ? 'off' : 'email';
+  });
+  const form = el('form', { class: 'notify', autocomplete: 'off' }, kind, target, trap, btn);
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    btn.disabled = true;
+    msg.replaceChildren(el('span', { text: 'Sending…' }));
+    try {
+      const r = await fetch('/api/v1/subscriptions', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ kind: kind.value, target: target.value.trim(), asn: as, website: trap.value }),
+      });
+      const body = await r.json().catch(() => ({}));
+      if (!r.ok) throw new Error(body.error || `HTTP ${r.status}`);
+      if (body.secret) {
+        msg.replaceChildren(el('p', { text: 'Subscribed. Keep this secret: it is shown only now, and signs each delivery in the X-ASPA-Signature header.' }), copyField('Secret', body.secret));
+      } else {
+        msg.replaceChildren(el('p', { text: body.message || 'Check your mail.' }));
+      }
+      target.value = '';
+    } catch (err) {
+      msg.replaceChildren(el('p', { class: 'error', text: err.message }));
+    } finally { btn.disabled = false; }
+  });
+  return el('details', { class: 'embed' },
+    el('summary', { text: 'Get notified by e-mail or webhook' }),
+    el('p', { class: 'hint', text: `A message when the ASPA of ${as} changes, or when another ASPA adds or drops ${as} as a provider. An e-mail address has to be confirmed through a link; a webhook has to repeat a challenge. Nothing else is kept or used.` }),
+    form, msg,
+    el('p', { class: 'hint' }, 'How it works, what is kept and how to stop: ', el('a', { href: '/guide.html#notify', text: 'the guide' }), '.'));
+}
+
 function shareBlock(as) {
   const base = location.origin;
   const page = `${base}/as/${as}`, badge = `${base}/badge/${as}.svg`;
@@ -955,6 +999,7 @@ function shareBlock(as) {
       el('a', { href: `/feed/${as}.atom` }, 'Atom feed of its changes'), ' · ',
       el('a', { href: `/api/v1/as/${asNum(as)}` }, 'JSON'), ' · ',
       el('a', { href: '/api.html' }, 'API')),
+    notifyForm(as),
     el('details', { class: 'embed' },
       el('summary', { text: 'Add the badge to your site' }),
       el('p', {}, el('img', { src: badge, alt: `ASPA badge of ${as}`, height: '20', class: 'badge-img' })),
@@ -982,7 +1027,7 @@ const pathAs = () => {
 function lookupFromHash() {
   const hash = location.hash.slice(1);
   // a new lookup on an AS page goes back to the plain address, so the address always matches what is shown
-  if (hash && location.pathname !== '/' && pathAs()) history.replaceState(null, '', '/' + location.hash);
+  if (hash && location.pathname !== '/' && pathAs()) window.history.replaceState(null, '', '/' + location.hash);   // `history` is the daily series here
   if (hash.startsWith('path=')) {
     const q = new URLSearchParams(hash);
     const direction = q.get('from') === 'up' ? 'up' : 'down';

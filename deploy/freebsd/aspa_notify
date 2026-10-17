@@ -1,0 +1,25 @@
+#!/bin/sh
+#
+# PROVIDE: aspa_notify
+# REQUIRE: LOGIN NETWORKING
+# KEYWORD: shutdown
+#
+# rc.d script of the notifier (notifier/main.mjs). Install as /usr/local/etc/rc.d/aspa_notify and
+# add aspa_notify_enable="YES" to /etc/rc.conf. daemon(8) supervises and restarts the service;
+# chroot(8) with -u only drops privileges to the service user (the root directory stays /). The
+# variable is not called aspa_notify_user because rc.subr would then run daemon itself as that user.
+. /etc/rc.subr
+
+name=aspa_notify
+rcvar=aspa_notify_enable
+load_rc_config $name
+: ${aspa_notify_enable:=NO}
+: ${aspa_notify_runas:=aspanotify}
+: ${aspa_notify_dir:=/usr/local/libexec/aspa-notify}
+
+pidfile=/var/run/${name}.pid
+logfile=/var/log/aspa-notify.log
+command=/usr/sbin/daemon
+command_args="-r -P ${pidfile} -o ${logfile} /usr/sbin/chroot -u ${aspa_notify_runas} -g ${aspa_notify_runas} -G ${aspa_notify_runas} / /usr/local/bin/node --disable-warning=ExperimentalWarning ${aspa_notify_dir}/notifier/main.mjs"
+
+run_rc_command "$1"

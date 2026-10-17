@@ -7,9 +7,10 @@ js:
 	node --check site/footer.js
 	node --check site/verify.js
 	node --check scripts/build-api.mjs
+	for f in notifier/*.mjs; do node --check $$f; done
 
 html:
-	npx --yes html-validate@9 site/index.html site/guide.html site/api.html
+	npx --yes html-validate@9 site/index.html site/guide.html site/api.html site/subscription.html
 
 # Validates the nginx configuration with a throwaway certificate.
 nginx:
@@ -30,3 +31,4 @@ secrets:
 test:
 	node scripts/test-verify.mjs
 	node scripts/test-api.mjs
+	node --disable-warning=ExperimentalWarning scripts/test-notify.mjs

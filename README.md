@@ -33,14 +33,19 @@
   </tr>
   <tr>
     <td width="50%"><img src="assets/screenshots/pathcheck-dark.jpg" alt="Checking the AS path 3356 1299 680: the verdict and the hop-by-hop table"></td>
-    <td width="50%"><img src="assets/screenshots/routes-dark.jpg" alt="The routes seen in BGP for AS8283, checked against the ASPAs: valid, unknown and invalid, with the distinct AS paths"></td>
+    <td width="50%"><img src="assets/screenshots/routes-dark.jpg" alt="The routes seen in BGP for AS3333: its prefixes checked against the ROAs (two invalid, longer than the ROA allows), then the distinct AS paths checked against the ASPAs"></td>
   </tr>
   <tr>
     <td align="center"><sub>AS path check: verdict and hop-by-hop reasons</sub></td>
-    <td align="center"><sub>Routes seen in BGP, checked against the ASPAs</sub></td>
+    <td align="center"><sub>Routes seen in BGP: ROAs for the prefixes, ASPAs for the paths</sub></td>
   </tr>
   <tr>
-    <td colspan="2" align="center"><img src="assets/screenshots/quality-dark.jpg" width="60%" alt="The ASPA quality section: errors, warnings and notes, with the ASPAs of each check"><br><sub>ASPA quality: what looks wrong in the ASPAs</sub></td>
+    <td width="50%"><img src="assets/screenshots/quality-dark.jpg" alt="The ASPA quality section: errors, warnings and notes, with the ASPAs of each check"></td>
+    <td width="50%"><img src="assets/screenshots/share-light.jpg" alt="Share and follow: links to the page, feed and JSON of an AS, the form to be notified by e-mail or webhook, and the badge with the Markdown and HTML to paste"></td>
+  </tr>
+  <tr>
+    <td align="center"><sub>ASPA quality: what looks wrong in the ASPAs</sub></td>
+    <td align="center"><sub>Share and follow: feed, notifications, badge, API</sub></td>
   </tr>
 </table>
 
@@ -59,6 +64,7 @@ The validator is a [Routinator](https://github.com/NLnetLabs/routinator) instanc
 - **Routes seen in BGP:** for a prefix or an AS, the routes that the RIPE RIS collectors see (through RIPEstat), each distinct AS path checked with the downstream procedure: how many routes are valid, unknown or invalid, and the paths with a valley. This box sends the prefix or the AS to RIPEstat; the guide says so.
 - **Origin validation:** the same box checks every prefix and origin of those routes against the ROAs of the validator (valid, not found, invalid with the reason), asked of the page's own server, not of a third party.
 - **A page, a badge and a feed for every AS:** `/as/AS3333` opens the page on that AS, `/badge/AS3333.svg` is a badge with its number of providers (Markdown and HTML to paste are in the lookup), and `/feed/AS3333.atom` lists the changes of its ASPA and of the ASPAs that add or drop it as a provider.
+- **Notifications:** subscribe an e-mail address (confirmed through a link, DKIM-signed mails with a one-click unsubscribe) or a webhook (verified by a challenge, signed with HMAC-SHA256, public https addresses only) to the changes of an AS. The service is `notifier/`, a small Node.js program with SQLite.
 - **Public API:** `/api/v1/as/3333` returns the ASPA, the ASPAs that name it, BGP visibility, quality findings and history as JSON (CORS open); see `site/api.html` and the OpenAPI description in `site/api/openapi.json`.
 - **Overview:** summary tiles (with the coverage: the share of the ASes seen in BGP that have an ASPA) and four charts: ASPAs over time (daily since October 2023, by RIR, provider ASes, median providers, no-provider ASPAs or coverage, over any period, with a logarithmic scale and CSV/JSON download), ASPAs per RIR, providers per ASPA, most-named providers.
 - **Quality:** checks on every ASPA (AS0 mixed with other providers, a private or reserved provider, two ASes listing each other, providers no collector sees in BGP, expiring objects, very large provider sets) with counts and lists, a *Quality* block in the lookup, and, in the routes check, a table of the neighbours of the origin against its ASPA.
@@ -121,6 +127,7 @@ The page fetches two same-origin JSON files, which nginx proxies to Routinator a
 ## Repository layout
 
 ```
+notifier/                      the notification service (subscriptions, mail with DKIM, webhooks)
 site/                          the web root: index.html, guide.html, api.html, style.css, app.js,
                                footer.js, verify.js, history.js, quality.js, version.json, api/openapi.json, img/
 assets/                        logo (SVG), screenshots and credit logos used in this README
@@ -131,7 +138,7 @@ scripts/                       CI helpers and jobs: nginx check, version check, 
                                path verification and of the API builder, the builder itself (build-api.mjs), build info, package audit, ASPA snapshot,
                                release and wiki publishing
 .gitlab-ci.yml                 the CI pipeline (checks, security, scheduled and publishing jobs)
-deploy/freebsd/                daily refresh of the pkg vulnerability database
+deploy/freebsd/                daily refresh of the pkg vulnerability database, rc script of the notifier
 eslint.config.mjs              security rules for the browser code (no innerHTML, eval, ...)
 ```
 
@@ -141,11 +148,12 @@ eslint.config.mjs              security rules for the browser code (no innerHTML
 2. Copy `deploy/nginx/aspa.conf` into nginx's `conf.d/`, and `deploy/nginx/rpki-proxy.conf` and `deploy/nginx/security-headers.conf` next to `nginx.conf`. Adjust the listen IP, server name, TLS certificate paths and the Routinator host in `rpki-proxy.conf`.
 3. Write the build information shown in the footer next to `index.html`: `sh scripts/build-info.sh > build.json`.
 4. For the per-AS API, badges and feeds, run `node scripts/build-api.mjs /var/db/aspa-gen` (Node.js 18+, with `site/history.js` and `site/quality.js` next to its `../site`) every 15 minutes as an unprivileged user; it builds into a new directory and switches a `current` symlink that nginx serves. Without it the AS endpoints still answer, with "no ASPA".
-5. Make sure the Routinator HTTP(S) port is reachable from the web server, then `nginx -t && nginx -s reload`.
+5. Notifications (optional): run `notifier/main.mjs` as an unprivileged user with the `deploy/freebsd/aspa_notify` rc script (Node.js 22 with `node:sqlite`; the environment variables are listed at the top of the file), route `/api/v1/subscriptions` to it as in `deploy/nginx/aspa.conf`, and publish SPF and DKIM records for the sending domain; see the wiki, Deployment.
+6. Make sure the Routinator HTTP(S) port is reachable from the web server, then `nginx -t && nginx -s reload`.
 
 ## Development
 
-No build step and no dependencies. `make check` runs the same checks as the CI pipeline: JavaScript syntax, HTML validation, nginx configuration test, version consistency, a security lint of the browser code and the unit tests of the ASPA path verification (`make test`, which also covers the API builder). The pipeline also scans the git history for secrets (`make secrets`). Scheduled jobs audit the packages of the host weekly and log a daily snapshot of the ASPA data to the project's *Model experiments* (adoption over time); see [CONTRIBUTING.md](CONTRIBUTING.md). Details in <a href="CONTRIBUTING.md" target="_blank" rel="noopener">CONTRIBUTING.md</a>.
+No build step and no dependencies. `make check` runs the same checks as the CI pipeline: JavaScript syntax, HTML validation, nginx configuration test, version consistency, a security lint of the browser code and the unit tests of the ASPA path verification (`make test`, which also covers the API builder and the notifier). The pipeline also scans the git history for secrets (`make secrets`). Scheduled jobs audit the packages of the host weekly and log a daily snapshot of the ASPA data to the project's *Model experiments* (adoption over time); see [CONTRIBUTING.md](CONTRIBUTING.md). Details in <a href="CONTRIBUTING.md" target="_blank" rel="noopener">CONTRIBUTING.md</a>.
 
 Releases follow [Semantic Versioning](https://semver.org/); the version shown in the footer lives in <a href="site/version.json" target="_blank" rel="noopener"><code>site/version.json</code></a> and must match the latest entry of the <a href="CHANGELOG.md" target="_blank" rel="noopener">changelog</a>.
 

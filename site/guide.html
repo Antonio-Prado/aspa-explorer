@@ -7,13 +7,13 @@
 <meta name="description" content="How to read and use the ASPA Explorer interface: lookup, overview charts, the table of all ASPAs and where the data comes from.">
 <meta name="color-scheme" content="light dark">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
-<link rel="stylesheet" href="/style.css?v=1.8.0">
-<script src="/footer.js?v=1.8.0" defer></script>
+<link rel="stylesheet" href="/style.css?v=1.9.0">
+<script src="/footer.js?v=1.9.0" defer></script>
 </head>
 <body>
 <a class="skip" href="#main">Skip to main content</a>
 <header class="wrap masthead">
-  <p class="back"><a class="brandlink" href="/" title="Back to ASPA Explorer"><img class="brand" src="/img/logo-mark.svg?v=1.8.0" alt="" width="40" height="40"><span>ASPA Explorer</span></a></p>
+  <p class="back"><a class="brandlink" href="/" title="Back to ASPA Explorer"><img class="brand" src="/img/logo-mark.svg?v=1.9.0" alt="" width="40" height="40"><span>ASPA Explorer</span></a></p>
   <h1>Guide</h1>
   <p class="lede">How the ASPA Explorer interface works, what each number means and where the data comes from.</p>
 </header>
@@ -30,6 +30,7 @@
       <li><a href="#changes">Recent changes and the history of an AS</a></li>
       <li><a href="#quality">ASPA quality</a></li>
       <li><a href="#share">Sharing, badges, feeds and the API</a></li>
+      <li><a href="#notify">Notifications by e-mail and webhook</a></li>
       <li><a href="#links">Links and keyboard use</a></li>
       <li><a href="#data">Where the data comes from</a></li>
       <li><a href="#reading">Reading the results</a></li>
@@ -163,7 +164,19 @@
     <h2 id="share">Sharing, badges, feeds and the API</h2>
     <p>Every AS has a page of its own, <code>https://aspa.ping6.it/as/AS8283</code>: it is this same page, already showing that AS, so it can be bookmarked or linked. Under each result, <em>Share and follow</em> has the links to that page, to an <strong>Atom feed</strong> of its changes (its own ASPA, and the ASPAs of others that add or drop it as a provider, so a provider can follow who starts to name it) and to the <strong>JSON</strong> of the AS, and <em>Add the badge to your site</em> gives a small image, with Markdown and HTML to paste, that says how many providers the AS has authorized.</p>
     <p>The <a href="/api.html">API page</a> describes the JSON, the badge and the feed, and there is an <a href="/api/openapi.json">OpenAPI description</a>. The files are rebuilt every 15 minutes from the same data as this page, so a change can take up to half an hour to appear there.</p>
-    <p>Notifications by mail or webhook are not offered: the feed is the way to follow an AS.</p>
+    <p>To be told instead of having to look, see <a href="#notify">notifications</a> below.</p>
+  </section>
+
+  <section aria-labelledby="notify">
+    <h2 id="notify">Notifications by e-mail and webhook</h2>
+    <p>Under each result, <em>Get notified by e-mail or webhook</em> subscribes you to one AS. You receive a message when its own ASPA appears, changes or disappears, and when another ASPA adds or drops it as a provider (the same events as its <a href="#share">feed</a>). The validator is checked every ten minutes, and a change is announced only when two checks in a row show it, so that a repository that is unreachable for a moment does not cause a false alarm.</p>
+    <h3>E-mail</h3>
+    <p>Type your address. A message with a link comes to it; nothing is sent until you open the link and press the button. Every notification has a link to stop, and a <code>List-Unsubscribe</code> header that mail programs show as an unsubscribe button. The messages come from <code>notifications@aspa.ping6.it</code>, are signed with DKIM and are plain text. If they land in the spam folder, mark them as not spam.</p>
+    <h3>Webhook</h3>
+    <p>Give an <code>https</code> address with a public host name (port 443 or 8443; not an IP address, not a private network). The service first sends a <code>verification</code> request with a random <code>challenge</code>, and the address must answer with a 2xx status and repeat the challenge in the body; only then the subscription is active, and the <strong>secret</strong> is shown once. Each delivery is a JSON <code>POST</code> signed in the <code>X-ASPA-Signature</code> header (HMAC-SHA256 of the timestamp, a dot and the body, with the secret). The <a href="/api.html#subscriptions">API page</a> has the format. A webhook that fails five deliveries in a row is switched off.</p>
+    <h3>What is kept</h3>
+    <p>The address (or the webhook address and its secret), the AS and the dates of subscription and of the last notification, for as long as the subscription lasts. A request that is never confirmed is deleted after two days. Visitor addresses are not stored: they are only counted in memory to limit abuse, a few requests an hour. Nothing is used for anything else or given to anyone; stopping deletes the record. Questions: <a href="mailto:antonio.prado@dei.unipd.it">antonio.prado@dei.unipd.it</a>.</p>
+    <p>This is a research service run without guarantees: a notification may be late or, if a mail server rejects the message, lost.</p>
   </section>
 
   <section aria-labelledby="links">

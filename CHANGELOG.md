@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.9.0] - 2026-10-17
+
+### Added
+- **Notifications by e-mail and webhook** for any AS: the *Get notified* form under a lookup, a new `notifier/` service (Node.js, SQLite) that checks the validator every ten minutes, announces a change when two checks in a row show it, and sends it to the subscribers. E-mail needs a confirmation link and carries `List-Unsubscribe`; mails are DKIM-signed and go out through the local mailer. Webhooks must answer a challenge, are signed with HMAC-SHA256 (`X-ASPA-Signature`) and are called only on public https addresses (no private networks, no redirects). Limits per visitor, per address and per AS; unconfirmed requests are deleted after two days.
+- `subscription.html` to confirm or cancel from the links in the mails; `deploy/freebsd/aspa_notify` rc script; nginx location for `/api/v1/subscriptions`; guide and API page describe the service and what is kept.
+- `scripts/test-notify.mjs`, 18 tests.
+
+### Fixed
+- A new lookup made on the page of an AS (`/as/AS3333`) did nothing: the code that turns the address back into `/#AS680` called `history.replaceState`, but `history` is the name of the daily series in `app.js`. It now calls `window.history`.
+
+### Changed
+- The definition of an ASPA moved from the page footer to the top, under the title.
+
 ## [1.8.0] - 2026-10-17
 
 ### Added
