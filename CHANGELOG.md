@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.21.1] - 2026-10-17
+
+### Added
+- The numbers of the project in one small line under the title of the statistics page: the networks that have an ASPA, the routes of the collectors checked today, how many are valid, unknown and invalid, and the places of valley. The README has them too, with a date.
+
 ## [1.21.0] - 2026-10-17
 
 ### Added

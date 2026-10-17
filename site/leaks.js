@@ -65,6 +65,22 @@
     window.addEventListener('resize', () => { clearTimeout(t); t = setTimeout(() => drawHistory(box, rows), 150); });
   }
 
+  // 449,000,000 -> "449 M", 580,000 -> "580 k"
+  const short = (n) => (n >= 1e6 ? `${fmt.format(Math.round(n / 1e6))} M` : n >= 1e3 ? `${fmt.format(Math.round(n / 1e3))} k` : fmt.format(n));
+
+  // The numbers of the project in one small line under the title: the networks that have an ASPA and the routes checked today.
+  async function numbers(d) {
+    const box = $('numbers');
+    if (!box) return;
+    let a = null;
+    try { const r = await fetch('/api/v1/adoption.json', { headers: { Accept: 'application/json' } }); if (r.ok) a = await r.json(); } catch { /* the first part is left out */ }
+    const t = d.total;
+    const parts = [];
+    if (a && a.seen) parts.push(`${fmt.format(a.aspa)} of ${fmt.format(a.seen)} networks have an ASPA (${a.pct}%)`);
+    parts.push(`${short(t.routes)} routes of ${d.collectors.length} collectors checked`, `${short(t.invalid)} invalid, ${short(t.unknown)} unknown, ${short(t.valid)} valid`, `${fmt.format(d.places)} places of valley`);
+    box.textContent = `In numbers: ${parts.join(' · ')}.`;
+  }
+
   async function main() {
     if (!$('leaks-sub')) return;
     let d;
@@ -76,6 +92,7 @@
       $('leaks-sub').textContent = `The route leaks are not available (${err.message}). They are rebuilt once a day.`;
       return;
     }
+    numbers(d);
     const t = d.total;
     const when = d.collectors.map((c) => c.built).sort()[0];
     $('leaks-sub').textContent = `Every route of ${d.collectors.length} collectors, ${d.collectors.filter((c) => /^rrc/.test(c.collector)).length} of RIPE RIS and ${d.collectors.filter((c) => !/^rrc/.test(c.collector)).length} of RouteViews (${fmt.format(t.routes)} routes in the table dumps of ${new Date(when).toLocaleString('en-GB', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'UTC' })} UTC) checked with the downstream ASPA verification. A valley is a route that came down from a provider or a peer and went up again.`;
