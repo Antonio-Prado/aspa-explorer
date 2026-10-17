@@ -144,6 +144,17 @@ publish-release:
   script:
     - node scripts/publish-release.mjs
 
+# Copy of the project on GitHub (read only, github.com/Antonio-Prado/aspa-explorer): the commit or the tag of the pipeline is
+# pushed with a deploy key that can write to that repository only (the protected variable GITHUB_DEPLOY_KEY).
+github-mirror:
+  stage: publish
+  tags: [aspa]
+  rules:
+    - if: $CI_COMMIT_TAG
+    - if: $CI_COMMIT_BRANCH == "main" && $CI_PIPELINE_SOURCE != "schedule" && $SCHEDULE == null
+  script:
+    - sh scripts/mirror-github.sh
+
 mirror-wiki:
   stage: publish
   tags: [aspa]

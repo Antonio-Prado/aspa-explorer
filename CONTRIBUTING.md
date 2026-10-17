@@ -50,7 +50,7 @@ Each job can be started by hand from *Build > Pipelines > Run pipeline* by setti
 - Insert data into the DOM with `textContent` / DOM APIs only, never `innerHTML`, since all data comes from a remote service.
 - Keep the page usable without a build step, in both light and dark mode, and on narrow screens.
 - `site/guida.html` is the Italian translation of `site/guide.html`: when you change the guide, change both (same ids and structure).
-- After a change to a page, run `make a11y` (or look at the result of the *Mirror* workflow on the GitHub copy): every page must pass axe-core at desktop width and at 320 px, in both themes, and not scroll sideways. The data it uses are the small files of `scripts/fixtures/a11y`, recorded with `scripts/record-fixtures.mjs`.
+- After a change to a page, run `make a11y` (or look at the result of the *Accessibility* workflow on the GitHub copy): every page must pass axe-core at desktop width and at 320 px, in both themes, and not scroll sideways. The data it uses are the small files of `scripts/fixtures/a11y`, recorded with `scripts/record-fixtures.mjs`.
 - Update [CHANGELOG.md](CHANGELOG.md) under *Unreleased* for any user-visible change.
 
 ## Merge requests

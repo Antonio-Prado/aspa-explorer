@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Changed
+- The copy on GitHub is pushed from GitLab: the job `github-mirror` (`scripts/mirror-github.sh`) pushes the commit of each pipeline of the main branch and each tag, with a deploy key that can write to that repository only (the protected variable `GITHUB_DEPLOY_KEY`). It replaces the workflow that copied the project every 30 minutes (GitHub did not start it). On GitHub, `.github/workflows/release.yml` makes a release for each tag and `accessibility.yml` runs the accessibility check after each push.
 - Version numbers that were never tagged because they were deployed and then folded into the next one: 1.13.0, 1.14.0, 1.16.0, 1.17.0, 1.18.3, 1.20.1 and 1.20.2. Their changes are in 1.13.1, 1.15.0, 1.16.1, 1.17.1, 1.18.4 and 1.20.3. The release 1.15.0 was tagged afterwards, on its own commit.
 
 ## [1.20.3] - 2026-10-17
@@ -20,10 +21,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 - The route leaks are read from ten RIPE RIS collectors (rrc00, 01, 03, 04, 10, 11, 12, 15, 19 and 23: Europe, North and South America, Africa and Asia) instead of three.
 - The history of the leaks is filled in backwards: `build-leaks.mjs --day=YYYYMMDD` rebuilds a past day from the table dumps of 00:00 UTC and the ASPAs as they were that day, and `scripts/backfill-leaks.sh` does it for the last days.
-- An accessibility check (`scripts/test-a11y.mjs`, Chromium and axe-core): every page, at desktop width and at 320 px, in both themes, must have no axe violation and must not scroll sideways. It runs on the GitHub copy after each change of the main branch (the GitLab runner is a FreeBSD shell executor, where Playwright does not run), and `make a11y` runs it locally.
+- An accessibility check (`scripts/test-a11y.mjs`, Chromium and axe-core): every page, at desktop width and at 320 px, in both themes, must have no axe violation and must not scroll sideways. It runs on the GitHub copy after each push to the main branch (`.github/workflows/accessibility.yml`; the GitLab runner is a FreeBSD shell executor, where Playwright does not run), and `make a11y` runs it locally.
 
 ### Added
-- A read-only mirror on GitHub (`.github/workflows/mirror.yml`): every 30 minutes the main branch and the tags are copied from the public project, and a release is made for the latest tags.
+- A read-only mirror on GitHub: the commit or the tag of each pipeline of the main branch is pushed by the job `github-mirror` (`scripts/mirror-github.sh`, with a deploy key that can write to that repository only), and GitHub makes a release for each tag (`.github/workflows/release.yml`).
 
 ### Fixed
 - The neighbourhood graph is a group of links, no longer an image with links inside (an axe violation, *nested-interactive*, found by the new check).

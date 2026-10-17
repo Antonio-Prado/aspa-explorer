@@ -1,0 +1,28 @@
+# A release on GitHub for each tag that GitLab pushes, with the notes of its section of CHANGELOG.md.
+# It runs on GitHub only (GitLab ignores the file).
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    if: github.repository_owner == 'Antonio-Prado'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Make the release
+        run: |
+          set -eu
+          tag="$GITHUB_REF_NAME"
+          gh release view "$tag" >/dev/null 2>&1 && exit 0
+          version="${tag#v}"
+          awk -v v="$version" '$0 ~ "^## \\[" v "\\]" {f=1; next} /^## \[/ {f=0} f' CHANGELOG.md > notes.md
+          [ -s notes.md ] || echo "See CHANGELOG.md." > notes.md
+          gh release create "$tag" --verify-tag --title "$tag" --notes-file notes.md
+        env:
+          GH_TOKEN: ${{ github.token }}
