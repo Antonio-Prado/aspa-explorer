@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.24.6] - 2026-10-17
+
+### Changed
+- The measurement of the tromboning uses up to twelve probes instead of three, and says the median round trip of all of them (from the first public address), the range and how many are normal, longer than they should be, or a trombone; the probes are listed under it, the slowest first. The test uses twelve of the 250 measurements an hour that Globalping allows to an address, and the page says so.
+
 ## [1.24.5] - 2026-10-17
 
 ### Changed

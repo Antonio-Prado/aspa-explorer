@@ -487,6 +487,7 @@ function trombonePanel(origin, tr, routes) {
 // Measure it: a traceroute from probes in the country of the origin towards an address of its prefixes, through Globalping,
 // and each hop read with the AS that RIPEstat maps its address to (site/traceroute.js). Only when the visitor asks for it.
 const GLOBALPING = 'https://api.globalping.io/v1/measurements';
+const PROBES = 12;      // one probe is one of the 250 credits an hour that Globalping gives to an address
 const ipAsnCache = new Map();
 async function asnOfIp(ip) {
   if (ipAsnCache.has(ip)) return ipAsnCache.get(ip);
@@ -503,7 +504,7 @@ async function asnOfIp(ip) {
 async function runTraceroute(address, country, onStatus) {
   const r = await fetch(GLOBALPING, {
     method: 'POST', headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-    body: JSON.stringify({ type: 'traceroute', target: address, locations: [{ country, limit: 3 }], measurementOptions: { protocol: 'ICMP' } }),
+    body: JSON.stringify({ type: 'traceroute', target: address, locations: [{ country, limit: PROBES }], measurementOptions: { protocol: 'ICMP' } }),
   });
   const body = await r.json().catch(() => ({}));
   if (!r.ok) throw new Error(r.status === 429 ? 'the limit of measurements per hour of your address has been reached, try later' : (body.error && body.error.message) || `Globalping answered HTTP ${r.status}`);
@@ -534,15 +535,29 @@ function measureBlock(origin, tr, routes) {
       await Promise.all(Array.from({ length: 4 }, async () => { for (let ip = queue.shift(); ip; ip = queue.shift()) await asnOfIp(ip); }));
       const results = m.results.map((x) => AspaTraceroute.summarise(x, (ip) => ipAsnCache.get(ip) || null));
       status.textContent = `Traceroute towards ${target.address}, in ${target.prefix} of ${as}, from ${results.length} probe${results.length === 1 ? '' : 's'} in ${home}.`;
-      out.replaceChildren(...results.map((r) => traceCard(r, target)));
+      const all = AspaTraceroute.aggregate(results);
+      const sorted = [...results].sort((a, b) => (b.net === null ? -1 : b.net) - (a.net === null ? -1 : a.net));
+      out.replaceChildren(...(all ? [el('p', { class: 'verdict-' + all.verdict, text: aggregateText(all, results.length, home) })] : []),
+        el('details', { class: 'embed' }, el('summary', { text: `The ${results.length} probes, the slowest first` }), ...sorted.map((r) => traceCard(r, target))));
     } catch (err) {
       status.textContent = `The measurement did not work: ${err.message}.`;
     }
     btn.disabled = false;
   });
   return el('div', { class: 'measure' }, btn,
-    el('p', { class: 'hint', text: `It runs a traceroute towards ${target.address} (in ${target.prefix}) from up to 3 probes in ${home} (the country of the AS) through Globalping (globalping.io), and asks RIPEstat which network each hop belongs to. They both see your address and what is asked, and the test counts against the hourly limit of your address.` }),
+    el('p', { class: 'hint', text: `It runs a traceroute towards ${target.address} (in ${target.prefix}) from up to ${PROBES} probes in ${home} (the country of the AS) through Globalping (globalping.io), and asks RIPEstat which network each hop belongs to. They both see your address and what is asked, and the test uses ${PROBES} of the 250 measurements an hour that Globalping allows to your address.` }),
     status, out);
+}
+
+// The probes together, in a sentence: the median round trip, the range and how many are normal, longer than they should be, or a trombone.
+function aggregateText(a, total, home) {
+  const ms = (v) => `${v < 10 ? v.toFixed(1) : Math.round(v)} ms`;
+  const parts = [];
+  if (a.counts.ok) parts.push(`${a.counts.ok} normal`);
+  if (a.counts.long) parts.push(`${a.counts.long} longer than it should be`);
+  if (a.counts.trombone) parts.push(`${a.counts.trombone} ${a.counts.trombone === 1 ? 'a trombone' : 'trombones'}`);
+  const verdict = { ok: 'Most of the probes reach it at a normal delay for a route inside the country.', long: 'The median is longer than it should be inside a country: many routes probably go abroad.', trombone: 'The median is a trombone: most routes cross an ocean or go round Europe twice.' }[a.verdict];
+  return `${a.n} of ${total} probes in ${home} answered. Median round trip, from the first public address: ${ms(a.median)} (from ${ms(a.min)} to ${ms(a.max)}). ${parts.join(', ')}. ${verdict} A probe on a mobile network or far from the target weighs as much as the others, so look at the median and not at a single probe.`;
 }
 
 function traceCard(r, target) {

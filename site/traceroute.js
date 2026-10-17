@@ -88,7 +88,20 @@
     };
   }
 
-  const api = { hostIn, targetOf, isPrivate, summarise, LONG_DELAY_MS, TROMBONE_MS, JUMP_MS };
+  // The probes together: how many, the median of their round trips (from the first public address) and how many fall in each fascia.
+  // The median, because a probe on a slow access network or with a bad route is one voice among many.
+  function aggregate(summaries) {
+    const done = summaries.filter((s) => s.verdict);
+    if (!done.length) return null;
+    const nets = done.map((s) => s.net).sort((a, b) => a - b);
+    const mid = Math.floor(nets.length / 2);
+    const median = nets.length % 2 ? nets[mid] : (nets[mid - 1] + nets[mid]) / 2;
+    const counts = { ok: 0, long: 0, trombone: 0 };
+    for (const s of done) counts[s.verdict]++;
+    return { n: done.length, median, min: nets[0], max: nets[nets.length - 1], counts, verdict: median >= TROMBONE_MS ? 'trombone' : median > LONG_DELAY_MS ? 'long' : 'ok' };
+  }
+
+  const api = { hostIn, targetOf, isPrivate, summarise, aggregate, LONG_DELAY_MS, TROMBONE_MS, JUMP_MS };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.AspaTraceroute = api;
 })(typeof self !== 'undefined' ? self : this);
