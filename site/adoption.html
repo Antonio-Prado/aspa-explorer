@@ -39,13 +39,13 @@
     <h2 id="top-title">The largest transit networks</h2>
     <p class="hint" id="top-sub"></p>
     <p class="filters"><label class="chk"><input type="checkbox" id="top-missing"> Only those without an ASPA</label></p>
-    <div class="card table-wrap" tabindex="0" role="region" aria-label="Table of the largest transit networks">
+    <section class="card table-wrap" tabindex="0" aria-label="Table of the largest transit networks">
       <table class="checks live">
         <caption class="sr-only">The 100 largest networks seen in BGP by customer cone, and whether each has an ASPA</caption>
         <thead><tr><th scope="col" class="num">#</th><th scope="col">AS</th><th scope="col">Country</th><th scope="col" class="num">Customer cone</th><th scope="col">ASPA</th></tr></thead>
         <tbody id="top-rows"></tbody>
       </table>
-    </div>
+    </section>
     <button type="button" class="more" id="top-more" hidden>Show more</button>
   </section>
 
@@ -56,13 +56,13 @@
       <label>Sort by <select id="cc-sort"><option value="seen">networks</option><option value="pct">coverage</option></select></label>
       <label>Countries with at least <select id="cc-min"><option value="1">1 network</option><option value="10">10 networks</option><option value="30" selected>30 networks</option><option value="100">100 networks</option></select></label>
     </p>
-    <div class="card table-wrap" tabindex="0" role="region" aria-label="Table of adoption by country">
+    <section class="card table-wrap" tabindex="0" aria-label="Table of adoption by country">
       <table class="checks live">
         <caption class="sr-only">Networks seen in BGP, and how many have an ASPA, by country</caption>
         <thead><tr><th scope="col">Country</th><th scope="col" class="num">Networks</th><th scope="col" class="num">With an ASPA</th><th scope="col" class="cov-col">Coverage</th></tr></thead>
         <tbody id="cc-rows"></tbody>
       </table>
-    </div>
+    </section>
     <button type="button" class="more" id="cc-more" hidden>Show more</button>
   </section>
 
