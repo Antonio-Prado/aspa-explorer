@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.7.3] - 2026-10-17
+
+### Added
+- The paper can be downloaded: `site/paper/prado-centenaro-vangelista-cscn2026.pdf` (author's accepted version, with the IEEE notice), linked from the guide and the README.
+
 ## [1.7.2] - 2026-10-17
 
 ### Added

@@ -157,7 +157,7 @@ Releases follow [Semantic Versioning](https://semver.org/); the version shown in
 
 ## Citation
 
-The downstream verification implemented by the path check is analysed in the following paper (proceedings forthcoming in IEEE Xplore); the repository also provides a <a href="CITATION.cff" target="_blank" rel="noopener"><code>CITATION.cff</code></a>.
+The downstream verification implemented by the path check is analysed in the following paper (proceedings forthcoming in IEEE Xplore); the <a href="site/paper/prado-centenaro-vangelista-cscn2026.pdf" target="_blank" rel="noopener">author's accepted version (PDF)</a> is in the repository and at <a href="https://aspa.ping6.it/paper/prado-centenaro-vangelista-cscn2026.pdf" target="_blank" rel="noopener">aspa.ping6.it</a> (© 2026 IEEE; copyright may be transferred without notice, after which this version may no longer be accessible); the repository also provides a <a href="CITATION.cff" target="_blank" rel="noopener"><code>CITATION.cff</code></a>.
 
 ```bibtex
 @inproceedings{prado2026aspa,
