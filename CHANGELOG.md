@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.15.1] - 2026-10-17
+
+### Fixed
+- The download form on the API page has a real submit button (*Download CSV*), as the HTML check asks; pressing Enter in the form now downloads the CSV.
+
 ## [1.15.0] - 2026-10-17
 
 ### Added

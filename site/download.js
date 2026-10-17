@@ -50,7 +50,7 @@
     }
     count();
     $('dl-rir').addEventListener('change', count);
-    $('dl-csv').addEventListener('click', () => save('csv'));
+    form.addEventListener('submit', (e) => { e.preventDefault(); save('csv'); });
     $('dl-json').addEventListener('click', () => save('json'));
     for (const b of [$('dl-csv'), $('dl-json')]) b.disabled = false;
   }
