@@ -61,6 +61,28 @@
   <tr>
     <td colspan="2" align="center"><img src="assets/screenshots/evidence-dark.jpg" width="60%" alt="The neighbours of AS12779 in the routes seen in BGP: which are in its ASPA, which look like providers from the routes, and the note that AS60798 seems to be a provider its ASPA does not list"><br><sub>Neighbours of an origin: the evidence of who its providers are</sub></td>
   </tr>
+  <tr>
+    <td width="50%"><img src="assets/screenshots/graph-dark.jpg" alt="The neighbourhood graph of AS12779: the providers of its ASPA above, the ASes that name it below, and on the right the neighbours that the routes show, with AS60798 marked as a likely provider"></td>
+    <td width="50%"><img src="assets/screenshots/live-dark.jpg" alt="The live updates of RIPE RIS Live going through AS9002, each announcement with its ASPA verdict"></td>
+  </tr>
+  <tr>
+    <td align="center"><sub>Neighbourhood graph, with the neighbours that the routes show</sub></td>
+    <td align="center"><sub>Live updates from RIS Live, checked as they arrive</sub></td>
+  </tr>
+  <tr>
+    <td width="50%"><img src="assets/screenshots/leaks-dark.jpg" alt="Route leaks today: the invalid routes of three collectors, grouped by the place of the valley, with the ASes inside it"></td>
+    <td width="50%"><img src="assets/screenshots/validators-dark.jpg" alt="Validators compared: the customers whose providers differ between Routinator, rpki-client and the rpki-client of Cloudflare"></td>
+  </tr>
+  <tr>
+    <td align="center"><sub>Route leaks seen today in the table dumps</sub></td>
+    <td align="center"><sub>Validators compared</sub></td>
+  </tr>
+  <tr>
+    <td colspan="2" align="center"><img src="assets/screenshots/tromboning-dark.jpg" width="60%" alt="Possible tromboning of AS12779: routes from Italian feeders that go through networks registered in the United States, with the RIPE Atlas probes to measure it"></td>
+  </tr>
+  <tr>
+    <td colspan="2" align="center"><sub>Possible tromboning: a lead to confirm with traceroutes</sub></td>
+  </tr>
 </table>
 
 ## What is it
