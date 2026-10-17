@@ -472,7 +472,7 @@ function trombonePanel(origin, country, routes) {
   const measure = measureBlock(origin, { country }, routes);
   if (!measure) return null;
   return el('div', {}, el('h3', { class: 'subhead', text: `Tromboning of ${as}` }),
-    el('p', { class: 'hint', text: `A route trombones when it starts and ends in the same country and goes far away on the way: its delay is that of a packet that crosses an ocean. BGP cannot tell it; a traceroute from probes in ${home} can. The probes are in ${home} because ${as} is registered there, which is an approximation, and sometimes a bold one: an AS can work elsewhere, or in several countries, and the address that is measured may not be in ${home}. If it is not, a long delay is the distance and not a trombone.` }),
+    el('p', { class: 'hint', text: `A route trombones when it starts and ends in the same country and goes far away on the way: its delay is that of a packet that crosses an ocean. BGP cannot tell it; a traceroute from probes in ${home} can. The probes start in ${home} because ${as} is registered there, which is an approximation, and sometimes a bold one: an AS can work elsewhere, or in several countries, and the address that is measured may not be in ${home}. If it is not, a long delay is the distance and not a trombone: choose the country of the probes below.` }),
     measure);
 }
 
@@ -510,18 +510,26 @@ async function runTraceroute(address, country, onStatus) {
   throw new Error('the probes did not finish in time');
 }
 
+// The countries that can be chosen for the probes: the one where the AS is registered first, then these.
+const PROBE_COUNTRIES = ['AR', 'AU', 'AT', 'BE', 'BR', 'BG', 'CA', 'CL', 'CN', 'CO', 'HR', 'CZ', 'DK', 'EG', 'EE', 'FI', 'FR', 'DE', 'GR', 'HK', 'HU', 'IS', 'IN', 'ID', 'IE', 'IL', 'IT', 'JP', 'KE', 'KR', 'LV', 'LT', 'LU', 'MY', 'MX', 'MA', 'NL', 'NZ', 'NG', 'NO', 'PK', 'PE', 'PH', 'PL', 'PT', 'RO', 'RU', 'SA', 'RS', 'SG', 'SK', 'SI', 'ZA', 'ES', 'SE', 'CH', 'TW', 'TH', 'TR', 'UA', 'AE', 'GB', 'US', 'VN'];
+
 function measureBlock(origin, tr, routes) {
   const target = AspaTraceroute.targetOf(routes, origin);
   if (!target || !target.address) return null;
-  const as = 'AS' + origin, home = countryName(tr.country);
-  const btn = el('button', { type: 'button', text: `Measure it now from probes in ${home}` });
+  const as = 'AS' + origin, registered = tr.country;
+  const options = [registered, ...PROBE_COUNTRIES.filter((c) => c !== registered).sort((a, b) => countryName(a).localeCompare(countryName(b)))];
+  const select = el('select', { id: `probe-country-${origin}`, 'aria-label': 'Country of the probes' },
+    ...options.map((c, i) => el('option', { value: c, text: i === 0 ? `${countryName(c)}, where ${as} is registered` : countryName(c) })));
+  const btn = el('button', { type: 'button', text: `Measure it now from probes in ${countryName(registered)}` });
+  select.addEventListener('change', () => { btn.textContent = `Measure it now from probes in ${countryName(select.value)}`; });
   const status = el('p', { class: 'hint', 'aria-live': 'polite' });
   const out = el('div', {});
   btn.addEventListener('click', async () => {
-    btn.disabled = true; out.replaceChildren();
+    const country = select.value, home = countryName(country);
+    btn.disabled = true; select.disabled = true; out.replaceChildren();
     status.replaceChildren(el('span', { class: 'busy', text: 'Starting the probes' }));
     try {
-      const m = await runTraceroute(target.address, tr.country, (t) => status.replaceChildren(el('span', { class: 'busy', text: t })));
+      const m = await runTraceroute(target.address, country, (t) => status.replaceChildren(el('span', { class: 'busy', text: t })));
       const ips = [...new Set(m.results.flatMap((x) => (x.result.hops || []).map((h) => h.resolvedAddress)).filter((ip) => ip && !AspaTraceroute.isPrivate(ip)))];
       status.replaceChildren(el('span', { class: 'busy', text: `Mapping ${ips.length} addresses to their networks` }));
       const queue = [...ips];
@@ -530,23 +538,35 @@ function measureBlock(origin, tr, routes) {
       status.textContent = `Traceroute towards ${target.address}, in ${target.prefix} of ${as}, from ${results.length} probe${results.length === 1 ? '' : 's'} in ${home}.`;
       const all = AspaTraceroute.aggregate(results);
       const sorted = [...results].sort((a, b) => (b.net === null ? -1 : b.net) - (a.net === null ? -1 : a.net));
-      out.replaceChildren(...(all ? [resultBox(all, results.length, home)] : []),
-        probeTable(sorted, all, target));
+      out.replaceChildren(...(all ? [resultBox(all, results.length, home, country === registered)] : []),
+        probeTable(sorted, all, target, country === registered));
     } catch (err) {
       status.textContent = `The measurement did not work: ${err.message}.`;
     }
-    btn.disabled = false;
+    btn.disabled = false; select.disabled = false;
   });
-  return el('div', { class: 'measure' }, btn,
-    el('p', { class: 'hint', text: `It runs a traceroute towards ${target.address} (in ${target.prefix}) from up to ${PROBES} probes in ${home} (the country of the AS) through Globalping (globalping.io), and asks RIPEstat which network each hop belongs to. They both see your address and what is asked, and the test uses ${PROBES} of the 250 measurements an hour that Globalping allows to your address.` }),
+  return el('div', { class: 'measure' },
+    el('p', { class: 'field' }, el('label', { for: select.id, class: 'inline', text: 'Probes in ' }), select, ' ', btn),
+    el('p', { class: 'hint', text: `It runs a traceroute towards ${target.address} (in ${target.prefix}) from up to ${PROBES} probes in the country that you choose, through Globalping (globalping.io), and asks RIPEstat which network each hop belongs to. They both see your address and what is asked, and the test uses ${PROBES} of the 250 measurements an hour that Globalping allows to an address.` }),
     status, out);
 }
 
 // The result of the measurement, as a headline and what stands behind it: the median round trip, the range, how many probes are in each band,
 // and what the measurement cannot tell.
-function resultBox(a, total, home) {
+// Probes in another country than the one of the AS: the delays are those of an international trip, and the bands of a trip inside a country
+// do not apply, so the page gives the figures and no reading.
+function otherCountryBox(a, total, home) {
+  const ms = (v) => (v < 1 ? '<1 ms' : `${v < 10 ? v.toFixed(1) : Math.round(v)} ms`);
+  return el('div', { class: 'result r-none', role: 'group', 'aria-label': 'Result of the measurement' },
+    el('p', { class: 'headline', text: `Median ${ms(a.median)} from ${home}` }),
+    el('p', { text: `${a.n} of ${total} probes in ${home} answered. Median round trip, from the first public address: ${ms(a.median)} (from ${ms(a.min)} to ${ms(a.max)}).` }),
+    el('p', { class: 'hint', text: `The bands of the reading (up to 50 ms normal, 100 ms or more a trombone) are for two points of one country, so there is no reading here: these are the delays of a trip from ${home} to the target. Choose the country of the target to read them.` }));
+}
+
+function resultBox(a, total, home, atRegistered) {
   const ms = (v) => (v < 1 ? '<1 ms' : `${v < 10 ? v.toFixed(1) : Math.round(v)} ms`);
   const c = a.counts, out = c.long + c.trombone;
+  if (!atRegistered) return otherCountryBox(a, total, home);
   let kind, headline;
   if (a.verdict === 'trombone') { kind = 'trombone'; headline = 'Trombone'; }
   else if (a.verdict === 'long') { kind = 'long'; headline = 'Longer than it should be'; }
@@ -562,20 +582,20 @@ function resultBox(a, total, home) {
   else if (a.verdict === 'long') lines.push('The median is longer than it should be inside a country (50 ms): many routes probably go abroad, but not as far as an ocean.');
   else if (c.trombone) lines.push(`${c.trombone === 1 ? 'One probe is' : `${c.trombone} probes are`} at 100 ms or more: look at ${c.trombone === 1 ? 'it' : 'them'} in the table, it can be the probe (a mobile network, for instance) or its route.`);
   else lines.push('No probe is at 100 ms or more, the delay of a packet that crosses an ocean.');
-  const notes = [`The probes are in ${home} because the AS is registered there, which says little about where it works: if the target is not in ${home}, the delays are those of a longer trip, not of a trombone.`, 'What this does not tell: a short detour inside Europe (a few tens of milliseconds) cannot be told apart from a target that is far inside the country, and the probes are only a sample of where the traffic comes from.'];
+  const notes = [atRegistered ? `The probes are in ${home} because the AS is registered there, which says little about where it works: if the target is not in ${home}, the delays are those of a longer trip, not of a trombone. You can choose another country above.` : `The probes are in ${home}, the country that you chose: the delays are those of a trip from there to the target.`, 'What this does not tell: a short detour inside Europe (a few tens of milliseconds) cannot be told apart from a target that is far inside the country, and the probes are only a sample of where the traffic comes from.'];
   if (a.verdict === 'ok' && a.near / a.n < 0.25) notes.unshift(`Only ${a.near} of the ${a.n} probes get within 10 ms of the target: it is far from them, inside the country, or the last part of its network is long.`);
   return el('div', { class: `result r-${kind}`, role: 'group', 'aria-label': 'Result of the measurement' },
     el('p', { class: 'headline', text: headline }), ...lines.map((x) => el('p', { text: x })), ...notes.map((x) => el('p', { class: 'hint', text: x })));
 }
 
 // One row for each probe, the slowest first, with the median at the top; the hops of a probe open under its row.
-function probeTable(probes, all, target) {
+function probeTable(probes, all, target, atRegistered) {
   const ms = (v) => (v === null ? '–' : v < 1 ? '<1 ms' : `${v < 10 ? v.toFixed(1) : Math.round(v)} ms`);
   const badge = { ok: ['v-valid', 'normal'], long: ['v-unknown', 'longer than it should be'], trombone: ['v-invalid', 'trombone'] };
   const rows = [];
   if (all) {
     rows.push(el('tr', { class: 'median' }, el('th', { scope: 'row', text: `Median of ${all.n} probes (from ${ms(all.min)} to ${ms(all.max)})` }), el('td', { text: '' }), el('td', { class: 'num', text: ms(all.median) }), el('td', { text: '' }),
-      el('td', {}, el('span', { class: 'badge ' + badge[all.verdict][0], text: badge[all.verdict][1] })), el('td', { text: '' })));
+      el('td', {}, atRegistered ? el('span', { class: 'badge ' + badge[all.verdict][0], text: badge[all.verdict][1] }) : el('span', { class: 'muted', text: '–' })), el('td', { text: '' })));
   }
   for (const r of probes) {
     const more = el('button', { type: 'button', class: 'linkish', 'aria-expanded': 'false', text: 'hops' });
@@ -583,7 +603,7 @@ function probeTable(probes, all, target) {
     const tr = el('tr', {}, el('th', { scope: 'row', class: 'probe', text: `${r.probe.city || 'A probe'}${r.probe.network ? ` · ${r.probe.network}` : ''}` }),
       el('td', { class: 'mono pathcell', text: r.path.map((a) => `AS${a}`).join(' → ') || '–' }),
       el('td', { class: 'num', text: ms(r.net) }), el('td', { class: 'num', text: ms(r.lastRtt) }),
-      el('td', {}, v ? el('span', { class: 'badge ' + v[0], text: v[1] }) : el('span', { class: 'muted', text: 'no answer' })),
+      el('td', {}, v && atRegistered ? el('span', { class: 'badge ' + v[0], text: v[1] }) : el('span', { class: 'muted', text: v ? '–' : 'no answer' })),
       el('td', { class: 'nowrap' }, more));
     let open = null;
     more.addEventListener('click', () => {

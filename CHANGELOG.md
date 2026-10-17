@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.29.1] - 2026-10-17
+
+### Changed
+- With the probes in another country than the one of the AS, the measurement gives the median and the range and no reading (normal, longer than it should be, trombone): the bands are for two points of one country, and from another country the delays are those of an international trip.
+
+## [1.29.0] - 2026-10-17
+
+### Added
+- A menu next to the button of the measurement of the tromboning lets the visitor choose the country of the probes: the one where the AS is registered comes first, then about sixty others. The result says whether the probes are where the AS is registered or in the country that was chosen.
+
 ## [1.28.1] - 2026-10-17
 
 ### Changed

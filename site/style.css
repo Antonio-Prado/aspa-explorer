@@ -566,3 +566,7 @@ table.live th.probe { font-weight: 400; text-align: left; }
 .result.r-long { border-left-color: var(--s4); }
 .result.r-trombone { border-left-color: var(--s2); }
 table.live td.nowrap { white-space: nowrap; }
+
+.measure .field { flex-wrap: wrap; max-width: none; align-items: center; }
+.measure .field select { max-width: 100%; padding: 0.4rem 0.5rem; font: inherit; }
+.result.r-none { border-left-color: var(--accent); }
