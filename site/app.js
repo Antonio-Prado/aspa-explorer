@@ -332,6 +332,9 @@ const PREFIX_RE = /^(?:\d{1,3}(?:\.\d{1,3}){3}\/\d{1,2}|[0-9a-f:]+:[0-9a-f:]*\/\
 
 function parseLiveQuery(text) {
   const t = String(text).trim();
+  // a single address, alone or as a /32 (IPv4) or /128 (IPv6): RIPEstat answers with the routes of the most specific prefix that covers it
+  const host = /^(\d{1,3}(?:\.\d{1,3}){3})(?:\/32)?$/.exec(t) || /^([0-9a-f]*:[0-9a-f:]*)(?:\/128)?$/i.exec(t);
+  if (host && (host[1].includes(':') || host[1].split('.').every((x) => Number(x) <= 255))) return { resource: host[1].toLowerCase(), label: t.toLowerCase(), kind: 'prefix', host: host[1].toLowerCase() };
   if (PREFIX_RE.test(t)) return { resource: t.toLowerCase(), label: t.toLowerCase(), kind: 'prefix' };
   const as = normalizeAsn(t);
   return as ? { resource: as, label: as, kind: 'as' } : null;
@@ -377,6 +380,15 @@ async function fetchRoutesSampled(resource) {
     }
   }));
   return { bgp_state: routes, timestamp: stamp, sample: { used: pick.length, total: all.length } };
+}
+
+// For a single address: the prefix that the routes belong to, the most specific one that is announced.
+function hostNote(address, routes) {
+  const prefixes = [...new Set(routes.map((r) => String(r.target_prefix).toLowerCase()))];
+  const text = prefixes.length === 1
+    ? `${address} is not announced alone: the most specific prefix that covers it is ${prefixes[0]}, and these are its routes.`
+    : `${address} is covered by ${prefixes.length} prefixes, ${prefixes.slice(0, 4).join(', ')}${prefixes.length > 4 ? ' and more' : ''}: these are the routes of the most specific ones.`;
+  return el('p', { class: 'hint', text });
 }
 
 // Distinct AS paths of the routes, each with its verdict and the number of routes that have it.
@@ -885,7 +897,7 @@ function rovPanel(all) {
 async function renderLiveRoutes(text) {
   const out = $('liveresult');
   const q = parseLiveQuery(text);
-  if (!q) { out.replaceChildren(el('p', { class: 'error', text: 'Enter a prefix such as 193.0.0.0/21 or an AS number such as AS3333.' })); return; }
+  if (!q) { out.replaceChildren(el('p', { class: 'error', text: 'Enter a prefix such as 193.0.0.0/21, an address such as 193.0.0.1 or an AS number such as AS3333.' })); return; }
   if (!aspas.length) { out.replaceChildren(el('p', { class: 'error', text: 'The ASPA data is still loading; try again in a moment.' })); return; }
   out.replaceChildren(el('p', { class: 'hint' }, el('span', { class: 'busy', text: `Fetching the routes for ${q.label} from RIPEstat` })));
   let data;
@@ -894,7 +906,7 @@ async function renderLiveRoutes(text) {
     return;
   }
   const routes = data.bgp_state || [];
-  if (!routes.length) { out.replaceChildren(el('p', { text: `The RIPE RIS collectors see no route for ${q.label}${q.kind === 'as' ? ' originated by it' : ''} right now.` })); return; }
+  if (!routes.length) { out.replaceChildren(el('p', { text: `The RIPE RIS collectors see no route for ${q.label}${q.kind === 'as' ? ' originated by it' : q.host ? ' or for a prefix that covers it' : ''} right now.` })); return; }
   const { rows, skipped } = checkRoutes(routes);
   const pairs = routePairs(routes);
   const count = (k) => rows.filter((r) => r.result === k);
@@ -906,6 +918,7 @@ async function renderLiveRoutes(text) {
   const ts = data.timestamp ? ` as of ${fmtDate(data.timestamp.endsWith('Z') ? data.timestamp : data.timestamp + 'Z')}` : '';
   const kids = [
     ...(data.sample ? [el('p', { class: 'hint', text: `${q.label} originates ${fmt.format(data.sample.total)} prefixes, too many to read at once: the view is limited to the routes of ${fmt.format(data.sample.used)} of them, the shortest ones. Check a single prefix to see the others.` })] : []),
+    ...(q.host ? [hostNote(q.host, routes)] : []),
     el('p', { class: 'src', text: `${fmt.format(routes.length)} routes${q.kind === 'as' ? ` originated by ${q.label}` : ` for ${q.label}`}, seen by the RIPE RIS collectors${ts}, ${fmt.format(rows.length)} distinct AS path${rows.length === 1 ? '' : 's'}${skipped ? `; ${fmt.format(skipped)} with an AS_SET left out` : ''}.` }),
     ...(pairs.length ? [el('h3', { class: 'subhead', text: 'Origin validation (ROAs)' }), rovPanel(pairs)] : []),
     el('h3', { class: 'subhead', text: 'AS paths (ASPA)' }),

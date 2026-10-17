@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.28.0] - 2026-10-17
+
+### Added
+- The routes check takes a single address, alone or as a /32 (IPv4) or /128 (IPv6): RIPEstat answers with the routes of the most specific prefix that covers it, and the page says which prefix that is. Before, `94.136.22.155/32` found no route because that exact prefix is not announced.
+
 ## [1.27.1] - 2026-10-17
 
 ### Removed

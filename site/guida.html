@@ -8,15 +8,15 @@
 <meta name="color-scheme" content="light dark">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <link rel="alternate" hreflang="en" href="/guide.html">
-<link rel="stylesheet" href="/style.css?v=1.27.1">
-<script src="/status-checks.js?v=1.27.1" defer></script>
-<script src="/footer.js?v=1.27.1" defer></script>
+<link rel="stylesheet" href="/style.css?v=1.28.0">
+<script src="/status-checks.js?v=1.28.0" defer></script>
+<script src="/footer.js?v=1.28.0" defer></script>
 </head>
 <body>
 <a class="skip" href="#main">Vai al contenuto principale</a>
 <header class="wrap masthead">
   <div class="top">
-    <p class="back"><a class="brandlink" href="/" title="Torna a ASPA Explorer"><img class="brand" src="/img/logo-mark.svg?v=1.27.1" alt="" width="40" height="40"><span>ASPA Explorer</span></a></p>
+    <p class="back"><a class="brandlink" href="/" title="Torna a ASPA Explorer"><img class="brand" src="/img/logo-mark.svg?v=1.28.0" alt="" width="40" height="40"><span>ASPA Explorer</span></a></p>
     <nav class="topnav" aria-label="Main"><a href="/">Home</a><a href="/statistics.html">Statistics</a><a href="/examples.html">Examples</a><a href="/api.html">API</a><a href="/guide.html" aria-current="page">Guide</a><a href="/status.html">Status</a></nav>
   </div>
   <h1>Guida</h1>
@@ -128,7 +128,7 @@
 
   <section aria-labelledby="live-routes">
     <h2 id="live-routes">Verificare le rotte viste in BGP</h2>
-    <p>Il riquadro <em>Check the routes seen in BGP</em> accetta un prefisso (<code>193.0.0.0/21</code>) o un numero di AS (<code>AS3333</code>), recupera le rotte che i route collector <a href="https://ris.ripe.net/" target="_blank" rel="noopener">RIPE RIS<span class="sr-only"> (si apre in una nuova scheda)</span></a> vedono in questo momento e applica la verifica ASPA a ogni AS path distinto. Per un AS le rotte sono quelle che esso origina.</p>
+    <p>Il riquadro <em>Check the routes seen in BGP</em> accetta un prefisso (<code>193.0.0.0/21</code>), un indirizzo (<code>193.0.0.1</code>, solo o come /32 o /128: le rotte del prefisso più specifico che lo contiene) o un numero di AS (<code>AS3333</code>), recupera le rotte che i route collector <a href="https://ris.ripe.net/" target="_blank" rel="noopener">RIPE RIS<span class="sr-only"> (si apre in una nuova scheda)</span></a> vedono in questo momento e applica la verifica ASPA a ogni AS path distinto. Per un AS le rotte sono quelle che esso origina.</p>
     <p>Il risultato è un conteggio di rotte valid, unknown e invalid e una tabella dei percorsi distinti, con gli invalid per primi, con il motivo (l'hop attestato come errato, oppure gli AS che non pubblicano alcuna ASPA) e un pulsante <em>details</em> che apre la verifica hop per hop di quel percorso subito sotto la riga, con un link per aprirlo nella verifica dell'AS path. Si usa la procedura downstream, perché la maggior parte delle reti che alimentano un route collector gli invia la propria tabella completa, come un provider fa con un customer, e questa include le rotte apprese dai loro provider (la procedura upstream le chiamerebbe a torto leak). Un percorso è invalid quando contiene una valley: la salita dall'origine e la discesa dal vicino non si incontrano. I percorsi con un AS_SET sono esclusi. Un AS che origina migliaia di prefissi può avere una risposta troppo grande da caricare: meglio verificare uno dei suoi prefissi.</p>
     <p>Sopra i percorsi, <em>Origin validation (ROAs)</em> confronta ogni coppia distinta di prefisso e origine delle rotte con le ROA che il validatore ha validato, come fa un router nella route origin validation: <em>valid</em> (una ROA corrisponde a origine e lunghezza), <em>not found</em> (nessuna ROA copre il prefisso) oppure <em>invalid</em> (una ROA lo copre ma per un altro AS, o il prefisso è più lungo di quanto la ROA consenta). Quelle invalid sono elencate con il motivo. Ogni volta si verificano al massimo 200 coppie prefisso-origine; la riga sopra le tessere indica quando ce ne sono di più. È l'altra metà del quadro: la ROA dice se l'origine è autorizzata per il prefisso, l'ASPA se il percorso che porta ad essa ha senso.</p>
     <p>Sotto i percorsi, la tabella <em>neighbours of the origin</em> ha una colonna <em>Evidence</em> che indica quali di essi sembrano provider dell'origine, in base alle rotte stesse. Un vicino conta come provider quando la rotta dell'origine passa attraverso di lui fino a una rete Tier-1 (la clique delle relazioni CAIDA, che cambia di rado): un peer, o un provider a cui non si chiede di portare la rotta verso l'alto, fa passare verso l'alto solo le rotte apprese dai propri customer, quindi una rotta che raggiunge un Tier-1 attraverso un vicino significa che l'origine è customer di quel vicino. Un Tier-1 accanto all'origine non è un provider per la sola posizione (i Tier-1 fanno peering con alcuni altri): serve un altro Tier-1 alla sua sinistra. I percorsi di due AS non dicono nulla, perché l'AS a sinistra è solo la rete che alimenta il collector, e gli AS dei punti di scambio sono esclusi dai percorsi. <em>Provider</em> significa visto da almeno tre feeder e su almeno un quinto dei percorsi informativi; <em>weak</em> significa visto, ma da meno feeder o su una quota minore (un route leak può simularne un poco). <strong>L'assenza di evidenza non è prova di un peer</strong>: i collector vedono solo una parte di Internet. Quando l'ASPA dell'origine non elenca un vicino con evidenza forte, la pagina lo segnala: le rotte che passano da lui non passano dove si controlla l'ASPA. Le rotte sono l'ultimo dump delle tabelle dei collector, che può avere fino a otto ore; questa è una lettura delle rotte di oggi, non di un dataset mensile.</p>
