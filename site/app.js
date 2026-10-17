@@ -216,7 +216,7 @@ function renderChanges() {
 function renderAsHistory(as) {
   const box = $('as-history');
   if (!box || !as) return;
-  if (!changes) { box.replaceChildren(el('h4', { text: 'History' }), el('p', { class: 'hint', text: 'Loading the history…' })); return; }
+  if (!changes) { box.replaceChildren(el('h4', { text: 'History' }), el('p', { class: 'hint' }, el('span', { class: 'busy', text: 'Loading the history' }))); return; }
   const own = changes.filter((e) => e.customer === as);
   const named = firstSeen.get(as);
   const since = (d) => (d === changesFirstDay ? `${fmtDayLong(d)} (the start of the archive, so possibly earlier)` : fmtDayLong(d));
@@ -491,7 +491,7 @@ function graphBlock(as) {
   };
   const btn = el('button', { type: 'button', class: 'linkish', text: 'Add the neighbours that the routes show' });
   btn.addEventListener('click', async () => {
-    btn.disabled = true; status.textContent = ' Reading the routes…';
+    btn.disabled = true; status.replaceChildren(el('span', { class: 'busy', text: ' Reading the routes' }));
     try {
       const data = await fetchRoutesSampled(as);
       const routes = data.bgp_state || [];
@@ -735,7 +735,7 @@ async function renderLiveRoutes(text) {
   const q = parseLiveQuery(text);
   if (!q) { out.replaceChildren(el('p', { class: 'error', text: 'Enter a prefix such as 193.0.0.0/21 or an AS number such as AS3333.' })); return; }
   if (!aspas.length) { out.replaceChildren(el('p', { class: 'error', text: 'The ASPA data is still loading; try again in a moment.' })); return; }
-  out.replaceChildren(el('p', { class: 'hint', text: `Fetching the routes for ${q.label} from RIPEstat…` }));
+  out.replaceChildren(el('p', { class: 'hint' }, el('span', { class: 'busy', text: `Fetching the routes for ${q.label} from RIPEstat` })));
   let data;
   try { data = await fetchRoutesSampled(q.resource); } catch (err) {
     out.replaceChildren(el('p', { class: 'error', text: `Could not get the routes for ${q.label} (${err.message}).` }));
@@ -857,7 +857,7 @@ function compareBlock(as) {
     const n = c.named;
     if (!n.added.length && !n.dropped.length) kids.push(el('p', { text: `The ASPAs that name ${as} as a provider are the same (${fmt.format(n.after)}).` }));
     else kids.push(el('p', { text: `ASPAs that now name ${as} as a provider (${fmt.format(n.before)} before, ${fmt.format(n.after)} after):` }), list(n.added), el('p', { text: 'and that no longer do:' }), list(n.dropped));
-    out.replaceChildren(...kids, el('p', { class: 'hint', text: 'Looking at the places of valley…' }));
+    out.replaceChildren(...kids, el('p', { class: 'hint' }, el('span', { class: 'busy', text: 'Looking at the places of valley' })));
     const [pa, pb] = await Promise.all([dayPlaces(a), dayPlaces(b)]);
     const last = out.lastChild;
     if (!pa || !pb) last.textContent = 'Places of valley: the daily files are kept for the last 60 days, so there is nothing to compare for one of the two days.';
@@ -957,7 +957,7 @@ function notifyForm(as) {
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
     btn.disabled = true;
-    msg.replaceChildren(el('span', { text: 'Sending…' }));
+    msg.replaceChildren(el('span', { class: 'busy', text: 'Sending' }));
     try {
       const r = await fetch('/api/v1/subscriptions', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },

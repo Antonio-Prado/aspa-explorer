@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.20.3] - 2026-10-17
+
+### Added
+- A sign of activity wherever a click is followed by a wait (reading the routes, fetching them from RIPEstat, loading the data, sending a subscription): three dots that appear one at a time after the text (nothing moves, so it is kept for people who ask for less motion too).
+
 ## [1.20.0] - 2026-10-17
 
 ### Changed

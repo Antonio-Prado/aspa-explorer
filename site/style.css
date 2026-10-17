@@ -542,3 +542,7 @@ table.live td { overflow-wrap: anywhere; }
 .sw-graph.n-mutual { background: var(--bad-bg); border-color: var(--bad-ink); }
 .sw-graph.n-seen-provider { background: var(--warn-bg); border-color: var(--warn-ink); border-style: dashed; }
 .sw-graph.n-seen { background: var(--track); border-style: dashed; }
+
+/* Something is going on: three dots that appear one at a time after the text. Nothing moves, characters appear (two or three a second at most), so it is kept for people who ask for less motion too: it is the only sign that the page is working */
+.busy::after { content: '...'; display: inline-block; width: 0; overflow: hidden; vertical-align: bottom; white-space: nowrap; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; animation: busy-dots 1.6s steps(1, end) infinite !important; }
+@keyframes busy-dots { 0% { width: 0; } 25% { width: 0.6em; } 50% { width: 1.2em; } 75% { width: 1.8em; } 100% { width: 1.8em; } }

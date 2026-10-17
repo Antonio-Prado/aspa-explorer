@@ -9,28 +9,28 @@
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <link rel="canonical" href="https://aspa.ping6.it/">
 <link rel="alternate" type="application/atom+xml" title="ASPA Explorer: changes" href="/changes.atom">
-<link rel="stylesheet" href="/style.css?v=1.20.0">
-<script src="/verify.js?v=1.20.0" defer></script>
-<script src="/history.js?v=1.20.0" defer></script>
-<script src="/quality.js?v=1.20.0" defer></script>
-<script src="/evidence.js?v=1.20.0" defer></script>
-<script src="/tromboning.js?v=1.20.0" defer></script>
-<script src="/graph.js?v=1.20.0" defer></script>
-<script src="/live.js?v=1.20.0" defer></script>
-<script src="/app.js?v=1.20.0" defer></script>
-<script src="/status-checks.js?v=1.20.0" defer></script>
-<script src="/footer.js?v=1.20.0" defer></script>
+<link rel="stylesheet" href="/style.css?v=1.20.3">
+<script src="/verify.js?v=1.20.3" defer></script>
+<script src="/history.js?v=1.20.3" defer></script>
+<script src="/quality.js?v=1.20.3" defer></script>
+<script src="/evidence.js?v=1.20.3" defer></script>
+<script src="/tromboning.js?v=1.20.3" defer></script>
+<script src="/graph.js?v=1.20.3" defer></script>
+<script src="/live.js?v=1.20.3" defer></script>
+<script src="/app.js?v=1.20.3" defer></script>
+<script src="/status-checks.js?v=1.20.3" defer></script>
+<script src="/footer.js?v=1.20.3" defer></script>
 </head>
 <body>
 <a class="skip" href="#main">Skip to main content</a>
 <header class="wrap masthead">
   <div class="top">
-    <h1><a class="homelink" href="/"><img class="brand" src="/img/logo-mark.svg?v=1.20.0" alt="" width="40" height="40"><span>ASPA Explorer</span></a></h1>
+    <h1><a class="homelink" href="/"><img class="brand" src="/img/logo-mark.svg?v=1.20.3" alt="" width="40" height="40"><span>ASPA Explorer</span></a></h1>
     <nav class="topnav" aria-label="Main"><a href="/" aria-current="page">Home</a><a href="/statistics.html">Statistics</a><a href="/examples.html">Examples</a><a href="/api.html">API</a><a href="/guide.html">Guide</a><a href="/status.html">Status</a></nav>
   </div>
   <p class="lede">Validated ASPA objects from the RPKI, as seen by the Routinator validator at <a href="https://rpki.ping6.it/ui/" target="_blank" rel="noopener">rpki.ping6.it<span class="sr-only"> (opens in a new tab)</span></a>.</p>
   <p class="lede">An <strong>ASPA</strong> (Autonomous System Provider Authorization) is a signed RPKI object in which a customer AS lists the ASes allowed to act as its upstream providers. Routers use these lists to detect route leaks and some forged AS paths. A provider set of <code>AS0</code> means the AS declares it has no upstream providers.</p>
-  <p class="meta" id="meta">Loading data…</p>
+  <p class="meta" id="meta"><span class="busy">Loading data</span></p>
 </header>
 
 <main class="wrap" id="main" tabindex="-1">
@@ -99,12 +99,12 @@
     </div>
     <div role="tabpanel" class="tabpanel" id="panel-changes" aria-labelledby="tab-changes" hidden>
       <p class="hint">ASPAs that appeared, changed their providers or disappeared in the last 14 days, as seen by this validator. Subscribe to the <a href="/changes.atom">Atom feed</a>.</p>
-      <div class="card changes" id="changes-body"><p class="hint">Loading the changes…</p></div>
+      <div class="card changes" id="changes-body"><p class="hint"><span class="busy">Loading the changes</span></p></div>
     </div>
     <div role="tabpanel" class="tabpanel" id="panel-quality" aria-labelledby="tab-quality" hidden>
       <p class="hint">Checks on the ASPAs listed here that point at likely mistakes: contradictions, private AS numbers, ASes that list each other as provider, providers that no collector sees in BGP, ASPAs about to expire. The counts are ASPAs, and each finding can be opened.</p>
       <div class="tiles quality-tiles" id="quality-tiles"></div>
-      <div class="card changes" id="quality-body"><p class="hint">Checking the ASPAs…</p></div>
+      <div class="card changes" id="quality-body"><p class="hint"><span class="busy">Checking the ASPAs</span></p></div>
     </div>
   </section>
 </main>

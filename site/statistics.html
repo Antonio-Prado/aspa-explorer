@@ -7,24 +7,24 @@
 <meta name="description" content="Statistics of the ASPAs: how many over time, by RIR, providers per ASPA, the most-named providers, and who has published one, by size of the network, RIR and country.">
 <meta name="color-scheme" content="light dark">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
-<link rel="stylesheet" href="/style.css?v=1.20.0">
-<script src="/stats.js?v=1.20.0" defer></script>
-<script src="/adoption.js?v=1.20.0" defer></script>
-<script src="/leaks.js?v=1.20.0" defer></script>
-<script src="/validators.js?v=1.20.0" defer></script>
-<script src="/status-checks.js?v=1.20.0" defer></script>
-<script src="/footer.js?v=1.20.0" defer></script>
+<link rel="stylesheet" href="/style.css?v=1.20.3">
+<script src="/stats.js?v=1.20.3" defer></script>
+<script src="/adoption.js?v=1.20.3" defer></script>
+<script src="/leaks.js?v=1.20.3" defer></script>
+<script src="/validators.js?v=1.20.3" defer></script>
+<script src="/status-checks.js?v=1.20.3" defer></script>
+<script src="/footer.js?v=1.20.3" defer></script>
 </head>
 <body>
 <a class="skip" href="#main">Skip to main content</a>
 <header class="wrap masthead">
   <div class="top">
-    <p class="back"><a class="brandlink" href="/" title="Back to ASPA Explorer"><img class="brand" src="/img/logo-mark.svg?v=1.20.0" alt="" width="40" height="40"><span>ASPA Explorer</span></a></p>
+    <p class="back"><a class="brandlink" href="/" title="Back to ASPA Explorer"><img class="brand" src="/img/logo-mark.svg?v=1.20.3" alt="" width="40" height="40"><span>ASPA Explorer</span></a></p>
     <nav class="topnav" aria-label="Main"><a href="/">Home</a><a href="/statistics.html" aria-current="page">Statistics</a><a href="/examples.html">Examples</a><a href="/api.html">API</a><a href="/guide.html">Guide</a><a href="/status.html">Status</a></nav>
   </div>
   <h1>Statistics</h1>
   <p class="lede">How many ASPAs there are and how they are made up, and which networks have published one, by size, RIR and country.</p>
-  <p class="meta" id="meta">Loading data…</p>
+  <p class="meta" id="meta"><span class="busy">Loading data</span></p>
 </header>
 
 <main class="wrap" id="main" tabindex="-1">
@@ -55,7 +55,7 @@
       <label class="chk"><input type="checkbox" id="hist-log"> Logarithmic scale</label>
     </div>
     <ul class="legend" id="history-legend"></ul>
-    <div class="linechart" id="chart-history"><p class="hint">Loading the history…</p></div>
+    <div class="linechart" id="chart-history"><p class="hint"><span class="busy">Loading the history</span></p></div>
     <p class="hint" id="history-note"></p>
     <p class="hint export">Download the daily data: <button type="button" class="linkish" id="dl-csv">CSV</button> or <button type="button" class="linkish" id="dl-json">JSON</button>.</p>
     <details class="tableview">
@@ -130,7 +130,7 @@
 
   <section aria-labelledby="leaks-title">
     <h2 id="leaks-title">Route leaks today</h2>
-    <p class="hint" id="leaks-sub">Loading…</p>
+    <p class="hint" id="leaks-sub"><span class="busy">Loading</span></p>
     <div class="tiles" id="leaks-tiles"></div>
     <h3 class="subhead">Possible route leaks</h3>
     <p class="hint">Places of valley where the first AS after the climb is, for CAIDA, a peer or a customer of the AS before it: it passed on up a route that it should not have.</p>
@@ -159,7 +159,7 @@
 
   <section aria-labelledby="val-title">
     <h2 id="val-title">Validators compared</h2>
-    <p class="hint" id="val-sub">Loading…</p>
+    <p class="hint" id="val-sub"><span class="busy">Loading</span></p>
     <div class="tiles" id="val-tiles"></div>
     <section class="card table-wrap" tabindex="0" aria-label="Table of the ASPAs on which the validators differ">
       <table class="checks live">
