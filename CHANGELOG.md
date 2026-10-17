@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- CodeQL on the GitHub copy (`.github/workflows/codeql.yml`): static analysis of the JavaScript on each push to the main branch and once a week, with the alerts in the Security tab of that repository.
+
 ## [1.23.1] - 2026-10-17
 
 ### Added
