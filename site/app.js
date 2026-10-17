@@ -553,8 +553,9 @@ function traceCard(r, target) {
   else if (r.reachedAddress !== target.address) notes.push(`The last answer comes from ${r.reachedAddress || 'no address'}, not from ${target.address}: the target does not answer, which is common, so the last network that answers is the last one that is seen.`);
   if (r.jump) notes.push(`The delay rises by ${Math.round(r.jump.by)} ms between hop ${r.jump.from} and hop ${r.jump.hop} and stays up to the end: from there the path is longer, or slower, by that much (queues, tunnels and slow answers add milliseconds too).`);
   if (r.access >= 10) notes.push(`The first public address is already ${rttText(r.access)} away: the access network of the probe (a mobile network or a tunnel, for instance) adds delay by itself, so the delays below say little about the route.`);
-  if (r.longDelay) notes.push(`From the first public address to the end the round trip takes ${rttText(r.lastRtt - r.access)} more, which is long between two points of the same country: the route may go abroad.`);
-  else if (r.lastRtt !== null) notes.push(`Round trip to the last hop: ${rttText(r.lastRtt)}.`);
+  if (r.verdict === 'trombone') notes.push(`Trombone: from the first public address to the end the round trip takes ${rttText(r.net)}. Between two points of one country, 100 ms or more is the delay of a packet that crosses an ocean, or goes round Europe twice (supposing that the target is in the country of the probe).`);
+  else if (r.verdict === 'long') notes.push(`From the first public address to the end the round trip takes ${rttText(r.net)}, longer than it should be between two points of one country: the route probably goes abroad, but not far (supposing that the target is in the country of the probe).`);
+  else if (r.lastRtt !== null) notes.push(`Round trip to the last hop: ${rttText(r.lastRtt)}, normal inside a country.`);
   const rows = r.hops.map((h) => el('tr', {}, el('td', { class: 'num', text: String(h.n) }),
     el('td', {}, h.ip ? el('span', { class: 'mono', text: h.ip }) : el('span', { class: 'muted', text: 'no answer' })),
     el('td', { text: h.asn ? `AS${h.asn}` : (h.ip ? (AspaTraceroute.isPrivate(h.ip) ? 'private' : '–') : '') }),

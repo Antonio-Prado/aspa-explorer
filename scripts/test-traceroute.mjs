@@ -48,7 +48,7 @@ test('a path with a jump of the delay: the networks on the way and the long dela
   assert.deepEqual(r.path, [213791, 3257, 1200, 3333]);
   assert.deepEqual(r.jump, { from: 3, hop: 4, by: 11.3 });
   assert.equal(r.lastRtt, 16.5);
-  assert.equal(r.longDelay, false);
+  assert.equal(r.verdict, 'ok');
   assert.equal(r.reachedAddress, '193.0.0.1');
   assert.equal(r.hops[0].asn, null);                     // a private address is left alone
 });
@@ -58,17 +58,21 @@ test('a delay that comes from the access network, or that does not stay up, is n
   const tim = summarise({ probe, result: { status: 'finished', hops: [hop('172.17.17.1', [0.1]), hop('192.168.57.1', [1.1]), hop('172.17.152.32', [9.3]), hop('195.22.218.116', [30.1]), hop('93.94.88.1', [28.5])] } }, () => null);
   assert.equal(tim.jump, null);
   assert.equal(tim.access, 30.1);
-  assert.equal(tim.longDelay, false);
+  assert.equal(tim.verdict, 'ok');
   // one slow answer, then back to normal: not a distance
   const blip = summarise({ probe, result: { status: 'finished', hops: [hop('37.202.205.254', [1]), hop('154.14.77.113', [40]), hop('141.136.110.41', [2]), hop('193.0.0.1', [3])] } }, () => null);
   assert.equal(blip.jump, null);
 });
 
 test('a long round trip is flagged, and a path with no answer does not break', () => {
-  const far = summarise({ probe, result: { status: 'finished', hops: [hop('37.202.205.254', [3]), hop('193.0.0.1', [40])] } }, (ip) => asns[ip] || null);
-  assert.equal(far.longDelay, true);
+  const far = summarise({ probe, result: { status: 'finished', hops: [hop('37.202.205.254', [3]), hop('193.0.0.1', [50])] } }, (ip) => asns[ip] || null);
+  assert.equal(far.verdict, 'long');
+  const ocean = summarise({ probe, result: { status: 'finished', hops: [hop('37.202.205.254', [3]), hop('193.0.0.1', [140])] } }, (ip) => asns[ip] || null);
+  assert.equal(ocean.verdict, 'trombone');
+  assert.equal(ocean.net, 137);
   const none = summarise({ probe, result: { status: 'finished', hops: [{ resolvedAddress: null, timings: [] }] } }, () => null);
   assert.deepEqual([none.path, none.lastRtt, none.reachedAddress], [[], null, null]);
+  assert.equal(none.verdict, null);
   assert.equal(summarise({ probe, result: { status: 'failed' } }, () => null).hops.length, 0);
 });
 

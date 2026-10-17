@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.24.5] - 2026-10-17
+
+### Changed
+- A trombone is now told by its delay: from the first public address to the end, the round trip is normal up to 40 ms, longer than it should be above that, and a trombone at 100 ms or more (a packet that crosses an ocean or goes round Europe twice), supposing that the target is in the country of the probes.
+
 ## [1.24.4] - 2026-10-17
 
 ### Changed

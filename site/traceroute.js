@@ -6,7 +6,8 @@
 // What it can say is limited: a delay is not a distance (queues, tunnels, an access network and slow answers add milliseconds),
 // so a long delay between two points of one country is a lead, not proof, that the packet went somewhere else on the way.
 (function (root) {
-  const LONG_DELAY_MS = 25;      // a round trip longer than this between two points of one country is long
+  const LONG_DELAY_MS = 40;      // a round trip longer than this between two points of one country is longer than it should be
+  const TROMBONE_MS = 100;       // and from here it is a trombone: the packet has crossed an ocean, or gone round Europe twice
   const JUMP_MS = 10;            // a step of the delay between two hops that is worth saying
 
   const toNum = (s) => s.split('.').reduce((n, x) => n * 256 + Number(x), 0);
@@ -81,11 +82,13 @@
     return {
       probe: { city: result.probe.city, country: result.probe.country, asn: result.probe.asn, network: result.probe.network },
       status: result.result.status, hops, path, jump, lastRtt, reachedAddress: last ? last.ip : null,
-      access, longDelay: lastRtt !== null && lastRtt - access > LONG_DELAY_MS,
+      access, net: lastRtt === null ? null : Math.max(0, lastRtt - access),
+      // from the first public address to the end, supposing that the target is in the country of the probe
+      verdict: lastRtt === null ? null : lastRtt - access >= TROMBONE_MS ? 'trombone' : lastRtt - access > LONG_DELAY_MS ? 'long' : 'ok',
     };
   }
 
-  const api = { hostIn, targetOf, isPrivate, summarise, LONG_DELAY_MS, JUMP_MS };
+  const api = { hostIn, targetOf, isPrivate, summarise, LONG_DELAY_MS, TROMBONE_MS, JUMP_MS };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.AspaTraceroute = api;
 })(typeof self !== 'undefined' ? self : this);
