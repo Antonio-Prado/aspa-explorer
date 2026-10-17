@@ -7,7 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.21.0] - 2026-10-17
+
+### Added
+- The route leaks are read from RouteViews as well, the other large collection project, whose collectors have other peers than RIPE RIS: eight collectors (Oregon, route-views3 and 4, Singapore, Johannesburg, Sao Paulo, Sydney, Equinix) next to the ten of RIS, 18 in all. The files are bzip2 (read with the system's `bzip2`) and the newest RIB is found in the listing of the month; `FORCE=1 scripts/backfill-leaks.sh` rebuilds the history of the past days with them.
+- The MRT reader understands the tables with a path identifier (RIB entries with ADD-PATH).
+
 ### Changed
+- A feeder is now a network (an AS) that sends its routes to a collector, counted once however many collectors it feeds; before, the same network at two collectors counted twice. The history of the leaks is rebuilt with the 18 collectors and this definition, so the numbers before and after are comparable only once the rebuild is done.
 - The copy on GitHub is pushed from GitLab: the job `github-mirror` (`scripts/mirror-github.sh`) pushes the commit of each pipeline of the main branch and each tag, with a deploy key that can write to that repository only (the protected variable `GITHUB_DEPLOY_KEY`). It replaces the workflow that copied the project every 30 minutes (GitHub did not start it). On GitHub, `.github/workflows/release.yml` makes a release for each tag and `accessibility.yml` runs the accessibility check after each push.
 - Version numbers that were never tagged because they were deployed and then folded into the next one: 1.13.0, 1.14.0, 1.16.0, 1.17.0, 1.18.3, 1.20.1 and 1.20.2. Their changes are in 1.13.1, 1.15.0, 1.16.1, 1.17.1, 1.18.4 and 1.20.3. The release 1.15.0 was tagged afterwards, on its own commit.
 

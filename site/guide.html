@@ -8,15 +8,15 @@
 <meta name="color-scheme" content="light dark">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <link rel="alternate" hreflang="it" href="/guida.html">
-<link rel="stylesheet" href="/style.css?v=1.20.3">
-<script src="/status-checks.js?v=1.20.3" defer></script>
-<script src="/footer.js?v=1.20.3" defer></script>
+<link rel="stylesheet" href="/style.css?v=1.21.0">
+<script src="/status-checks.js?v=1.21.0" defer></script>
+<script src="/footer.js?v=1.21.0" defer></script>
 </head>
 <body>
 <a class="skip" href="#main">Skip to main content</a>
 <header class="wrap masthead">
   <div class="top">
-    <p class="back"><a class="brandlink" href="/" title="Back to ASPA Explorer"><img class="brand" src="/img/logo-mark.svg?v=1.20.3" alt="" width="40" height="40"><span>ASPA Explorer</span></a></p>
+    <p class="back"><a class="brandlink" href="/" title="Back to ASPA Explorer"><img class="brand" src="/img/logo-mark.svg?v=1.21.0" alt="" width="40" height="40"><span>ASPA Explorer</span></a></p>
     <nav class="topnav" aria-label="Main"><a href="/">Home</a><a href="/statistics.html">Statistics</a><a href="/examples.html">Examples</a><a href="/api.html">API</a><a href="/guide.html" aria-current="page">Guide</a><a href="/status.html">Status</a></nav>
   </div>
   <h1>Guide</h1>
@@ -179,12 +179,12 @@
       <li><strong>the 100 largest networks</strong> by cone, each with its ASPA state, and a switch to show only those without one.</li>
     </ul>
     <h3 id="leaks">Route leaks today</h3>
-    <p>Below the adoption, the statistics page checks <strong>every route of ten RIPE RIS collectors</strong> (rrc00, rrc01, rrc03, rrc04, rrc10, rrc11, rrc12, rrc15, rrc19 and rrc23, in Europe, North and South America, Africa and Asia: hundreds of millions of routes in their table dumps) with the downstream ASPA verification, once a day, and groups the ones that the ASPAs prove to contain a valley by the place of the valley. A valley is a route that came down from a provider or a peer and went up again. Two tables tell the places apart by what the CAIDA relationships say of the first AS after the climb, the AS right after the part of the path that the ASPAs show to go up from the origin:</p>
+    <p>Below the adoption, the statistics page checks <strong>every route of 18 collectors</strong> (ten of RIPE RIS, rrc00, rrc01, rrc03, rrc04, rrc10, rrc11, rrc12, rrc15, rrc19 and rrc23, and eight of RouteViews, the other big collection project, with other peers: Oregon, route-views3 and 4, Singapore, Johannesburg, Sao Paulo, Sydney and Equinix; hundreds of millions of routes in their table dumps) with the downstream ASPA verification, once a day, and groups the ones that the ASPAs prove to contain a valley by the place of the valley. A valley is a route that came down from a provider or a peer and went up again. Two tables tell the places apart by what the CAIDA relationships say of the first AS after the climb, the AS right after the part of the path that the ASPAs show to go up from the origin:</p>
     <ul>
       <li><strong>Possible route leaks:</strong> that AS is a peer or a customer of the AS before it, and it passed the route on up. It is the AS in the valley to look at.</li>
       <li><strong>ASPAs that seem to miss a provider:</strong> that AS is a provider of the AS before it, which has an ASPA that does not list it: valid routes through it look like valleys. The owner of that ASPA is the one to tell. Most of the places are of this kind.</li>
     </ul>
-    <p>Places with no relation in the dataset are counted but not listed. The relations are inferred from observed routes, so they can be out of date, and a place is a candidate, not a verdict. The ASPAs prove a valley only where they are published: a large share of the routes cross an AS without an ASPA and stay <em>unknown</em>. A leak seen by one feeder only can be a leak at the feeder itself. The same file is available as <a href="/api/v1/leaks.json">JSON</a>.</p>
+    <p>Places with no relation in the dataset are counted but not listed. The relations are inferred from observed routes, so they can be out of date, and a place is a candidate, not a verdict. The ASPAs prove a valley only where they are published: a large share of the routes cross an AS without an ASPA and stay <em>unknown</em>. A leak seen by one feeder only can be a leak at the feeder itself. A feeder is a network that sends its routes to a collector; one that feeds several collectors counts once. The same file is available as <a href="/api/v1/leaks.json">JSON</a>.</p>
     <p><em>Over time</em> is the chart of the places of possible leak and of gap, one point a day (<code>/api/v1/leaks-history.json</code>). It is one point a day since 17 October 2026; the days before were rebuilt afterwards from the table dumps of 00:00 UTC of each day, with the ASPAs as they were that day (replayed from the history of changes) and the relationships dataset of today, and a day that could not be rebuilt is missing. A change can come from the routes, from the ASPAs published that day or from the relationships dataset.</p>
     <h3 id="validators">Validators compared</h3>
     <p>Every hour the site compares the ASPAs of three validators: the Routinator of this site (NLnet Labs), <a href="https://console.rpki-client.org/" target="_blank" rel="noopener">rpki-client<span class="sr-only"> (opens in a new tab)</span></a> (OpenBSD, the console of the project) and the rpki-client that Cloudflare runs. They read the same repositories with different code, so they are an independent check on each other. The section shows how many ASPAs each has and when it was built, how many customers have the same providers in all three, and the ASPAs on which they differ with a possible reason. A few differences are normal (they read at different moments, and each can reject an object that another accepts); one that lasts is worth a report to the validator. The common one is an ASPA that lists <code>AS0</code> next to other providers, which the profile forbids: Routinator keeps it and rpki-client rejects or trims it. The same data is available as <a href="/api/v1/validators.json">JSON</a>.</p>

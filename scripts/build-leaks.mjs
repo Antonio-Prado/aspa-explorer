@@ -10,7 +10,7 @@
 //
 // Inputs (environment, with defaults for the production host):
 //   ASPA_DATA        URL or file of Routinator's jsonext     http://127.0.0.1:8080/data/aspas.json
-//   LEAKS_COLLECTORS comma separated RIS collectors          rrc00,rrc01,rrc03,rrc04,rrc10,rrc11,rrc12,rrc15,rrc19,rrc23
+//   LEAKS_COLLECTORS comma separated collectors              ten of RIPE RIS and eight of RouteViews (COLLECTORS below)
 //   LEAKS_EVENTS     URL or file of the history of changes   the events.json of the history branch (only with --day)
 //   LEAKS_ADOPTION   file with the Tier-1 clique and the IXP ASes (adoption.json), next to OUT_FILE
 //
@@ -24,15 +24,42 @@ import { pipeline } from 'node:stream/promises';
 import { Readable } from 'node:stream';
 import { join } from 'node:path';
 import net from 'node:net';
-import { readRib, openGz } from './mrt.mjs';
+import { readRib, openDump } from './mrt.mjs';
 
 const { verify } = createRequire(import.meta.url)('../site/verify.js');
 if (net.setDefaultAutoSelectFamilyAttemptTimeout) net.setDefaultAutoSelectFamilyAttemptTimeout(3000);
-export const COLLECTORS = 'rrc00,rrc01,rrc03,rrc04,rrc10,rrc11,rrc12,rrc15,rrc19,rrc23';   // Amsterdam, London, Amsterdam, Geneva, Milan, New York, Frankfurt, Sao Paulo, Johannesburg, Singapore
+// RIPE RIS: Amsterdam, London, Amsterdam, Geneva, Milan, New York, Frankfurt, Sao Paulo, Johannesburg, Singapore.
+// RouteViews (University of Oregon, other peers than RIS): Oregon, route-views3 and 4, Singapore, Johannesburg, Sao Paulo, Sydney, Equinix.
+export const COLLECTORS = 'rrc00,rrc01,rrc03,rrc04,rrc10,rrc11,rrc12,rrc15,rrc19,rrc23,route-views2,route-views3,route-views4,route-views.sg,route-views.napafrica,route-views2.saopaulo,route-views.sydney,route-views.eqix';
+export const isRis = (collector) => /^rrc\d+$/.test(collector);
 // The table dump of a collector: the latest one, or the one of 00:00 UTC of a day (YYYYMMDD).
-export const dumpUrl = (collector, day) => (day
-  ? `https://data.ris.ripe.net/${collector}/${day.slice(0, 4)}.${day.slice(4, 6)}/bview.${day}.0000.gz`
-  : `https://data.ris.ripe.net/${collector}/latest-bview.gz`);
+// For RouteViews the latest one has to be found in the listing of the month (pickLatestRib).
+const RV = 'https://archive.routeviews.org';
+const rvBase = (collector) => (collector === 'route-views2' ? 'bgpdata' : `${collector}/bgpdata`);
+export const rvListing = (collector, month) => `${RV}/${rvBase(collector)}/${month}/RIBS/`;
+export const dumpUrl = (collector, day) => {
+  if (isRis(collector)) {
+    return day ? `https://data.ris.ripe.net/${collector}/${day.slice(0, 4)}.${day.slice(4, 6)}/bview.${day}.0000.gz` : `https://data.ris.ripe.net/${collector}/latest-bview.gz`;
+  }
+  if (!day) throw new Error('the latest RouteViews dump has to be looked up: use latestDumpUrl');
+  return `${RV}/${rvBase(collector)}/${day.slice(0, 4)}.${day.slice(4, 6)}/RIBS/rib.${day}.0000.bz2`;
+};
+// The newest rib file named in the listing of a month (an HTML page), or null.
+export const pickLatestRib = (html) => {
+  const names = [...String(html).matchAll(/rib\.(\d{8})\.(\d{4})\.bz2/g)].map((m) => m[0]);
+  return names.length ? names.sort().at(-1) : null;
+};
+export async function latestDumpUrl(collector, now = new Date()) {
+  if (isRis(collector)) return dumpUrl(collector);
+  for (let back = 0; back < 2; back++) {            // this month, and the last one when this one has just begun
+    const d = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - back, 1));
+    const month = `${d.getUTCFullYear()}.${String(d.getUTCMonth() + 1).padStart(2, '0')}`;
+    const r = await fetch(rvListing(collector, month), { headers: { 'User-Agent': UA }, signal: AbortSignal.timeout(60000) });
+    const name = r.ok ? pickLatestRib(await r.text()) : null;
+    if (name) return `${rvListing(collector, month)}${name}`;
+  }
+  throw new Error(`no RIB file found for ${collector}`);
+}
 const EVENTS = 'https://gitlab.dei.unipd.it/api/v4/projects/5246/repository/files/events.json/raw?ref=history';
 const History = createRequire(import.meta.url)('../site/history.js');
 const UA = 'aspa-explorer (https://aspa.ping6.it; antonio.prado@dei.unipd.it)';
@@ -112,7 +139,7 @@ export class Leaks {
       g = { from, to, between, caida, kind: KIND[caida], routes: 0, feeders: new Set(), origins: new Set(), example: p.slice().reverse() };
       this.groups.set(key, g);
     }
-    g.routes++; g.feeders.add(`${collector}:${feeder}`); g.origins.add(p[0]);
+    g.routes++; g.feeders.add(feeder); g.origins.add(p[0]);
   }
 
   result(limit = 40) {
@@ -222,10 +249,11 @@ async function main() {
   const leaks = new Leaks(aspaMap(aspas), ixp, rel.relOf);
   const used = [];
   for (const c of collectors) {
-    const file = join(cache, dayIso ? `bview-${c}-${dayFlag}.gz` : `bview-${c}.gz`);
-    if (dayIso || !(await fresh(file, 4 * 3600e3))) await download(dumpUrl(c, dayFlag), file);
+    const ext = isRis(c) ? 'gz' : 'bz2';
+    const file = join(cache, dayIso ? `dump-${c}-${dayFlag}.${ext}` : `dump-${c}.${ext}`);
+    if (dayIso || !(await fresh(file, 4 * 3600e3))) await download(dayIso ? dumpUrl(c, dayFlag) : await latestDumpUrl(c), file);
     const t0 = Date.now();
-    const stats = await readRib(openGz(file), (peerAs, path, n) => leaks.add(peerAs, c, Array.from(path.subarray(0, n))));
+    const stats = await readRib(openDump(file), (peerAs, path, n) => leaks.add(peerAs, c, Array.from(path.subarray(0, n))));
     used.push({ collector: c, routes: stats.entries, built: new Date((await stat(file)).mtimeMs).toISOString().replace(/\.\d+Z$/, 'Z') });
     console.error(`${c}: ${stats.entries} routes in ${Math.round((Date.now() - t0) / 1000)} s`);
     if (dayIso) await unlink(file);                  // a day of the past is read once

@@ -3,9 +3,10 @@
 // route of every peer, the AS path. No dependencies.
 import { createReadStream } from 'node:fs';
 import { createGunzip } from 'node:zlib';
+import { spawn } from 'node:child_process';
 
 const TABLE_DUMP_V2 = 13;
-const PEER_INDEX_TABLE = 1, RIB_IPV4_UNICAST = 2, RIB_IPV6_UNICAST = 4;
+const PEER_INDEX_TABLE = 1, RIB_IPV4_UNICAST = 2, RIB_IPV6_UNICAST = 4, RIB_IPV4_UNICAST_ADDPATH = 8, RIB_IPV6_UNICAST_ADDPATH = 10;
 const MAX_PATH = 512;
 
 // The AS numbers of an AS_PATH attribute (4-byte numbers) written into `out`; returns their count, or -1 when
@@ -55,21 +56,23 @@ export function readPeers(buf, pos, end) {
 export async function readRib(stream, onEntry) {
   const path = new Uint32Array(MAX_PATH);
   let carry = null, peers = [];
-  const stats = { records: 0, entries: 0, skipped: 0 };
+  const stats = { records: 0, entries: 0, skipped: 0, other: 0 };
   const record = (buf, pos, len, type, subtype) => {
     stats.records++;
     if (type !== TABLE_DUMP_V2) return;
     const end = pos + len;
     if (subtype === PEER_INDEX_TABLE) { peers = readPeers(buf, pos, end); return; }
-    if (subtype !== RIB_IPV4_UNICAST && subtype !== RIB_IPV6_UNICAST) return;
+    const addPath = subtype === RIB_IPV4_UNICAST_ADDPATH || subtype === RIB_IPV6_UNICAST_ADDPATH;   // an entry has a path identifier
+    if (subtype !== RIB_IPV4_UNICAST && subtype !== RIB_IPV6_UNICAST && !addPath) { if (![3, 5, 9, 11].includes(subtype)) stats.other++; return; }   // (the multicast tables are of no use here)
+    const head = addPath ? 12 : 8;                    // peer, time, [path identifier,] attribute length
     pos += 4;                                         // sequence number
     const plen = buf[pos]; pos += 1 + Math.ceil(plen / 8);
     const count = buf.readUInt16BE(pos); pos += 2;
-    for (let i = 0; i < count && pos + 8 <= end; i++) {
+    for (let i = 0; i < count && pos + head <= end; i++) {
       const peer = buf.readUInt16BE(pos);
-      const alen = buf.readUInt16BE(pos + 6);
-      const n = pathOfAttributes(buf, pos + 8, pos + 8 + alen, path);
-      pos += 8 + alen;
+      const alen = buf.readUInt16BE(pos + head - 2);
+      const n = pathOfAttributes(buf, pos + head, pos + head + alen, path);
+      pos += head + alen;
       if (n < 1) { stats.skipped++; continue; }
       stats.entries++;
       onEntry(peers[peer] ? peers[peer].as : 0, path, n);
@@ -90,3 +93,13 @@ export async function readRib(stream, onEntry) {
 }
 
 export const openGz = (file) => createReadStream(file).pipe(createGunzip({ chunkSize: 1 << 20 }));
+
+// RouteViews publishes bzip2 files: the system's bzip2 reads them (a failure of the program ends the stream with an error).
+export function openBz2(file) {
+  const child = spawn('bzip2', ['-dc', file], { stdio: ['ignore', 'pipe', 'inherit'] });
+  child.on('error', (err) => child.stdout.destroy(err));
+  child.on('close', (code) => { if (code) child.stdout.destroy(new Error(`bzip2 ended with code ${code} on ${file}`)); });
+  return child.stdout;
+}
+
+export const openDump = (file) => (file.endsWith('.bz2') ? openBz2(file) : openGz(file));

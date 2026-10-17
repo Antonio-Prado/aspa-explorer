@@ -2,7 +2,7 @@
 import assert from 'node:assert/strict';
 import { Readable } from 'node:stream';
 import { readRib, readAsPath } from './mrt.mjs';
-import { Leaks, aspaMap, relations, byAs, addHistory, dumpUrl, COLLECTORS } from './build-leaks.mjs';
+import { Leaks, aspaMap, relations, byAs, addHistory, dumpUrl, pickLatestRib, rvListing, isRis, COLLECTORS } from './build-leaks.mjs';
 
 let passed = 0;
 const test = async (name, fn) => { await fn(); passed++; console.log('ok  ', name); };
@@ -118,7 +118,18 @@ await test('the history keeps one row a day, in order, and a rerun replaces the 
 await test('the table dump of a collector: the latest, or the one of a day', () => {
   assert.equal(dumpUrl('rrc10'), 'https://data.ris.ripe.net/rrc10/latest-bview.gz');
   assert.equal(dumpUrl('rrc10', '20261010'), 'https://data.ris.ripe.net/rrc10/2026.10/bview.20261010.0000.gz');
-  assert.equal(COLLECTORS.split(',').length, 10);
+  assert.equal(COLLECTORS.split(',').filter(isRis).length, 10);
+  assert.equal(COLLECTORS.split(',').filter((c) => !isRis(c)).length, 8);
+  assert.equal(dumpUrl('route-views2', '20261010'), 'https://archive.routeviews.org/bgpdata/2026.10/RIBS/rib.20261010.0000.bz2');
+  assert.equal(dumpUrl('route-views.sg', '20261010'), 'https://archive.routeviews.org/route-views.sg/bgpdata/2026.10/RIBS/rib.20261010.0000.bz2');
+  assert.equal(rvListing('route-views3', '2026.10'), 'https://archive.routeviews.org/route-views3/bgpdata/2026.10/RIBS/');
+  assert.throws(() => dumpUrl('route-views2'));
+});
+
+await test('the newest RouteViews RIB of a listing', () => {
+  const html = '<a href="rib.20261016.2200.bz2">x</a><a href="rib.20261017.0000.bz2">y</a><a href="rib.20261017.1400.bz2">z</a><a href="updates.20261017.1400.bz2">u</a>';
+  assert.equal(pickLatestRib(html), 'rib.20261017.1400.bz2');
+  assert.equal(pickLatestRib('<html>empty</html>'), null);
 });
 
 console.log(`${passed} tests passed`);
