@@ -1,6 +1,6 @@
 // Unit tests for scripts/build-adoption.mjs (no dependencies). Run with: node scripts/test-adoption.mjs
 import assert from 'node:assert/strict';
-import { parseDelegated, registry, parseRelationships, coneSizes, aggregate, tierOf, parseCaidaHeader } from './build-adoption.mjs';
+import { parseDelegated, registry, parseRelationships, coneSizes, aggregate, tierOf, parseCaidaHeader, registryDoc } from './build-adoption.mjs';
 
 let passed = 0;
 const test = (name, fn) => { fn(); passed++; console.log('ok  ', name); };
@@ -70,5 +70,9 @@ test('the clique and the exchange points come from the header of the CAIDA file'
   const h = parseCaidaHeader('# source:topology|BGP|20261001\n# input clique: 174 209 3356\n# IXP ASes: 1200 4635\n1|2|-1|bgp\n');
   assert.deepEqual(h, { clique: [174, 209, 3356], ixp: [1200, 4635] });
   assert.deepEqual(parseCaidaHeader('1|2|-1|bgp\n'), { clique: [], ixp: [] });
+});
+test('the country and registry of the ASes seen, in one small object', () => {
+  const where = registry(parseDelegated(delegated, 'ripe'));
+  assert.deepEqual(registryDoc(new Set([137, 1103, 2002, 99999]), where), { 137: 'ITr', 1103: 'NLr', 2002: 'EUr' });
 });
 console.log(`${passed} tests passed`);

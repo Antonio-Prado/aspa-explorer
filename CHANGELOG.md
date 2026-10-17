@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.16.1] - 2026-10-17
+
+### Changed
+- The text of the route-leaks table says that many valleys can be the fault of an ASPA that forgets one of its providers, and points to the evidence table.
+
+## [1.16.0] - 2026-10-17
+
+### Added
+- **Route leaks (valleys) seen now** in *Routes seen in BGP*: the paths that the ASPAs prove to have a valley, grouped by the place of the valley (the two ASes it lies between and the ASes inside it), with paths, routes and feeders, and a link to the path check. Valleys are route leaks, not tromboning.
+- **Possible tromboning** in *Routes seen in BGP*: of the routes that collectors fed by networks of the origin's own country see for it, how many go through a network registered in another country or another RIR region, and which ones. It is a candidate only, shown when three networks of the country feed the collectors, with the reasons why (the registration country is not where a network works) and the way to confirm (a traceroute from a probe in the country). The definition follows the literature (Edmundson et al.), which measures it with traceroutes. New `site/tromboning.js` with tests (`scripts/test-tromboning.mjs`).
+- `/api/v1/asn-registry.json`: the country and registry of every AS seen in BGP, built with the adoption numbers (`asn-registry.json` next to `adoption.json`).
+
 ## [1.15.4] - 2026-10-17
 
 ### Changed

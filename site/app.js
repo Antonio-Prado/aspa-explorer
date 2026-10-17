@@ -353,8 +353,8 @@ function checkRoutes(routes) {
   for (const rt of routes) {
     if (!Array.isArray(rt.path) || !rt.path.length || !rt.path.every((n) => Number.isInteger(n))) { skipped++; continue; }
     const key = rt.path.join(' ');
-    const e = byPath.get(key) || { bgp: rt.path, routes: 0, prefixes: new Set() };
-    e.routes++; e.prefixes.add(rt.target_prefix);
+    const e = byPath.get(key) || { bgp: rt.path, routes: 0, prefixes: new Set(), feeders: new Set() };
+    e.routes++; e.prefixes.add(rt.target_prefix); e.feeders.add(rt.source_id);
     byPath.set(key, e);
   }
   const rows = [...byPath.values()].map((e) => {
@@ -364,13 +364,83 @@ function checkRoutes(routes) {
     let why = '';
     if (v.result === 'Invalid') why = `a valley between ${v.path[v.maxUp - 1]} and ${v.path[v.N - v.maxDown]}`;
     else if (v.result === 'Unknown') why = `no ASPA from ${missing.slice(0, 4).join(', ')}${missing.length > 4 ? ` and ${missing.length - 4} more` : ''}`;
-    return { v, result: v.result, why, shown: compressBgp(e.bgp), routes: e.routes, prefixes: e.prefixes.size };
+    return { v, result: v.result, why, shown: compressBgp(e.bgp), routes: e.routes, prefixes: e.prefixes.size, feeders: e.feeders };
   });
   const order = { Invalid: 0, Unknown: 1, Valid: 2 };
   rows.sort((a, b) => order[a.result] - order[b.result] || b.routes - a.routes);
   return { rows, skipped };
 }
 const compressBgp = (p) => p.filter((n, i) => i === 0 || n !== p[i - 1]);
+
+
+// The route leaks seen now: the paths that the ASPAs prove to have a valley (a route that came down from a
+// provider or a peer and went up again), grouped by the place of the valley.
+function leakPanel(rows) {
+  const groups = new Map();
+  for (const r of rows) {
+    if (r.result !== 'Invalid') continue;
+    const v = r.v;
+    const from = v.path[v.maxUp - 1], to = v.path[v.N - v.maxDown];
+    const key = `${from}|${to}`;
+    const g = groups.get(key) || { from, to, between: v.path.slice(v.maxUp, v.N - v.maxDown), paths: 0, routes: 0, feeders: new Set(), example: r.shown };
+    g.paths++; g.routes += r.routes; for (const f of r.feeders) g.feeders.add(f);
+    groups.set(key, g);
+  }
+  if (!groups.size) return null;
+  const list = [...groups.values()].sort((x, y) => y.feeders.size - x.feeders.size || y.routes - x.routes);
+  const head = el('tr', {}, ...['Valley between', 'ASes in the valley', 'Paths', 'Routes', 'Feeders', 'Example'].map((t, i) => el('th', { scope: 'col', class: i >= 2 && i <= 4 ? 'num' : undefined, text: t })));
+  const trs = list.slice(0, 10).map((g) => el('tr', {},
+    el('td', {}, asChip(g.from), ' ', asChip(g.to)),
+    el('td', {}, g.between.length ? g.between.map((x) => asChip(x)) : '–'),
+    el('td', { class: 'num', text: fmt.format(g.paths) }), el('td', { class: 'num', text: fmt.format(g.routes) }), el('td', { class: 'num', text: fmt.format(g.feeders.size) }),
+    el('td', {}, el('a', { href: `#path=${encodeURIComponent(g.example.join(' '))}&from=down`, text: 'open the path' }))));
+  return el('div', {},
+    el('h3', { class: 'subhead', text: 'Route leaks (valleys) seen now' }),
+    el('section', { class: 'table-wrap card', tabindex: '0', 'aria-label': 'Route leaks seen now' }, el('table', { class: 'checks live nb' },
+      el('caption', { class: 'sr-only', text: 'Paths that the ASPAs show to contain a valley, grouped by the place of the valley, with the paths, routes and feeders that see it' }),
+      el('thead', {}, head), el('tbody', {}, ...trs))),
+    el('p', { class: 'hint', text: `${fmt.format(list.length)} place${list.length === 1 ? '' : 's'} of valley${list.length > 10 ? ', the ten seen by most feeders are listed' : ''}. A valley is a route that came down from a provider or a peer and went up again: a route leak, or a forged path. The ASes in the valley are the ones to look at first. Before blaming them, look at the neighbours below: an ASPA that does not list one of its real providers makes valid routes look like valleys, and many of these places can be just that. The ASPAs prove a valley only where they are published, so paths of unknown verdict may hide others.` }));
+}
+
+// The registry of the ASes (country and region), from the daily numbers: a function AS number -> {cc, rir} or null.
+let registryFn;
+async function getRegistry() {
+  if (registryFn !== undefined) return registryFn;
+  try {
+    const d = await getJson('/api/v1/asn-registry.json');
+    const m = d.asns || {};
+    registryFn = (n) => { const v = m[n]; return v ? { cc: v.slice(0, 2), rir: v[2] } : null; };
+  } catch { return null; }
+  return registryFn;
+}
+
+const regionName = { r: 'RIPE NCC', a: 'ARIN', p: 'APNIC', l: 'LACNIC', f: 'AFRINIC' };
+let regionNames = null;
+try { regionNames = new Intl.DisplayNames(['en'], { type: 'region' }); } catch { /* the code is shown */ }
+const countryName = (cc) => { try { return (regionNames && regionNames.of(cc)) || cc; } catch { return cc; } };
+
+// Possible tromboning of the origin: routes between two networks of its country that go through another country.
+function trombonePanel(origin, tr) {
+  if (!tr || !tr.country) return null;
+  const as = 'AS' + origin, home = countryName(tr.country);
+  const title = el('h3', { class: 'subhead', text: `Possible tromboning of ${as} (${home})` });
+  if (!tr.enough) {
+    return el('div', {}, title, el('p', { class: 'hint', text: `Only ${fmt.format(tr.feeders)} network${tr.feeders === 1 ? '' : 's'} registered in ${home} feed the collectors with a route of ${as}: too few to say anything.` }));
+  }
+  const intro = `Of the ${fmt.format(tr.domestic)} routes that collectors fed by networks registered in ${home} (${fmt.format(tr.feeders)} of them) see for ${as}, ${fmt.format(tr.crossCountry)} go through a network registered in another country and ${fmt.format(tr.crossRegion)} through another RIR region.`;
+  const list = [...tr.byAs].sort((x, y) => y[1].feeders - x[1].feeders || y[1].paths - x[1].paths).slice(0, 8);
+  const kids = [title, el('p', { text: intro })];
+  if (list.length) {
+    const head = el('tr', {}, ...['Network', 'Registered in', 'Region', 'Routes', 'Feeders'].map((t, i) => el('th', { scope: 'col', class: i >= 3 ? 'num' : undefined, text: t })));
+    kids.push(el('section', { class: 'table-wrap card', tabindex: '0', 'aria-label': `Networks in the middle of the domestic routes of ${as}` }, el('table', { class: 'checks live nb' },
+      el('caption', { class: 'sr-only', text: `Networks registered in another country that domestic routes of ${as} go through` }),
+      el('thead', {}, head),
+      el('tbody', {}, ...list.map(([a, e]) => el('tr', {}, el('td', {}, asChip('AS' + a)), el('td', { text: countryName(e.cc) }),
+        el('td', { text: e.outsideRegion ? 'another region' : 'same region' }), el('td', { class: 'num', text: fmt.format(e.paths) }), el('td', { class: 'num', text: fmt.format(e.feeders) })))))));
+  }
+  kids.push(el('p', { class: 'hint', text: 'A lead, not proof. The literature calls a route a trombone when it starts and ends in the same country and crosses another, and measures it with traceroutes. From BGP only the candidate is visible, and the country where an AS is registered is not where it works: a transit network registered in the United States has points of presence in Europe, and an exchange point can keep a route local while the networks on it are registered abroad. To confirm one, measure the path (a traceroute from a probe in the country, for instance with RIPE Atlas) and look at the latency.' }));
+  return el('div', {}, ...kids);
+}
 
 // What the evidence needs besides the routes: the Tier-1 clique and the exchange-point ASes, from the daily
 // adoption numbers. null when they are not available (the evidence is then left out).
@@ -583,12 +653,16 @@ async function renderLiveRoutes(text) {
   for (const r of rows) if (r.shown.length > 1) origins.set(r.shown[r.shown.length - 1], (origins.get(r.shown[r.shown.length - 1]) || 0) + r.routes);
   const total = [...origins.values()].reduce((a, b) => a + b, 0);
   const ctx = await getEvidenceCtx();
+  const lookupAs = await getRegistry();
+  const leaks = leakPanel(rows);
+  if (leaks) kids.push(leaks);
   let usedEvidence = false;
   for (const [origin, n] of [...origins].sort((a, b) => b[1] - a[1]).slice(0, 2)) {
     if (n < total * 0.1) continue;
     const ev = ctx ? AspaEvidence.analyse(routes, origin, ctx) : null;
     const panel = neighbourPanel(origin, rows, ev);
     if (panel) { kids.push(panel); usedEvidence = usedEvidence || Boolean(ev); }
+    if (lookupAs) { const tp = trombonePanel(origin, AspaTromboning.analyse(routes, origin, lookupAs, { ixp: ctx ? ctx.ixp : new Set() })); if (tp) kids.push(tp); }
   }
   if (usedEvidence) kids.push(el('p', { class: 'hint', text: `Evidence: a neighbour counts as a provider of the origin when the route passes through it up to a Tier-1 network (the clique of ${ctx.source}). A peer, or a provider that is not asked to carry the route upwards, passes upwards only what it learned from its customers. Weak: seen by few feeders or on a small share of the paths. No evidence is not proof of a peer: the collectors see only part of the Internet, and paths of two ASes say nothing. The routes are the last RIB dump of the collectors, which can be up to eight hours old.` }));
   kids.push(el('section', { class: 'table-wrap card', tabindex: '0', 'aria-label': 'Distinct AS paths of the routes' }, el('table', { class: 'checks live' },

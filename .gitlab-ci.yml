@@ -30,6 +30,7 @@ js-syntax:
     - node --check site/history.js
     - node --check site/quality.js
     - node --check site/evidence.js
+    - node --check site/tromboning.js
     - node --check site/status-checks.js
     - node --check scripts/build-api.mjs
     - node --check scripts/build-adoption.mjs
@@ -45,6 +46,7 @@ unit-tests:
     - node scripts/test-api.mjs
     - node scripts/test-adoption.mjs
     - node scripts/test-evidence.mjs
+    - node scripts/test-tromboning.mjs
     - node scripts/test-status.mjs
     - node scripts/test-notify.mjs
 
@@ -81,7 +83,7 @@ js-security-lint:
   stage: security
   image: node:22-alpine
   script:
-    - npx --yes eslint@9 --no-config-lookup -c eslint.config.mjs site/app.js site/footer.js site/verify.js site/history.js site/quality.js site/evidence.js site/status-checks.js site/adoption.js site/stats.js site/download.js site/status.js site/examples.js site/subscription.js
+    - npx --yes eslint@9 --no-config-lookup -c eslint.config.mjs site/app.js site/footer.js site/verify.js site/history.js site/quality.js site/evidence.js site/tromboning.js site/status-checks.js site/adoption.js site/stats.js site/download.js site/status.js site/examples.js site/subscription.js
 
 secret-detection:
   extends: .regular

@@ -77,6 +77,19 @@ export function parseRelationships(text) {
   return customers;
 }
 
+// The country and the registry of every AS seen in BGP, in one small object: AS number -> "NLr" (the country
+// and one letter for the registry: r RIPE NCC, a ARIN, p APNIC, l LACNIC, f AFRINIC). The page uses it to
+// tell which networks a route goes through are registered in another country.
+export const RIR_LETTER = { ripe: 'r', arin: 'a', apnic: 'p', lacnic: 'l', afrinic: 'f' };
+export function registryDoc(seen, where) {
+  const asns = {};
+  for (const a of seen) {
+    const w = where(a);
+    if (w) asns[a] = w.cc + RIR_LETTER[w.rir];
+  }
+  return asns;
+}
+
 // The header of the CAIDA file names the Tier-1 clique ("# input clique: 174 209 ...") and the exchange-point
 // ASes ("# IXP ASes: ..."): both are used by the page to read the routes seen in BGP.
 export function parseCaidaHeader(text) {
@@ -200,6 +213,9 @@ async function main() {
   const tmp = `${outFile}.tmp`;
   await writeFile(tmp, JSON.stringify(doc) + '\n');
   await rename(tmp, outFile);
+  const regFile = join(outFile, '..', 'asn-registry.json');
+  await writeFile(`${regFile}.tmp`, JSON.stringify({ generated: doc.generated, asns: registryDoc(seen, registry(ranges)) }) + '\n');
+  await rename(`${regFile}.tmp`, regFile);
   console.log(`${doc.generated}: ${doc.seen} ASes seen, ${doc.aspa} with an ASPA (${doc.pct}%), ${doc.by_country.length} countries, CAIDA ${caida.date}`);
 }
 
