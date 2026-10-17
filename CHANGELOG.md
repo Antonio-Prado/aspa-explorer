@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.16.2] - 2026-10-17
+
+### Fixed
+- The details of a path under its row (the verdict and the hop-by-hop table) no longer make the table wider than the screen: the row inherited the rule that keeps the first column on one line, so its text did not wrap and the table had to be scrolled to the right.
+
+### Changed
+- Documentation brought up to date with the project: the README (features grouped, a second diagram with all the pieces, the list of endpoints, the repository layout, the checks), `CONTRIBUTING.md` (Node.js 22, the services of the host, the third scheduled job, the cache of assets), `SECURITY.md` (the notification service, the webhooks and the API are in scope) and `CITATION.cff` (abstract and keywords).
+
 ## [1.16.1] - 2026-10-17
 
 ### Changed

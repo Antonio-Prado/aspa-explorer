@@ -9,6 +9,15 @@ authors:
     email: antonio.prado@dei.unipd.it
     affiliation: "Department of Information Engineering, University of Padova"
 license: MIT
+abstract: "A web page, a small API and a notification service on top of a Routinator validator: lookups of the validated ASPA objects of the RPKI, AS path and route checks against them, statistics on their adoption, feeds, badges and notifications."
+keywords:
+  - ASPA
+  - RPKI
+  - BGP
+  - route leaks
+  - AS path verification
+  - routing security
+  - Routinator
 repository-code: "https://gitlab.dei.unipd.it/Antonio-Prado/aspa-explorer"
 url: "https://aspa.ping6.it/"
 preferred-citation:

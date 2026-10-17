@@ -15,6 +15,9 @@
   <a href="https://aspa.ping6.it/" target="_blank" rel="noopener">Live site</a> ·
   <a href="https://rpki.ping6.it/" target="_blank" rel="noopener">Validator</a> ·
   <a href="https://aspa.ping6.it/guide.html" target="_blank" rel="noopener">Guide</a> ·
+  <a href="https://aspa.ping6.it/api.html" target="_blank" rel="noopener">API</a> ·
+  <a href="https://aspa.ping6.it/statistics.html" target="_blank" rel="noopener">Statistics</a> ·
+  <a href="https://aspa.ping6.it/status.html" target="_blank" rel="noopener">Status</a> ·
   <a href="https://gitlab.dei.unipd.it/Antonio-Prado/aspa-explorer/-/wikis/home#" target="_blank" rel="noopener">Wiki</a> ·
   <a href="CHANGELOG.md" target="_blank" rel="noopener">Changelog</a> ·
   <a href="CONTRIBUTING.md" target="_blank" rel="noopener">Contributing</a>
@@ -70,23 +73,42 @@ The validator is a [Routinator](https://github.com/NLnetLabs/routinator) instanc
 
 ## Features
 
-- **Lookup:** type `AS680`, `as 680` or `680` to see the AS's own ASPA and every ASPA that names it as a provider. Each lookup has a shareable address (`/#AS680`).
+**Look up and check**
+
+- **Lookup:** type `AS680`, `as 680` or `680` to see the AS's own ASPA, every ASPA that names it as a provider, its history and the quality findings about its ASPA. Each AS has a page of its own (`/as/AS680`) and a shareable address (`/#AS680`).
 - **AS path check:** paste a path as your router shows it (neighbour first, origin last) and see whether it passes the ASPA verification procedure of the IETF draft (upstream or downstream), hop by hop, with the reason for a *Valid*, *Unknown* or *Invalid* verdict. It runs in the browser on the ASPA objects listed on the page, and a result can be shared with a link.
-- **Routes seen in BGP:** for a prefix or an AS, the routes that the RIPE RIS collectors see (through RIPEstat), each distinct AS path checked with the downstream procedure: how many routes are valid, unknown or invalid, and the paths with a valley. This box sends the prefix or the AS to RIPEstat; the guide says so.
-- **Who is the provider:** in the neighbours of an origin, an evidence column says which neighbours look like its providers because its routes go on through them to a Tier-1 network, and which of them its ASPA does not list. It is a reading of the routes of the moment, with its limits stated, not a verdict.
-- **Route leaks and possible tromboning:** the routes seen in BGP also list the valleys that the ASPAs prove, grouped by place, and the domestic routes that cross another country (a candidate for *tromboning* in the sense of the literature, to be confirmed with traceroutes), with the limits stated.
-- **Origin validation:** the same box checks every prefix and origin of those routes against the ROAs of the validator (valid, not found, invalid with the reason), asked of the page's own server, not of a third party.
-- **A page, a badge and a feed for every AS:** `/as/AS3333` opens the page on that AS, `/badge/AS3333.svg` is a badge with its number of providers (Markdown and HTML to paste are in the lookup), and `/feed/AS3333.atom` lists the changes of its ASPA and of the ASPAs that add or drop it as a provider.
+- **Routes seen in BGP:** for a prefix or an AS, the routes that the RIPE RIS collectors see (through RIPEstat; this box sends the prefix or the AS to RIPEstat, and the guide says so). It gives, on one page:
+  - *origin validation*: every prefix and origin checked against the ROAs of the validator (valid, not found, invalid with the reason), asked of the page's own server;
+  - *the AS paths* checked with the downstream procedure (valid, unknown, invalid);
+  - *route leaks*: the valleys that the ASPAs prove, grouped by place, with the feeders that see them;
+  - *the neighbours of the origin*, with an evidence column that says which of them look like its providers because its routes go on through them to a Tier-1 network, and which of them its ASPA does not list;
+  - *possible tromboning*: the domestic routes that cross another country, a candidate in the sense of the literature to be confirmed with traceroutes.
+
+  Evidence and tromboning are readings of the routes of the moment, with their limits stated in the page, not verdicts.
+- **Writing your ASPA:** an examples page with the rules, five cases, the common mistakes and a checker that reviews a list of providers and compares it with the published ASPA.
+
+**Follow**
+
+- **Changes:** the ASPAs that appeared, changed or disappeared in the last 14 days, an Atom feed of them (`/changes.atom`), and the history of one AS. The series is rebuilt from the RIPE NCC RPKI archive (`tools/backfill-history.py`) and extended every day by the `aspa-snapshot` job.
+- **A feed and a badge for every AS:** `/feed/AS3333.atom` lists the changes of its ASPA and of the ASPAs that add or drop it as a provider; `/badge/AS3333.svg` is a badge with its number of providers (Markdown and HTML to paste are in the lookup).
 - **Notifications:** subscribe an e-mail address (confirmed through a link, DKIM-signed mails with a one-click unsubscribe) or a webhook (verified by a challenge, signed with HMAC-SHA256, public https addresses only) to the changes of an AS. The service is `notifier/`, a small Node.js program with SQLite.
-- **Statistics, status and examples:** a statistics page (the charts of the ASPAs, then who has an ASPA, by size of the network, RIR and country, and the 100 largest transit networks, also as `/api/v1/adoption.json`), a status page that shows how fresh each piece of data is, and an examples page with the rules for writing an ASPA, five cases, the common mistakes and a checker for your own list.
-- **Public API:** `/api/v1/as/3333` returns the ASPA, the ASPAs that name it, BGP visibility, quality findings and history as JSON (CORS open); see `site/api.html` and the OpenAPI description in `site/api/openapi.json`.
-- **Overview:** summary tiles on the home page (with the coverage: the share of the ASes seen in BGP that have an ASPA).
-- **Statistics:** four charts: ASPAs over time (daily since October 2023, by RIR, provider ASes, median providers, no-provider ASPAs or coverage, over any period, with a logarithmic scale and CSV/JSON download), ASPAs per RIR, providers per ASPA, most-named providers.
-- **Quality:** checks on every ASPA (AS0 mixed with other providers, a private or reserved provider, two ASes listing each other, providers no collector sees in BGP, expiring objects, very large provider sets) with counts and lists, a *Quality* block in the lookup, and, in the routes check, a table of the neighbours of the origin against its ASPA.
-- **Changes:** the ASPAs that appeared, changed or disappeared in the last 14 days, an Atom feed of them (`/changes.atom`), and the history of one AS in its lookup. The series is rebuilt from the RIPE NCC RPKI archive (`tools/backfill-history.py`) and extended every day by the `aspa-snapshot` job.
-- **Download:** the whole list of ASPAs as CSV or JSON, for one RIR or all (`/api/v1/aspas.csv`, `/api/v1/aspas.json`, and a form on the API page).
+
+**Numbers**
+
+- **Overview:** summary tiles on the home page, with the coverage (the share of the ASes seen in BGP that have an ASPA).
+- **Statistics:** the charts of the ASPAs (over time since October 2023 by RIR, provider ASes, median providers, no-provider ASPAs or coverage, over any period, with a logarithmic scale and CSV/JSON download; per RIR; providers per ASPA; most-named providers) and the adoption: who has an ASPA by size of the network, RIR and country, and the 100 largest transit networks.
+- **Quality:** checks on every ASPA (AS0 mixed with other providers, a private or reserved provider, two ASes listing each other, providers no collector sees in BGP, expiring objects, very large provider sets) with counts and lists, a *Quality* block in the lookup and a *check now* link on the ASes that list each other.
+- **Status:** a page and a dot in the menu that say how fresh each piece of data is (validator, API files, daily history, BGP visibility, adoption numbers, notifications).
+- **Download:** the whole list of ASPAs as CSV or JSON, for one RIR or all.
+
+**Open data**
+
+- **Public API:** `/api/v1/as/3333` returns the ASPA, the ASPAs that name it, BGP visibility, quality findings and history as JSON (CORS open), next to `/api/v1/adoption.json`, `/api/v1/asn-registry.json`, `/api/v1/aspas.csv` and `/api/v1/aspas.json`; see `site/api.html` and the OpenAPI description in `site/api/openapi.json`.
+
+**The project**
+
 - **Built-in guide** in English, with an accessibility statement: <a href="https://aspa.ping6.it/guide.html" target="_blank" rel="noopener">read it on the site</a> (source: <a href="site/guide.html" target="_blank" rel="noopener"><code>site/guide.html</code></a>).
-- **Accessible:** keyboard operable, visible focus, skip link, light and dark themes, reduced-motion aware. Checked with axe-core in both themes (WCAG 2.2 AA rules) with no issues reported.
+- **Accessible:** keyboard operable (tabs included), visible focus, skip link, light and dark themes, reduced-motion aware. Checked with axe-core in both themes (WCAG 2.2 AA rules) with no issues reported.
 - **Plain code, no dependencies, no cookies.** The page is static JavaScript with no build step; the services behind the API, the adoption numbers and the notifications are small Node.js programs that use no package. Strict Content-Security-Policy; remote data goes into the page only through `textContent`.
 
 ## How it works
@@ -121,7 +143,7 @@ sequenceDiagram
         N-->>-B: status (JSON)
     end
 
-    B->>B: render overview, table, lookup and path check
+    B->>B: render the overview, the lookup and the path check
 
     loop about every 10 minutes
         R->>+T: fetch the repositories of the five RIRs
@@ -132,28 +154,49 @@ sequenceDiagram
 
 The diagram above is a UML sequence diagram: the visitor's browser gets the static page from nginx and then the data, which nginx serves from its 2-minute cache or fetches from Routinator, while Routinator validates the RPKI repositories on its own schedule.
 
-The page fetches two same-origin JSON files, which nginx proxies to Routinator and caches:
+The diagram shows the data of the home page. Around it there are a few more pieces, which the wiki describes in *Deployment*:
 
-| Page path | Routinator endpoint |
+```mermaid
+flowchart LR
+    V["Visitor's browser"] -->|"page, /data/*, /api/v1/*"| N["nginx<br>aspa.ping6.it"]
+    N -->|"/jsonext, /api/v1/status,<br>/api/v1/validity"| R["Routinator<br>rpki.ping6.it"]
+    N -->|"per-AS files, lists,<br>adoption numbers"| F[("files built by<br>build-api (15 min)<br>build-adoption (daily)")]
+    N -->|"/api/v1/subscriptions"| S["notifier<br>Node.js + SQLite"]
+    S -->|"mail with DKIM,<br>signed webhooks"| U["subscribers"]
+    V -->|"routes of a prefix or AS"| P["RIPEstat"]
+    V -->|"history, events,<br>visibility"| H["history branch<br>of the public project"]
+    J["daily job<br>on the runner"] -->|"adds the day"| H
+    F -.->|"RIR delegation files,<br>CAIDA relationships"| X["public datasets"]
+```
+
+The same-origin endpoints:
+
+| Page path | What it is |
 |---|---|
-| `/data/aspas.json` | `/jsonext?exclude=routeOrigins,routerKeys` |
-| `/data/status.json` | `/api/v1/status` |
+| `/data/aspas.json`, `/data/status.json` | Routinator's `/jsonext?exclude=routeOrigins,routerKeys` and `/api/v1/status`, proxied and cached for 2 minutes |
+| `/data/validity/AS<n>/<prefix>` | Routinator's origin validation of one route |
+| `/api/v1/as/<n>`, `/badge/AS<n>.svg`, `/feed/AS<n>.atom` | files built every 15 minutes for each AS; any other AS gets a generic answer |
+| `/api/v1/aspas.json`, `/api/v1/aspas.csv`, `/api/v1/meta.json` | the whole list, and when it was built |
+| `/api/v1/adoption.json`, `/api/v1/asn-registry.json` | numbers built once a day |
+| `/api/v1/subscriptions…` | subscriptions, confirmations, unsubscribe and health, served by the notifier |
+| `/changes.atom` | the Atom feed of the changes, proxied from the history branch |
 
 ## Repository layout
 
 ```
+site/                          the web root: the pages (index, guide, api, statistics, examples, status,
+                               subscription), their scripts and style.css, version.json, api/openapi.json,
+                               paper/ and img/
 notifier/                      the notification service (subscriptions, mail with DKIM, webhooks)
-site/                          the web root: index.html, guide.html, api.html, style.css, app.js,
-                               footer.js, verify.js, history.js, quality.js, version.json, api/openapi.json, img/
-assets/                        logo (SVG), screenshots and credit logos used in this README
-deploy/nginx/aspa.conf         nginx server blocks and proxy cache zone
-deploy/nginx/rpki-proxy.conf   proxy settings shared by the data endpoints
-deploy/nginx/security-headers.conf   security headers (server block and /client-ip)
-scripts/                       CI helpers and jobs: nginx check, version check, unit tests, the builders
-                               of the per-AS API (build-api.mjs) and of the adoption numbers (build-adoption.mjs), build info, package audit, ASPA snapshot,
-                               release and wiki publishing
-.gitlab-ci.yml                 the CI pipeline (checks, security, scheduled and publishing jobs)
-deploy/freebsd/                daily refresh of the pkg vulnerability database, rc script of the notifier
+scripts/                       the builders of the per-AS API (build-api.mjs) and of the adoption numbers
+                               (build-adoption.mjs), the daily snapshot, release and wiki publishing, the CI
+                               helpers and the unit tests (test-*.mjs)
+tools/                         backfill-history.py rebuilds the history from the RIPE NCC RPKI archive
+deploy/nginx/                  server blocks and proxy cache zone (aspa.conf), the proxy settings shared by
+                               the data endpoints (rpki-proxy.conf) and the security headers
+deploy/freebsd/                rc script of the notifier, daily refresh of the pkg vulnerability database
+assets/                        logo, screenshots and credit logos used in this README
+.gitlab/, .gitlab-ci.yml       issue and merge request templates, and the CI pipeline
 eslint.config.mjs              security rules for the browser code (no innerHTML, eval, ...)
 ```
 
@@ -165,11 +208,11 @@ eslint.config.mjs              security rules for the browser code (no innerHTML
 4. For the per-AS API, badges and feeds, run `node scripts/build-api.mjs /var/db/aspa-gen` (Node.js 18+, with `site/history.js` and `site/quality.js` next to its `../site`) every 15 minutes as an unprivileged user; it builds into a new directory and switches a `current` symlink that nginx serves. Without it the AS endpoints still answer, with "no ASPA".
 5. Notifications (optional): run `notifier/main.mjs` as an unprivileged user with the `deploy/freebsd/aspa_notify` rc script (Node.js 22 with `node:sqlite`; the environment variables are listed at the top of the file), route `/api/v1/subscriptions` to it as in `deploy/nginx/aspa.conf`, and publish SPF and DKIM records for the sending domain; see the wiki, Deployment.
 6. Adoption numbers (optional): run `node scripts/build-adoption.mjs /var/db/aspa-gen/adoption.json` once a day (Node.js 18+ and `bunzip2`; it downloads the RIR delegation files and the CAIDA relationships into a cache next to the output).
-7. Make sure the Routinator HTTP(S) port is reachable from the web server, then `nginx -t && nginx -s reload`.
+7. Make sure the Routinator HTTP(S) port is reachable from the web server (it must expose `/jsonext`, `/api/v1/status` and `/api/v1/validity`), then `nginx -t && nginx -s reload`.
 
 ## Development
 
-No build step and no dependencies. `make check` runs the same checks as the CI pipeline: JavaScript syntax, HTML validation, nginx configuration test, version consistency, a security lint of the browser code and the unit tests of the ASPA path verification (`make test`, which also covers the API builder and the notifier). The pipeline also scans the git history for secrets (`make secrets`). Scheduled jobs audit the packages of the host weekly and log a daily snapshot of the ASPA data to the project's *Model experiments* (adoption over time); see [CONTRIBUTING.md](CONTRIBUTING.md). Details in <a href="CONTRIBUTING.md" target="_blank" rel="noopener">CONTRIBUTING.md</a>.
+No build step and no dependencies. `make check` runs the same checks as the CI pipeline: JavaScript syntax, HTML validation, nginx configuration test, version consistency, a security lint of the browser code and the unit tests (`make test`: the ASPA path verification, the API and adoption builders, the evidence and tromboning readings, the status checks and the notifier). The pipeline also scans the git history for secrets (`make secrets`). Scheduled jobs audit the packages of the host weekly, log a daily snapshot of the ASPA data to the project's *Model experiments* and copy the wiki to the public mirror; the builders and the notifier run on the host itself. See [CONTRIBUTING.md](CONTRIBUTING.md).
 
 Releases follow [Semantic Versioning](https://semver.org/); the version shown in the footer lives in <a href="site/version.json" target="_blank" rel="noopener"><code>site/version.json</code></a> and must match the latest entry of the <a href="CHANGELOG.md" target="_blank" rel="noopener">changelog</a>.
 
