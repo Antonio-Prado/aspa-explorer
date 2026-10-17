@@ -473,13 +473,7 @@ function trombonePanel(origin, tr, routes) {
   }
   const measure = measureBlock(origin, tr, routes);
   if (measure) kids.push(measure);
-  const atlas = el('p', { class: 'hint' });
-  kids.push(atlas);
-  getJson(`https://atlas.ripe.net/api/v2/probes/?country_code=${encodeURIComponent(tr.country)}&status=1&page_size=1&fields=id`)
-    .then((c) => getJson(`https://atlas.ripe.net/api/v2/probes/?asn_v4=${origin}&status=1&page_size=1&fields=id`).then((n) => ({ c: c.count, n: n.count })))
-    .then(({ c, n }) => { atlas.textContent = `For a longer measurement: RIPE Atlas has ${fmt.format(c)} connected probes in ${home}${n ? ` and ${fmt.format(n)} in ${as}` : ''}. With the RIPE Atlas tools (an API key and some credits are needed), a traceroute from probes of the country towards an address of one of the prefixes of ${as} is, for example, \`ripe-atlas measure traceroute --target <address> --from-country ${tr.country} --probes 5\`; then look at the country and the delay of each hop.`; })
-    .catch(() => { /* the line is simply not shown */ });
-  kids.push(el('p', { class: 'hint', text: 'A lead, not proof. The literature calls a route a trombone when it starts and ends in the same country and crosses another, and measures it with traceroutes. From BGP only the candidate is visible, and the country where an AS is registered is not where it works: a transit network registered in the United States has points of presence in Europe, and an exchange point can keep a route local while the networks on it are registered abroad. To confirm one, measure the path (a traceroute from a probe in the country, for instance with RIPE Atlas) and look at the latency.' }));
+  kids.push(el('p', { class: 'hint', text: 'A lead, not proof. The literature calls a route a trombone when it starts and ends in the same country and crosses another, and measures it with traceroutes. From BGP only the candidate is visible, and the country where an AS is registered is not where it works: a transit network registered in the United States has points of presence in Europe, and an exchange point can keep a route local while the networks on it are registered abroad. To confirm one, press the button above and look at the delays of the probes.' }));
   return el('div', {}, ...kids);
 }
 

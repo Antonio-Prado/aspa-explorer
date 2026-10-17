@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.24.10] - 2026-10-17
+
+### Removed
+- The line on RIPE Atlas (the number of probes and the command to run) under the possible-tromboning table: the measurement is now made by the page, and the connection to `atlas.ripe.net` is no longer allowed by the content security policy.
+
 ## [1.24.9] - 2026-10-17
 
 ### Changed
