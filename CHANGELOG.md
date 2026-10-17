@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.24.1] - 2026-10-17
+
+### Fixed
+- In the table *Route leaks (valleys) seen now* of the routes check the ASes in the valley were shown as a web address instead of AS numbers (the same fault as in the statistics page, in 1.18.2): a list of nodes is now always taken as a list of children.
+- The measurement of the tromboning no longer counts the network of the probe itself as a foreign network.
+
+## [1.24.0] - 2026-10-17
+
+### Added
+- *Measure it now* in the possible-tromboning panel: a traceroute from up to three probes in the country of the AS, through Globalping, towards an address of one of its prefixes; each hop is mapped to its network by RIPEstat and shown with its country and delay, with the networks on the way, the first foreign one, the biggest jump of the delay and a note when the round trip is long for two points of one country. It starts only when the visitor presses the button, and the page says who sees what. The connection to `api.globalping.io` is allowed by the content security policy.
+- In the tables of the paths, the ASes, the feeder and the prefix are links (to the page of the AS and to the routes of the prefix), and each announcement of the live updates has *details*, the hop-by-hop check of its path, as in the table of the routes.
+
 ## [1.23.4] - 2026-10-17
 
 ### Fixed

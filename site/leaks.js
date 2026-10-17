@@ -13,7 +13,7 @@
       if (v === undefined || v === null || v === false) continue;
       if (k === 'class') n.className = v; else if (k === 'text') n.textContent = v; else n.setAttribute(k, v);
     }
-    for (const c of kids) if (c !== null && c !== undefined && c !== false) n.append(c instanceof Node ? c : document.createTextNode(String(c)));
+    for (const c of kids.flat(Infinity)) if (c !== null && c !== undefined && c !== false) n.append(c instanceof Node ? c : document.createTextNode(String(c)));
     return n;
   }
   const chip = (as) => el('a', { class: 'chip', href: `/as/${as}`, text: as });

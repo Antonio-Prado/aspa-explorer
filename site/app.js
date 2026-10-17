@@ -25,7 +25,7 @@ function el(tag, attrs, ...children) {
     else if (k.startsWith('on')) node.addEventListener(k.slice(2), v);
     else node.setAttribute(k, v === true ? '' : v);
   }
-  for (const c of children) {
+  for (const c of children.flat(Infinity)) {                      // a list of nodes is a list of children, not a string
     if (c === null || c === undefined || c === false) continue;
     node.append(c instanceof Node ? c : document.createTextNode(String(c)));
   }
@@ -54,6 +54,13 @@ const fmtDay = (iso) => (iso ? iso.slice(0, 10) : '?');
 function asChip(as) {
   if (as === 'AS0') return el('span', { class: 'chip zero', text: 'AS0 · no providers' });
   return el('a', { class: 'chip', href: '#' + as, text: as });
+}
+
+// The ASes of a path (numbers, collector side first) as links to their own pages, separated by spaces.
+function pathLinks(numbers) {
+  const nodes = [];
+  numbers.forEach((n, i) => { if (i) nodes.push(' '); nodes.push(el('a', { class: 'aslink', href: `#AS${n}`, text: `AS${n}` })); });
+  return nodes;
 }
 
 function chipList(list, limit) {
@@ -417,7 +424,7 @@ function leakPanel(rows) {
   const head = el('tr', {}, ...['Valley between', 'ASes in the valley', 'Paths', 'Routes', 'Feeders', 'Example'].map((t, i) => el('th', { scope: 'col', class: i >= 2 && i <= 4 ? 'num' : undefined, text: t })));
   const trs = list.slice(0, 10).map((g) => el('tr', {},
     el('td', {}, asChip(g.from), ' ', asChip(g.to)),
-    el('td', {}, g.between.length ? g.between.map((x) => asChip(x)) : '–'),
+    el('td', {}, ...(g.between.length ? g.between.flatMap((x, i) => (i ? [' ', asChip(x)] : [asChip(x)])) : ['–'])),
     el('td', { class: 'num', text: fmt.format(g.paths) }), el('td', { class: 'num', text: fmt.format(g.routes) }), el('td', { class: 'num', text: fmt.format(g.feeders.size) }),
     el('td', {}, el('a', { href: `#path=${encodeURIComponent(g.example.join(' '))}&from=down`, text: 'open the path' }))));
   return el('div', {},
@@ -446,7 +453,7 @@ try { regionNames = new Intl.DisplayNames(['en'], { type: 'region' }); } catch {
 const countryName = (cc) => { try { return (regionNames && regionNames.of(cc)) || cc; } catch { return cc; } };
 
 // Possible tromboning of the origin: routes between two networks of its country that go through another country.
-function trombonePanel(origin, tr) {
+function trombonePanel(origin, tr, routes, registry) {
   if (!tr || !tr.country) return null;
   const as = 'AS' + origin, home = countryName(tr.country);
   const title = el('h3', { class: 'subhead', text: `Possible tromboning of ${as} (${home})` });
@@ -464,14 +471,104 @@ function trombonePanel(origin, tr) {
       el('tbody', {}, ...list.map(([a, e]) => el('tr', {}, el('td', {}, asChip('AS' + a)), el('td', { text: countryName(e.cc) }),
         el('td', { text: e.outsideRegion ? 'another region' : 'same region' }), el('td', { class: 'num', text: fmt.format(e.paths) }), el('td', { class: 'num', text: fmt.format(e.feeders) })))))));
   }
+  const measure = measureBlock(origin, tr, routes, registry);
+  if (measure) kids.push(measure);
   const atlas = el('p', { class: 'hint' });
   kids.push(atlas);
   getJson(`https://atlas.ripe.net/api/v2/probes/?country_code=${encodeURIComponent(tr.country)}&status=1&page_size=1&fields=id`)
     .then((c) => getJson(`https://atlas.ripe.net/api/v2/probes/?asn_v4=${origin}&status=1&page_size=1&fields=id`).then((n) => ({ c: c.count, n: n.count })))
-    .then(({ c, n }) => { atlas.textContent = `To measure it: RIPE Atlas has ${fmt.format(c)} connected probes in ${home}${n ? ` and ${fmt.format(n)} in ${as}` : ''}. With the RIPE Atlas tools (an API key and some credits are needed), a traceroute from probes of the country towards an address of one of the prefixes of ${as} is, for example, \`ripe-atlas measure traceroute --target <address> --from-country ${tr.country} --probes 5\`; then look at the country and the delay of each hop.`; })
+    .then(({ c, n }) => { atlas.textContent = `For a longer measurement: RIPE Atlas has ${fmt.format(c)} connected probes in ${home}${n ? ` and ${fmt.format(n)} in ${as}` : ''}. With the RIPE Atlas tools (an API key and some credits are needed), a traceroute from probes of the country towards an address of one of the prefixes of ${as} is, for example, \`ripe-atlas measure traceroute --target <address> --from-country ${tr.country} --probes 5\`; then look at the country and the delay of each hop.`; })
     .catch(() => { /* the line is simply not shown */ });
   kids.push(el('p', { class: 'hint', text: 'A lead, not proof. The literature calls a route a trombone when it starts and ends in the same country and crosses another, and measures it with traceroutes. From BGP only the candidate is visible, and the country where an AS is registered is not where it works: a transit network registered in the United States has points of presence in Europe, and an exchange point can keep a route local while the networks on it are registered abroad. To confirm one, measure the path (a traceroute from a probe in the country, for instance with RIPE Atlas) and look at the latency.' }));
   return el('div', {}, ...kids);
+}
+
+
+// Measure it: a traceroute from probes in the country of the origin towards an address of its prefixes, through Globalping,
+// and each hop read with the AS that RIPEstat maps its address to (site/traceroute.js). Only when the visitor asks for it.
+const GLOBALPING = 'https://api.globalping.io/v1/measurements';
+const ipAsnCache = new Map();
+async function asnOfIp(ip) {
+  if (ipAsnCache.has(ip)) return ipAsnCache.get(ip);
+  let asn = null;
+  try {
+    const d = await getJson(`https://stat.ripe.net/data/network-info/data.json?resource=${encodeURIComponent(ip)}`);
+    const first = d.data && d.data.asns && d.data.asns[0];
+    asn = first ? Number(first) : null;
+  } catch { /* the hop is shown without an AS */ }
+  ipAsnCache.set(ip, asn);
+  return asn;
+}
+
+async function runTraceroute(address, country, onStatus) {
+  const r = await fetch(GLOBALPING, {
+    method: 'POST', headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+    body: JSON.stringify({ type: 'traceroute', target: address, locations: [{ country, limit: 3 }], measurementOptions: { protocol: 'ICMP' } }),
+  });
+  const body = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(r.status === 429 ? 'the limit of measurements per hour of your address has been reached, try later' : (body.error && body.error.message) || `Globalping answered HTTP ${r.status}`);
+  onStatus(`Measuring from ${body.probesCount || 'a few'} probes`);
+  for (let i = 0; i < 45; i++) {
+    await new Promise((res) => setTimeout(res, 1500));
+    const m = await getJson(`${GLOBALPING}/${encodeURIComponent(body.id)}`);
+    if (m.status !== 'in-progress') return m;
+  }
+  throw new Error('the probes did not finish in time');
+}
+
+function measureBlock(origin, tr, routes, registry) {
+  const target = AspaTraceroute.targetOf(routes, origin);
+  if (!target || !target.address || !registry) return null;
+  const as = 'AS' + origin, home = countryName(tr.country);
+  const btn = el('button', { type: 'button', text: `Measure it now from probes in ${home}` });
+  const status = el('p', { class: 'hint', 'aria-live': 'polite' });
+  const out = el('div', {});
+  btn.addEventListener('click', async () => {
+    btn.disabled = true; out.replaceChildren();
+    status.replaceChildren(el('span', { class: 'busy', text: 'Starting the probes' }));
+    try {
+      const m = await runTraceroute(target.address, tr.country, (t) => status.replaceChildren(el('span', { class: 'busy', text: t })));
+      const ips = [...new Set(m.results.flatMap((x) => (x.result.hops || []).map((h) => h.resolvedAddress)).filter((ip) => ip && !AspaTraceroute.isPrivate(ip)))];
+      status.replaceChildren(el('span', { class: 'busy', text: `Mapping ${ips.length} addresses to their networks` }));
+      const queue = [...ips];
+      await Promise.all(Array.from({ length: 4 }, async () => { for (let ip = queue.shift(); ip; ip = queue.shift()) await asnOfIp(ip); }));
+      const results = m.results.map((x) => AspaTraceroute.summarise(x, tr.country, (ip) => ipAsnCache.get(ip) || null, registry));
+      status.textContent = `Traceroute towards ${target.address}, in ${target.prefix} of ${as}, from ${results.length} probe${results.length === 1 ? '' : 's'} in ${home}.`;
+      out.replaceChildren(...results.map((r) => traceCard(r, target, tr.country)));
+    } catch (err) {
+      status.textContent = `The measurement did not work: ${err.message}.`;
+    }
+    btn.disabled = false;
+  });
+  return el('div', { class: 'measure' }, btn,
+    el('p', { class: 'hint', text: `It runs a traceroute towards ${target.address} (in ${target.prefix}) from up to 3 probes in ${home} through Globalping (globalping.io), and asks RIPEstat which network each hop belongs to. They both see your address and what is asked, and the test counts against the hourly limit of your address.` }),
+    status, out);
+}
+
+function traceCard(r, target, home) {
+  const ccName = (cc) => countryName(cc);
+  const rttText = (v) => (v === null ? '–' : `${v < 10 ? v.toFixed(1) : Math.round(v)} ms`);
+  const notes = [];
+  const path = r.path.map((a) => { const h = r.hops.find((x) => x.asn === a); return `AS${a}${h && h.cc ? ` (${h.cc})` : ''}`; });
+  if (path.length) notes.push(`Networks on the way: ${path.join(' → ')}.`);
+  if (r.status !== 'finished') notes.push('The probe could not run the measurement.');
+  else if (r.reachedAddress !== target.address) notes.push(`The last answer comes from ${r.reachedAddress || 'no address'}, not from ${target.address}: the target does not answer, which is common, so the last network that answers is the last one that is seen.`);
+  if (r.abroad.length) notes.push(`It goes through networks registered in ${r.abroad.map(ccName).join(', ')}${r.exit ? `, the first at hop ${r.exit.n} (AS${r.exit.asn}, ${rttText(r.exit.rtt)})` : ''}. A network registered abroad can have a router at home, so the delay tells more.`);
+  if (r.jump) notes.push(`The delay jumps by ${Math.round(r.jump.by)} ms at hop ${r.jump.hop}: the packet went at most about ${Math.round(r.jump.by * 100)} km further, one way.`);
+  if (r.longDelay) notes.push(`The round trip takes ${rttText(r.lastRtt)}, which is long between two points of the same country (light covers about 100 km each way in a millisecond): the route most likely goes abroad.`);
+  else if (r.lastRtt !== null) notes.push(`Round trip to the last hop: ${rttText(r.lastRtt)}${r.abroad.length ? ', short enough that the foreign networks are probably close by' : ''}.`);
+  const rows = r.hops.map((h) => el('tr', {}, el('td', { class: 'num', text: String(h.n) }),
+    el('td', {}, h.ip ? el('span', { class: 'mono', text: h.ip }) : el('span', { class: 'muted', text: 'no answer' })),
+    el('td', { text: h.asn ? `AS${h.asn}${h.cc ? ` (${ccName(h.cc)})` : ''}` : (h.ip ? (AspaTraceroute.isPrivate(h.ip) ? 'private' : '–') : '') }),
+    el('td', { class: 'num', text: rttText(h.rtt) })));
+  return el('div', { class: 'trace' },
+    el('h4', { text: `${r.probe.city || 'A probe'}, ${ccName(r.probe.country)}${r.probe.asn ? ` · AS${r.probe.asn}${r.probe.network ? ` ${r.probe.network}` : ''}` : ''}` }),
+    ...notes.map((t) => el('p', { class: 'hint', text: t })),
+    el('details', { class: 'embed' }, el('summary', { text: `The ${r.hops.length} hops` }),
+      el('section', { class: 'table-wrap card', tabindex: '0', 'aria-label': `Hops of the traceroute from ${r.probe.city || 'the probe'}` }, el('table', { class: 'checks live nb' },
+        el('caption', { class: 'sr-only', text: 'Hops of the traceroute: address, network and shortest delay' }),
+        el('thead', {}, el('tr', {}, ...['Hop', 'Address', 'Network', 'Delay'].map((t, i) => el('th', { scope: 'col', class: i === 0 || i === 3 ? 'num' : undefined, text: t })))),
+        el('tbody', {}, ...rows)))));
 }
 
 
@@ -538,12 +635,25 @@ function livePanel(origin) {
     seen++;
     const v = AspaVerify.verify(aspaSets, [...a.path].reverse().map((n) => 'AS' + n), 'down');
     counts[v.result]++;
-    const row = el('tr', {},
-      el('td', { text: new Date().toLocaleTimeString('en-GB') }), el('td', { class: 'mono', text: 'AS' + a.peer }), el('td', { class: 'mono', text: a.prefix }),
-      el('td', { class: 'mono pathcell', text: compressBgp(a.path).map((n) => 'AS' + n).join(' ') }),
-      el('td', {}, el('span', { class: 'badge v-' + v.result.toLowerCase(), text: v.result })));
+    const shown = compressBgp(a.path), text = shown.join(' ');
+    const more = el('button', { type: 'button', class: 'linkish', 'aria-expanded': 'false', text: 'details' });
+    const row = el('tr', { class: 'live-row' },
+      el('td', { text: new Date().toLocaleTimeString('en-GB') }),
+      el('td', { class: 'mono' }, el('a', { class: 'aslink', href: `#AS${a.peer}`, text: 'AS' + a.peer })),
+      el('td', { class: 'mono' }, el('a', { class: 'aslink', href: `#routes=${encodeURIComponent(a.prefix)}`, text: a.prefix })),
+      el('td', { class: 'mono pathcell' }, ...pathLinks(shown)),
+      el('td', {}, el('span', { class: 'badge v-' + v.result.toLowerCase(), text: v.result }), ' ', more));
+    // the hop-by-hop check opens under the row that was clicked, as in the table of the routes
+    more.addEventListener('click', () => {
+      if (row._detail) { row._detail.remove(); row._detail = null; more.setAttribute('aria-expanded', 'false'); more.textContent = 'details'; return; }
+      row._detail = el('tr', { class: 'detailrow' }, el('td', { colspan: '5' }, ...pathCheckNodes(text, 'down'),
+        el('p', { class: 'hint' }, el('a', { href: `#path=${encodeURIComponent(text)}&from=down`, text: 'Open this path in the AS path check' }), ' (a link you can share).')));
+      row.after(row._detail);
+      more.setAttribute('aria-expanded', 'true'); more.textContent = 'hide details';
+    });
     tbody.prepend(row);
-    while (tbody.children.length > ROWS) tbody.lastChild.remove();
+    const rows = [...tbody.children].filter((r) => r.classList.contains('live-row'));
+    for (const old of rows.slice(ROWS)) { if (old._detail) old._detail.remove(); old.remove(); }
     sayTally();
   };
   btn.addEventListener('click', () => {
@@ -766,7 +876,7 @@ async function renderLiveRoutes(text) {
       const btn = el('button', { type: 'button', class: 'linkish', 'aria-expanded': 'false', text: 'details' });
       const tr = el('tr', {},
         el('td', {}, el('span', { class: 'badge v-' + r.result.toLowerCase(), text: r.result })),
-        el('td', { class: 'mono pathcell' }, r.shown.map((x) => 'AS' + x).join(' ')),
+        el('td', { class: 'mono pathcell' }, ...pathLinks(r.shown)),
         el('td', { class: 'num', text: fmt.format(r.routes) }),
         el('td', {}, r.why ? r.why + ' · ' : '', btn));
       // the hop-by-hop check opens under the row that was clicked, where the reader is looking
@@ -807,7 +917,7 @@ async function renderLiveRoutes(text) {
     const panel = neighbourPanel(origin, rows, ev);
     if (panel) { kids.push(panel); usedEvidence = usedEvidence || Boolean(ev); }
     if (panel && ev && q.kind === 'as') { const own = byCustomer.get('AS' + origin); kids.push(suggestPanel(origin, ev, own ? new Set(own.providers) : null)); }
-    if (lookupAs) { const tp = trombonePanel(origin, AspaTromboning.analyse(routes, origin, lookupAs, { ixp: ctx ? ctx.ixp : new Set() })); if (tp) kids.push(tp); }
+    if (lookupAs) { const tp = trombonePanel(origin, AspaTromboning.analyse(routes, origin, lookupAs, { ixp: ctx ? ctx.ixp : new Set() }), routes, lookupAs); if (tp) kids.push(tp); }
   }
   if (q.kind === 'as') kids.push(livePanel(asNum(q.label)));
   if (usedEvidence) kids.push(el('p', { class: 'hint', text: `Evidence: a neighbour counts as a provider of the origin when the route passes through it up to a Tier-1 network (the clique of ${ctx.source}). A peer, or a provider that is not asked to carry the route upwards, passes upwards only what it learned from its customers. Weak: seen by few feeders or on a small share of the paths. No evidence is not proof of a peer: the collectors see only part of the Internet, and paths of two ASes say nothing. The routes are the last RIB dump of the collectors, which can be up to eight hours old.` }));

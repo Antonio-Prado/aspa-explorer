@@ -551,3 +551,7 @@ table.live td { overflow-wrap: anywhere; }
 .bars-svg { display: block; width: 100%; height: auto; }
 .bars-svg .tick { font-size: 12px; fill: var(--ink-2); font-variant-numeric: tabular-nums; }
 .barchart { margin-bottom: 0.5rem; }
+
+/* the ASes, feeders and prefixes of the tables of paths are links: underlined, so that they do not rely on color */
+.aslink { color: inherit; text-decoration: underline; text-decoration-color: var(--axis); text-underline-offset: 2px; }
+.aslink:hover, .aslink:focus-visible { color: var(--accent); text-decoration-color: currentColor; }
