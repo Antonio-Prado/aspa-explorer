@@ -79,9 +79,10 @@ test('a long round trip is flagged, and a path with no answer does not break', (
 test('the probes together: median, range and the number in each fascia', () => {
   const s = (net, verdict) => ({ net, verdict });
   const a = aggregate([s(22, 'ok'), s(23, 'ok'), s(38, 'ok'), s(45, 'long'), s(77, 'long'), s(155, 'trombone'), { net: null, verdict: null }]);
-  assert.deepEqual([a.n, a.median, a.min, a.max, a.verdict], [6, 41.5, 22, 155, 'long']);
+  assert.deepEqual([a.n, a.median, a.min, a.max, a.verdict], [6, 41.5, 22, 155, 'ok']);       // 41.5 ms is inside the 50 ms of a country
   assert.deepEqual(a.counts, { ok: 3, long: 2, trombone: 1 });
   assert.equal(aggregate([s(120, 'trombone'), s(130, 'trombone'), s(20, 'ok')]).verdict, 'trombone');
+  assert.equal(aggregate([s(60, 'long'), s(70, 'long'), s(20, 'ok')]).verdict, 'long');
   assert.equal(aggregate([s(5, 'ok')]).median, 5);
   assert.equal(aggregate([]), null);
   assert.equal(aggregate([{ net: null, verdict: null }]), null);
