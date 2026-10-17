@@ -435,3 +435,5 @@ table.nb th.num, table.nb td.num { text-align: right; font-variant-numeric: tabu
 .notify select, .notify input[type="text"] { min-width: 0; padding: 0.45rem 0.55rem; border: 1px solid var(--grid); border-radius: 6px; background: var(--surface); color: var(--ink); font: inherit; }
 .hp { position: absolute; left: -10000px; width: 1px; height: 1px; opacity: 0; }
 @media (max-width: 520px) { .notify { grid-template-columns: 1fr; } }
+.notice { padding: 1.25rem 1.5rem; }
+.notice button { margin: 0.25rem 0 0.75rem; }
