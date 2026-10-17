@@ -108,9 +108,9 @@
         svg('rect', { class: r.cls, x: L, y, width: w.toFixed(1), height: rh - 6, rx: 2 }, svg('title', {}, r.tip || `${r.label}: ${r.text}`)),
         svg('text', { class: 'tick', x: L + w + 6, y: y + 14 }, r.text));
     });
-    const table = el('table', { class: 'sr-only' }, el('caption', { text: caption }),
+    const table = el('div', { class: 'sr-only' }, el('table', {}, el('caption', { text: caption }),
       el('thead', {}, el('tr', {}, el('th', { scope: 'col', text: 'Collector' }), el('th', { scope: 'col', text: 'Value' }))),
-      el('tbody', {}, ...rows.map((r) => el('tr', {}, el('th', { scope: 'row', text: r.label }), el('td', { text: r.text })))));
+      el('tbody', {}, ...rows.map((r) => el('tr', {}, el('th', { scope: 'row', text: r.label }), el('td', { text: r.text }))))));
     box.replaceChildren(g, table);
   }
 
@@ -154,9 +154,9 @@
         x += w;
       }
     });
-    const table = el('table', { class: 'sr-only' }, el('caption', { text: 'Places of valley seen by RIPE RIS only, by both projects and by RouteViews only' }),
+    const table = el('div', { class: 'sr-only' }, el('table', {}, el('caption', { text: 'Places of valley seen by RIPE RIS only, by both projects and by RouteViews only' }),
       el('thead', {}, el('tr', {}, ...['Places', 'RIS only', 'Both', 'RouteViews only'].map((h) => el('th', { scope: 'col', text: h })))),
-      el('tbody', {}, ...rows.map((r) => el('tr', {}, el('th', { scope: 'row', text: r.label }), el('td', { text: fmt.format(r.ris) }), el('td', { text: fmt.format(r.both) }), el('td', { text: fmt.format(r.rv) })))));
+      el('tbody', {}, ...rows.map((r) => el('tr', {}, el('th', { scope: 'row', text: r.label }), el('td', { text: fmt.format(r.ris) }), el('td', { text: fmt.format(r.both) }), el('td', { text: fmt.format(r.rv) }))))));
     box.replaceChildren(g, table);
   }
 

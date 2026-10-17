@@ -7,8 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.23.3] - 2026-10-17
+
 ### Added
 - CodeQL on the GitHub copy (`.github/workflows/codeql.yml`): static analysis of the JavaScript on each push to the main branch and once a week, with the alerts in the Security tab of that repository.
+
+### Fixed
+- The tables of the new charts, kept for screen readers, made the statistics page scroll sideways at 320 px (found by the accessibility check on the GitHub copy): they are now inside a hidden block, as a table cannot be clipped by itself.
 
 ## [1.23.1] - 2026-10-17
 
