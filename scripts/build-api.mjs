@@ -130,6 +130,33 @@ export function feed(as, doc, ctx) {
     `</feed>\n`;
 }
 
+// ---------- the full list ----------
+
+const RIR_NAMES = { afrinic: 'AFRINIC', apnic: 'APNIC', arin: 'ARIN', lacnic: 'LACNIC', ripe: 'RIPE NCC' };
+
+// One row per ASPA, for the download of the whole list: the customer, its providers, the trust anchor
+// (the RIR) and the validity of the signed object.
+export function aspaRows(ctx) {
+  return [...ctx.byCustomer.values()].sort((a, b) => asNum(a.customer) - asNum(b.customer)).map((a) => {
+    const s = a.source[0] || {};
+    return {
+      customer: a.customer, providers: a.providers, rir: s.tal || null,
+      valid_from: (s.validity && s.validity.notBefore) || null, valid_until: (s.validity && s.validity.notAfter) || null,
+    };
+  });
+}
+
+const csvCell = (v) => {
+  const t = v === null || v === undefined ? '' : String(v);
+  return /[",\n]/.test(t) ? `"${t.replace(/"/g, '""')}"` : t;
+};
+
+// providers are separated by spaces inside one cell
+export function toCsv(rows) {
+  const cols = ['customer', 'providers', 'rir', 'valid_from', 'valid_until'];
+  return [cols.join(','), ...rows.map((r) => cols.map((c) => csvCell(c === 'providers' ? r.providers.join(' ') : r[c])).join(','))].join('\n') + '\n';
+}
+
 // ---------- the context ----------
 
 export function makeContext(data, events, unseen, generated) {
@@ -211,6 +238,9 @@ async function main() {
     await writeFile(join(dir, 'feed', `${as}.atom`), feed(as, doc, ctx));
     n++;
   }
+  const list = aspaRows(ctx);
+  await writeFile(join(dir, 'api/v1/aspas.json'), JSON.stringify(list) + '\n');
+  await writeFile(join(dir, 'api/v1/aspas.csv'), toCsv(list));
   await writeFile(join(dir, 'badge/none.svg'), badge('ASPA', 'none', '#9f9f9f'));
   await writeFile(join(dir, 'api/v1/meta.json'), JSON.stringify({ generated, aspas: ctx.byCustomer.size, ases: n, events: events.length }) + '\n');
 

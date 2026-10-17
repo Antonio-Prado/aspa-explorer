@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "ASPA Explorer API",
-    "version": "1.2.0",
+    "version": "1.3.0",
     "description": "ASPA objects validated by Routinator at rpki.ping6.it, their history and quality, for any AS. Open data, read-only, no key.",
     "contact": {
       "email": "antonio.prado@dei.unipd.it"
@@ -431,6 +431,74 @@
                       "type": "object"
                     }
                   }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/aspas.json": {
+      "get": {
+        "summary": "The whole list of ASPAs, one object per ASPA",
+        "responses": {
+          "200": {
+            "description": "Rows",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "customer": {
+                        "type": "string"
+                      },
+                      "providers": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      },
+                      "rir": {
+                        "type": [
+                          "string",
+                          "null"
+                        ]
+                      },
+                      "valid_from": {
+                        "type": [
+                          "string",
+                          "null"
+                        ],
+                        "format": "date-time"
+                      },
+                      "valid_until": {
+                        "type": [
+                          "string",
+                          "null"
+                        ],
+                        "format": "date-time"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/aspas.csv": {
+      "get": {
+        "summary": "The whole list of ASPAs as CSV (providers separated by spaces in one cell)",
+        "responses": {
+          "200": {
+            "description": "CSV with the header customer,providers,rir,valid_from,valid_until",
+            "content": {
+              "text/csv": {
+                "schema": {
+                  "type": "string"
                 }
               }
             }

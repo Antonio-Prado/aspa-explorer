@@ -9,19 +9,19 @@
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <link rel="canonical" href="https://aspa.ping6.it/">
 <link rel="alternate" type="application/atom+xml" title="ASPA Explorer: changes" href="/changes.atom">
-<link rel="stylesheet" href="/style.css?v=1.12.0">
-<script src="/verify.js?v=1.12.0" defer></script>
-<script src="/history.js?v=1.12.0" defer></script>
-<script src="/quality.js?v=1.12.0" defer></script>
-<script src="/app.js?v=1.12.0" defer></script>
-<script src="/footer.js?v=1.12.0" defer></script>
+<link rel="stylesheet" href="/style.css?v=1.13.1">
+<script src="/verify.js?v=1.13.1" defer></script>
+<script src="/history.js?v=1.13.1" defer></script>
+<script src="/quality.js?v=1.13.1" defer></script>
+<script src="/app.js?v=1.13.1" defer></script>
+<script src="/footer.js?v=1.13.1" defer></script>
 </head>
 <body>
 <a class="skip" href="#main">Skip to main content</a>
 <header class="wrap masthead">
   <div class="top">
-    <h1><a class="homelink" href="/"><img class="brand" src="/img/logo-mark.svg?v=1.12.0" alt="" width="40" height="40"><span>ASPA Explorer</span></a></h1>
-    <nav class="topnav" aria-label="Main"><a href="/" aria-current="page">Home</a><a href="/statistics.html">Statistics</a><a href="/examples.html">Examples</a><a href="/api.html">API</a><a href="/guide.html">Guide</a></nav>
+    <h1><a class="homelink" href="/"><img class="brand" src="/img/logo-mark.svg?v=1.13.1" alt="" width="40" height="40"><span>ASPA Explorer</span></a></h1>
+    <nav class="topnav" aria-label="Main"><a href="/" aria-current="page">Home</a><a href="/statistics.html">Statistics</a><a href="/examples.html">Examples</a><a href="/api.html">API</a><a href="/guide.html">Guide</a><a href="/status.html">Status</a></nav>
   </div>
   <p class="lede">Validated ASPA objects from the RPKI, as seen by the Routinator validator at <a href="https://rpki.ping6.it/ui/" target="_blank" rel="noopener">rpki.ping6.it<span class="sr-only"> (opens in a new tab)</span></a>.</p>
   <p class="lede">An <strong>ASPA</strong> (Autonomous System Provider Authorization) is a signed RPKI object in which a customer AS lists the ASes allowed to act as its upstream providers. Routers use these lists to detect route leaks and some forged AS paths. A provider set of <code>AS0</code> means the AS declares it has no upstream providers.</p>
@@ -87,7 +87,6 @@
       <button type="button" role="tab" class="tab" id="tab-overview" aria-controls="panel-overview" aria-selected="true" tabindex="0">Overview</button>
       <button type="button" role="tab" class="tab" id="tab-changes" aria-controls="panel-changes" aria-selected="false" tabindex="-1">Recent changes</button>
       <button type="button" role="tab" class="tab" id="tab-quality" aria-controls="panel-quality" aria-selected="false" tabindex="-1">ASPA quality</button>
-      <button type="button" role="tab" class="tab" id="tab-all" aria-controls="panel-all" aria-selected="false" tabindex="-1">All ASPAs</button>
     </div>
     <div role="tabpanel" class="tabpanel" id="panel-overview" aria-labelledby="tab-overview">
       <div class="tiles" id="tiles"></div>
@@ -101,21 +100,6 @@
       <p class="hint">Checks on the ASPAs listed here that point at likely mistakes: contradictions, private AS numbers, ASes that list each other as provider, providers that no collector sees in BGP, ASPAs about to expire. The counts are ASPAs, and each finding can be opened.</p>
       <div class="tiles quality-tiles" id="quality-tiles"></div>
       <div class="card changes" id="quality-body"><p class="hint">Checking the ASPAs…</p></div>
-    </div>
-    <div role="tabpanel" class="tabpanel" id="panel-all" aria-labelledby="tab-all" hidden>
-      <div class="filters">
-        <input id="filter" type="search" inputmode="text" spellcheck="false" placeholder="Filter by AS number" aria-label="Filter by AS number (customer or provider)">
-        <select id="rir" aria-label="Filter by RIR"><option value="">All RIRs</option></select>
-        <span class="count" id="count"></span>
-      </div>
-      <div class="table-wrap card">
-        <table>
-          <caption class="sr-only">All validated ASPAs: customer AS, its providers and the RIR</caption>
-          <thead><tr><th scope="col">Customer AS</th><th scope="col">Providers</th><th scope="col">RIR</th></tr></thead>
-          <tbody id="rows"></tbody>
-        </table>
-      </div>
-      <button type="button" class="more" id="more" hidden>Show more</button>
     </div>
   </section>
 </main>

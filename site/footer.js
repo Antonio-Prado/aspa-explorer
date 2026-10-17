@@ -50,8 +50,7 @@
   const releaseItem = item(true, releaseLink);
   const commitItem = item(true, commitLink);
   const ipItem = item(true, 'Your IP: ', ipLink);
-  const statusLink = el('a', { href: '/status.html' }, 'Status');
-  const items = [releaseItem, commitItem, item(false, link('/guide.html#accessibility', 'Accessibility')), item(false, statusLink), ipItem];
+  const items = [releaseItem, commitItem, item(false, link('/guide.html#accessibility', 'Accessibility')), ipItem];
   // A space between the items gives the browser a place to break the line on narrow screens
   const build = el('p', { class: 'build' });
   items.forEach((it, i) => { if (i) build.append(' '); build.append(it); });

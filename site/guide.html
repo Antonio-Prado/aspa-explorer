@@ -4,18 +4,18 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>ASPA Explorer guide</title>
-<meta name="description" content="How to read and use the ASPA Explorer interface: lookup, overview charts, the table of all ASPAs and where the data comes from.">
+<meta name="description" content="How to read and use the ASPA Explorer interface: lookup, path and route checks, statistics, notifications, the API and where the data comes from.">
 <meta name="color-scheme" content="light dark">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
-<link rel="stylesheet" href="/style.css?v=1.12.0">
-<script src="/footer.js?v=1.12.0" defer></script>
+<link rel="stylesheet" href="/style.css?v=1.13.1">
+<script src="/footer.js?v=1.13.1" defer></script>
 </head>
 <body>
 <a class="skip" href="#main">Skip to main content</a>
 <header class="wrap masthead">
   <div class="top">
-    <p class="back"><a class="brandlink" href="/" title="Back to ASPA Explorer"><img class="brand" src="/img/logo-mark.svg?v=1.12.0" alt="" width="40" height="40"><span>ASPA Explorer</span></a></p>
-    <nav class="topnav" aria-label="Main"><a href="/">Home</a><a href="/statistics.html">Statistics</a><a href="/examples.html">Examples</a><a href="/api.html">API</a><a href="/guide.html" aria-current="page">Guide</a></nav>
+    <p class="back"><a class="brandlink" href="/" title="Back to ASPA Explorer"><img class="brand" src="/img/logo-mark.svg?v=1.13.1" alt="" width="40" height="40"><span>ASPA Explorer</span></a></p>
+    <nav class="topnav" aria-label="Main"><a href="/">Home</a><a href="/statistics.html">Statistics</a><a href="/examples.html">Examples</a><a href="/api.html">API</a><a href="/guide.html" aria-current="page">Guide</a><a href="/status.html">Status</a></nav>
   </div>
   <h1>Guide</h1>
   <p class="lede">How the ASPA Explorer interface works, what each number means and where the data comes from.</p>
@@ -27,7 +27,6 @@
       <li><a href="#what">What you are looking at</a></li>
       <li><a href="#lookup">Looking up an AS</a></li>
       <li><a href="#overview">The overview</a></li>
-      <li><a href="#table">The table of all ASPAs</a></li>
       <li><a href="#path-check">Checking an AS path</a></li>
       <li><a href="#live-routes">Checking the routes seen in BGP</a></li>
       <li><a href="#changes">Recent changes and the history of an AS</a></li>
@@ -51,7 +50,7 @@
     <h2 id="what">What you are looking at</h2>
     <p>An <strong>ASPA</strong> (Autonomous System Provider Authorization) is a signed object published in the RPKI. In it, a <em>customer</em> AS lists the ASes that are allowed to act as its upstream <em>providers</em>. Routers that validate AS paths use these lists to spot route leaks and some forged paths.</p>
     <p>ASPA Explorer shows every ASPA that a Routinator validator currently considers valid. Nothing here is edited or interpreted: the page reads the validator's output and presents it so you can search it and see the big picture.</p>
-    <p>The home page has two sets of tabs. The first, <em>Look up an AS</em>, <em>Check an AS path</em> and <em>Routes seen in BGP</em>, holds the three tools, one at a time; the result appears under the tool. The second, <em>Overview</em>, <em>Recent changes</em>, <em>ASPA quality</em> and <em>All ASPAs</em>, holds the data. The tabs work with the arrow keys, <kbd>Home</kbd> and <kbd>End</kbd>. Every address keeps working: <code>#AS680</code> opens the lookup, <code>#path=…</code> the path check, <code>#routes=…</code> the routes, and <code>#overview</code>, <code>#changes</code>, <code>#quality</code> and <code>#all</code> open the data tabs.</p>
+    <p>The home page has two sets of tabs. The first, <em>Look up an AS</em>, <em>Check an AS path</em> and <em>Routes seen in BGP</em>, holds the three tools, one at a time; the result appears under the tool. The second, <em>Overview</em>, <em>Recent changes</em> and <em>ASPA quality</em>, holds the data. The tabs work with the arrow keys, <kbd>Home</kbd> and <kbd>End</kbd>. Every address keeps working: <code>#AS680</code> opens the lookup, <code>#path=…</code> the path check, <code>#routes=…</code> the routes, and <code>#overview</code>, <code>#changes</code> and <code>#quality</code> open the data tabs. The full list of ASPAs, which used to be a table here, is a download on the <a href="/api.html#download">API page</a> (an old <code>#all</code> link goes there).</p>
     <p>At the top of the page a line summarises the data: the number of ASPAs, the time of the last validation run (always in UTC) and the version of the validator that produced it.</p>
   </section>
 
@@ -97,18 +96,6 @@
       <dd>The ten ASes that appear in the most ASPAs as a provider. Select a bar to look that AS up.</dd>
     </dl>
     <p>Hover over a bar or column, or move the keyboard focus onto it, to see the exact value in a tooltip.</p>
-  </section>
-
-  <section aria-labelledby="table">
-    <h2 id="table">The table of all ASPAs</h2>
-    <p>The table lists every ASPA in order of customer AS number, with the customer, its providers and the RIR.</p>
-    <ul>
-      <li><strong>Filter by AS number</strong> shows the ASPAs where that AS is the customer <em>or</em> one of the providers. It needs a complete AS number; partial numbers or text are not searched, and the counter tells you so.</li>
-      <li><strong>All RIRs</strong> restricts the table to one trust anchor. It combines with the AS filter.</li>
-      <li>The counter shows how many ASPAs match.</li>
-      <li>The table shows 20 rows at a time. Use <em>Show N more</em> under it to load the next batch. Provider sets longer than eight entries can be expanded with <em>+N more</em>.</li>
-      <li>Every AS in the table is a link to its lookup.</li>
-    </ul>
   </section>
 
   <section aria-labelledby="path-check">
@@ -191,13 +178,13 @@
 
   <section aria-labelledby="status">
     <h2 id="status">Status</h2>
-    <p>The <a href="/status.html">status page</a> (also linked in the footer) shows when each part was last updated: the validator, the per-AS files of the API, the daily history, the BGP visibility file used by the quality checks, the adoption numbers and the notification service. A part is <em>late</em> when it is older than expected and <em>down</em> when it is much older or does not answer. The page checks from your browser, so it shows what you would get, and refreshes every minute.</p>
+    <p>The <a href="/status.html">status page</a> (the last item of the menu at the top) shows when each part was last updated: the validator, the per-AS files of the API, the daily history, the BGP visibility file used by the quality checks, the adoption numbers and the notification service. A part is <em>late</em> when it is older than expected and <em>down</em> when it is much older or does not answer. The page checks from your browser, so it shows what you would get, and refreshes every minute.</p>
   </section>
 
   <section aria-labelledby="share">
     <h2 id="share">Sharing, badges, feeds and the API</h2>
     <p>Every AS has a page of its own, <code>https://aspa.ping6.it/as/AS8283</code>: it is this same page, already showing that AS, so it can be bookmarked or linked. Under each result, <em>Share and follow</em> has the links to that page, to an <strong>Atom feed</strong> of its changes (its own ASPA, and the ASPAs of others that add or drop it as a provider, so a provider can follow who starts to name it) and to the <strong>JSON</strong> of the AS, and <em>Add the badge to your site</em> gives a small image, with Markdown and HTML to paste, that says how many providers the AS has authorized.</p>
-    <p>The <a href="/api.html">API page</a> describes the JSON, the badge and the feed, and there is an <a href="/api/openapi.json">OpenAPI description</a>. The files are rebuilt every 15 minutes from the same data as this page, so a change can take up to half an hour to appear there.</p>
+    <p>The <a href="/api.html">API page</a> describes the JSON, the badge and the feed, and has the <a href="/api.html#download">download of the whole list</a> of ASPAs as CSV or JSON, for one RIR or all, and there is an <a href="/api/openapi.json">OpenAPI description</a>. The files are rebuilt every 15 minutes from the same data as this page, so a change can take up to half an hour to appear there.</p>
     <p>To be told instead of having to look, see <a href="#notify">notifications</a> below.</p>
   </section>
 

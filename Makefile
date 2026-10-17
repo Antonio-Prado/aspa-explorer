@@ -8,7 +8,7 @@ js:
 	node --check site/verify.js
 	node --check scripts/build-api.mjs
 	node --check scripts/build-adoption.mjs
-	for f in site/adoption.js site/stats.js site/status.js site/examples.js site/subscription.js; do node --check $$f; done
+	for f in site/adoption.js site/stats.js site/download.js site/status.js site/examples.js site/subscription.js; do node --check $$f; done
 	for f in notifier/*.mjs; do node --check $$f; done
 
 html:
@@ -23,7 +23,7 @@ version:
 
 # Static analysis of the browser code: no innerHTML, eval and similar sinks.
 lint-security:
-	npx --yes eslint@9 --no-config-lookup -c eslint.config.mjs site/app.js site/footer.js site/verify.js site/adoption.js site/stats.js site/status.js site/examples.js site/subscription.js
+	npx --yes eslint@9 --no-config-lookup -c eslint.config.mjs site/app.js site/footer.js site/verify.js site/adoption.js site/stats.js site/download.js site/status.js site/examples.js site/subscription.js
 
 # Secret scan of the whole git history (needs gitleaks: https://github.com/gitleaks/gitleaks).
 secrets:

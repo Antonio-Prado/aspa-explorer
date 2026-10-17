@@ -479,3 +479,5 @@ table.live thead th { white-space: nowrap; }
 .data .tabpanel { padding-top: 1.25rem; }
 .data .tabs { margin-bottom: 0; }
 .tabpanel:focus-visible { outline-offset: -2px; }
+.foot .build { max-width: none; }
+.foot .build .item { white-space: nowrap; }

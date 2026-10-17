@@ -7,15 +7,16 @@
 <meta name="description" content="A small public API: the ASPA, its history and its quality for any AS, a badge and an Atom feed per AS. Open data, no key.">
 <meta name="color-scheme" content="light dark">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
-<link rel="stylesheet" href="/style.css?v=1.12.0">
-<script src="/footer.js?v=1.12.0" defer></script>
+<link rel="stylesheet" href="/style.css?v=1.13.1">
+<script src="/download.js?v=1.13.1" defer></script>
+<script src="/footer.js?v=1.13.1" defer></script>
 </head>
 <body>
 <a class="skip" href="#main">Skip to main content</a>
 <header class="wrap masthead">
   <div class="top">
-    <p class="back"><a class="brandlink" href="/" title="Back to ASPA Explorer"><img class="brand" src="/img/logo-mark.svg?v=1.12.0" alt="" width="40" height="40"><span>ASPA Explorer</span></a></p>
-    <nav class="topnav" aria-label="Main"><a href="/">Home</a><a href="/statistics.html">Statistics</a><a href="/examples.html">Examples</a><a href="/api.html" aria-current="page">API</a><a href="/guide.html">Guide</a></nav>
+    <p class="back"><a class="brandlink" href="/" title="Back to ASPA Explorer"><img class="brand" src="/img/logo-mark.svg?v=1.13.1" alt="" width="40" height="40"><span>ASPA Explorer</span></a></p>
+    <nav class="topnav" aria-label="Main"><a href="/">Home</a><a href="/statistics.html">Statistics</a><a href="/examples.html">Examples</a><a href="/api.html" aria-current="page">API</a><a href="/guide.html">Guide</a><a href="/status.html">Status</a></nav>
   </div>
   <h1>API</h1>
   <p class="lede">The data of this page for any AS, as JSON, a badge and an Atom feed. Open, read-only, no key.</p>
@@ -28,6 +29,7 @@
       <li><a href="#badge">Badge</a></li>
       <li><a href="#feed">Atom feed</a></li>
       <li><a href="#subscriptions">Subscriptions and webhooks</a></li>
+      <li><a href="#download">Download the whole list</a></li>
       <li><a href="#all">Everything at once</a></li>
       <li><a href="#rules">Freshness and fair use</a></li>
     </ol>
@@ -88,10 +90,22 @@ X-ASPA-Signature: sha256=…      HMAC-SHA256(secret, timestamp + "." + body), h
     <p>Webhook addresses must be <code>https</code> with a public host name; the service refuses names that resolve to private or local addresses, does not follow redirects and waits five seconds at most.</p>
   </section>
 
+  <section aria-labelledby="download">
+    <h2 id="download">Download the whole list</h2>
+    <p>Every valid ASPA, one per row: the customer, its providers (separated by spaces in the CSV), the RIR whose trust anchor holds it and the validity of the signed object. The files are rebuilt every 15 minutes. Direct addresses, for scripts: <a href="/api/v1/aspas.csv">/api/v1/aspas.csv</a> and <a href="/api/v1/aspas.json">/api/v1/aspas.json</a>.</p>
+    <form id="dl-form" class="builder" autocomplete="off">
+      <label for="dl-rir">RIR</label>
+      <select id="dl-rir"><option value="">All RIRs</option></select>
+      <p class="hint" id="dl-count" aria-live="polite">Loading the list…</p>
+      <p><button type="button" id="dl-csv" disabled>Download CSV</button> <button type="button" id="dl-json" disabled>Download JSON</button></p>
+    </form>
+    <noscript><p>Without JavaScript use the direct addresses above.</p></noscript>
+  </section>
+
   <section aria-labelledby="all">
     <h2 id="all">Everything at once</h2>
     <ul>
-      <li><a href="/data/aspas.json">/data/aspas.json</a>: all valid ASPAs, as Routinator's <code>jsonext</code> (route origins and router keys left out).</li>
+      <li><a href="/data/aspas.json">/data/aspas.json</a>: all valid ASPAs, as Routinator's <code>jsonext</code> (route origins and router keys left out), with every detail of the signed objects.</li>
       <li><a href="/api/v1/meta.json">/api/v1/meta.json</a>: when the per-AS files were built and how many there are.</li>
       <li><a href="/api/v1/adoption.json">/api/v1/adoption.json</a>: the adoption numbers: networks seen in BGP and how many have an ASPA, by RIR, country and size, and the 100 largest networks. Built once a day; the sources are named in the file.</li>
       <li>The daily history, the events and the BGP visibility are plain files on the <code>history</code> branch of the <a href="https://gitlab.dei.unipd.it/Antonio-Prado/aspa-explorer/-/tree/history" target="_blank" rel="noopener">public project<span class="sr-only"> (opens in a new tab)</span></a>.</li>

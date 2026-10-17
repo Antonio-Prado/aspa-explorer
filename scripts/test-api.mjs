@@ -1,6 +1,6 @@
 // Unit tests for scripts/build-api.mjs (no dependencies). Run with: node scripts/test-api.mjs
 import assert from 'node:assert/strict';
-import { makeContext, describe, badge, badgeFor, feed, subjects } from './build-api.mjs';
+import { makeContext, describe, badge, badgeFor, feed, subjects, aspaRows, toCsv } from './build-api.mjs';
 
 let passed = 0;
 const test = (name, fn) => { fn(); passed++; console.log('ok  ', name); };
@@ -73,6 +73,17 @@ test('feed of an AS with no history is a valid empty feed', () => {
   const xml = feed('AS77', describe('AS77', empty), empty);
   assert.doesNotMatch(xml, /<entry>/);
   assert.match(xml, /<updated>2026-10-17T00:00:00Z<\/updated>/);
+});
+
+test('the full list: one row per ASPA, as JSON rows and as CSV', () => {
+  const rows = aspaRows(ctx);
+  assert.deepEqual(rows.map((r) => r.customer), ['AS10', 'AS40', 'AS50']);
+  assert.deepEqual(rows[0], { customer: 'AS10', providers: ['AS20', 'AS30'], rir: 'ripe', valid_from: '2026-01-01T00:00:00Z', valid_until: '2027-01-01T00:00:00Z' });
+  const lines = toCsv(rows).trimEnd().split('\n');
+  assert.equal(lines[0], 'customer,providers,rir,valid_from,valid_until');
+  assert.equal(lines[1], 'AS10,AS20 AS30,ripe,2026-01-01T00:00:00Z,2027-01-01T00:00:00Z');
+  assert.equal(lines.length, 4);
+  assert.equal(toCsv([{ customer: 'AS1', providers: ['AS0'], rir: 'a,b"c', valid_from: null, valid_until: null }]).split('\n')[1], 'AS1,AS0,"a,b""c",,');
 });
 
 console.log(`${passed} tests passed`);

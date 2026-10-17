@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.13.1] - 2026-10-17
+
+### Changed
+- *Status* is now the last item of the menu at the top, and no longer in the footer, where the longer line wrapped inside *Your IP*.
+
+### Changed
+- **The *All ASPAs* tab is gone from the home page**: a table of 3,593 rows read 20 at a time duplicated the lookup, and whoever wants the list wants the file. The home page keeps *Overview*, *Recent changes* and *ASPA quality*. An old `#all` link goes to the new download.
+
+### Added
+- **Download the whole list** on the API page: one RIR or all, as CSV or JSON, made in the browser from `/api/v1/aspas.json`. The files `/api/v1/aspas.json` (one object per ASPA: customer, providers, rir, valid_from, valid_until) and `/api/v1/aspas.csv` are built every 15 minutes with the per-AS files and are in the OpenAPI description.
+
 ## [1.12.0] - 2026-10-17
 
 ### Changed

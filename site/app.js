@@ -6,7 +6,6 @@ const DATA_STATUS = '/data/status.json';
 // Daily history of the ASPA counts: the `history` branch of the public project, through the GitLab API (CORS open).
 const DATA_VISIBILITY = 'https://gitlab.dei.unipd.it/api/v4/projects/5246/repository/files/visibility.json/raw?ref=history';
 const DATA_EVENTS = 'https://gitlab.dei.unipd.it/api/v4/projects/5246/repository/files/events.json/raw?ref=history';
-const PAGE = 20;
 const RIR_NAMES = { afrinic: 'AFRINIC', apnic: 'APNIC', arin: 'ARIN', lacnic: 'LACNIC', ripe: 'RIPE NCC' };
 
 const $ = (id) => document.getElementById(id);
@@ -16,8 +15,6 @@ let aspas = [];            // [{customer, providers, source}] sorted by customer
 let byCustomer = new Map(); // 'AS123' -> aspa
 let byProvider = new Map(); // 'AS123' -> ['AS456', ...] customers naming it
 let aspaSets = new Map();   // 'AS123' -> Set of its providers, for the path checker
-let shown = 0;
-let filtered = [];
 
 function el(tag, attrs, ...children) {
   const node = document.createElement(tag);
@@ -713,7 +710,9 @@ function lookupFromHash() {
   const hash = location.hash.slice(1);
   // a new lookup on an AS page goes back to the plain address, so the address always matches what is shown
   if (hash && location.pathname !== '/' && pathAs()) window.history.replaceState(null, '', '/' + location.hash);   // `history` is the daily series here
-  const dataTab = { overview: 'tab-overview', changes: 'tab-changes', quality: 'tab-quality', all: 'tab-all' }[hash];
+  // the table of all ASPAs became a download on the API page: old links to #all go there
+  if (hash === 'all') { location.replace('/api.html#download'); return; }
+  const dataTab = { overview: 'tab-overview', changes: 'tab-changes', quality: 'tab-quality' }[hash];
   if (dataTab) { showTab(dataTab); revealBox('data'); return; }
   if (hash.startsWith('path=')) {
     showTab('tab-path');
@@ -771,35 +770,6 @@ function setupTabs() {
   }
 }
 
-/* ---------- table ---------- */
-function applyFilter() {
-  const q = $('filter').value.trim();
-  const rir = $('rir').value;
-  const as = q ? normalizeAsn(q) : null;
-  filtered = aspas.filter((a) => (!rir || a.tal === rir) &&
-    (!q || (as ? a.customer === as || a.providers.includes(as) : false)));
-  shown = 0;
-  $('rows').replaceChildren();
-  $('count').textContent = q && !as ? 'Enter an AS number, e.g. AS680'
-    : `${fmt.format(filtered.length)} ASPA${filtered.length === 1 ? '' : 's'}`;
-  showMore();
-}
-
-function showMore() {
-  const frag = document.createDocumentFragment();
-  for (const a of filtered.slice(shown, shown + PAGE)) {
-    frag.append(el('tr', {},
-      el('td', {}, el('a', { class: 'chip', href: '#' + a.customer, text: a.customer })),
-      el('td', {}, chipList(a.providers, 8)),
-      el('td', { class: 'rir', text: rirName(a.tal) })));
-  }
-  $('rows').append(frag);
-  shown = Math.min(filtered.length, shown + PAGE);
-  const more = $('more');
-  more.hidden = shown >= filtered.length;
-  more.textContent = `Show ${fmt.format(Math.min(PAGE, filtered.length - shown))} more`;
-}
-
 /* ---------- load ---------- */
 async function getJson(url) {
   const r = await fetch(url, { headers: { Accept: 'application/json' } });
@@ -827,15 +797,11 @@ async function load() {
         byProvider.get(p).push(a.customer);
       }
     }
-    const tals = [...new Set(aspas.map((a) => a.tal))].sort((x, y) => rirName(x).localeCompare(rirName(y)));
-    $('rir').replaceChildren(el('option', { value: '', text: 'All RIRs' }),
-      ...tals.map((t) => el('option', { value: t, text: rirName(t) })));
     renderOverview(status);
     addCoverageTile();
     await loadVisibility();
     computeQuality();
     renderQuality();
-    applyFilter();
     lookupFromHash();
   } catch (err) {
     $('meta').textContent = '';
@@ -871,9 +837,6 @@ document.addEventListener('DOMContentLoaded', () => {
     else location.hash = hash;
   });
   window.addEventListener('hashchange', lookupFromHash);
-  $('filter').addEventListener('input', applyFilter);
-  $('rir').addEventListener('change', applyFilter);
-  $('more').addEventListener('click', showMore);
   setupTabs();
   load();
   loadEvents();
