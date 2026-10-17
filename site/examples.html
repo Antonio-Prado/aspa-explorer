@@ -7,14 +7,17 @@
 <meta name="description" content="How to write the ASPA of a network: one upstream, several providers, a transit network, a network with no provider, and an IXP member, with the usual mistakes and a checker for your own list.">
 <meta name="color-scheme" content="light dark">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
-<link rel="stylesheet" href="/style.css?v=1.10.0">
-<script src="/examples.js?v=1.10.0" defer></script>
-<script src="/footer.js?v=1.10.0" defer></script>
+<link rel="stylesheet" href="/style.css?v=1.10.1">
+<script src="/examples.js?v=1.10.1" defer></script>
+<script src="/footer.js?v=1.10.1" defer></script>
 </head>
 <body>
 <a class="skip" href="#main">Skip to main content</a>
 <header class="wrap masthead">
-  <p class="back"><a class="brandlink" href="/" title="Back to ASPA Explorer"><img class="brand" src="/img/logo-mark.svg?v=1.10.0" alt="" width="40" height="40"><span>ASPA Explorer</span></a></p>
+  <div class="top">
+    <p class="back"><a class="brandlink" href="/" title="Back to ASPA Explorer"><img class="brand" src="/img/logo-mark.svg?v=1.10.1" alt="" width="40" height="40"><span>ASPA Explorer</span></a></p>
+    <nav class="topnav" aria-label="Main"><a href="/adoption.html">Adoption</a><a href="/examples.html" aria-current="page">Examples</a><a href="/api.html">API</a><a href="/guide.html">Guide</a></nav>
+  </div>
   <h1>Writing your ASPA</h1>
   <p class="lede">What to put in the ASPA of your network, with the usual cases, the usual mistakes and a checker for your own list.</p>
 </header>
@@ -47,28 +50,28 @@
 
     <h3>One upstream</h3>
     <p>AS64500 is a small company that buys Internet access from a single provider, AS64510.</p>
-    <pre><code>customer AS64500
+    <pre tabindex="0"><code>customer AS64500
 providers AS64510</code></pre>
 
     <h3>Several providers, with a backup</h3>
     <p>AS64501 is connected to two providers, AS64510 and AS64511, and has a third one, AS64512, that it uses only if the others fail.</p>
-    <pre><code>customer AS64501
+    <pre tabindex="0"><code>customer AS64501
 providers AS64510, AS64511, AS64512</code></pre>
     <p>The backup provider must be there too. Without it, the day the main links fail and the routes go through AS64512, they look like a leak to everybody who checks.</p>
 
     <h3>A transit network</h3>
     <p>AS64510 sells transit to AS64500 and AS64501, and buys it from AS64520 and AS64521. Its ASPA names the networks <em>above</em> it. Its customers are not in it: each customer names AS64510 in its own ASPA.</p>
-    <pre><code>customer AS64510
+    <pre tabindex="0"><code>customer AS64510
 providers AS64520, AS64521</code></pre>
 
     <h3>A network with no provider</h3>
     <p>AS64520 is at the top of the hierarchy: it buys transit from nobody and exchanges routes with the other large networks as peers. It says so with an ASPA whose only provider is <code>AS0</code>, which lets everybody reject any route in which this AS appears as if it had a provider above it.</p>
-    <pre><code>customer AS64520
+    <pre tabindex="0"><code>customer AS64520
 providers AS0</code></pre>
 
     <h3>A member of an IXP</h3>
     <p>AS64501 also peers with others at an exchange point, through the route server AS64600 and bilaterally with AS64530. None of them is a provider, so none appears. Its ASPA stays as in the case with the backup provider.</p>
-    <pre><code>customer AS64501
+    <pre tabindex="0"><code>customer AS64501
 providers AS64510, AS64511, AS64512      (not AS64600, not AS64530)</code></pre>
     <p>An exchange point's route server does not put its own AS number in the paths it passes on, so it is not part of the question. If the AS of the route server has no provider at all, <code>AS0</code> describes it correctly.</p>
   </section>

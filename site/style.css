@@ -458,3 +458,9 @@ table.nb th.num, table.nb td.num { text-align: right; font-variant-numeric: tabu
 .filters input[type="checkbox"] { width: auto; margin: 0; }
 table.live tbody th[scope="row"] { text-transform: none; letter-spacing: 0; font-family: inherit; font-size: inherit; font-weight: 600; color: inherit; text-align: left; }
 table.live thead th { white-space: nowrap; }
+.topnav a[aria-current="page"] { text-decoration: underline; text-underline-offset: 4px; }
+.top .back { margin-bottom: 0.75rem; }
+.topnav { display: flex; flex-wrap: wrap; }
+.top { row-gap: 0; }
+.prose code { overflow-wrap: anywhere; }
+.prose pre code { overflow-wrap: normal; }
