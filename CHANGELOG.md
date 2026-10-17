@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.28.1] - 2026-10-17
+
+### Changed
+- The tromboning panel says that the probes are chosen in the country where the AS is registered, which is an approximation and sometimes a bold one (an AS can work elsewhere, or in several countries, and the address that is measured may not be in that country), and that then a long delay is the distance and not a trombone. The same is in the guides and the result of the measurement.
+
 ## [1.28.0] - 2026-10-17
 
 ### Added

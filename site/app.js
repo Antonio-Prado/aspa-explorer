@@ -472,7 +472,7 @@ function trombonePanel(origin, country, routes) {
   const measure = measureBlock(origin, { country }, routes);
   if (!measure) return null;
   return el('div', {}, el('h3', { class: 'subhead', text: `Tromboning of ${as}` }),
-    el('p', { class: 'hint', text: `A route trombones when it starts and ends in the same country and goes far away on the way: its delay is that of a packet that crosses an ocean. BGP cannot tell it; a traceroute from probes in ${home}, the country of ${as}, can.` }),
+    el('p', { class: 'hint', text: `A route trombones when it starts and ends in the same country and goes far away on the way: its delay is that of a packet that crosses an ocean. BGP cannot tell it; a traceroute from probes in ${home} can. The probes are in ${home} because ${as} is registered there, which is an approximation, and sometimes a bold one: an AS can work elsewhere, or in several countries, and the address that is measured may not be in ${home}. If it is not, a long delay is the distance and not a trombone.` }),
     measure);
 }
 
@@ -562,7 +562,7 @@ function resultBox(a, total, home) {
   else if (a.verdict === 'long') lines.push('The median is longer than it should be inside a country (50 ms): many routes probably go abroad, but not as far as an ocean.');
   else if (c.trombone) lines.push(`${c.trombone === 1 ? 'One probe is' : `${c.trombone} probes are`} at 100 ms or more: look at ${c.trombone === 1 ? 'it' : 'them'} in the table, it can be the probe (a mobile network, for instance) or its route.`);
   else lines.push('No probe is at 100 ms or more, the delay of a packet that crosses an ocean.');
-  const notes = ['What this does not tell: a short detour inside Europe (a few tens of milliseconds) cannot be told apart from a target that is far inside the country, and the probes are only a sample of where the traffic comes from.'];
+  const notes = [`The probes are in ${home} because the AS is registered there, which says little about where it works: if the target is not in ${home}, the delays are those of a longer trip, not of a trombone.`, 'What this does not tell: a short detour inside Europe (a few tens of milliseconds) cannot be told apart from a target that is far inside the country, and the probes are only a sample of where the traffic comes from.'];
   if (a.verdict === 'ok' && a.near / a.n < 0.25) notes.unshift(`Only ${a.near} of the ${a.n} probes get within 10 ms of the target: it is far from them, inside the country, or the last part of its network is long.`);
   return el('div', { class: `result r-${kind}`, role: 'group', 'aria-label': 'Result of the measurement' },
     el('p', { class: 'headline', text: headline }), ...lines.map((x) => el('p', { text: x })), ...notes.map((x) => el('p', { class: 'hint', text: x })));
