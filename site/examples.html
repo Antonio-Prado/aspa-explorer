@@ -7,16 +7,16 @@
 <meta name="description" content="How to write the ASPA of a network: one upstream, several providers, a transit network, a network with no provider, and an IXP member, with the usual mistakes and a checker for your own list.">
 <meta name="color-scheme" content="light dark">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
-<link rel="stylesheet" href="/style.css?v=1.11.0">
-<script src="/examples.js?v=1.11.0" defer></script>
-<script src="/footer.js?v=1.11.0" defer></script>
+<link rel="stylesheet" href="/style.css?v=1.12.0">
+<script src="/examples.js?v=1.12.0" defer></script>
+<script src="/footer.js?v=1.12.0" defer></script>
 </head>
 <body>
 <a class="skip" href="#main">Skip to main content</a>
 <header class="wrap masthead">
   <div class="top">
-    <p class="back"><a class="brandlink" href="/" title="Back to ASPA Explorer"><img class="brand" src="/img/logo-mark.svg?v=1.11.0" alt="" width="40" height="40"><span>ASPA Explorer</span></a></p>
-    <nav class="topnav" aria-label="Main"><a href="/">Home</a><a href="/adoption.html">Adoption</a><a href="/examples.html" aria-current="page">Examples</a><a href="/api.html">API</a><a href="/guide.html">Guide</a></nav>
+    <p class="back"><a class="brandlink" href="/" title="Back to ASPA Explorer"><img class="brand" src="/img/logo-mark.svg?v=1.12.0" alt="" width="40" height="40"><span>ASPA Explorer</span></a></p>
+    <nav class="topnav" aria-label="Main"><a href="/">Home</a><a href="/statistics.html">Statistics</a><a href="/examples.html" aria-current="page">Examples</a><a href="/api.html">API</a><a href="/guide.html">Guide</a></nav>
   </div>
   <h1>Writing your ASPA</h1>
   <p class="lede">What to put in the ASPA of your network, with the usual cases, the usual mistakes and a checker for your own list.</p>
@@ -110,7 +110,7 @@ providers AS64510, AS64511, AS64512      (not AS64600, not AS64530)</code></pre>
   <section aria-labelledby="publish">
     <h2 id="publish">Publishing it</h2>
     <p>The ASPA is created by the holder of the AS number in the RPKI service of the regional registry that the number comes from. This site shows which trust anchors have ASPAs in them: RIPE NCC, ARIN, APNIC and LACNIC have, AFRINIC none so far (see the <a href="/">overview</a>). Look for the RPKI or resource-certification section of your registry's portal: <a href="https://www.ripe.net/" target="_blank" rel="noopener">RIPE NCC<span class="sr-only"> (opens in a new tab)</span></a>, <a href="https://www.arin.net/" target="_blank" rel="noopener">ARIN<span class="sr-only"> (opens in a new tab)</span></a>, <a href="https://www.apnic.net/" target="_blank" rel="noopener">APNIC<span class="sr-only"> (opens in a new tab)</span></a>, <a href="https://www.lacnic.net/" target="_blank" rel="noopener">LACNIC<span class="sr-only"> (opens in a new tab)</span></a>, <a href="https://afrinic.net/" target="_blank" rel="noopener">AFRINIC<span class="sr-only"> (opens in a new tab)</span></a>. Each portal has its own screens and the support changes with time, so follow the registry's own instructions.</p>
-    <p>Once it is published, it takes a while to reach the validators: the repository of the registry, then the validator, which here refreshes about every 10 minutes. Look up your AS on the <a href="/">home page</a> to see it, and subscribe to its changes from there. The <a href="/adoption.html">adoption page</a> shows how many networks like yours have done it.</p>
+    <p>Once it is published, it takes a while to reach the validators: the repository of the registry, then the validator, which here refreshes about every 10 minutes. Look up your AS on the <a href="/">home page</a> to see it, and subscribe to its changes from there. The <a href="/statistics.html">adoption page</a> shows how many networks like yours have done it.</p>
   </section>
 </main>
 

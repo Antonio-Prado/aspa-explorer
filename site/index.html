@@ -9,19 +9,19 @@
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <link rel="canonical" href="https://aspa.ping6.it/">
 <link rel="alternate" type="application/atom+xml" title="ASPA Explorer: changes" href="/changes.atom">
-<link rel="stylesheet" href="/style.css?v=1.11.0">
-<script src="/verify.js?v=1.11.0" defer></script>
-<script src="/history.js?v=1.11.0" defer></script>
-<script src="/quality.js?v=1.11.0" defer></script>
-<script src="/app.js?v=1.11.0" defer></script>
-<script src="/footer.js?v=1.11.0" defer></script>
+<link rel="stylesheet" href="/style.css?v=1.12.0">
+<script src="/verify.js?v=1.12.0" defer></script>
+<script src="/history.js?v=1.12.0" defer></script>
+<script src="/quality.js?v=1.12.0" defer></script>
+<script src="/app.js?v=1.12.0" defer></script>
+<script src="/footer.js?v=1.12.0" defer></script>
 </head>
 <body>
 <a class="skip" href="#main">Skip to main content</a>
 <header class="wrap masthead">
   <div class="top">
-    <h1><a class="homelink" href="/"><img class="brand" src="/img/logo-mark.svg?v=1.11.0" alt="" width="40" height="40"><span>ASPA Explorer</span></a></h1>
-    <nav class="topnav" aria-label="Main"><a href="/" aria-current="page">Home</a><a href="/adoption.html">Adoption</a><a href="/examples.html">Examples</a><a href="/api.html">API</a><a href="/guide.html">Guide</a></nav>
+    <h1><a class="homelink" href="/"><img class="brand" src="/img/logo-mark.svg?v=1.12.0" alt="" width="40" height="40"><span>ASPA Explorer</span></a></h1>
+    <nav class="topnav" aria-label="Main"><a href="/" aria-current="page">Home</a><a href="/statistics.html">Statistics</a><a href="/examples.html">Examples</a><a href="/api.html">API</a><a href="/guide.html">Guide</a></nav>
   </div>
   <p class="lede">Validated ASPA objects from the RPKI, as seen by the Routinator validator at <a href="https://rpki.ping6.it/ui/" target="_blank" rel="noopener">rpki.ping6.it<span class="sr-only"> (opens in a new tab)</span></a>.</p>
   <p class="lede">An <strong>ASPA</strong> (Autonomous System Provider Authorization) is a signed RPKI object in which a customer AS lists the ASes allowed to act as its upstream providers. Routers use these lists to detect route leaks and some forged AS paths. A provider set of <code>AS0</code> means the AS declares it has no upstream providers.</p>
@@ -91,57 +91,7 @@
     </div>
     <div role="tabpanel" class="tabpanel" id="panel-overview" aria-labelledby="tab-overview">
       <div class="tiles" id="tiles"></div>
-      <div class="charts">
-        <figure class="card wide">
-          <figcaption><span class="t">ASPAs over time</span><span class="s" id="history-sub">Validated ASPA objects per day, stacked by RIR</span></figcaption>
-          <div class="histctl">
-            <label>Show
-              <select id="hist-metric">
-                <option value="rir">ASPAs, by RIR</option>
-                <option value="total">ASPAs, total</option>
-                <option value="providers">Provider ASes</option>
-                <option value="median">Median providers per ASPA</option>
-                <option value="zero">No-provider ASPAs (AS0)</option>
-                <option value="coverage">Coverage of the ASes seen in BGP</option>
-              </select>
-            </label>
-            <label>Period
-              <select id="hist-range">
-                <option value="all">Since October 2023</option>
-                <option value="365">Last 12 months</option>
-                <option value="90">Last 90 days</option>
-              </select>
-            </label>
-            <label class="chk"><input type="checkbox" id="hist-log"> Logarithmic scale</label>
-          </div>
-          <ul class="legend" id="history-legend"></ul>
-          <div class="linechart" id="chart-history"><p class="hint">Loading the history…</p></div>
-          <p class="hint" id="history-note"></p>
-          <p class="hint export">Download the daily data: <button type="button" class="linkish" id="dl-csv">CSV</button> or <button type="button" class="linkish" id="dl-json">JSON</button>.</p>
-          <details class="tableview">
-            <summary>Show as a table</summary>
-            <section class="table-wrap" tabindex="0" aria-label="ASPAs at the end of each month">
-              <table>
-                <caption class="sr-only">ASPAs on the last day of each month: in total, per RIR, provider ASes, and the share of the ASes seen in BGP that have an ASPA</caption>
-                <thead><tr><th scope="col">Day</th><th scope="col">Total</th><th scope="col">RIPE NCC</th><th scope="col">ARIN</th><th scope="col">APNIC</th><th scope="col">LACNIC</th><th scope="col">Provider ASes</th><th scope="col">Coverage</th></tr></thead>
-                <tbody id="history-rows"></tbody>
-              </table>
-            </section>
-          </details>
-        </figure>
-        <figure class="card">
-          <figcaption><span class="t">ASPAs by RIR</span><span class="s">Validated ASPA objects per trust anchor</span></figcaption>
-          <div class="bars" id="chart-rir"></div>
-        </figure>
-        <figure class="card">
-          <figcaption><span class="t">Providers per ASPA</span><span class="s">How many provider ASes each customer AS declares</span></figcaption>
-          <div class="colchart" id="chart-size"></div>
-        </figure>
-        <figure class="card wide">
-          <figcaption><span class="t">Most-named providers</span><span class="s">Number of ASPAs listing the AS as a provider · select one to look it up</span></figcaption>
-          <div class="bars" id="chart-prov"></div>
-        </figure>
-      </div>
+      <p class="hint more-stats">More numbers: the ASPAs over time, by RIR, the providers per ASPA, the most-named providers and the adoption by size, RIR and country are on the <a href="/statistics.html">Statistics</a> page.</p>
     </div>
     <div role="tabpanel" class="tabpanel" id="panel-changes" aria-labelledby="tab-changes" hidden>
       <p class="hint">ASPAs that appeared, changed their providers or disappeared in the last 14 days, as seen by this validator. Subscribe to the <a href="/changes.atom">Atom feed</a>.</p>
@@ -174,6 +124,5 @@
   <p>Data: Routinator, refreshed about every 10 minutes. Raw JSON: <a href="https://rpki.ping6.it/jsonext?exclude=routeOrigins,routerKeys" target="_blank" rel="noopener">jsonext<span class="sr-only"> (opens in a new tab)</span></a> · <a href="https://rpki.ping6.it/json?exclude=routeOrigins,routerKeys" target="_blank" rel="noopener">json<span class="sr-only"> (opens in a new tab)</span></a>.</p>
 </footer>
 
-<div class="tip" id="tip" role="tooltip" hidden></div>
 </body>
 </html>

@@ -25,11 +25,11 @@
 <table>
   <tr>
     <td width="50%"><img src="assets/screenshots/lookup-light.jpg" alt="Looking up AS680: its own ASPA and the ASPAs that name it as a provider, with its history and the AS path check below"></td>
-    <td width="50%"><img src="assets/screenshots/overview-dark.jpg" alt="Overview tiles and charts in the dark theme"></td>
+    <td width="50%"><img src="assets/screenshots/statistics-dark.jpg" alt="The statistics page in the dark theme: ASPAs over time, stacked by RIR, and the other charts"></td>
   </tr>
   <tr>
     <td align="center"><sub>Look up an AS, with its history</sub></td>
-    <td align="center"><sub>Overview, in the dark theme</sub></td>
+    <td align="center"><sub>Statistics, in the dark theme</sub></td>
   </tr>
   <tr>
     <td width="50%"><img src="assets/screenshots/pathcheck-dark.jpg" alt="Checking the AS path 3356 1299 680: the verdict and the hop-by-hop table"></td>
@@ -73,9 +73,10 @@ The validator is a [Routinator](https://github.com/NLnetLabs/routinator) instanc
 - **Origin validation:** the same box checks every prefix and origin of those routes against the ROAs of the validator (valid, not found, invalid with the reason), asked of the page's own server, not of a third party.
 - **A page, a badge and a feed for every AS:** `/as/AS3333` opens the page on that AS, `/badge/AS3333.svg` is a badge with its number of providers (Markdown and HTML to paste are in the lookup), and `/feed/AS3333.atom` lists the changes of its ASPA and of the ASPAs that add or drop it as a provider.
 - **Notifications:** subscribe an e-mail address (confirmed through a link, DKIM-signed mails with a one-click unsubscribe) or a webhook (verified by a challenge, signed with HMAC-SHA256, public https addresses only) to the changes of an AS. The service is `notifier/`, a small Node.js program with SQLite.
-- **Adoption, status and examples:** an adoption page (who has an ASPA, by size of the network, RIR and country, and the 100 largest transit networks, also as `/api/v1/adoption.json`), a status page that shows how fresh each piece of data is, and an examples page with the rules for writing an ASPA, five cases, the common mistakes and a checker for your own list.
+- **Statistics, status and examples:** a statistics page (the charts of the ASPAs, then who has an ASPA, by size of the network, RIR and country, and the 100 largest transit networks, also as `/api/v1/adoption.json`), a status page that shows how fresh each piece of data is, and an examples page with the rules for writing an ASPA, five cases, the common mistakes and a checker for your own list.
 - **Public API:** `/api/v1/as/3333` returns the ASPA, the ASPAs that name it, BGP visibility, quality findings and history as JSON (CORS open); see `site/api.html` and the OpenAPI description in `site/api/openapi.json`.
-- **Overview:** summary tiles (with the coverage: the share of the ASes seen in BGP that have an ASPA) and four charts: ASPAs over time (daily since October 2023, by RIR, provider ASes, median providers, no-provider ASPAs or coverage, over any period, with a logarithmic scale and CSV/JSON download), ASPAs per RIR, providers per ASPA, most-named providers.
+- **Overview:** summary tiles on the home page (with the coverage: the share of the ASes seen in BGP that have an ASPA).
+- **Statistics:** four charts: ASPAs over time (daily since October 2023, by RIR, provider ASes, median providers, no-provider ASPAs or coverage, over any period, with a logarithmic scale and CSV/JSON download), ASPAs per RIR, providers per ASPA, most-named providers.
 - **Quality:** checks on every ASPA (AS0 mixed with other providers, a private or reserved provider, two ASes listing each other, providers no collector sees in BGP, expiring objects, very large provider sets) with counts and lists, a *Quality* block in the lookup, and, in the routes check, a table of the neighbours of the origin against its ASPA.
 - **Changes:** the ASPAs that appeared, changed or disappeared in the last 14 days, an Atom feed of them (`/changes.atom`), and the history of one AS in its lookup. The series is rebuilt from the RIPE NCC RPKI archive (`tools/backfill-history.py`) and extended every day by the `aspa-snapshot` job.
 - **Table:** all ASPAs, filterable by AS number and RIR, 20 rows at a time.

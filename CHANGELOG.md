@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.12.0] - 2026-10-17
+
+### Changed
+- **The charts moved to a statistics page.** ASPAs over time, ASPAs by RIR, providers per ASPA and the most-named providers are now on `statistics.html`, together with the adoption numbers (the page that was `adoption.html`, which redirects there). The home page keeps the overview tiles and links to it. The chart code is in the new `site/stats.js`; the coverage tile on the home page now comes from the daily adoption numbers. The navigation says *Statistics* instead of *Adoption*.
+
 ## [1.11.0] - 2026-10-17
 
 ### Changed
