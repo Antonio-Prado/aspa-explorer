@@ -107,6 +107,7 @@ export class Leaks {
     this.aspas = aspas; this.ixp = ixp; this.relOf = relOf;
     this.total = { routes: 0, valid: 0, unknown: 0, invalid: 0 };
     this.groups = new Map();
+    this.feederSet = new Set();                                       // the networks that feed the collectors, whichever collector
   }
 
   // path: AS numbers, collector side first; feeder: the AS of the peer; collector: its name
@@ -118,6 +119,7 @@ export class Leaks {
       if (p[p.length - 1] !== a) p.push(a);
     }
     this.total.routes++;
+    this.feederSet.add(feeder);
     if (p.length < 2) { this.total.valid++; return; }
     // cheap filter: a valley needs a hop that an ASPA attests as not a provider
     let suspect = false;
@@ -160,7 +162,7 @@ export class Leaks {
     };
     this.list = list;
     return {
-      total: this.total, places: list.length,
+      total: { ...this.total, feeders: this.feederSet.size }, places: list.length,
       kinds: { gap: list.filter((g) => g.kind === 'gap').length, leak: list.filter((g) => g.kind === 'leak').length, unclear: list.filter((g) => g.kind === 'unclear').length },
       // the most seen places of each kind, so that no kind crowds the others out
       groups: ['leak', 'gap', 'unclear'].flatMap((k) => list.filter((g) => g.kind === k).slice(0, k === 'unclear' ? 20 : limit)).sort((a, b) => b.feeders - a.feeders || b.routes - a.routes),
@@ -196,7 +198,7 @@ export function byAs(list, minFeeders = MIN_FEEDERS, perAs = PER_AS) {
 // The history file with the totals of the day added (a day already there is replaced).
 export function addHistory(rows, date, doc) {
   const t = doc.total;
-  const row = { date, routes: t.routes, invalid: t.invalid, unknown: t.unknown, places: doc.places, leak: doc.kinds.leak, gap: doc.kinds.gap, unclear: doc.kinds.unclear };
+  const row = { date, routes: t.routes, invalid: t.invalid, unknown: t.unknown, feeders: t.feeders, places: doc.places, leak: doc.kinds.leak, gap: doc.kinds.gap, unclear: doc.kinds.unclear };
   return rows.filter((r) => r.date !== date).concat(row).sort((a, b) => (a.date < b.date ? -1 : 1));
 }
 

@@ -132,4 +132,13 @@ await test('the newest RouteViews RIB of a listing', () => {
   assert.equal(pickLatestRib('<html>empty</html>'), null);
 });
 
+await test('the networks that feed the collectors are counted once, whichever collector they feed', () => {
+  const l = new Leaks(new Map());
+  l.add(500, 'rrc00', [50, 40]); l.add(500, 'route-views2', [50, 41]); l.add(501, 'rrc00', [51, 40]);
+  const r = l.result();
+  assert.equal(r.total.feeders, 2);
+  assert.equal(r.total.routes, 3);
+  assert.equal(addHistory([], '2026-10-17', { total: r.total, places: 0, kinds: { leak: 0, gap: 0, unclear: 0 } })[0].feeders, 2);
+});
+
 console.log(`${passed} tests passed`);

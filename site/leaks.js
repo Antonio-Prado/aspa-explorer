@@ -65,20 +65,24 @@
     window.addEventListener('resize', () => { clearTimeout(t); t = setTimeout(() => drawHistory(box, rows), 150); });
   }
 
-  // 449,000,000 -> "449 M", 580,000 -> "580 k"
-  const short = (n) => (n >= 1e6 ? `${fmt.format(Math.round(n / 1e6))} M` : n >= 1e3 ? `${fmt.format(Math.round(n / 1e3))} k` : fmt.format(n));
+  // 449,000,000 -> "449 M", 580,000 -> "580 k", 6,700,000,000 -> "6.7 billion"
+  const short = (n) => (n >= 1e9 ? `${(n / 1e9).toFixed(1)} billion` : n >= 1e6 ? `${fmt.format(Math.round(n / 1e6))} M` : n >= 1e3 ? `${fmt.format(Math.round(n / 1e3))} k` : fmt.format(n));
+  const getJson = async (url) => { try { const r = await fetch(url, { headers: { Accept: 'application/json' } }); return r.ok ? await r.json() : null; } catch { return null; } };
 
-  // The numbers of the project in one small line under the title: the networks that have an ASPA and the routes checked today.
+  // The numbers of the project in two small lines under the title: the ASPAs, and the routes checked today.
   async function numbers(d) {
-    const box = $('numbers');
-    if (!box) return;
-    let a = null;
-    try { const r = await fetch('/api/v1/adoption.json', { headers: { Accept: 'application/json' } }); if (r.ok) a = await r.json(); } catch { /* the first part is left out */ }
+    const asBox = $('numbers'), routeBox = $('numbers-routes');
+    if (!asBox || !routeBox) return;
+    const [a, meta, hist] = await Promise.all([getJson('/api/v1/adoption.json'), getJson('/api/v1/meta.json'), getJson('/api/v1/leaks-history.json')]);
     const t = d.total;
-    const parts = [];
-    if (a && a.seen) parts.push(`${fmt.format(a.aspa)} of ${fmt.format(a.seen)} networks have an ASPA (${a.pct}%)`);
-    parts.push(`${short(t.routes)} routes of ${d.collectors.length} collectors checked`, `${short(t.invalid)} invalid, ${short(t.unknown)} unknown, ${short(t.valid)} valid`, `${fmt.format(d.places)} places of valley`);
-    box.textContent = `In numbers: ${parts.join(' · ')}.`;
+    const first = [];
+    if (a && a.seen) first.push(`${fmt.format(a.aspa)} of ${fmt.format(a.seen)} networks have an ASPA (${a.pct}%)`);
+    if (meta && meta.events) first.push(`${fmt.format(meta.events)} changes to ASPAs recorded since 12 Oct 2023`);
+    asBox.textContent = first.length ? `In numbers: ${first.join(' · ')}.` : '';
+    const second = [`${short(t.routes)} routes checked today, from ${d.collectors.length} collectors${t.feeders ? ` and ${fmt.format(t.feeders)} feeder networks` : ''}`,
+      `${pct(t.valid, t.routes)} valid, ${pct(t.unknown, t.routes)} unknown, ${pct(t.invalid, t.routes)} invalid`, `${fmt.format(d.places)} places of valley`];
+    if (Array.isArray(hist) && hist.length > 1) second.push(`${short(hist.reduce((s, r) => s + r.routes, 0))} routes checked in ${hist.length} days`);
+    routeBox.textContent = `${second.join(' · ')}.`;
   }
 
   async function main() {

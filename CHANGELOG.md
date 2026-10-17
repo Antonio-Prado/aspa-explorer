@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.22.0] - 2026-10-17
+
+### Added
+- More numbers under the title of the statistics page, in two small lines: the changes to ASPAs recorded since 12 October 2023; the share of valid, unknown and invalid routes; the number of feeder networks; and the routes checked in all the days of the history. The builder of the leaks counts the feeder networks and keeps them in the history.
+
 ## [1.21.1] - 2026-10-17
 
 ### Added
