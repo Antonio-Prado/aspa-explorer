@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.15.3] - 2026-10-17
+
+### Fixed
+- The README credits, the wiki and the guide now carry *Inspired by passion* and the heart too, not only the footer of the site.
+
 ## [1.15.2] - 2026-10-17
 
 ### Added
