@@ -555,3 +555,5 @@ table.live td { overflow-wrap: anywhere; }
 /* the ASes, feeders and prefixes of the tables of paths are links: underlined, so that they do not rely on color */
 .aslink { color: inherit; text-decoration: underline; text-decoration-color: var(--axis); text-underline-offset: 2px; }
 .aslink:hover, .aslink:focus-visible { color: var(--accent); text-decoration-color: currentColor; }
+table.live tr.median th, table.live tr.median td { font-weight: 600; background: var(--wash); }
+table.live th.probe { font-weight: 400; text-align: left; }

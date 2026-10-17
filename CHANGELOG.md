@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.24.9] - 2026-10-17
+
+### Changed
+- In the table of the probes the two round trips are called *net* (from the first public address, the one that is read) and *total* (to the end).
+
+## [1.24.8] - 2026-10-17
+
+### Changed
+- The probes of the measurement of the tromboning are in a table, the slowest first, with the median in the first row: the networks on the way, the round trip from the first public address and to the end, and a reading (normal, longer than it should be, trombone); the hops of each probe open under its row.
+
 ## [1.24.7] - 2026-10-17
 
 ### Changed

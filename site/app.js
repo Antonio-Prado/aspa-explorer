@@ -538,7 +538,7 @@ function measureBlock(origin, tr, routes) {
       const all = AspaTraceroute.aggregate(results);
       const sorted = [...results].sort((a, b) => (b.net === null ? -1 : b.net) - (a.net === null ? -1 : a.net));
       out.replaceChildren(...(all ? [el('p', { class: 'verdict-' + all.verdict, text: aggregateText(all, results.length, home) })] : []),
-        el('details', { class: 'embed' }, el('summary', { text: `The ${results.length} probes, the slowest first` }), ...sorted.map((r) => traceCard(r, target))));
+        probeTable(sorted, all, target));
     } catch (err) {
       status.textContent = `The measurement did not work: ${err.message}.`;
     }
@@ -558,6 +558,38 @@ function aggregateText(a, total, home) {
   if (a.counts.trombone) parts.push(`${a.counts.trombone} ${a.counts.trombone === 1 ? 'a trombone' : 'trombones'}`);
   const verdict = { ok: 'Most of the probes reach it at a normal delay for a route inside the country.', long: 'The median is longer than it should be inside a country: many routes probably go abroad.', trombone: 'The median is a trombone: most routes cross an ocean or go round Europe twice.' }[a.verdict];
   return `${a.n} of ${total} probes in ${home} answered. Median round trip, from the first public address: ${ms(a.median)} (from ${ms(a.min)} to ${ms(a.max)}). ${parts.join(', ')}. ${verdict} A probe on a mobile network or far from the target weighs as much as the others, so look at the median and not at a single probe.`;
+}
+
+// One row for each probe, the slowest first, with the median at the top; the hops of a probe open under its row.
+function probeTable(probes, all, target) {
+  const ms = (v) => (v === null ? '–' : v < 1 ? '<1 ms' : `${v < 10 ? v.toFixed(1) : Math.round(v)} ms`);
+  const badge = { ok: ['v-valid', 'normal'], long: ['v-unknown', 'longer than it should be'], trombone: ['v-invalid', 'trombone'] };
+  const rows = [];
+  if (all) {
+    rows.push(el('tr', { class: 'median' }, el('th', { scope: 'row', text: `Median of ${all.n} probes (from ${ms(all.min)} to ${ms(all.max)})` }), el('td', { text: '' }), el('td', { class: 'num', text: ms(all.median) }), el('td', { text: '' }),
+      el('td', {}, el('span', { class: 'badge ' + badge[all.verdict][0], text: badge[all.verdict][1] })), el('td', { text: '' })));
+  }
+  for (const r of probes) {
+    const more = el('button', { type: 'button', class: 'linkish', 'aria-expanded': 'false', text: 'hops' });
+    const v = r.verdict ? badge[r.verdict] : null;
+    const tr = el('tr', {}, el('th', { scope: 'row', class: 'probe', text: `${r.probe.city || 'A probe'}${r.probe.network ? ` · ${r.probe.network}` : ''}` }),
+      el('td', { class: 'mono pathcell', text: r.path.map((a) => `AS${a}`).join(' → ') || '–' }),
+      el('td', { class: 'num', text: ms(r.net) }), el('td', { class: 'num', text: ms(r.lastRtt) }),
+      el('td', {}, v ? el('span', { class: 'badge ' + v[0], text: v[1] }) : el('span', { class: 'muted', text: 'no answer' })),
+      el('td', {}, more));
+    let open = null;
+    more.addEventListener('click', () => {
+      if (open) { open.remove(); open = null; more.setAttribute('aria-expanded', 'false'); more.textContent = 'hops'; return; }
+      open = el('tr', { class: 'detailrow' }, el('td', { colspan: '6' }, traceCard(r, target)));
+      tr.after(open);
+      more.setAttribute('aria-expanded', 'true'); more.textContent = 'hide';
+    });
+    rows.push(tr);
+  }
+  return el('section', { class: 'table-wrap card', tabindex: '0', 'aria-label': 'The probes of the measurement, the slowest first' }, el('table', { class: 'checks live nb' },
+    el('caption', { class: 'sr-only', text: 'The probes of the measurement, with the networks on the way and the round trip from the first public address' }),
+    el('thead', {}, el('tr', {}, ...['Probe', 'Networks on the way', 'Net round trip', 'Total round trip', 'Reading', 'Hops'].map((t, i) => el('th', { scope: 'col', class: i === 2 || i === 3 ? 'num' : undefined }, i === 5 ? el('span', { class: 'sr-only', text: t }) : t)))),
+    el('tbody', {}, ...rows)));
 }
 
 function traceCard(r, target) {
