@@ -36,7 +36,9 @@ const log = (m) => console.log(`${new Date().toISOString()} ${m}`);
 
 const store = openStore(env('NOTIFY_DB', '/var/db/aspa-notify/notify.db'));
 const keyPath = env('NOTIFY_KEY', '/var/db/aspa-notify/token.key');
-if (!existsSync(keyPath)) { writeFileSync(keyPath, randomBytes(32).toString('base64url'), { mode: 0o600 }); chmodSync(keyPath, 0o600); }
+// the secret of the links is created once; the flag 'wx' makes a second creator fail instead of overwriting it
+try { writeFileSync(keyPath, randomBytes(32).toString('base64url'), { mode: 0o600, flag: 'wx' }); } catch (err) { if (err.code !== 'EEXIST') throw err; }
+chmodSync(keyPath, 0o600);
 const key = readFileSync(keyPath, 'utf8').trim();
 const dkimPath = env('NOTIFY_DKIM_KEY', '/var/db/aspa-notify/dkim.key');
 const dkim = existsSync(dkimPath) ? { domain: DOMAIN, selector: env('NOTIFY_SELECTOR', 'aspa2026'), privateKey: readFileSync(dkimPath, 'utf8') } : null;

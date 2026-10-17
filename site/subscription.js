@@ -22,7 +22,7 @@
   button.addEventListener('click', async () => {
     button.disabled = true;
     try {
-      const r = await fetch(`/api/v1/subscriptions/${action}`, {
+      const r = await fetch(action === 'confirm' ? '/api/v1/subscriptions/confirm' : '/api/v1/subscriptions/unsubscribe', {
         method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ token }),
       });
       const body = await r.json();

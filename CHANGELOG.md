@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.23.4] - 2026-10-17
+
+### Fixed
+- Two points flagged by CodeQL: the secret of the links of the notifier is created with an exclusive flag (no gap between checking for the file and writing it), and the page that confirms or cancels a subscription chooses its address from two fixed ones instead of building it from the link. The other alerts are by design (the builders write to files the data that they fetch, the release job sends the notes of the CHANGELOG) or false positives (an id looked up in the tabs).
+
 ## [1.23.3] - 2026-10-17
 
 ### Added
