@@ -554,8 +554,9 @@ function traceCard(r, target, home) {
   if (r.status !== 'finished') notes.push('The probe could not run the measurement.');
   else if (r.reachedAddress !== target.address) notes.push(`The last answer comes from ${r.reachedAddress || 'no address'}, not from ${target.address}: the target does not answer, which is common, so the last network that answers is the last one that is seen.`);
   if (r.abroad.length) notes.push(`It goes through networks registered in ${r.abroad.map(ccName).join(', ')}${r.exit ? `, the first at hop ${r.exit.n} (AS${r.exit.asn}, ${rttText(r.exit.rtt)})` : ''}. A network registered abroad can have a router at home, so the delay tells more.`);
-  if (r.jump) notes.push(`The delay jumps by ${Math.round(r.jump.by)} ms at hop ${r.jump.hop}: the packet went at most about ${Math.round(r.jump.by * 100)} km further, one way.`);
-  if (r.longDelay) notes.push(`The round trip takes ${rttText(r.lastRtt)}, which is long between two points of the same country (light covers about 100 km each way in a millisecond): the route most likely goes abroad.`);
+  if (r.jump) notes.push(`The delay rises by ${Math.round(r.jump.by)} ms between hop ${r.jump.from} and hop ${r.jump.hop} and stays up to the end: at most about ${Math.round(r.jump.by * 100)} km further, one way. It is an upper bound of a distance, not a distance: queues, tunnels and slow answers add milliseconds too.`);
+  if (r.access >= 10) notes.push(`The first public address is already ${rttText(r.access)} away: the access network of the probe (a mobile network or a tunnel, for instance) adds delay by itself, so the delays below say little about the route.`);
+  if (r.longDelay) notes.push(`From the first public address to the end the round trip takes ${rttText(r.lastRtt - r.access)} more, which is long between two points of the same country (light covers about 100 km each way in a millisecond): the route may go abroad.`);
   else if (r.lastRtt !== null) notes.push(`Round trip to the last hop: ${rttText(r.lastRtt)}${r.abroad.length ? ', short enough that the foreign networks are probably close by' : ''}.`);
   const rows = r.hops.map((h) => el('tr', {}, el('td', { class: 'num', text: String(h.n) }),
     el('td', {}, h.ip ? el('span', { class: 'mono', text: h.ip }) : el('span', { class: 'muted', text: 'no answer' })),

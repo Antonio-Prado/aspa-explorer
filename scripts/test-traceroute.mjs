@@ -49,7 +49,7 @@ test('a path that leaves the country: where, how far, and the long delay', () =>
   assert.deepEqual(r.path, [213791, 3257, 1200, 3333]);
   assert.deepEqual(r.abroad, ['US', 'NL']);
   assert.equal(r.exit.asn, 3257);
-  assert.deepEqual(r.jump, { hop: 4, by: 11.3 });
+  assert.deepEqual(r.jump, { from: 3, hop: 4, by: 11.3 });
   assert.equal(r.lastRtt, 16.5);
   assert.equal(r.longDelay, false);
   assert.equal(r.reachedAddress, '193.0.0.1');
@@ -62,6 +62,17 @@ test('the network of the probe itself is not counted as abroad', () => {
   assert.deepEqual(r.abroad, []);
   assert.equal(r.exit, null);
   assert.deepEqual(r.path, [3257, 213791]);
+});
+
+test('a delay that comes from the access network, or that does not stay up, is not a jump', () => {
+  // the probe sits behind private addresses and the delay is there before the first public address
+  const tim = summarise({ probe, result: { status: 'finished', hops: [hop('172.17.17.1', [0.1]), hop('192.168.57.1', [1.1]), hop('172.17.152.32', [9.3]), hop('195.22.218.116', [30.1]), hop('93.94.88.1', [28.5])] } }, 'IT', () => null, () => null);
+  assert.equal(tim.jump, null);
+  assert.equal(tim.access, 30.1);
+  assert.equal(tim.longDelay, false);
+  // one slow answer, then back to normal: not a distance
+  const blip = summarise({ probe, result: { status: 'finished', hops: [hop('37.202.205.254', [1]), hop('154.14.77.113', [40]), hop('141.136.110.41', [2]), hop('193.0.0.1', [3])] } }, 'IT', () => null, () => null);
+  assert.equal(blip.jump, null);
 });
 
 test('a long round trip is flagged, and a path with no answer does not break', () => {

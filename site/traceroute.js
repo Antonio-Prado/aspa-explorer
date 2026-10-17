@@ -68,20 +68,27 @@
     const foreign = (h) => h.cc && h.cc !== home && h.asn !== result.probe.asn;
     const abroad = [...new Set(hops.filter(foreign).map((h) => h.cc))];
     const exit = hops.find(foreign) || null;
-    let jump = null;                                   // the biggest step of the delay between two hops that answer
-    let prev = null;
-    for (const h of hops) {
-      if (h.rtt === null) continue;
-      if (prev !== null && h.rtt - prev.rtt >= JUMP_MS && (!jump || h.rtt - prev.rtt > jump.by)) jump = { hop: h.n, by: h.rtt - prev.rtt };
-      prev = h;
+    // The biggest rise of the delay between two hops that answer. It counts only if the delay stays up from there to the end
+    // (a slow answer of one router does not), and not when it comes out of a private address (the access network of the probe: a
+    // tunnel, a mobile network, a modem), where the delay says nothing about the route.
+    let jump = null;
+    const timed = hops.filter((h) => h.rtt !== null);
+    for (let i = 1; i < timed.length; i++) {
+      const prev = timed[i - 1];
+      if (isPrivate(prev.ip)) continue;
+      const by = Math.min(...timed.slice(i).map((h) => h.rtt)) - prev.rtt;
+      if (by >= JUMP_MS && (!jump || by > jump.by)) jump = { from: prev.n, hop: timed[i].n, by };
     }
+    // the delay that the probe has before the first public address, whatever the route
+    const firstPublic = hops.find((h) => h.ip && !isPrivate(h.ip) && h.rtt !== null);
+    const access = firstPublic ? firstPublic.rtt : 0;
     const path = [];
     for (const h of hops) if (h.asn && path[path.length - 1] !== h.asn) path.push(h.asn);
     const lastRtt = last && last.rtt !== null ? last.rtt : null;
     return {
       probe: { city: result.probe.city, country: result.probe.country, asn: result.probe.asn, network: result.probe.network },
       status: result.result.status, hops, path, abroad, exit, jump, lastRtt, reachedAddress: last ? last.ip : null,
-      longDelay: lastRtt !== null && lastRtt > LONG_DELAY_MS,
+      access, longDelay: lastRtt !== null && lastRtt - access > LONG_DELAY_MS,
     };
   }
 

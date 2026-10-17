@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.24.3] - 2026-10-17
+
+### Fixed
+- The reading of the delays of a traceroute was too bold: a rise of the delay is now a jump only when it stays up to the end of the path (a slow answer of one router is not), not when it comes out of a private address (the access network of the probe: a tunnel, a mobile network), and the round trip is called long counting from the first public address, with a note when the probe already has a long delay there. The text also says that the delay is an upper bound of a distance, not a distance.
+
 ## [1.24.2] - 2026-10-17
 
 ### Fixed
