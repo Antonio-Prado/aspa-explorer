@@ -70,7 +70,7 @@
     <td align="center"><sub>Live updates from RIS Live, checked as they arrive</sub></td>
   </tr>
   <tr>
-    <td width="50%"><img src="assets/screenshots/leaks-dark.jpg" alt="Route leaks today: the invalid routes of three collectors, grouped by the place of the valley, with the ASes inside it"></td>
+    <td width="50%"><img src="assets/screenshots/leaks-dark.jpg" alt="Route leaks today: the invalid routes of ten collectors, grouped by the place of the valley, with the ASes inside it"></td>
     <td width="50%"><img src="assets/screenshots/validators-dark.jpg" alt="Validators compared: the customers whose providers differ between Routinator, rpki-client and the rpki-client of Cloudflare"></td>
   </tr>
   <tr>
@@ -128,7 +128,7 @@ The validator is a [Routinator](https://github.com/NLnetLabs/routinator) instanc
 
 - **Overview:** summary tiles on the home page, with the coverage (the share of the ASes seen in BGP that have an ASPA).
 - **Statistics:** the charts of the ASPAs (over time since October 2023 by RIR, provider ASes, median providers, no-provider ASPAs or coverage, over any period, with a logarithmic scale and CSV/JSON download; per RIR; providers per ASPA; most-named providers) and the adoption: who has an ASPA by size of the network, RIR and country, and the 100 largest transit networks.
-- **Route leaks today:** every route of three RIPE RIS collectors checked with the downstream ASPA verification once a day (`scripts/build-leaks.mjs`, a small MRT reader in `scripts/mrt.mjs`), the places of valley grouped and told apart with the CAIDA relationships into possible leaks and ASPAs that seem to miss a provider, also as `/api/v1/leaks.json`.
+- **Route leaks today:** every route of ten RIPE RIS collectors (rrc00, 01, 03, 04, 10, 11, 12, 15, 19 and 23, on four continents) checked with the downstream ASPA verification once a day (`scripts/build-leaks.mjs`, a small MRT reader in `scripts/mrt.mjs`), the places of valley grouped and told apart with the CAIDA relationships into possible leaks and ASPAs that seem to miss a provider, also as `/api/v1/leaks.json`.
 - **Leaks over time, alerts and comparison:** the daily totals of the leaks (`/api/v1/leaks-history.json`, a chart on the statistics page), the places of valley that involve each AS (`/api/v1/leaks-by-as.json`, and one file for each of the last 60 days), an opt-in alert for the new places that involve a subscribed AS, and *Compare two dates* on the page of an AS (providers added and dropped, the ASPAs that began or stopped naming it, its places of valley).
 - **A starting point for an ASPA:** from the evidence about the neighbours of an origin, the providers to list, the ones already declared and the weak leads, with a list ready to copy.
 - **Validators compared:** the ASPAs of this site's Routinator and of two rpki-client validators (the project's console and Cloudflare's), side by side every hour (`scripts/build-validators.mjs`), with the ASPAs on which they differ, also as `/api/v1/validators.json`.

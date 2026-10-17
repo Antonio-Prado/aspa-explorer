@@ -1,0 +1,96 @@
+// Accessibility and layout check of the pages, in a real browser (Chromium through Playwright), with axe-core:
+// every page, at a desktop width and at 320 px, in the light and in the dark theme, must have no axe violation
+// (WCAG 2.0/2.1 A and AA and the best practices) and must not scroll sideways.
+//
+// The site is served from site/ with the data files of scripts/fixtures/a11y (see scripts/record-fixtures.mjs);
+// anything else outside the site is blocked, so the result does not depend on the network.
+//   npm install --no-save playwright axe-core && node scripts/test-a11y.mjs [page name...]
+import http from 'node:http';
+import { readFile } from 'node:fs/promises';
+import { dirname, join, extname } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { createRequire } from 'node:module';
+import { chromium } from 'playwright';
+
+const require = createRequire(import.meta.url);
+const axeSource = require('axe-core').source;
+const here = dirname(fileURLToPath(import.meta.url));
+const SITE = join(here, '..', 'site');
+const FIX = join(here, 'fixtures', 'a11y');
+
+const TYPES = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.svg': 'image/svg+xml', '.json': 'application/json', '.png': 'image/png', '.jpg': 'image/jpeg', '.pdf': 'application/pdf' };
+const FIXTURE_OF = (p) => {
+  if (p === '/data/aspas.json' || p === '/data/status.json') return p.slice(1);
+  if (/^\/api\/v1\/(adoption|leaks|validators|meta|leaks-history)\.json$/.test(p)) return p.slice(1);
+  if (/^\/api\/v1\/as\/\d+$/.test(p)) return 'api/v1/as.json';
+  if (p === '/api/v1/subscriptions/health') return 'api/v1/health.json';
+  return null;
+};
+const GITLAB_FIXTURE = (url) => {
+  const m = /\/repository\/files\/(events|history|visibility)\.json\/raw/.exec(url);
+  return m ? `gitlab/${m[1]}.json` : null;
+};
+
+const server = http.createServer(async (req, res) => {
+  const p = new URL(req.url, 'http://x').pathname;
+  const send = (code, type, body) => { res.writeHead(code, { 'Content-Type': type }); res.end(body); };
+  try {
+    const fx = FIXTURE_OF(p);
+    if (fx) { try { return send(200, 'application/json', await readFile(join(FIX, fx))); } catch { return send(404, 'application/json', '{}'); } }
+    if (p === '/client-ip') return send(200, 'application/json', '{"ip":"192.0.2.1"}');
+    if (/^\/as\/(AS)?\d+\/?$/.test(p)) return send(200, TYPES['.html'], await readFile(join(SITE, 'index.html')));
+    const file = join(SITE, p === '/' ? 'index.html' : p);
+    if (!file.startsWith(SITE)) return send(403, 'text/plain', 'no');
+    return send(200, TYPES[extname(file)] || 'application/octet-stream', await readFile(file));
+  } catch { return send(404, 'text/plain', 'not found'); }
+});
+await new Promise((r) => server.listen(0, '127.0.0.1', r));
+const base = `http://127.0.0.1:${server.address().port}`;
+
+const PAGES = [
+  ['home', '/'], ['as', '/#AS12779'], ['path', '/#path=3356+12779&from=up'], ['changes', '/#changes'], ['quality', '/#quality'],
+  ['statistics', '/statistics.html'], ['guide', '/guide.html'], ['guida', '/guida.html'], ['api', '/api.html'],
+  ['examples', '/examples.html'], ['status', '/status.html'], ['subscription', '/subscription.html#confirm=abc'],
+];
+const VIEWPORTS = [['desktop', { width: 1280, height: 800 }], ['narrow', { width: 320, height: 640 }]];
+const SCHEMES = ['light', 'dark'];
+const only = process.argv.slice(2);
+
+const browser = await chromium.launch({ args: ['--no-sandbox'] });
+const failures = [];
+let checked = 0;
+for (const [name, path] of PAGES) {
+  if (only.length && !only.includes(name)) continue;
+  for (const [vname, viewport] of VIEWPORTS) {
+    for (const scheme of SCHEMES) {
+      const ctx = await browser.newContext({ viewport, colorScheme: scheme, serviceWorkers: 'block' });
+      const page = await ctx.newPage();
+      await page.route((url) => url.origin !== base, async (route) => {
+        const fx = GITLAB_FIXTURE(route.request().url());
+        if (fx) return route.fulfill({ status: 200, contentType: 'application/json', body: await readFile(join(FIX, fx)) });
+        return route.abort();
+      });
+      const label = `${name} ${vname} ${scheme}`;
+      try {
+        await page.goto(base + path, { waitUntil: 'networkidle' });
+        await page.waitForTimeout(600);
+        if (name === 'as') {
+          await page.evaluate(() => { const d = document.getElementById('as-graph'); if (d) d.open = true; });
+          await page.waitForTimeout(300);
+        }
+        await page.addScriptTag({ content: axeSource });
+        const result = await page.evaluate(() => axe.run(document, { runOnly: ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'best-practice'] }));
+        const over = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
+        const notes = result.violations.map((v) => `${v.id} (${v.nodes.length}): ${v.nodes[0].target.join(' ')} -- ${v.help}`);
+        if (over > 1) notes.push(`scrolls sideways by ${over}px`);
+        checked++;
+        if (notes.length) { failures.push(label); console.log(`FAIL ${label}`); for (const n of notes) console.log(`     ${n}`); } else console.log(`ok   ${label}`);
+      } catch (err) { failures.push(label); console.log(`FAIL ${label}: ${err.message}`); }
+      await ctx.close();
+    }
+  }
+}
+await browser.close();
+server.close();
+console.log(`${checked - failures.length} of ${checked} checks passed`);
+if (failures.length) process.exit(1);

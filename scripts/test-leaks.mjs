@@ -2,7 +2,7 @@
 import assert from 'node:assert/strict';
 import { Readable } from 'node:stream';
 import { readRib, readAsPath } from './mrt.mjs';
-import { Leaks, aspaMap, relations, byAs, addHistory } from './build-leaks.mjs';
+import { Leaks, aspaMap, relations, byAs, addHistory, dumpUrl, COLLECTORS } from './build-leaks.mjs';
 
 let passed = 0;
 const test = async (name, fn) => { await fn(); passed++; console.log('ok  ', name); };
@@ -113,6 +113,12 @@ await test('the history keeps one row a day, in order, and a rerun replaces the 
   rows = addHistory(rows, '2026-10-17', doc(8));
   assert.deepEqual(rows.map((r) => [r.date, r.invalid]), [['2026-10-16', 6], ['2026-10-17', 8]]);
   assert.equal(rows[1].leak, 2);
+});
+
+await test('the table dump of a collector: the latest, or the one of a day', () => {
+  assert.equal(dumpUrl('rrc10'), 'https://data.ris.ripe.net/rrc10/latest-bview.gz');
+  assert.equal(dumpUrl('rrc10', '20261010'), 'https://data.ris.ripe.net/rrc10/2026.10/bview.20261010.0000.gz');
+  assert.equal(COLLECTORS.split(',').length, 10);
 });
 
 console.log(`${passed} tests passed`);

@@ -1,4 +1,4 @@
-.PHONY: check js html nginx version lint-security secrets test
+.PHONY: check js html nginx version lint-security secrets test a11y
 
 check: js html nginx version lint-security test
 
@@ -16,6 +16,8 @@ js:
 	node --check scripts/mrt.mjs
 	node --check scripts/build-leaks.mjs
 	node --check scripts/build-validators.mjs
+	node --check scripts/test-a11y.mjs
+	node --check scripts/record-fixtures.mjs
 	for f in site/adoption.js site/leaks.js site/validators.js site/stats.js site/download.js site/status.js site/examples.js site/subscription.js; do node --check $$f; done
 	for f in notifier/*.mjs; do node --check $$f; done
 
@@ -51,3 +53,8 @@ test:
 	node scripts/test-tromboning.mjs
 	node scripts/test-status.mjs
 	node --disable-warning=ExperimentalWarning scripts/test-notify.mjs
+
+# Accessibility and 320 px check in a real browser (needs Chromium: `npx playwright install chromium`); the CI runs it in the Playwright image
+a11y:
+	npm install --no-save --no-audit --no-fund playwright@1.49.1 axe-core@4.10.2
+	node scripts/test-a11y.mjs

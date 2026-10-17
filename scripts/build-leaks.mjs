@@ -2,11 +2,16 @@
 // checked with the downstream ASPA verification, and the paths that the ASPAs prove to contain a valley are
 // grouped by the place of the valley. Written as one JSON file (served as /api/v1/leaks.json).
 //
-//   node scripts/build-leaks.mjs OUT_FILE [CACHE_DIR]
+//   node scripts/build-leaks.mjs OUT_FILE [CACHE_DIR] [--day=YYYYMMDD]
+//
+// With --day the table dumps of that day (the ones of 00:00 UTC) and the ASPAs as they were that day (replayed from the
+// history of changes) are used, and only the by-AS file of that day and the line of the history are written: this is how
+// the history of the leaks is filled in backwards.
 //
 // Inputs (environment, with defaults for the production host):
 //   ASPA_DATA        URL or file of Routinator's jsonext     http://127.0.0.1:8080/data/aspas.json
-//   LEAKS_COLLECTORS comma separated RIS collectors          rrc00,rrc01,rrc03
+//   LEAKS_COLLECTORS comma separated RIS collectors          rrc00,rrc01,rrc03,rrc04,rrc10,rrc11,rrc12,rrc15,rrc19,rrc23
+//   LEAKS_EVENTS     URL or file of the history of changes   the events.json of the history branch (only with --day)
 //   LEAKS_ADOPTION   file with the Tier-1 clique and the IXP ASes (adoption.json), next to OUT_FILE
 //
 // Next to OUT_FILE it also writes leaks-by-as.json (the places of valley that involve each AS, for the page of an AS
@@ -23,6 +28,13 @@ import { readRib, openGz } from './mrt.mjs';
 
 const { verify } = createRequire(import.meta.url)('../site/verify.js');
 if (net.setDefaultAutoSelectFamilyAttemptTimeout) net.setDefaultAutoSelectFamilyAttemptTimeout(3000);
+export const COLLECTORS = 'rrc00,rrc01,rrc03,rrc04,rrc10,rrc11,rrc12,rrc15,rrc19,rrc23';   // Amsterdam, London, Amsterdam, Geneva, Milan, New York, Frankfurt, Sao Paulo, Johannesburg, Singapore
+// The table dump of a collector: the latest one, or the one of 00:00 UTC of a day (YYYYMMDD).
+export const dumpUrl = (collector, day) => (day
+  ? `https://data.ris.ripe.net/${collector}/${day.slice(0, 4)}.${day.slice(4, 6)}/bview.${day}.0000.gz`
+  : `https://data.ris.ripe.net/${collector}/latest-bview.gz`);
+const EVENTS = 'https://gitlab.dei.unipd.it/api/v4/projects/5246/repository/files/events.json/raw?ref=history';
+const History = createRequire(import.meta.url)('../site/history.js');
 const UA = 'aspa-explorer (https://aspa.ping6.it; antonio.prado@dei.unipd.it)';
 
 // What the CAIDA relationships say about two ASes: relOf(c, n) is 'provider' when n is a provider of c,
@@ -185,34 +197,48 @@ async function caidaRelations(cache) {
 }
 
 async function main() {
-  const [outFile, cacheArg] = process.argv.slice(2);
-  if (!outFile) { console.error('usage: build-leaks.mjs OUT_FILE [CACHE_DIR]'); process.exit(2); }
+  const flags = process.argv.slice(2).filter((a) => a.startsWith('--'));
+  const [outFile, cacheArg] = process.argv.slice(2).filter((a) => !a.startsWith('--'));
+  if (!outFile) { console.error('usage: build-leaks.mjs OUT_FILE [CACHE_DIR] [--day=YYYYMMDD]'); process.exit(2); }
+  const dayFlag = (flags.find((f) => f.startsWith('--day=')) || '').slice(6);
+  if (dayFlag && !/^\d{8}$/.test(dayFlag)) { console.error('--day takes YYYYMMDD'); process.exit(2); }
+  const dayIso = dayFlag && `${dayFlag.slice(0, 4)}-${dayFlag.slice(4, 6)}-${dayFlag.slice(6)}`;
   const cache = cacheArg || join(outFile, '..', 'cache');
   await mkdir(cache, { recursive: true });
-  const dataUrl = process.env.ASPA_DATA || 'http://127.0.0.1:8080/data/aspas.json';
-  const data = /^https?:/.test(dataUrl)
-    ? await (await fetch(dataUrl, { headers: { 'User-Agent': UA } })).json() : JSON.parse(await readFile(dataUrl, 'utf8'));
-  if (!Array.isArray(data.aspas) || !data.aspas.length) throw new Error('the ASPA data is empty: not publishing');
+  const readJson = async (src) => (/^https?:/.test(src)
+    ? await (await fetch(src, { headers: { 'User-Agent': UA } })).json() : JSON.parse(await readFile(src, 'utf8')));
+  let aspas;
+  if (dayIso) {
+    const events = await readJson(process.env.LEAKS_EVENTS || EVENTS);
+    aspas = [...History.replay(events, dayIso)].map(([customer, providers]) => ({ customer, providers }));
+  } else {
+    aspas = (await readJson(process.env.ASPA_DATA || 'http://127.0.0.1:8080/data/aspas.json')).aspas;
+  }
+  if (!Array.isArray(aspas) || !aspas.length) throw new Error('the ASPA data is empty: not publishing');
   let ixp = new Set();
   try { ixp = new Set(JSON.parse(await readFile(process.env.LEAKS_ADOPTION || join(outFile, '..', 'adoption.json'), 'utf8')).ixp || []); } catch { /* no list */ }
-  const collectors = (process.env.LEAKS_COLLECTORS || 'rrc00,rrc01,rrc03').split(',').map((s) => s.trim()).filter(Boolean);
+  const collectors = (process.env.LEAKS_COLLECTORS || COLLECTORS).split(',').map((s) => s.trim()).filter(Boolean);
   const rel = await caidaRelations(cache);
-  const leaks = new Leaks(aspaMap(data.aspas), ixp, rel.relOf);
+  const leaks = new Leaks(aspaMap(aspas), ixp, rel.relOf);
   const used = [];
   for (const c of collectors) {
-    const file = join(cache, `bview-${c}.gz`);
-    if (!(await fresh(file, 4 * 3600e3))) await download(`https://data.ris.ripe.net/${c}/latest-bview.gz`, file);
+    const file = join(cache, dayIso ? `bview-${c}-${dayFlag}.gz` : `bview-${c}.gz`);
+    if (dayIso || !(await fresh(file, 4 * 3600e3))) await download(dumpUrl(c, dayFlag), file);
     const t0 = Date.now();
     const stats = await readRib(openGz(file), (peerAs, path, n) => leaks.add(peerAs, c, Array.from(path.subarray(0, n))));
     used.push({ collector: c, routes: stats.entries, built: new Date((await stat(file)).mtimeMs).toISOString().replace(/\.\d+Z$/, 'Z') });
     console.error(`${c}: ${stats.entries} routes in ${Math.round((Date.now() - t0) / 1000)} s`);
+    if (dayIso) await unlink(file);                  // a day of the past is read once
   }
-  const doc = { generated: new Date().toISOString().replace(/\.\d+Z$/, 'Z'), aspas: data.aspas.length, collectors: used, relationships: rel.source, ...leaks.result() };
+  const generated = dayIso ? `${dayIso}T00:00:00Z` : new Date().toISOString().replace(/\.\d+Z$/, 'Z');
+  const doc = { generated, aspas: aspas.length, collectors: used, relationships: rel.source, ...leaks.result() };
   const write = async (file, value) => { const tmp = `${file}.tmp`; await writeFile(tmp, JSON.stringify(value) + '\n'); await rename(tmp, file); };
-  await write(outFile, doc);
-  const dir = join(outFile, '..'), day = doc.generated.slice(0, 10);
-  const perAs = { generated: doc.generated, min_feeders: MIN_FEEDERS, as: byAs(leaks.list) };
-  await write(join(dir, 'leaks-by-as.json'), perAs);
+  const dir = join(outFile, '..'), day = generated.slice(0, 10);
+  const perAs = { generated, min_feeders: MIN_FEEDERS, as: byAs(leaks.list) };
+  if (!dayIso) {
+    await write(outFile, doc);
+    await write(join(dir, 'leaks-by-as.json'), perAs);
+  }
   let rows = [];
   try { rows = JSON.parse(await readFile(join(dir, 'leaks-history.json'), 'utf8')); } catch { /* the first run */ }
   await write(join(dir, 'leaks-history.json'), addHistory(rows, day, doc));

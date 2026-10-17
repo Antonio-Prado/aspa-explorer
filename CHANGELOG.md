@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- The route leaks are read from ten RIPE RIS collectors (rrc00, 01, 03, 04, 10, 11, 12, 15, 19 and 23: Europe, North and South America, Africa and Asia) instead of three.
+- The history of the leaks is filled in backwards: `build-leaks.mjs --day=YYYYMMDD` rebuilds a past day from the table dumps of 00:00 UTC and the ASPAs as they were that day, and `scripts/backfill-leaks.sh` does it for the last days.
+- An accessibility check in the CI (`scripts/test-a11y.mjs`, Chromium and axe-core): every page, at desktop width and at 320 px, in both themes, must have no axe violation and must not scroll sideways. `make a11y` runs it locally.
+
 ### Added
 - A read-only mirror on GitHub (`.github/workflows/mirror.yml`): every 30 minutes the main branch and the tags are copied from the public project, and a release is made for the latest tags.
 

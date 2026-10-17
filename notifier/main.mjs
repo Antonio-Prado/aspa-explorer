@@ -112,7 +112,7 @@ async function deliver(sub, { subject, line, type, extra }) {
         `Page: ${SITE}/as/${sub.asn}`, '',
         'You receive this because you subscribed on ASPA Explorer. To stop:',
         unsubPage, '',
-        'The places of valley are read once a day from the table dumps of three RIPE RIS collectors. A place is a candidate, not a verdict.',
+        'The places of valley are read once a day from the table dumps of ten RIPE RIS collectors. A place is a candidate, not a verdict.',
       ].join('\n'), unsub);
     } else {
       const r = await post(sub.target, { type, asn: sub.asn, text: line, time: new Date().toISOString(), ...extra, page: `${SITE}/as/${sub.asn}`, unsubscribe: unsub }, { secret: sub.secret });

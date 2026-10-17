@@ -1,7 +1,7 @@
 'use strict';
 
 // The "Route leaks today" section of the statistics page: /api/v1/leaks.json, built once a day by
-// scripts/build-leaks.mjs from the table dumps of three RIPE RIS collectors.
+// scripts/build-leaks.mjs from the table dumps of ten RIPE RIS collectors.
 (function () {
   const $ = (id) => document.getElementById(id);
   const fmt = new Intl.NumberFormat('en-US');
@@ -78,7 +78,7 @@
     }
     const t = d.total;
     const when = d.collectors.map((c) => c.built).sort()[0];
-    $('leaks-sub').textContent = `Every route of ${d.collectors.map((c) => c.collector).join(', ')} (${fmt.format(t.routes)} routes in the table dumps of ${new Date(when).toLocaleString('en-GB', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'UTC' })} UTC) checked with the downstream ASPA verification. A valley is a route that came down from a provider or a peer and went up again.`;
+    $('leaks-sub').textContent = `Every route of ${d.collectors.length} RIPE RIS collectors, ${d.collectors.map((c) => c.collector).join(', ')} (${fmt.format(t.routes)} routes in the table dumps of ${new Date(when).toLocaleString('en-GB', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'UTC' })} UTC) checked with the downstream ASPA verification. A valley is a route that came down from a provider or a peer and went up again.`;
     const tile = (label, value, note, cls) => el('div', { class: 'tile card ' + (cls || '') }, el('div', { class: 'label', text: label }), el('div', { class: 'value', text: value }), el('div', { class: 'note', text: note }));
     $('leaks-tiles').replaceChildren(
       tile('Invalid routes', fmt.format(t.invalid), `${pct(t.invalid, t.routes)} of the routes`, 'v-invalid'),
