@@ -155,6 +155,22 @@ Releases follow [Semantic Versioning](https://semver.org/); the version shown in
 | <a href="https://gitlab.dei.unipd.it/Antonio-Prado/aspa-explorer/-/wikis/home#" target="_blank" rel="noopener">Wiki</a> | user guide, accessibility, deployment |
 | <a href="LICENSE" target="_blank" rel="noopener">LICENSE</a> | MIT |
 
+## Citation
+
+The downstream verification implemented by the path check is analysed in the following paper (proceedings forthcoming in IEEE Xplore); the repository also provides a <a href="CITATION.cff" target="_blank" rel="noopener"><code>CITATION.cff</code></a>.
+
+```bibtex
+@inproceedings{prado2026aspa,
+  author    = {Prado, Antonio and Centenaro, Marco and Vangelista, Lorenzo},
+  title     = {Securing Multi-domain 5G/6G Routing: Towards Path Verification with {ASPA}},
+  booktitle = {Proc. IEEE Conference on Standards for Communications and Networking (CSCN)},
+  address   = {London, UK},
+  month     = sep,
+  year      = {2026},
+  note      = {Proceedings forthcoming in IEEE Xplore}
+}
+```
+
 ## License
 
 Released under the <a href="LICENSE" target="_blank" rel="noopener">MIT License</a>.

@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.7.2] - 2026-10-17
+
+### Added
+- The guide, the README and a new `CITATION.cff` cite the paper that analyses the downstream procedure: A. Prado, M. Centenaro and L. Vangelista, *Securing Multi-domain 5G/6G Routing: Towards Path Verification with ASPA*, IEEE CSCN 2026 (London, 7–9 September 2026; proceedings forthcoming).
+
 ## [1.7.1] - 2026-10-16
 
 ### Fixed

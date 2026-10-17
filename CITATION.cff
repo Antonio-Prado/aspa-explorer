@@ -1,0 +1,35 @@
+cff-version: 1.2.0
+message: "If you use ASPA Explorer, please cite the paper below."
+title: "ASPA Explorer"
+type: software
+authors:
+  - family-names: Prado
+    given-names: Antonio
+    orcid: "https://orcid.org/0000-0002-5600-8509"
+    email: antonio.prado@dei.unipd.it
+    affiliation: "Department of Information Engineering, University of Padova"
+license: MIT
+repository-code: "https://gitlab.dei.unipd.it/Antonio-Prado/aspa-explorer"
+url: "https://aspa.ping6.it/"
+preferred-citation:
+  type: conference-paper
+  title: "Securing Multi-domain 5G/6G Routing: Towards Path Verification with ASPA"
+  authors:
+    - family-names: Prado
+      given-names: Antonio
+      orcid: "https://orcid.org/0000-0002-5600-8509"
+    - family-names: Centenaro
+      given-names: Marco
+      orcid: "https://orcid.org/0000-0003-1664-8015"
+    - family-names: Vangelista
+      given-names: Lorenzo
+      orcid: "https://orcid.org/0000-0002-4898-6951"
+  collection-title: "Proc. IEEE Conference on Standards for Communications and Networking (CSCN)"
+  conference:
+    name: "IEEE Conference on Standards for Communications and Networking (CSCN)"
+    city: London
+    country: GB
+    date-start: "2026-09-07"
+    date-end: "2026-09-09"
+  year: 2026
+  notes: "Proceedings forthcoming in IEEE Xplore"
