@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.24.4] - 2026-10-17
+
+### Changed
+- The measurement of the tromboning says nothing about kilometres, and nothing about the country where a network is registered: it gives the networks on the way, the delay of each hop, where the delay rises and stays up, and when the round trip is long. The country is only used to choose where the probes are.
+
 ## [1.24.3] - 2026-10-17
 
 ### Fixed

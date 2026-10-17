@@ -453,7 +453,7 @@ try { regionNames = new Intl.DisplayNames(['en'], { type: 'region' }); } catch {
 const countryName = (cc) => { try { return (regionNames && regionNames.of(cc)) || cc; } catch { return cc; } };
 
 // Possible tromboning of the origin: routes between two networks of its country that go through another country.
-function trombonePanel(origin, tr, routes, registry) {
+function trombonePanel(origin, tr, routes) {
   if (!tr || !tr.country) return null;
   const as = 'AS' + origin, home = countryName(tr.country);
   const title = el('h3', { class: 'subhead', text: `Possible tromboning of ${as} (${home})` });
@@ -471,7 +471,7 @@ function trombonePanel(origin, tr, routes, registry) {
       el('tbody', {}, ...list.map(([a, e]) => el('tr', {}, el('td', {}, asChip('AS' + a)), el('td', { text: countryName(e.cc) }),
         el('td', { text: e.outsideRegion ? 'another region' : 'same region' }), el('td', { class: 'num', text: fmt.format(e.paths) }), el('td', { class: 'num', text: fmt.format(e.feeders) })))))));
   }
-  const measure = measureBlock(origin, tr, routes, registry);
+  const measure = measureBlock(origin, tr, routes);
   if (measure) kids.push(measure);
   const atlas = el('p', { class: 'hint' });
   kids.push(atlas);
@@ -516,9 +516,9 @@ async function runTraceroute(address, country, onStatus) {
   throw new Error('the probes did not finish in time');
 }
 
-function measureBlock(origin, tr, routes, registry) {
+function measureBlock(origin, tr, routes) {
   const target = AspaTraceroute.targetOf(routes, origin);
-  if (!target || !target.address || !registry) return null;
+  if (!target || !target.address) return null;
   const as = 'AS' + origin, home = countryName(tr.country);
   const btn = el('button', { type: 'button', text: `Measure it now from probes in ${home}` });
   const status = el('p', { class: 'hint', 'aria-live': 'polite' });
@@ -532,38 +532,35 @@ function measureBlock(origin, tr, routes, registry) {
       status.replaceChildren(el('span', { class: 'busy', text: `Mapping ${ips.length} addresses to their networks` }));
       const queue = [...ips];
       await Promise.all(Array.from({ length: 4 }, async () => { for (let ip = queue.shift(); ip; ip = queue.shift()) await asnOfIp(ip); }));
-      const results = m.results.map((x) => AspaTraceroute.summarise(x, tr.country, (ip) => ipAsnCache.get(ip) || null, registry));
+      const results = m.results.map((x) => AspaTraceroute.summarise(x, (ip) => ipAsnCache.get(ip) || null));
       status.textContent = `Traceroute towards ${target.address}, in ${target.prefix} of ${as}, from ${results.length} probe${results.length === 1 ? '' : 's'} in ${home}.`;
-      out.replaceChildren(...results.map((r) => traceCard(r, target, tr.country)));
+      out.replaceChildren(...results.map((r) => traceCard(r, target)));
     } catch (err) {
       status.textContent = `The measurement did not work: ${err.message}.`;
     }
     btn.disabled = false;
   });
   return el('div', { class: 'measure' }, btn,
-    el('p', { class: 'hint', text: `It runs a traceroute towards ${target.address} (in ${target.prefix}) from up to 3 probes in ${home} through Globalping (globalping.io), and asks RIPEstat which network each hop belongs to. They both see your address and what is asked, and the test counts against the hourly limit of your address.` }),
+    el('p', { class: 'hint', text: `It runs a traceroute towards ${target.address} (in ${target.prefix}) from up to 3 probes in ${home} (the country of the AS) through Globalping (globalping.io), and asks RIPEstat which network each hop belongs to. They both see your address and what is asked, and the test counts against the hourly limit of your address.` }),
     status, out);
 }
 
-function traceCard(r, target, home) {
-  const ccName = (cc) => countryName(cc);
+function traceCard(r, target) {
   const rttText = (v) => (v === null ? '–' : `${v < 10 ? v.toFixed(1) : Math.round(v)} ms`);
   const notes = [];
-  const path = r.path.map((a) => { const h = r.hops.find((x) => x.asn === a); return `AS${a}${h && h.cc ? ` (${h.cc})` : ''}`; });
-  if (path.length) notes.push(`Networks on the way: ${path.join(' → ')}.`);
+  if (r.path.length) notes.push(`Networks on the way: ${r.path.map((a) => `AS${a}`).join(' → ')}.`);
   if (r.status !== 'finished') notes.push('The probe could not run the measurement.');
   else if (r.reachedAddress !== target.address) notes.push(`The last answer comes from ${r.reachedAddress || 'no address'}, not from ${target.address}: the target does not answer, which is common, so the last network that answers is the last one that is seen.`);
-  if (r.abroad.length) notes.push(`It goes through networks registered in ${r.abroad.map(ccName).join(', ')}${r.exit ? `, the first at hop ${r.exit.n} (AS${r.exit.asn}, ${rttText(r.exit.rtt)})` : ''}. A network registered abroad can have a router at home, so the delay tells more.`);
-  if (r.jump) notes.push(`The delay rises by ${Math.round(r.jump.by)} ms between hop ${r.jump.from} and hop ${r.jump.hop} and stays up to the end: at most about ${Math.round(r.jump.by * 100)} km further, one way. It is an upper bound of a distance, not a distance: queues, tunnels and slow answers add milliseconds too.`);
+  if (r.jump) notes.push(`The delay rises by ${Math.round(r.jump.by)} ms between hop ${r.jump.from} and hop ${r.jump.hop} and stays up to the end: from there the path is longer, or slower, by that much (queues, tunnels and slow answers add milliseconds too).`);
   if (r.access >= 10) notes.push(`The first public address is already ${rttText(r.access)} away: the access network of the probe (a mobile network or a tunnel, for instance) adds delay by itself, so the delays below say little about the route.`);
-  if (r.longDelay) notes.push(`From the first public address to the end the round trip takes ${rttText(r.lastRtt - r.access)} more, which is long between two points of the same country (light covers about 100 km each way in a millisecond): the route may go abroad.`);
-  else if (r.lastRtt !== null) notes.push(`Round trip to the last hop: ${rttText(r.lastRtt)}${r.abroad.length ? ', short enough that the foreign networks are probably close by' : ''}.`);
+  if (r.longDelay) notes.push(`From the first public address to the end the round trip takes ${rttText(r.lastRtt - r.access)} more, which is long between two points of the same country: the route may go abroad.`);
+  else if (r.lastRtt !== null) notes.push(`Round trip to the last hop: ${rttText(r.lastRtt)}.`);
   const rows = r.hops.map((h) => el('tr', {}, el('td', { class: 'num', text: String(h.n) }),
     el('td', {}, h.ip ? el('span', { class: 'mono', text: h.ip }) : el('span', { class: 'muted', text: 'no answer' })),
-    el('td', { text: h.asn ? `AS${h.asn}${h.cc ? ` (${ccName(h.cc)})` : ''}` : (h.ip ? (AspaTraceroute.isPrivate(h.ip) ? 'private' : '–') : '') }),
+    el('td', { text: h.asn ? `AS${h.asn}` : (h.ip ? (AspaTraceroute.isPrivate(h.ip) ? 'private' : '–') : '') }),
     el('td', { class: 'num', text: rttText(h.rtt) })));
   return el('div', { class: 'trace' },
-    el('h4', { text: `${r.probe.city || 'A probe'}, ${ccName(r.probe.country)}${r.probe.asn ? ` · AS${r.probe.asn}${r.probe.network ? ` ${r.probe.network}` : ''}` : ''}` }),
+    el('h4', { text: `${r.probe.city || 'A probe'}, ${countryName(r.probe.country)}${r.probe.asn ? ` · AS${r.probe.asn}${r.probe.network ? ` ${r.probe.network}` : ''}` : ''}` }),
     ...notes.map((t) => el('p', { class: 'hint', text: t })),
     el('details', { class: 'embed' }, el('summary', { text: `The ${r.hops.length} hops` }),
       el('section', { class: 'table-wrap card', tabindex: '0', 'aria-label': `Hops of the traceroute from ${r.probe.city || 'the probe'}` }, el('table', { class: 'checks live nb' },
@@ -918,7 +915,7 @@ async function renderLiveRoutes(text) {
     const panel = neighbourPanel(origin, rows, ev);
     if (panel) { kids.push(panel); usedEvidence = usedEvidence || Boolean(ev); }
     if (panel && ev && q.kind === 'as') { const own = byCustomer.get('AS' + origin); kids.push(suggestPanel(origin, ev, own ? new Set(own.providers) : null)); }
-    if (lookupAs) { const tp = trombonePanel(origin, AspaTromboning.analyse(routes, origin, lookupAs, { ixp: ctx ? ctx.ixp : new Set() }), routes, lookupAs); if (tp) kids.push(tp); }
+    if (lookupAs) { const tp = trombonePanel(origin, AspaTromboning.analyse(routes, origin, lookupAs, { ixp: ctx ? ctx.ixp : new Set() }), routes); if (tp) kids.push(tp); }
   }
   if (q.kind === 'as') kids.push(livePanel(asNum(q.label)));
   if (usedEvidence) kids.push(el('p', { class: 'hint', text: `Evidence: a neighbour counts as a provider of the origin when the route passes through it up to a Tier-1 network (the clique of ${ctx.source}). A peer, or a provider that is not asked to carry the route upwards, passes upwards only what it learned from its customers. Weak: seen by few feeders or on a small share of the paths. No evidence is not proof of a peer: the collectors see only part of the Internet, and paths of two ASes say nothing. The routes are the last RIB dump of the collectors, which can be up to eight hours old.` }));

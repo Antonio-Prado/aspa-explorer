@@ -3,9 +3,8 @@
 // A traceroute measured from probes in the country of an AS (Globalping, globalping.io), read as a tromboning check:
 // where do the hops go, how long does the packet take. Pure functions shared by the page and the tests; the page does the requests.
 //
-// What it can say is still limited. The country of an AS is where it is registered, not where its router is, and a
-// delay is only a distance in disguise: light covers about 100 km each way in a millisecond, so a long delay between
-// two points of one country means that the packet went somewhere else on the way. Both are leads, not proof.
+// What it can say is limited: a delay is not a distance (queues, tunnels, an access network and slow answers add milliseconds),
+// so a long delay between two points of one country is a lead, not proof, that the packet went somewhere else on the way.
 (function (root) {
   const LONG_DELAY_MS = 25;      // a round trip longer than this between two points of one country is long
   const JUMP_MS = 10;            // a step of the delay between two hops that is worth saying
@@ -52,22 +51,16 @@
     return a === 10 || a === 127 || (a === 172 && b >= 16 && b <= 31) || (a === 192 && b === 168) || (a === 169 && b === 254) || (a === 100 && b >= 64 && b <= 127) || a === 0 || a >= 224;
   }
 
-  // result: one entry of `results` of a finished Globalping traceroute; asnOf(ip) -> AS number | null; lookup(asn) -> {cc} | null.
-  // home: country code of the origin.
-  function summarise(result, home, asnOf, lookup) {
+  // result: one entry of `results` of a finished Globalping traceroute; asnOf(ip) -> AS number | null.
+  function summarise(result, asnOf) {
     const hops = (result.result.hops || []).map((h, i) => {
       const rtts = (h.timings || []).map((t) => t.rtt).filter((x) => typeof x === 'number');
       const ip = h.resolvedAddress || null;
       const asn = ip && !isPrivate(ip) ? asnOf(ip) : null;
-      const reg = asn ? lookup(asn) : null;
-      return { n: i + 1, ip, host: h.resolvedHostname && h.resolvedHostname !== ip ? h.resolvedHostname : null, asn, cc: reg ? reg.cc : null, rtt: rtts.length ? Math.min(...rtts) : null };
+      return { n: i + 1, ip, host: h.resolvedHostname && h.resolvedHostname !== ip ? h.resolvedHostname : null, asn, rtt: rtts.length ? Math.min(...rtts) : null };
     });
     const answering = hops.filter((h) => h.ip);
     const last = answering[answering.length - 1] || null;
-    // the network of the probe itself is where the probe is, whatever country it is registered in
-    const foreign = (h) => h.cc && h.cc !== home && h.asn !== result.probe.asn;
-    const abroad = [...new Set(hops.filter(foreign).map((h) => h.cc))];
-    const exit = hops.find(foreign) || null;
     // The biggest rise of the delay between two hops that answer. It counts only if the delay stays up from there to the end
     // (a slow answer of one router does not), and not when it comes out of a private address (the access network of the probe: a
     // tunnel, a mobile network, a modem), where the delay says nothing about the route.
@@ -87,7 +80,7 @@
     const lastRtt = last && last.rtt !== null ? last.rtt : null;
     return {
       probe: { city: result.probe.city, country: result.probe.country, asn: result.probe.asn, network: result.probe.network },
-      status: result.result.status, hops, path, abroad, exit, jump, lastRtt, reachedAddress: last ? last.ip : null,
+      status: result.result.status, hops, path, jump, lastRtt, reachedAddress: last ? last.ip : null,
       access, longDelay: lastRtt !== null && lastRtt - access > LONG_DELAY_MS,
     };
   }
