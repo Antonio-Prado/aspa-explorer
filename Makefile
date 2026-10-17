@@ -20,7 +20,7 @@ js:
 	for f in notifier/*.mjs; do node --check $$f; done
 
 html:
-	npx --yes html-validate@9 site/index.html site/guide.html site/api.html site/subscription.html site/statistics.html site/status.html site/examples.html
+	npx --yes html-validate@9 site/index.html site/guide.html site/guida.html site/api.html site/subscription.html site/statistics.html site/status.html site/examples.html
 
 # Validates the nginx configuration with a throwaway certificate.
 nginx:

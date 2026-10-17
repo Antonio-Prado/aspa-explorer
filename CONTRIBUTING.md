@@ -49,6 +49,7 @@ Each job can be started by hand from *Build > Pipelines > Run pipeline* by setti
 
 - Insert data into the DOM with `textContent` / DOM APIs only, never `innerHTML`, since all data comes from a remote service.
 - Keep the page usable without a build step, in both light and dark mode, and on narrow screens.
+- `site/guida.html` is the Italian translation of `site/guide.html`: when you change the guide, change both (same ids and structure).
 - Update [CHANGELOG.md](CHANGELOG.md) under *Unreleased* for any user-visible change.
 
 ## Merge requests

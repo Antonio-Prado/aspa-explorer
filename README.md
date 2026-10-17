@@ -110,7 +110,7 @@ The validator is a [Routinator](https://github.com/NLnetLabs/routinator) instanc
 
 **The project**
 
-- **Built-in guide** in English, with an accessibility statement: <a href="https://aspa.ping6.it/guide.html" target="_blank" rel="noopener">read it on the site</a> (source: <a href="site/guide.html" target="_blank" rel="noopener"><code>site/guide.html</code></a>).
+- **Built-in guide** in English and Italian (<a href="https://aspa.ping6.it/guida.html" target="_blank" rel="noopener">guida</a>), with an accessibility statement: <a href="https://aspa.ping6.it/guide.html" target="_blank" rel="noopener">read it on the site</a> (source: <a href="site/guide.html" target="_blank" rel="noopener"><code>site/guide.html</code></a>).
 - **Accessible:** keyboard operable (tabs included), visible focus, skip link, light and dark themes, reduced-motion aware. Checked with axe-core in both themes (WCAG 2.2 AA rules) with no issues reported.
 - **Plain code, no dependencies, no cookies.** The page is static JavaScript with no build step; the services behind the API, the adoption numbers and the notifications are small Node.js programs that use no package. Strict Content-Security-Policy; remote data goes into the page only through `textContent`.
 

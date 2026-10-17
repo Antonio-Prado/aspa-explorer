@@ -469,7 +469,11 @@ function graphBlock(as) {
       const ev = AspaEvidence.analyse(routes, asNum(as), ctx || {});
       observed = [...ev].map(([n, e]) => ({ asn: 'AS' + n, label: e.label === 'provider' || e.label === 'weak' ? e.label : 'none', paths: e.paths })).sort((x, y) => y.paths - x.paths);
       draw();
-      status.textContent = ` ${fmt.format(routes.length)} routes read; the six most seen neighbours that the ASPA does not list are drawn on the right.`;
+      const listed = new Set([...(own ? own.providers : []), ...(byProvider.get(as) || [])]);
+      const extra = observed.filter((o) => !listed.has(o.asn)).length;
+      status.textContent = ` ${fmt.format(routes.length)} routes read; ` + (extra
+        ? `the ${extra > 6 ? 'six most seen of the ' + extra : extra} neighbours that the ASPAs do not list ${extra === 1 ? 'is' : 'are'} drawn on the right.`
+        : 'every neighbour seen in the routes is already in the graph, so there is nothing to add.');
     } catch (err) { status.textContent = ` Could not read the routes (${err.message}).`; }
     btn.disabled = false;
   });

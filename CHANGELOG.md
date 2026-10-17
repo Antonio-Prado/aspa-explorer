@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.18.1] - 2026-10-17
+
+### Added
+- The guide in Italian (`/guida.html`), linked from the English guide and the reverse; the English text stays the reference.
+
+### Fixed
+- The neighbourhood graph said that neighbours were "drawn on the right" even when every neighbour seen in the routes was already in the graph; it now says what was added, or that there is nothing to add.
+
 ## [1.18.0] - 2026-10-17
 
 ### Added
