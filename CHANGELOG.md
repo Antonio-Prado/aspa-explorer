@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.25.0] - 2026-10-17
+
+### Removed
+- The table *Possible tromboning* (the networks registered in another country that the domestic routes go through, from the routes that the collectors see) and `site/tromboning.js` with its tests: it depended on the country where an AS is registered, which says little about where it works. The panel is now *Tromboning of ASx*: the measurement from twelve probes in the country, with the median first. The country of the AS only chooses where the probes are.
+
 ## [1.24.10] - 2026-10-17
 
 ### Removed

@@ -452,29 +452,16 @@ let regionNames = null;
 try { regionNames = new Intl.DisplayNames(['en'], { type: 'region' }); } catch { /* the code is shown */ }
 const countryName = (cc) => { try { return (regionNames && regionNames.of(cc)) || cc; } catch { return cc; } };
 
-// Possible tromboning of the origin: routes between two networks of its country that go through another country.
-function trombonePanel(origin, tr, routes) {
-  if (!tr || !tr.country) return null;
-  const as = 'AS' + origin, home = countryName(tr.country);
-  const title = el('h3', { class: 'subhead', text: `Possible tromboning of ${as} (${home})` });
-  if (!tr.enough) {
-    return el('div', {}, title, el('p', { class: 'hint', text: `Only ${fmt.format(tr.feeders)} network${tr.feeders === 1 ? '' : 's'} registered in ${home} feed the collectors with a route of ${as}: too few to say anything.` }));
-  }
-  const intro = `Of the ${fmt.format(tr.domestic)} routes that collectors fed by networks registered in ${home} (${fmt.format(tr.feeders)} of them) see for ${as}, ${fmt.format(tr.crossCountry)} go through a network registered in another country and ${fmt.format(tr.crossRegion)} through another RIR region.`;
-  const list = [...tr.byAs].sort((x, y) => y[1].feeders - x[1].feeders || y[1].paths - x[1].paths).slice(0, 8);
-  const kids = [title, el('p', { text: intro })];
-  if (list.length) {
-    const head = el('tr', {}, ...['Network', 'Registered in', 'Region', 'Routes', 'Feeders'].map((t, i) => el('th', { scope: 'col', class: i >= 3 ? 'num' : undefined, text: t })));
-    kids.push(el('section', { class: 'table-wrap card', tabindex: '0', 'aria-label': `Networks in the middle of the domestic routes of ${as}` }, el('table', { class: 'checks live nb' },
-      el('caption', { class: 'sr-only', text: `Networks registered in another country that domestic routes of ${as} go through` }),
-      el('thead', {}, head),
-      el('tbody', {}, ...list.map(([a, e]) => el('tr', {}, el('td', {}, asChip('AS' + a)), el('td', { text: countryName(e.cc) }),
-        el('td', { text: e.outsideRegion ? 'another region' : 'same region' }), el('td', { class: 'num', text: fmt.format(e.paths) }), el('td', { class: 'num', text: fmt.format(e.feeders) })))))));
-  }
-  const measure = measureBlock(origin, tr, routes);
-  if (measure) kids.push(measure);
-  kids.push(el('p', { class: 'hint', text: 'A lead, not proof. The literature calls a route a trombone when it starts and ends in the same country and crosses another, and measures it with traceroutes. From BGP only the candidate is visible, and the country where an AS is registered is not where it works: a transit network registered in the United States has points of presence in Europe, and an exchange point can keep a route local while the networks on it are registered abroad. To confirm one, press the button above and look at the delays of the probes.' }));
-  return el('div', {}, ...kids);
+// Tromboning of the origin: it is measured, from probes in its country (measureBlock). The routes only give the address to aim at,
+// and the country where the AS is registered only chooses where the probes are.
+function trombonePanel(origin, country, routes) {
+  if (!country) return null;
+  const as = 'AS' + origin, home = countryName(country);
+  const measure = measureBlock(origin, { country }, routes);
+  if (!measure) return null;
+  return el('div', {}, el('h3', { class: 'subhead', text: `Tromboning of ${as}` }),
+    el('p', { class: 'hint', text: `A route trombones when it starts and ends in the same country and goes far away on the way: its delay is that of a packet that crosses an ocean. BGP cannot tell it; a traceroute from probes in ${home}, the country of ${as}, can.` }),
+    measure);
 }
 
 
@@ -957,7 +944,7 @@ async function renderLiveRoutes(text) {
     const panel = neighbourPanel(origin, rows, ev);
     if (panel) { kids.push(panel); usedEvidence = usedEvidence || Boolean(ev); }
     if (panel && ev && q.kind === 'as') { const own = byCustomer.get('AS' + origin); kids.push(suggestPanel(origin, ev, own ? new Set(own.providers) : null)); }
-    if (lookupAs) { const tp = trombonePanel(origin, AspaTromboning.analyse(routes, origin, lookupAs, { ixp: ctx ? ctx.ixp : new Set() }), routes); if (tp) kids.push(tp); }
+    if (lookupAs) { const reg = lookupAs(origin), tp = trombonePanel(origin, reg && reg.cc, routes); if (tp) kids.push(tp); }
   }
   if (q.kind === 'as') kids.push(livePanel(asNum(q.label)));
   if (usedEvidence) kids.push(el('p', { class: 'hint', text: `Evidence: a neighbour counts as a provider of the origin when the route passes through it up to a Tier-1 network (the clique of ${ctx.source}). A peer, or a provider that is not asked to carry the route upwards, passes upwards only what it learned from its customers. Weak: seen by few feeders or on a small share of the paths. No evidence is not proof of a peer: the collectors see only part of the Internet, and paths of two ASes say nothing. The routes are the last RIB dump of the collectors, which can be up to eight hours old.` }));

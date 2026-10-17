@@ -92,10 +92,10 @@
     <td colspan="2" align="center"><sub>The 18 collectors compared, and RIPE RIS against RouteViews on the same places</sub></td>
   </tr>
   <tr>
-    <td colspan="2" align="center"><img src="assets/screenshots/tromboning-dark.jpg" width="60%" alt="Possible tromboning of AS12779: routes from Italian feeders that go through networks registered in the United States, with the RIPE Atlas probes to measure it"></td>
+    <td colspan="2" align="center"><img src="assets/screenshots/tromboning-dark.jpg" width="60%" alt="Tromboning of AS41327: a table with the median of the round trips of twelve probes in Italy, and a row for each probe with the networks on the way and the reading"></td>
   </tr>
   <tr>
-    <td colspan="2" align="center"><sub>Possible tromboning: a lead to confirm with traceroutes</sub></td>
+    <td colspan="2" align="center"><sub>Tromboning, measured: twelve probes in the country, the median first</sub></td>
   </tr>
 </table>
 
@@ -120,9 +120,9 @@ The validator is a [Routinator](https://github.com/NLnetLabs/routinator) instanc
   - *the AS paths* checked with the downstream procedure (valid, unknown, invalid);
   - *route leaks*: the valleys that the ASPAs prove, grouped by place, with the feeders that see them;
   - *the neighbours of the origin*, with an evidence column that says which of them look like its providers because its routes go on through them to a Tier-1 network, and which of them its ASPA does not list;
-  - *possible tromboning*: the domestic routes that cross another country, a candidate in the sense of the literature to be confirmed with traceroutes.
+  - *tromboning*: a traceroute from twelve probes in the country of the origin (Globalping), with the median round trip and a row for each probe, to tell a route that goes far away (100 ms or more inside a country) from a normal one.
 
-  Evidence and tromboning are readings of the routes of the moment, with their limits stated in the page, not verdicts.
+  Evidence and tromboning are readings, with their limits stated in the page, not verdicts.
 - **Live and graph:** under the routes of an AS, the updates that RIPE RIS Live hands out as they arrive, each one checked with the ASPAs (a leak shows up here while it happens); in the lookup, the neighbourhood of an AS drawn as a graph (`site/graph.js`).
 - **Writing your ASPA:** an examples page with the rules, five cases, the common mistakes and a checker that reviews a list of providers and compares it with the published ASPA.
 
@@ -254,7 +254,7 @@ eslint.config.mjs              security rules for the browser code (no innerHTML
 
 ## Development
 
-No build step and no dependencies. `make check` runs the same checks as the CI pipeline: JavaScript syntax, HTML validation, nginx configuration test, version consistency, a security lint of the browser code and the unit tests (`make test`: the ASPA path verification, the API and adoption builders, the evidence and tromboning readings, the status checks and the notifier). The pipeline also scans the git history for secrets (`make secrets`). Scheduled jobs audit the packages of the host weekly, log a daily snapshot of the ASPA data to the project's *Model experiments* and copy the wiki to the public mirror; the builders and the notifier run on the host itself. See [CONTRIBUTING.md](CONTRIBUTING.md).
+No build step and no dependencies. `make check` runs the same checks as the CI pipeline: JavaScript syntax, HTML validation, nginx configuration test, version consistency, a security lint of the browser code and the unit tests (`make test`: the ASPA path verification, the API and adoption builders, the evidence and traceroute readings, the status checks and the notifier). The pipeline also scans the git history for secrets (`make secrets`). Scheduled jobs audit the packages of the host weekly, log a daily snapshot of the ASPA data to the project's *Model experiments* and copy the wiki to the public mirror; the builders and the notifier run on the host itself. See [CONTRIBUTING.md](CONTRIBUTING.md).
 
 Releases follow [Semantic Versioning](https://semver.org/); the version shown in the footer lives in <a href="site/version.json" target="_blank" rel="noopener"><code>site/version.json</code></a> and must match the latest entry of the <a href="CHANGELOG.md" target="_blank" rel="noopener">changelog</a>.
 
