@@ -488,3 +488,4 @@ td.muted { color: var(--muted); }
 .status-dot.ok { background: #1f9d55; }
 .status-dot.warn { background: #d97706; }
 .status-dot.down { background: #d92d20; }
+.credits .heart { color: #e0245e; font-size: 1.1em; }

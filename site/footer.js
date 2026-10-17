@@ -73,7 +73,8 @@
       link('https://nlnetlabs.nl/projects/routinator/', logo('/img/routinator-avatar.png?v=1', '', 28, 28), el('span', {}, 'Routinator'))),
     el('li', {}, 'Made with ',
       link('https://en.wikipedia.org/wiki/Vi_(text_editor)', logo('/img/vi-logo.svg?v=1', 'vi', 28, 28)),
-      ' ', el('code', {}, ':wq')));
+      ' ', el('code', {}, ':wq')),
+    el('li', {}, 'Inspired by passion ', el('span', { class: 'heart', 'aria-hidden': 'true' }, '\u2665')));
 
   footer.append(build, credits);
   refresh();
