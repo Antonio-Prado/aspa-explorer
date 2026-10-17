@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.26.2] - 2026-10-17
+
+### Changed
+- The countries of the measurement of the tromboning are written with their names (Tunisia, not TN).
+
+## [1.26.1] - 2026-10-17
+
+### Changed
+- The result of the measurement says that the places of the hops are estimates of RIPE IPmap, and that a place that looks odd is more likely a wrong estimate than a detour; the link *hops* of the table of the probes no longer breaks over two lines.
+
+## [1.26.0] - 2026-10-17
+
+### Added
+- The hops of the measurement of the tromboning are placed with RIPE IPmap (the best candidate that the delay allows, since a packet covers about 100 km each way in a millisecond of round trip): each hop has its place, each probe the countries on the way and whether it goes through another country, and the result says how many probes do, and where. The connection to `ipmap-api.ripe.net` is allowed by the content security policy.
+
 ## [1.25.1] - 2026-10-17
 
 ### Changed

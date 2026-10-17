@@ -2,7 +2,7 @@
 import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
 
-const { hostIn, targetOf, isPrivate, summarise, aggregate } = createRequire(import.meta.url)('../site/traceroute.js');
+const { hostIn, targetOf, isPrivate, summarise, aggregate, pickLocation, distanceKm } = createRequire(import.meta.url)('../site/traceroute.js');
 let passed = 0;
 const test = (name, fn) => { fn(); passed++; console.log('ok  ', name); };
 
@@ -88,6 +88,41 @@ test('the probes together: median, range and the number in each fascia', () => {
   assert.equal(aggregate([s(5, 'ok')]).median, 5);
   assert.equal(aggregate([]), null);
   assert.equal(aggregate([{ net: null, verdict: null }]), null);
+});
+
+test('the distance on the ground', () => {
+  assert.ok(Math.abs(distanceKm(45.46, 9.19, 50.11, 8.68) - 516) < 15);        // Milan - Frankfurt
+  assert.equal(Math.round(distanceKm(45, 9, 45, 9)), 0);
+});
+
+test('where a hop is: the best candidate that the delay allows', () => {
+  const milan = { latitude: 45.48, longitude: 9.13 };
+  const loc = (cityName, cc, latitude, longitude, score) => ({ cityName, countryCodeAlpha2: cc, latitude, longitude, score });
+  const cands = [loc('Frankfurt', 'DE', 50.11, 8.68, 30), loc('Como', 'IT', 45.81, 9.08, 20), loc('Milan', 'IT', 45.46, 9.19, 10)];
+  assert.deepEqual(pickLocation(cands, milan, 12), { city: 'Frankfurt', cc: 'DE' });      // 12 ms: up to 1200 km, Frankfurt is 516
+  assert.deepEqual(pickLocation(cands, milan, 1), { city: 'Como', cc: 'IT' });            // 1 ms: 100 km, Frankfurt is not possible
+  assert.equal(pickLocation([loc('Sydney', 'AU', -33.9, 151.2, 50)], milan, 5), null);   // nothing is possible
+  assert.deepEqual(pickLocation(cands, milan, null).cc, 'DE');                            // no delay, no check
+  assert.equal(pickLocation([], milan, 5), null);
+  assert.equal(pickLocation(undefined, milan, 5), null);
+});
+
+test('the countries on the way and the probes that leave the country', () => {
+  const where = { '37.202.205.254': [{ cityName: 'Milan', countryCodeAlpha2: 'IT', latitude: 45.46, longitude: 9.19, score: 5 }],
+    '141.136.110.41': [{ cityName: 'Frankfurt', countryCodeAlpha2: 'DE', latitude: 50.11, longitude: 8.68, score: 5 }],
+    '80.249.208.68': [{ cityName: 'Amsterdam', countryCodeAlpha2: 'NL', latitude: 52.37, longitude: 4.89, score: 5 }] };
+  const p = { city: 'Milan', country: 'IT', asn: 6517, network: 'LAKE', latitude: 45.48, longitude: 9.13 };
+  const r = summarise({ probe: p, result: { status: 'finished', hops: [hop('37.202.205.254', [0.5]), hop('141.136.110.41', [12.3]), hop('80.249.208.68', [15.9]), hop('193.0.0.1', [16.5])] } },
+    () => null, (ip) => where[ip] || []);
+  assert.deepEqual(r.countries, ['IT', 'DE', 'NL']);
+  assert.deepEqual(r.abroad, ['DE', 'NL']);
+  assert.equal(r.exit.n, 2);
+  assert.equal(r.exit.geo.city, 'Frankfurt');
+  const home = summarise({ probe: p, result: { status: 'finished', hops: [hop('37.202.205.254', [0.5])] } }, () => null, (ip) => where[ip] || []);
+  assert.deepEqual(home.abroad, []);
+  const a = aggregate([r, home, { net: 5, verdict: 'ok', abroad: ['DE'] }]);
+  assert.equal(a.detours, 2);
+  assert.deepEqual(a.abroadBy, { DE: 2, NL: 1 });
 });
 
 console.log(`${passed} tests passed`);

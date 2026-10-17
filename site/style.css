@@ -565,3 +565,4 @@ table.live th.probe { font-weight: 400; text-align: left; }
 .result.r-ok { border-left-color: var(--s3); }
 .result.r-long { border-left-color: var(--s4); }
 .result.r-trombone { border-left-color: var(--s2); }
+table.live td.nowrap { white-space: nowrap; }
