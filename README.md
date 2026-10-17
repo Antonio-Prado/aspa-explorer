@@ -78,6 +78,14 @@
     <td align="center"><sub>Validators compared</sub></td>
   </tr>
   <tr>
+    <td width="50%"><img src="assets/screenshots/suggest-dark.jpg" alt="A starting point for the ASPA of AS12779: the providers already listed and seen, AS60798 seen but not listed, the ones not seen, and a list to copy"></td>
+    <td width="50%"><img src="assets/screenshots/compare-dark.jpg" alt="Compare two dates for AS12779: the providers its ASPA added and the ASPAs that began to name it"></td>
+  </tr>
+  <tr>
+    <td align="center"><sub>A starting point for an ASPA, from the evidence of the routes</sub></td>
+    <td align="center"><sub>Compare two dates for an AS</sub></td>
+  </tr>
+  <tr>
     <td colspan="2" align="center"><img src="assets/screenshots/tromboning-dark.jpg" width="60%" alt="Possible tromboning of AS12779: routes from Italian feeders that go through networks registered in the United States, with the RIPE Atlas probes to measure it"></td>
   </tr>
   <tr>
