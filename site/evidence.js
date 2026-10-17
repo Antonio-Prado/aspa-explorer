@@ -56,7 +56,28 @@
     return nb;
   }
 
-  const api = { analyse, clean, MIN_PATHS, STRONG_FEEDERS, STRONG_SHARE };
+  // A starting point for the ASPA of the origin, from what it declares now (an array of "AS123", or null without an ASPA) and the
+  // evidence about its neighbours (the Map of analyse). Providers with strong evidence are proposed; the declared ones stay, whether
+  // the routes show them or not (a backup provider is invisible); weak evidence is only a lead.
+  const num = (a) => Number(a.slice(2));
+  function suggest(declared, ev) {
+    const has = declared && declared.length ? declared.filter((p) => p !== 'AS0') : [];
+    const zero = Boolean(declared && declared.includes('AS0'));
+    const strong = [], weak = [];
+    for (const [n, e] of ev) (e.label === 'provider' ? strong : e.label === 'weak' ? weak : []).push('AS' + n);
+    const declaredSet = new Set(has);
+    const sort = (l) => l.sort((a, b) => num(a) - num(b));
+    return {
+      keep: sort(has.filter((p) => strong.includes(p) || weak.includes(p))),
+      keepUnseen: sort(has.filter((p) => !strong.includes(p) && !weak.includes(p))),
+      add: sort(strong.filter((p) => !declaredSet.has(p))),
+      check: sort(weak.filter((p) => !declaredSet.has(p) && !strong.includes(p))),
+      zero,
+      list: sort([...new Set([...has, ...strong])]),
+    };
+  }
+
+  const api = { analyse, clean, suggest, MIN_PATHS, STRONG_FEEDERS, STRONG_SHARE };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.AspaEvidence = api;
 })(typeof self !== 'undefined' ? self : this);

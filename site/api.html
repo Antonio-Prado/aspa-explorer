@@ -7,16 +7,16 @@
 <meta name="description" content="A small public API: the ASPA, its history and its quality for any AS, a badge and an Atom feed per AS. Open data, no key.">
 <meta name="color-scheme" content="light dark">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
-<link rel="stylesheet" href="/style.css?v=1.18.4">
-<script src="/download.js?v=1.18.4" defer></script>
-<script src="/status-checks.js?v=1.18.4" defer></script>
-<script src="/footer.js?v=1.18.4" defer></script>
+<link rel="stylesheet" href="/style.css?v=1.19.0">
+<script src="/download.js?v=1.19.0" defer></script>
+<script src="/status-checks.js?v=1.19.0" defer></script>
+<script src="/footer.js?v=1.19.0" defer></script>
 </head>
 <body>
 <a class="skip" href="#main">Skip to main content</a>
 <header class="wrap masthead">
   <div class="top">
-    <p class="back"><a class="brandlink" href="/" title="Back to ASPA Explorer"><img class="brand" src="/img/logo-mark.svg?v=1.18.4" alt="" width="40" height="40"><span>ASPA Explorer</span></a></p>
+    <p class="back"><a class="brandlink" href="/" title="Back to ASPA Explorer"><img class="brand" src="/img/logo-mark.svg?v=1.19.0" alt="" width="40" height="40"><span>ASPA Explorer</span></a></p>
     <nav class="topnav" aria-label="Main"><a href="/">Home</a><a href="/statistics.html">Statistics</a><a href="/examples.html">Examples</a><a href="/api.html" aria-current="page">API</a><a href="/guide.html">Guide</a><a href="/status.html">Status</a></nav>
   </div>
   <h1>API</h1>
@@ -87,6 +87,7 @@ X-ASPA-Signature: sha256=…      HMAC-SHA256(secret, timestamp + "." + body), h
  "change": {"customer": "AS3333", "kind": "changed", "providers": ["AS174", "AS1299", "AS3356"], "added": ["AS1299"], "dropped": []},
  "page": "https://aspa.ping6.it/as/AS3333",
  "unsubscribe": "https://aspa.ping6.it/api/v1/subscriptions/unsubscribe?token=…"}</code></pre>
+    <p>Add <code>"leaks": true</code> to the body to receive, once a day, the new places of valley that involve the AS as well (only <code>true</code> counts; it cannot be changed later, subscribe again). Such a delivery has <code>"type": "aspa.leak"</code>, the same signature and a <code>place</code> object: <code>{"role": "valley" | "gap", "kind": "leak" | "gap", "from": "AS…", "to": "AS…", "between": ["AS…"], "feeders": 5, "routes": 10}</code>. The data comes from <a href="/api/v1/leaks-by-as.json">/api/v1/leaks-by-as.json</a> (the places seen by at least three feeders, for each AS), the totals of each day from <a href="/api/v1/leaks-history.json">/api/v1/leaks-history.json</a> and the file of an earlier day (the last 60) from <code>/api/v1/leaks-by-as/YYYYMMDD.json</code>.</p>
     <p><code>relation</code> is <code>own</code> for a change of the ASPA of the AS and <code>provider</code> when another ASPA adds or drops it; <code>kind</code> is <code>new</code>, <code>changed</code> or <code>removed</code>. Check the signature and reject a timestamp more than a few minutes old. Deliveries are not retried; five failures in a row switch the webhook off. To stop, send a <code>POST</code> to the <code>unsubscribe</code> address.</p>
     <p>Webhook addresses must be <code>https</code> with a public host name; the service refuses names that resolve to private or local addresses, does not follow redirects and waits five seconds at most.</p>
   </section>

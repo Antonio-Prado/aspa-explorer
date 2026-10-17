@@ -174,6 +174,7 @@ function renderAsQuality(as) {
 /* ---------- changes: recent days and the history of one AS ---------- */
 // events.json (see history.js) classified into new / changed / removed; null until it has loaded
 let changes = null;
+let eventsRaw = [];
 let firstSeen = new Map();   // provider -> first day an ASPA named it
 let changesFirstDay = '';
 let lookupAs = null;
@@ -233,6 +234,7 @@ function renderAsHistory(as) {
 async function loadEvents() {
   try {
     const events = await getJson(DATA_EVENTS);
+    eventsRaw = events;
     changes = AspaHistory.classify(events);
     changesFirstDay = events.length ? events[0][0] : '';
     firstSeen = new Map();
@@ -628,6 +630,28 @@ function neighbourPanel(origin, rows, ev) {
     ...notes.map((t) => el('p', { class: 'hint', text: t })));
 }
 
+// A starting point for the ASPA of the origin, from its declared providers and the evidence of the routes (site/evidence.js).
+function suggestPanel(origin, ev, listed) {
+  const as = 'AS' + origin;
+  const s = AspaEvidence.suggest(listed ? [...listed] : null, ev);
+  const names = (l) => l.join(', ');
+  const kids = [el('h3', { class: 'subhead', text: `A starting point for the ASPA of ${as}` })];
+  if (!s.list.length && !s.check.length) {
+    kids.push(el('p', { class: 'hint', text: s.zero ? `${as} declares that it has no provider (AS0) and the routes show none with strong evidence: nothing to propose.` : `The routes do not give strong evidence of a provider of ${as}: nothing to propose.` }));
+    return el('div', {}, ...kids);
+  }
+  const bits = [];
+  if (s.keep.length) bits.push(`Already in its ASPA and seen in the routes: ${names(s.keep)}.`);
+  if (s.add.length) bits.push(`Seen as ${s.add.length === 1 ? 'a provider' : 'providers'} but not in its ASPA: ${names(s.add)}. Add ${s.add.length === 1 ? 'it' : 'them'} if ${s.add.length === 1 ? 'it is' : 'they are'} really your upstream.`);
+  if (s.keepUnseen.length) bits.push(`In its ASPA but not seen: ${names(s.keepUnseen)}. Keep ${s.keepUnseen.length === 1 ? 'it' : 'them'} for a backup provider or one the collectors do not see.`);
+  if (s.check.length) bits.push(`Weak evidence, to check by hand before adding: ${names(s.check)}.`);
+  if (s.zero) bits.push(`${as} declares AS0 (no provider) today: an ASPA with AS0 and other providers is not valid, so replace it rather than extend it.`);
+  kids.push(...bits.map((x) => el('p', { class: 'hint', text: x })));
+  if (s.list.length) kids.push(copyField(`Providers of ${as}`, s.list.join(' ')),
+    el('p', { class: 'hint' }, 'It is a proposal from what the collectors see, not a verdict. Check it with ', el('a', { href: '/examples.html#check', text: 'the checker' }), ' and publish it as ', el('a', { href: '/examples.html#publish', text: 'the examples page' }), ' explains.'));
+  return el('div', {}, ...kids);
+}
+
 /* ---------- origin validation of the prefixes (ROAs) ---------- */
 const ROV_MAX = 200;       // prefix + origin pairs checked per request
 const ROV_PARALLEL = 6;
@@ -782,6 +806,7 @@ async function renderLiveRoutes(text) {
     const ev = ctx ? AspaEvidence.analyse(routes, origin, ctx) : null;
     const panel = neighbourPanel(origin, rows, ev);
     if (panel) { kids.push(panel); usedEvidence = usedEvidence || Boolean(ev); }
+    if (panel && ev && q.kind === 'as') { const own = byCustomer.get('AS' + origin); kids.push(suggestPanel(origin, ev, own ? new Set(own.providers) : null)); }
     if (lookupAs) { const tp = trombonePanel(origin, AspaTromboning.analyse(routes, origin, lookupAs, { ixp: ctx ? ctx.ixp : new Set() })); if (tp) kids.push(tp); }
   }
   if (q.kind === 'as') kids.push(livePanel(asNum(q.label)));
@@ -798,6 +823,57 @@ async function renderLiveRoutes(text) {
 
 /* ---------- lookup ---------- */
 // the graph sits in a block of its own, like the history and the quality
+
+// Compare an AS on two days (site/history.js): its providers, the ASPAs that name it and, for the last 60 days, its places of valley.
+const isoDay = (d) => d.toISOString().slice(0, 10);
+async function dayPlaces(day) {
+  try { return (await getJson(`/api/v1/leaks-by-as/${day.replaceAll('-', '')}.json`)).as || null; } catch { return null; }
+}
+function compareBlock(as) {
+  const today = isoDay(new Date());
+  const ago = (n) => { const d = new Date(); d.setUTCDate(d.getUTCDate() - n); const s = isoDay(d); return changesFirstDay && s < changesFirstDay ? changesFirstDay : s; };
+  const from = el('input', { type: 'date', id: 'cmp-from', value: ago(30), max: today, min: changesFirstDay || undefined });
+  const to = el('input', { type: 'date', id: 'cmp-to', value: today, max: today, min: changesFirstDay || undefined });
+  const out = el('div', { 'aria-live': 'polite' });
+  const btn = el('button', { type: 'submit', text: 'Compare' });
+  const form = el('form', { class: 'opts' },
+    el('label', {}, 'From ', from), el('label', {}, 'to ', to), btn);
+  const list = (items) => (items.length ? chipList(items, 30) : el('span', { class: 'muted', text: 'none' }));
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    if (!eventsRaw.length) { out.replaceChildren(el('p', { class: 'hint', text: 'The history is still loading; try again in a moment.' })); return; }
+    let a = from.value, b = to.value;
+    if (!a || !b) { out.replaceChildren(el('p', { class: 'error', text: 'Pick two days.' })); return; }
+    if (a > b) [a, b] = [b, a];
+    btn.disabled = true;
+    const c = AspaHistory.compareAs(eventsRaw, as, a, b);
+    const kids = [el('p', { class: 'hint', text: `The state at the end of each day, ${fmtDayLong(a)} and ${fmtDayLong(b)}.` })];
+    const own = c.own;
+    if (!own.before && !own.after) kids.push(el('p', { text: `${as} had no ASPA on either day.` }));
+    else if (!own.before) kids.push(el('p', { text: `${as} had no ASPA on ${fmtDayLong(a)}; on ${fmtDayLong(b)} it lists ${own.after.length} provider${own.after.length === 1 ? '' : 's'}:` }), list(own.after));
+    else if (!own.after) kids.push(el('p', { text: `The ASPA of ${as} was removed between the two days; it listed:` }), list(own.before));
+    else if (!own.added.length && !own.dropped.length) kids.push(el('p', { text: `The ASPA of ${as} is the same on both days (${own.after.length} provider${own.after.length === 1 ? '' : 's'}).` }));
+    else kids.push(el('p', { text: 'Its ASPA added:' }), list(own.added), el('p', { text: 'and dropped:' }), list(own.dropped));
+    const n = c.named;
+    if (!n.added.length && !n.dropped.length) kids.push(el('p', { text: `The ASPAs that name ${as} as a provider are the same (${fmt.format(n.after)}).` }));
+    else kids.push(el('p', { text: `ASPAs that now name ${as} as a provider (${fmt.format(n.before)} before, ${fmt.format(n.after)} after):` }), list(n.added), el('p', { text: 'and that no longer do:' }), list(n.dropped));
+    out.replaceChildren(...kids, el('p', { class: 'hint', text: 'Looking at the places of valley…' }));
+    const [pa, pb] = await Promise.all([dayPlaces(a), dayPlaces(b)]);
+    const last = out.lastChild;
+    if (!pa || !pb) last.textContent = 'Places of valley: the daily files are kept for the last 60 days and start on 17 October 2026, so there is nothing to compare for one of the two days.';
+    else {
+      const p = AspaHistory.comparePlaces(pa, pb, as);
+      const row = (x) => el('li', {}, x.role === 'gap' ? `its ASPA seems to miss ${x.between[0]}` : `inside a valley between ${x.from} and ${x.to} (${x.between.join(' ')})`, ` · ${x.feeders} feeders`);
+      last.replaceWith(el('div', {}, el('p', { text: `Places of valley that involve ${as}: ${p.added.length} new, ${p.gone.length} gone, ${p.kept} still there.` }),
+        ...(p.added.length ? [el('p', { text: 'New:' }), el('ul', {}, ...p.added.slice(0, 5).map(row))] : []),
+        ...(p.gone.length ? [el('p', { text: 'Gone:' }), el('ul', {}, ...p.gone.slice(0, 5).map(row))] : [])));
+    }
+    btn.disabled = false;
+  });
+  return el('details', { class: 'embed' }, el('summary', { text: 'Compare two dates' }),
+    el('p', { class: 'hint', text: `What changed for ${as} between two days: its providers, the ASPAs that name it and, for days since 17 October 2026, the places of valley that involve it.` }), form, out);
+}
+
 function graphHolder(as) { return el('div', { class: 'res-hist' }, el('h4', { text: 'Neighbourhood' }), graphBlock(as)); }
 
 function renderLookup(as) {
@@ -839,7 +915,7 @@ function renderLookup(as) {
     right.append(el('p', { text: `No ASPA names ${as} as a provider.` }));
   }
 
-  out.replaceChildren(head, el('div', { class: 'res-grid' }, left, right), el('div', { class: 'res-hist', id: 'as-history' }), el('div', { class: 'res-hist', id: 'as-quality' }), graphHolder(as), shareBlock(as));
+  out.replaceChildren(head, el('div', { class: 'res-grid' }, left, right), el('div', { class: 'res-hist', id: 'as-history' }), el('div', { class: 'res-hist' }, el('h4', { text: 'Compare' }), compareBlock(as)), el('div', { class: 'res-hist', id: 'as-quality' }), graphHolder(as), shareBlock(as));
   document.title = `${as} · ASPA Explorer`;
   const canon = document.querySelector('link[rel="canonical"]');
   if (canon) canon.setAttribute('href', `${location.origin}/as/${as}`);
@@ -875,7 +951,9 @@ function notifyForm(as) {
     target.inputMode = hook ? 'url' : 'email';
     target.autocomplete = hook ? 'off' : 'email';
   });
-  const form = el('form', { class: 'notify', autocomplete: 'off' }, kind, target, trap, btn);
+  const leaks = el('input', { type: 'checkbox', id: 'nf-leaks' });
+  const leaksLabel = el('label', { class: 'chk', for: 'nf-leaks' }, leaks, ` Also tell me, once a day, about new places of valley (possible route leaks) that involve ${as}`);
+  const form = el('form', { class: 'notify', autocomplete: 'off' }, kind, target, trap, btn, leaksLabel);
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
     btn.disabled = true;
@@ -883,7 +961,7 @@ function notifyForm(as) {
     try {
       const r = await fetch('/api/v1/subscriptions', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ kind: kind.value, target: target.value.trim(), asn: as, website: trap.value }),
+        body: JSON.stringify({ kind: kind.value, target: target.value.trim(), asn: as, leaks: leaks.checked, website: trap.value }),
       });
       const body = await r.json().catch(() => ({}));
       if (!r.ok) throw new Error(body.error || `HTTP ${r.status}`);
@@ -899,7 +977,7 @@ function notifyForm(as) {
   });
   return el('details', { class: 'embed' },
     el('summary', { text: 'Get notified by e-mail or webhook' }),
-    el('p', { class: 'hint', text: `A message when the ASPA of ${as} changes, or when another ASPA adds or drops ${as} as a provider. An e-mail address has to be confirmed through a link; a webhook has to repeat a challenge. Nothing else is kept or used.` }),
+    el('p', { class: 'hint', text: `A message when the ASPA of ${as} changes, or when another ASPA adds or drops ${as} as a provider; if you tick the box, also when a new place of valley (a possible route leak) involves it. An e-mail address has to be confirmed through a link; a webhook has to repeat a challenge. Nothing else is kept or used.` }),
     form, msg,
     el('p', { class: 'hint' }, 'How it works, what is kept and how to stop: ', el('a', { href: '/guide.html#notify', text: 'the guide' }), '.'));
 }

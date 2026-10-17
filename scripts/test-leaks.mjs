@@ -2,7 +2,7 @@
 import assert from 'node:assert/strict';
 import { Readable } from 'node:stream';
 import { readRib, readAsPath } from './mrt.mjs';
-import { Leaks, aspaMap, relations } from './build-leaks.mjs';
+import { Leaks, aspaMap, relations, byAs, addHistory } from './build-leaks.mjs';
 
 let passed = 0;
 const test = async (name, fn) => { await fn(); passed++; console.log('ok  ', name); };
@@ -95,6 +95,24 @@ await test('the kind of a place: a gap in an ASPA, a leak, or unclear, by what C
   assert.deepEqual(r.leakers.map((x) => x.asn).sort(), ['AS21', 'AS22']);
   assert.deepEqual(r.gaps.map((x) => [x.customer, x.missing]), [['AS10', 'AS20']]);
   assert.equal(new Leaks(asp).result().places, 0);
+});
+
+await test('the by-AS index: valley members, the customer of a gap, few feeders and unclear places left out', () => {
+  const g = (kind, from, between, feeders, routes = 1) => ({ kind, from, to: 'AS9', between, feeders, routes });
+  const idx = byAs([g('leak', 'AS1', ['AS2', 'AS3'], 5, 10), g('gap', 'AS1', ['AS4'], 4), g('gap', 'AS7', ['AS2'], 2), g('unclear', 'AS8', ['AS5'], 9)]);
+  assert.deepEqual(Object.keys(idx).sort(), ['AS1', 'AS2', 'AS3', 'AS4']);
+  assert.deepEqual(idx.AS1.map((x) => [x.role, x.kind]), [['gap', 'gap']]);
+  assert.deepEqual(idx.AS2.map((x) => x.role), ['valley']);
+  assert.equal(byAs([g('leak', 'AS1', ['AS2'], 5), g('leak', 'AS1', ['AS2', 'AS6'], 6)], 3, 1).AS2.length, 1);
+});
+
+await test('the history keeps one row a day, in order, and a rerun replaces the day', () => {
+  const doc = (invalid) => ({ total: { routes: 100, invalid, unknown: 40 }, places: 5, kinds: { leak: 2, gap: 3, unclear: 0 } });
+  let rows = addHistory([], '2026-10-17', doc(7));
+  rows = addHistory(rows, '2026-10-16', doc(6));
+  rows = addHistory(rows, '2026-10-17', doc(8));
+  assert.deepEqual(rows.map((r) => [r.date, r.invalid]), [['2026-10-16', 6], ['2026-10-17', 8]]);
+  assert.equal(rows[1].leak, 2);
 });
 
 console.log(`${passed} tests passed`);

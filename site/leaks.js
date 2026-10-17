@@ -19,6 +19,52 @@
   const chip = (as) => el('a', { class: 'chip', href: `/as/${as}`, text: as });
   const pct = (a, b) => (b ? `${((100 * a) / b).toFixed(a / b < 0.1 ? 2 : 1)}%` : '0%');
 
+
+  // The daily totals (/api/v1/leaks-history.json): the places of possible leak and of gap, one point a day.
+  const SVG = 'http://www.w3.org/2000/svg';
+  const svg = (tag, attrs, ...kids) => { const n = document.createElementNS(SVG, tag); for (const [k, v] of Object.entries(attrs || {})) n.setAttribute(k, v); n.append(...kids); return n; };
+  const SERIES = [{ key: 'leak', label: 'Possible leaks', cls: 's1' }, { key: 'gap', label: 'Gaps in ASPAs', cls: 's2' }];
+  const dayLabel = (iso) => new Date(iso + 'T00:00:00Z').toLocaleDateString('en-GB', { day: 'numeric', month: 'short', timeZone: 'UTC' });
+
+  function drawHistory(box, rows) {
+    const W = Math.max(280, box.clientWidth || 640), H = 200, m = { l: 46, r: 10, t: 10, b: 24 };
+    const iw = W - m.l - m.r, ih = H - m.t - m.b;
+    const max = Math.max(1, ...rows.flatMap((r) => SERIES.map((s) => r[s.key])));
+    const step = 10 ** Math.floor(Math.log10(max)), top = Math.ceil(max / step) * step;
+    const x = (i) => m.l + (rows.length === 1 ? iw / 2 : (iw * i) / (rows.length - 1));
+    const y = (v) => m.t + ih - (ih * v) / top;
+    const g = svg('svg', { viewBox: `0 0 ${W} ${H}`, role: 'img', 'aria-label': `Places of possible leak and of gap, one value a day, from ${dayLabel(rows[0].date)} to ${dayLabel(rows[rows.length - 1].date)}: ${SERIES.map((s) => `${s.label} ${rows[0][s.key]} then ${rows[rows.length - 1][s.key]}`).join('; ')}.` });
+    for (let v = 0; v <= top; v += top / 4) {
+      g.append(svg('line', { class: 'grid', x1: m.l, x2: W - m.r, y1: y(v), y2: y(v) }), svg('text', { class: 'tick', x: m.l - 6, y: y(v) + 4, 'text-anchor': 'end' }, fmt.format(Math.round(v))));
+    }
+    [0, rows.length - 1].forEach((i, k) => g.append(svg('text', { class: 'tick', x: x(i), y: H - 6, 'text-anchor': k ? 'end' : 'start' }, dayLabel(rows[i].date))));
+    for (const s of SERIES) {
+      g.append(svg('polyline', { class: `line ${s.cls}`, points: rows.map((r, i) => `${x(i).toFixed(1)},${y(r[s.key]).toFixed(1)}`).join(' ') }));
+      if (rows.length === 1) g.append(svg('circle', { cx: x(0), cy: y(rows[0][s.key]), r: 3, fill: `var(--${s.cls})` }));
+    }
+    box.replaceChildren(g);
+  }
+
+  async function history() {
+    const box = $('leaks-history');
+    if (!box) return;
+    let rows;
+    try {
+      const r = await fetch('/api/v1/leaks-history.json', { headers: { Accept: 'application/json' } });
+      if (!r.ok) throw new Error(`HTTP ${r.status}`);
+      rows = await r.json();
+    } catch { box.replaceChildren(); $('leaks-history-note').textContent = 'The history of the leaks is not available.'; return; }
+    if (!rows.length) return;
+    $('leaks-history-note').textContent = rows.length < 2
+      ? 'One point a day: the history starts on ' + dayLabel(rows[0].date) + ' and grows from tomorrow.'
+      : `One point a day, ${rows.length} days. A change can come from the routes, from the ASPAs published that day or from the relationships dataset.`;
+    const legend = $('leaks-history-legend');
+    legend.replaceChildren(...SERIES.map((s) => el('li', {}, el('span', { class: `sw ${s.cls}`, 'aria-hidden': 'true' }), el('span', { class: 'lg', text: s.label }), ' ', el('span', { class: 'lv', text: fmt.format(rows[rows.length - 1][s.key]) }))));
+    drawHistory(box, rows);
+    let t = 0;
+    window.addEventListener('resize', () => { clearTimeout(t); t = setTimeout(() => drawHistory(box, rows), 150); });
+  }
+
   async function main() {
     if (!$('leaks-sub')) return;
     let d;
@@ -56,4 +102,5 @@
     $('leaks-note').textContent = `${fmt.format(d.kinds.unclear)} more places have no relation in ${d.relationships || 'the relationships dataset'} and are not listed. The tables show the places seen by most feeders first. The relation is inferred from observed routes, so it can be out of date; a place is a candidate, not a verdict, and the ASPAs prove a valley only where they are published (${pct(t.unknown, t.routes)} of the routes cross an AS without one). A leak seen by one feeder only can be a leak at the feeder itself.`;
   }
   main();
+  history();
 })();

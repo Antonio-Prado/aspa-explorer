@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.19.0] - 2026-10-17
+
+### Added
+- *A starting point for the ASPA* after the neighbours table of the routes check: the providers with strong evidence, the ones already declared, weak leads, and a list ready to copy.
+- The history of the leaks: `leaks-history.json` (one row of totals a day), the chart *Over time* on the statistics page, and the by-AS files `leaks-by-as.json` and one for each of the last 60 days.
+- Alerts for places of valley, opt-in at subscription (`leaks: true`): once a day, the new places that involve the AS, by mail or as an `aspa.leak` webhook. The places present at subscription are not announced.
+- *Compare two dates* on the page of an AS: providers added and dropped, the ASPAs that began or stopped naming it, and the places of valley that involve it.
+
 ## [1.18.4] - 2026-10-17
 
 ### Changed

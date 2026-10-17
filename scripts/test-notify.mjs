@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import http from 'node:http';
 import { generateKeyPairSync } from 'node:crypto';
 import { makeToken, readToken } from '../notifier/tokens.mjs';
-import { stabilise, audience, describeEvent } from '../notifier/changes.mjs';
+import { stabilise, audience, describeEvent, newPlaces, describePlace } from '../notifier/changes.mjs';
 import { isPublicIp, parseWebhookUrl, post, signature } from '../notifier/webhook.mjs';
 import { sign, verify, relaxBody } from '../notifier/dkim.mjs';
 import { compose, serialize, sendmail, EMAIL_RE } from '../notifier/mail.mjs';
@@ -280,6 +280,41 @@ await test('HTTP: the health answer, when a function is given', async () => {
   assert.equal(r.status, 200);
   assert.deepEqual(await r.json(), { ok: true, last_poll: 'x' });
   await new Promise((res) => server.close(res));
+});
+
+await test('places of valley: a baseline first, then only the new ones, only for the ASes asked', () => {
+  const place = (from, between, feeders = 5) => ({ role: 'valley', kind: 'leak', from, to: 'AS9', between, feeders, routes: 10 });
+  const doc1 = { AS2: [place('AS1', ['AS2'])], AS7: [place('AS1', ['AS7'])] };
+  let r = newPlaces(doc1, ['AS2', 'AS3'], null);
+  assert.deepEqual(r.events, []);                                    // the first build only sets the baseline
+  assert.deepEqual(Object.keys(r.seen).sort(), ['AS2', 'AS3']);      // nothing kept for AS7: nobody asked
+  const doc2 = { AS2: [place('AS1', ['AS2']), place('AS4', ['AS2', 'AS5'])], AS3: [place('AS1', ['AS3'])] };
+  r = newPlaces(doc2, ['AS2', 'AS3'], r.seen);
+  assert.deepEqual(r.events.map((e) => [e.asn, e.from]), [['AS2', 'AS4'], ['AS3', 'AS1']]);
+  assert.equal(newPlaces(doc2, ['AS2', 'AS3'], r.seen).events.length, 0);   // the same build again says nothing
+  assert.equal(newPlaces(doc2, ['AS8'], r.seen).events.length, 0);          // an AS that is new to the list gets a baseline
+});
+
+await test('places of valley: the descriptions say leak or gap in plain words', () => {
+  const v = describePlace({ asn: 'AS2', role: 'valley', kind: 'leak', from: 'AS1', to: 'AS9', between: ['AS2', 'AS3'], feeders: 5, routes: 10 });
+  assert.match(v, /AS2 sits inside a valley between AS1 and AS9/);
+  assert.match(v, /peer or a customer/);
+  const g = describePlace({ asn: 'AS1', role: 'gap', kind: 'gap', from: 'AS1', to: 'AS9', between: ['AS4'], feeders: 4, routes: 8 });
+  assert.match(g, /does not seem to list AS4/);
+  assert.match(describePlace({ asn: 'AS2', role: 'valley', kind: 'gap', from: 'AS1', to: 'AS9', between: ['AS2'], feeders: 3, routes: 3 }), /misses a provider/);
+});
+
+await test('API: the request for places of valley is kept, only as an explicit true', async () => {
+  const { store, api, mails } = setup();
+  await api.subscribe({ kind: 'email', target: 'a@example.com', asn: 'AS1', leaks: true }, '1.1.1.1');
+  await api.subscribe({ kind: 'email', target: 'b@example.com', asn: 'AS1', leaks: 'yes' }, '1.1.1.2');
+  assert.equal(mails[0].leaks, true);
+  assert.equal(mails[1].leaks, false);
+  assert.equal(store.find('email', 'a@example.com', 'AS1').leaks, 1);
+  assert.equal(store.find('email', 'b@example.com', 'AS1').leaks, 0);
+  await api.subscribe({ kind: 'email', target: 'b@example.com', asn: 'AS1', leaks: true }, '1.1.1.3');   // a pending request can change its mind (not within the hour: ignored)
+  const w = await api.subscribe({ kind: 'webhook', target: 'https://hooks.example.org/x', asn: 'AS2', leaks: true }, '1.1.1.4');
+  assert.equal(w.body.leaks, true);
 });
 
 console.log(`${passed} tests passed`);

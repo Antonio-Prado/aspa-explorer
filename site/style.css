@@ -224,6 +224,7 @@ figcaption .s { display: block; color: var(--muted); font-size: 0.8125rem; }
 .histctl .chk.off { opacity: 0.55; }
 .linechart .line { fill: none; stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
 .linechart .line.s1 { stroke: var(--s1); }
+.linechart .line.s2 { stroke: var(--s2); }
 .linechart .fillarea { stroke: none; opacity: 0.14; }
 .export { margin-top: 0.25rem; }
 .changes { padding: 0.5rem 1.1rem; }
@@ -435,6 +436,7 @@ table.nb th.num, table.nb td.num { text-align: right; font-variant-numeric: tabu
 .notify select, .notify input[type="text"] { min-width: 0; padding: 0.45rem 0.55rem; border: 1px solid var(--grid); border-radius: 6px; background: var(--surface); color: var(--ink); font: inherit; }
 .hp { position: absolute; left: -10000px; width: 1px; height: 1px; opacity: 0; }
 @media (max-width: 520px) { .notify { grid-template-columns: 1fr; } }
+.notify .chk { grid-column: 1 / -1; display: flex; align-items: center; gap: 0.5rem; font-size: 0.875rem; color: var(--ink-2); }
 .notice { padding: 1.25rem 1.5rem; }
 .notice button { margin: 0.25rem 0 0.75rem; }
 

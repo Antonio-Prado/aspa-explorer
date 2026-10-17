@@ -66,7 +66,28 @@
     });
   }
 
-  const api = { stateOf, replay, diff, applyDay, classify, sortProviders };
+  // What changed for one AS between two days (from < to): its own providers and the ASPAs that name it as a provider.
+  function compareAs(events, as, from, to) {
+    const a = replay(events, from), b = replay(events, to);
+    const own = (s) => s.get(as) || null;
+    const namedBy = (s) => [...s].filter(([, ps]) => ps.includes(as)).map(([c]) => c).sort((x, y) => asNum(x) - asNum(y));
+    const pa = own(a), pb = own(b), na = namedBy(a), nb = namedBy(b);
+    return {
+      as, from, to,
+      own: { before: pa, after: pb, added: (pb || []).filter((x) => !(pa || []).includes(x)), dropped: (pa || []).filter((x) => !(pb || []).includes(x)) },
+      named: { before: na.length, after: nb.length, added: nb.filter((c) => !na.includes(c)), dropped: na.filter((c) => !nb.includes(c)) },
+    };
+  }
+
+  // The places of valley of one AS on two days (the "as" objects of the daily leaks-by-as files): new, gone and still there.
+  function comparePlaces(before, after, as) {
+    const key = (p) => `${p.role}|${p.from}|${p.to}|${p.between.join(' ')}`;
+    const pa = (before && before[as]) || [], pb = (after && after[as]) || [];
+    const ka = new Set(pa.map(key)), kb = new Set(pb.map(key));
+    return { added: pb.filter((p) => !ka.has(key(p))), gone: pa.filter((p) => !kb.has(key(p))), kept: pb.filter((p) => ka.has(key(p))).length };
+  }
+
+  const api = { stateOf, replay, diff, applyDay, classify, sortProviders, compareAs, comparePlaces };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.AspaHistory = api;
 })(typeof self !== 'undefined' ? self : this);

@@ -22,10 +22,13 @@ export function openStore(path) {
     CREATE INDEX IF NOT EXISTS subs_asn ON subscriptions (asn, status);
     CREATE TABLE IF NOT EXISTS state (key TEXT PRIMARY KEY, value TEXT NOT NULL);
   `);
+  // 1.19.0: a subscription can ask for the places of valley that involve its AS as well (older files do not have the column)
+  if (!db.prepare('PRAGMA table_info(subscriptions)').all().some((c) => c.name === 'leaks')) db.exec('ALTER TABLE subscriptions ADD COLUMN leaks INTEGER NOT NULL DEFAULT 0');
   const q = {
     find: db.prepare('SELECT * FROM subscriptions WHERE kind = ? AND target = ? AND asn = ?'),
     byId: db.prepare('SELECT * FROM subscriptions WHERE id = ?'),
-    insert: db.prepare('INSERT INTO subscriptions (kind, target, asn, secret, status, created, attempted) VALUES (?, ?, ?, ?, \'pending\', ?, ?)'),
+    insert: db.prepare('INSERT INTO subscriptions (kind, target, asn, secret, status, created, attempted, leaks) VALUES (?, ?, ?, ?, \'pending\', ?, ?, ?)'),
+    setLeaks: db.prepare('UPDATE subscriptions SET leaks = ? WHERE id = ? AND status = \'pending\''),
     attempt: db.prepare('UPDATE subscriptions SET attempted = ?, secret = COALESCE(?, secret) WHERE id = ?'),
     activate: db.prepare('UPDATE subscriptions SET status = \'active\', confirmed = ?, fails = 0 WHERE id = ?'),
     remove: db.prepare('DELETE FROM subscriptions WHERE id = ?'),
@@ -45,7 +48,8 @@ export function openStore(path) {
   return {
     find: (kind, target, asn) => plain(q.find.get(kind, target, asn)),
     get: (id) => plain(q.byId.get(id)),
-    insert: (kind, target, asn, secret, now) => Number(q.insert.run(kind, target, asn, secret, now, now).lastInsertRowid),
+    insert: (kind, target, asn, secret, now, leaks = 0) => Number(q.insert.run(kind, target, asn, secret, now, now, leaks ? 1 : 0).lastInsertRowid),
+    setLeaks: (id, leaks) => q.setLeaks.run(leaks ? 1 : 0, id),
     attempt: (id, now, secret = null) => q.attempt.run(now, secret, id),
     activate: (id, now) => q.activate.run(now, id),
     remove: (id) => q.remove.run(id),

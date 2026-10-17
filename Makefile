@@ -45,6 +45,7 @@ test:
 	node scripts/test-leaks.mjs
 	node scripts/test-validators.mjs
 	node scripts/test-graph.mjs
+	node scripts/test-compare.mjs
 	node scripts/test-live.mjs
 	node scripts/test-evidence.mjs
 	node scripts/test-tromboning.mjs

@@ -21,6 +21,9 @@ sed -e "s|/usr/local/etc/nginx/tls|$work/tls|g" \
     -e "s|/var/db/aspa-gen/adoption.json|$work/gen/adoption.json|g" \
     -e "s|/var/db/aspa-gen/asn-registry.json|$work/gen/asn-registry.json|g" \
     -e "s|/var/db/aspa-gen/leaks.json|$work/gen/leaks.json|g" \
+    -e "s|/var/db/aspa-gen/leaks-by-as.json|$work/gen/leaks-by-as.json|g" \
+    -e "s|/var/db/aspa-gen/leaks-history.json|$work/gen/leaks-history.json|g" \
+    -e "s|/var/db/aspa-gen/leaks-days|$work/gen/leaks-days|g" \
     -e "s|/var/db/aspa-gen/validators.json|$work/gen/validators.json|g" \
     -e "s|/var/db/aspa-gen/current|$work/gen|g" \
     -e "s|192\.0\.2\.10|127.0.0.1|g" \

@@ -8,8 +8,12 @@
 //   ASPA_DATA        URL or file of Routinator's jsonext     http://127.0.0.1:8080/data/aspas.json
 //   LEAKS_COLLECTORS comma separated RIS collectors          rrc00,rrc01,rrc03
 //   LEAKS_ADOPTION   file with the Tier-1 clique and the IXP ASes (adoption.json), next to OUT_FILE
+//
+// Next to OUT_FILE it also writes leaks-by-as.json (the places of valley that involve each AS, for the page of an AS
+// and for the notifier), leaks-history.json (one line of totals a day, for the chart) and leaks-days/YYYYMMDD.json
+// (the by-AS file of each of the last 60 days, to compare two days).
 import { createRequire } from 'node:module';
-import { mkdir, readFile, writeFile, rename, stat } from 'node:fs/promises';
+import { mkdir, readFile, writeFile, rename, stat, readdir, unlink } from 'node:fs/promises';
 import { createWriteStream } from 'node:fs';
 import { pipeline } from 'node:stream/promises';
 import { Readable } from 'node:stream';
@@ -115,6 +119,7 @@ export class Leaks {
       }
       return [...m.values()].sort((a, b) => b.feeders - a.feeders || b.routes - a.routes).slice(0, 30);
     };
+    this.list = list;
     return {
       total: this.total, places: list.length,
       kinds: { gap: list.filter((g) => g.kind === 'gap').length, leak: list.filter((g) => g.kind === 'leak').length, unclear: list.filter((g) => g.kind === 'unclear').length },
@@ -125,6 +130,35 @@ export class Leaks {
       gaps: sum(list.filter((g) => g.kind === 'gap'), (g) => `${g.from}|${g.between[0]}`, (g) => ({ customer: g.from, missing: g.between[0] })),
     };
   }
+}
+
+export const MIN_FEEDERS = 3;     // places seen by fewer feeders are left out of the by-AS file: a feeder can leak by itself
+const PER_AS = 10;
+const KEEP_DAYS = 60;
+
+// The places of valley that involve each AS, from the full list of places of Leaks.result(): an AS inside the valley
+// ("valley": it passed up what it should not have, or a path was forged through it) and, for a gap, the customer whose ASPA
+// seems to miss a provider ("gap"). At most PER_AS places for an AS, the most seen first.
+export function byAs(list, minFeeders = MIN_FEEDERS, perAs = PER_AS) {
+  const out = {};
+  const put = (asn, role, g) => {
+    const l = out[asn] || (out[asn] = []);
+    l.push({ role, kind: g.kind, from: g.from, to: g.to, between: g.between, feeders: g.feeders, routes: g.routes });
+  };
+  for (const g of list) {
+    if (g.feeders < minFeeders || g.kind === 'unclear') continue;
+    for (const a of new Set(g.between)) put(a, 'valley', g);
+    if (g.kind === 'gap') put(g.from, 'gap', g);
+  }
+  for (const asn of Object.keys(out)) out[asn] = out[asn].sort((a, b) => b.feeders - a.feeders || b.routes - a.routes).slice(0, perAs);
+  return out;
+}
+
+// The history file with the totals of the day added (a day already there is replaced).
+export function addHistory(rows, date, doc) {
+  const t = doc.total;
+  const row = { date, routes: t.routes, invalid: t.invalid, unknown: t.unknown, places: doc.places, leak: doc.kinds.leak, gap: doc.kinds.gap, unclear: doc.kinds.unclear };
+  return rows.filter((r) => r.date !== date).concat(row).sort((a, b) => (a.date < b.date ? -1 : 1));
 }
 
 async function fresh(path, maxAgeMs) {
@@ -174,9 +208,17 @@ async function main() {
     console.error(`${c}: ${stats.entries} routes in ${Math.round((Date.now() - t0) / 1000)} s`);
   }
   const doc = { generated: new Date().toISOString().replace(/\.\d+Z$/, 'Z'), aspas: data.aspas.length, collectors: used, relationships: rel.source, ...leaks.result() };
-  const tmp = `${outFile}.tmp`;
-  await writeFile(tmp, JSON.stringify(doc) + '\n');
-  await rename(tmp, outFile);
+  const write = async (file, value) => { const tmp = `${file}.tmp`; await writeFile(tmp, JSON.stringify(value) + '\n'); await rename(tmp, file); };
+  await write(outFile, doc);
+  const dir = join(outFile, '..'), day = doc.generated.slice(0, 10);
+  const perAs = { generated: doc.generated, min_feeders: MIN_FEEDERS, as: byAs(leaks.list) };
+  await write(join(dir, 'leaks-by-as.json'), perAs);
+  let rows = [];
+  try { rows = JSON.parse(await readFile(join(dir, 'leaks-history.json'), 'utf8')); } catch { /* the first run */ }
+  await write(join(dir, 'leaks-history.json'), addHistory(rows, day, doc));
+  await mkdir(join(dir, 'leaks-days'), { recursive: true });
+  await write(join(dir, 'leaks-days', `${day.replaceAll('-', '')}.json`), perAs);
+  for (const f of (await readdir(join(dir, 'leaks-days'))).filter((x) => /^\d{8}\.json$/.test(x)).sort().slice(0, -KEEP_DAYS)) await unlink(join(dir, 'leaks-days', f));
   console.log(`${doc.generated}: ${doc.total.routes} routes, ${doc.total.invalid} invalid, ${doc.places} places of valley`);
 }
 
