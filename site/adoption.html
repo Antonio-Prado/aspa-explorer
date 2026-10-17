@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ASPA adoption</title>
+<meta name="description" content="Who has published an ASPA: by RIR, country and size of the network, and the largest transit networks with and without one.">
+<meta name="color-scheme" content="light dark">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/style.css?v=1.10.0">
+<script src="/adoption.js?v=1.10.0" defer></script>
+<script src="/footer.js?v=1.10.0" defer></script>
+</head>
+<body>
+<a class="skip" href="#main">Skip to main content</a>
+<header class="wrap masthead">
+  <p class="back"><a class="brandlink" href="/" title="Back to ASPA Explorer"><img class="brand" src="/img/logo-mark.svg?v=1.10.0" alt="" width="40" height="40"><span>ASPA Explorer</span></a></p>
+  <h1>Adoption</h1>
+  <p class="lede">Which networks have published an ASPA, by RIR, country and size, and how the largest transit networks stand. Of the networks seen in BGP.</p>
+  <p class="meta" id="meta">Loading data…</p>
+</header>
+
+<main class="wrap" id="main" tabindex="-1">
+  <div class="tiles" id="tiles" aria-live="polite"></div>
+
+  <section class="card pad" aria-labelledby="size-title">
+    <h2 id="size-title" class="subhead">By size of the network</h2>
+    <p class="hint">Size is the customer cone: the networks that a network reaches through its customers, from the CAIDA relationships. Larger networks are the ones that matter most for the routes of others.</p>
+    <div class="bars cov" id="by-size"></div>
+  </section>
+
+  <section class="card pad" aria-labelledby="rir-title">
+    <h2 id="rir-title" class="subhead">By RIR</h2>
+    <p class="hint">The registry where the AS number was registered, which is not always the one whose trust anchor holds the ASPA.</p>
+    <div class="bars cov" id="by-rir"></div>
+  </section>
+
+  <section aria-labelledby="top-title">
+    <h2 id="top-title">The largest transit networks</h2>
+    <p class="hint" id="top-sub"></p>
+    <p class="filters"><label class="chk"><input type="checkbox" id="top-missing"> Only those without an ASPA</label></p>
+    <div class="card table-wrap" tabindex="0" role="region" aria-label="Table of the largest transit networks">
+      <table class="checks live">
+        <caption class="sr-only">The 100 largest networks seen in BGP by customer cone, and whether each has an ASPA</caption>
+        <thead><tr><th scope="col" class="num">#</th><th scope="col">AS</th><th scope="col">Country</th><th scope="col" class="num">Customer cone</th><th scope="col">ASPA</th></tr></thead>
+        <tbody id="top-rows"></tbody>
+      </table>
+    </div>
+    <button type="button" class="more" id="top-more" hidden>Show more</button>
+  </section>
+
+  <section aria-labelledby="cc-title">
+    <h2 id="cc-title">By country</h2>
+    <p class="hint">The country where the AS number was registered, not necessarily where the network operates.</p>
+    <p class="filters">
+      <label>Sort by <select id="cc-sort"><option value="seen">networks</option><option value="pct">coverage</option></select></label>
+      <label>Countries with at least <select id="cc-min"><option value="1">1 network</option><option value="10">10 networks</option><option value="30" selected>30 networks</option><option value="100">100 networks</option></select></label>
+    </p>
+    <div class="card table-wrap" tabindex="0" role="region" aria-label="Table of adoption by country">
+      <table class="checks live">
+        <caption class="sr-only">Networks seen in BGP, and how many have an ASPA, by country</caption>
+        <thead><tr><th scope="col">Country</th><th scope="col" class="num">Networks</th><th scope="col" class="num">With an ASPA</th><th scope="col" class="cov-col">Coverage</th></tr></thead>
+        <tbody id="cc-rows"></tbody>
+      </table>
+    </div>
+    <button type="button" class="more" id="cc-more" hidden>Show more</button>
+  </section>
+
+  <p class="hint" id="sources"></p>
+  <p class="hint">The same numbers as JSON: <a href="/api/v1/adoption.json">/api/v1/adoption.json</a>. How the numbers are made: <a href="/guide.html#adoption">the guide</a>.</p>
+</main>
+
+<footer class="wrap foot">
+  <p><a href="/">&larr; Back to ASPA Explorer</a></p>
+</footer>
+</body>
+</html>

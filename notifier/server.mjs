@@ -121,7 +121,7 @@ const readBody = (req, limit = 2048) => new Promise((resolve, reject) => {
 });
 
 // node:http request handler around makeApi
-export function httpHandler(api, { site, perIpUnsub = limiter(60, HOUR) } = {}) {
+export function httpHandler(api, { site, perIpUnsub = limiter(60, HOUR), health = null } = {}) {
   return async (req, res) => {
     const send = ({ status, body }) => {
       res.writeHead(status, { ...(status === 413 ? { Connection: 'close' } : {}), 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff' });
@@ -130,6 +130,7 @@ export function httpHandler(api, { site, perIpUnsub = limiter(60, HOUR) } = {}) 
     try {
       const url = new URL(req.url, 'http://localhost');
       const ip = String(req.headers['x-real-ip'] || req.socket.remoteAddress || '');
+      if (req.method === 'GET' && url.pathname === '/api/v1/subscriptions/health' && health) return send({ status: 200, body: health() });
       if (req.method !== 'POST') return send({ status: 405, body: { error: 'POST only' } });
       const origin = req.headers.origin;
       if (origin && origin !== site) return send({ status: 403, body: { error: 'cross-origin requests are not accepted' } });

@@ -7,13 +7,13 @@
 <meta name="description" content="A small public API: the ASPA, its history and its quality for any AS, a badge and an Atom feed per AS. Open data, no key.">
 <meta name="color-scheme" content="light dark">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
-<link rel="stylesheet" href="/style.css?v=1.9.0">
-<script src="/footer.js?v=1.9.0" defer></script>
+<link rel="stylesheet" href="/style.css?v=1.10.0">
+<script src="/footer.js?v=1.10.0" defer></script>
 </head>
 <body>
 <a class="skip" href="#main">Skip to main content</a>
 <header class="wrap masthead">
-  <p class="back"><a class="brandlink" href="/" title="Back to ASPA Explorer"><img class="brand" src="/img/logo-mark.svg?v=1.9.0" alt="" width="40" height="40"><span>ASPA Explorer</span></a></p>
+  <p class="back"><a class="brandlink" href="/" title="Back to ASPA Explorer"><img class="brand" src="/img/logo-mark.svg?v=1.10.0" alt="" width="40" height="40"><span>ASPA Explorer</span></a></p>
   <h1>API</h1>
   <p class="lede">The data of this page for any AS, as JSON, a badge and an Atom feed. Open, read-only, no key.</p>
 </header>
@@ -90,6 +90,7 @@ X-ASPA-Signature: sha256=…      HMAC-SHA256(secret, timestamp + "." + body), h
     <ul>
       <li><a href="/data/aspas.json">/data/aspas.json</a>: all valid ASPAs, as Routinator's <code>jsonext</code> (route origins and router keys left out).</li>
       <li><a href="/api/v1/meta.json">/api/v1/meta.json</a>: when the per-AS files were built and how many there are.</li>
+      <li><a href="/api/v1/adoption.json">/api/v1/adoption.json</a>: the adoption numbers: networks seen in BGP and how many have an ASPA, by RIR, country and size, and the 100 largest networks. Built once a day; the sources are named in the file.</li>
       <li>The daily history, the events and the BGP visibility are plain files on the <code>history</code> branch of the <a href="https://gitlab.dei.unipd.it/Antonio-Prado/aspa-explorer/-/tree/history" target="_blank" rel="noopener">public project<span class="sr-only"> (opens in a new tab)</span></a>.</li>
     </ul>
   </section>

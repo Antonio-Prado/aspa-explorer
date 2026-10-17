@@ -47,6 +47,14 @@
     <td align="center"><sub>ASPA quality: what looks wrong in the ASPAs</sub></td>
     <td align="center"><sub>Share and follow: feed, notifications, badge, API</sub></td>
   </tr>
+  <tr>
+    <td width="50%"><img src="assets/screenshots/adoption-dark.jpg" alt="The adoption page: the largest transit networks without an ASPA, with their customer cone and country"></td>
+    <td width="50%"><img src="assets/screenshots/examples-light.jpg" alt="The examples page: a checker that reviews a list of providers and compares it with the published ASPA"><br><img src="assets/screenshots/status-light.jpg" alt="The status page: each part of the service with its state and the time of its last update"></td>
+  </tr>
+  <tr>
+    <td align="center"><sub>Adoption: by size, RIR and country, and the largest transit networks</sub></td>
+    <td align="center"><sub>Examples with a checker, and the status page</sub></td>
+  </tr>
 </table>
 
 ## What is it
@@ -65,6 +73,7 @@ The validator is a [Routinator](https://github.com/NLnetLabs/routinator) instanc
 - **Origin validation:** the same box checks every prefix and origin of those routes against the ROAs of the validator (valid, not found, invalid with the reason), asked of the page's own server, not of a third party.
 - **A page, a badge and a feed for every AS:** `/as/AS3333` opens the page on that AS, `/badge/AS3333.svg` is a badge with its number of providers (Markdown and HTML to paste are in the lookup), and `/feed/AS3333.atom` lists the changes of its ASPA and of the ASPAs that add or drop it as a provider.
 - **Notifications:** subscribe an e-mail address (confirmed through a link, DKIM-signed mails with a one-click unsubscribe) or a webhook (verified by a challenge, signed with HMAC-SHA256, public https addresses only) to the changes of an AS. The service is `notifier/`, a small Node.js program with SQLite.
+- **Adoption, status and examples:** an adoption page (who has an ASPA, by size of the network, RIR and country, and the 100 largest transit networks, also as `/api/v1/adoption.json`), a status page that shows how fresh each piece of data is, and an examples page with the rules for writing an ASPA, five cases, the common mistakes and a checker for your own list.
 - **Public API:** `/api/v1/as/3333` returns the ASPA, the ASPAs that name it, BGP visibility, quality findings and history as JSON (CORS open); see `site/api.html` and the OpenAPI description in `site/api/openapi.json`.
 - **Overview:** summary tiles (with the coverage: the share of the ASes seen in BGP that have an ASPA) and four charts: ASPAs over time (daily since October 2023, by RIR, provider ASes, median providers, no-provider ASPAs or coverage, over any period, with a logarithmic scale and CSV/JSON download), ASPAs per RIR, providers per ASPA, most-named providers.
 - **Quality:** checks on every ASPA (AS0 mixed with other providers, a private or reserved provider, two ASes listing each other, providers no collector sees in BGP, expiring objects, very large provider sets) with counts and lists, a *Quality* block in the lookup, and, in the routes check, a table of the neighbours of the origin against its ASPA.
@@ -134,8 +143,8 @@ assets/                        logo (SVG), screenshots and credit logos used in 
 deploy/nginx/aspa.conf         nginx server blocks and proxy cache zone
 deploy/nginx/rpki-proxy.conf   proxy settings shared by the data endpoints
 deploy/nginx/security-headers.conf   security headers (server block and /client-ip)
-scripts/                       CI helpers and jobs: nginx check, version check, unit tests of the
-                               path verification and of the API builder, the builder itself (build-api.mjs), build info, package audit, ASPA snapshot,
+scripts/                       CI helpers and jobs: nginx check, version check, unit tests, the builders
+                               of the per-AS API (build-api.mjs) and of the adoption numbers (build-adoption.mjs), build info, package audit, ASPA snapshot,
                                release and wiki publishing
 .gitlab-ci.yml                 the CI pipeline (checks, security, scheduled and publishing jobs)
 deploy/freebsd/                daily refresh of the pkg vulnerability database, rc script of the notifier
@@ -149,7 +158,8 @@ eslint.config.mjs              security rules for the browser code (no innerHTML
 3. Write the build information shown in the footer next to `index.html`: `sh scripts/build-info.sh > build.json`.
 4. For the per-AS API, badges and feeds, run `node scripts/build-api.mjs /var/db/aspa-gen` (Node.js 18+, with `site/history.js` and `site/quality.js` next to its `../site`) every 15 minutes as an unprivileged user; it builds into a new directory and switches a `current` symlink that nginx serves. Without it the AS endpoints still answer, with "no ASPA".
 5. Notifications (optional): run `notifier/main.mjs` as an unprivileged user with the `deploy/freebsd/aspa_notify` rc script (Node.js 22 with `node:sqlite`; the environment variables are listed at the top of the file), route `/api/v1/subscriptions` to it as in `deploy/nginx/aspa.conf`, and publish SPF and DKIM records for the sending domain; see the wiki, Deployment.
-6. Make sure the Routinator HTTP(S) port is reachable from the web server, then `nginx -t && nginx -s reload`.
+6. Adoption numbers (optional): run `node scripts/build-adoption.mjs /var/db/aspa-gen/adoption.json` once a day (Node.js 18+ and `bunzip2`; it downloads the RIR delegation files and the CAIDA relationships into a cache next to the output).
+7. Make sure the Routinator HTTP(S) port is reachable from the web server, then `nginx -t && nginx -s reload`.
 
 ## Development
 

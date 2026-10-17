@@ -437,3 +437,24 @@ table.nb th.num, table.nb td.num { text-align: right; font-variant-numeric: tabu
 @media (max-width: 520px) { .notify { grid-template-columns: 1fr; } }
 .notice { padding: 1.25rem 1.5rem; }
 .notice button { margin: 0.25rem 0 0.75rem; }
+
+/* adoption page */
+.pad { padding: 1rem 1.25rem; margin-bottom: 12px; }
+.filters { display: flex; flex-wrap: wrap; gap: 0.5rem 1.25rem; align-items: center; font-size: 0.875rem; margin: 0.5rem 0; }
+.filters select { padding: 0.3rem 0.45rem; border: 1px solid var(--grid); border-radius: 6px; background: var(--surface); color: var(--ink); font: inherit; }
+.bar-row.wide { grid-template-columns: 15rem 1fr; }
+.cov-col { min-width: 9rem; white-space: nowrap; }
+.mini { display: inline-block; width: 4rem; height: 0.55rem; background: var(--track); border-radius: 3px; vertical-align: middle; overflow: hidden; }
+.mini .fill { display: block; height: 100%; background: var(--bar); }
+@media (max-width: 640px) { .bar-row.wide { grid-template-columns: 1fr; } .bar-row.wide .plot { border-left: 0; } }
+
+/* examples page */
+.prose pre { background: var(--chip); border-radius: 8px; padding: 0.75rem 1rem; overflow-x: auto; font-size: 0.85rem; }
+.prose pre code { font-family: var(--mono); }
+.builder { display: grid; gap: 0.35rem; max-width: 36rem; }
+.builder input { padding: 0.5rem 0.6rem; border: 1px solid var(--grid); border-radius: 6px; background: var(--surface); color: var(--ink); font: inherit; }
+.pad .subhead { margin-top: 0; }
+.filters .chk { display: inline-flex; align-items: center; gap: 0.4rem; }
+.filters input[type="checkbox"] { width: auto; margin: 0; }
+table.live tbody th[scope="row"] { text-transform: none; letter-spacing: 0; font-family: inherit; font-size: inherit; font-weight: 600; color: inherit; text-align: left; }
+table.live thead th { white-space: nowrap; }

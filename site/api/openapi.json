@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "ASPA Explorer API",
-    "version": "1.1.0",
+    "version": "1.2.0",
     "description": "ASPA objects validated by Routinator at rpki.ping6.it, their history and quality, for any AS. Open data, read-only, no key.",
     "contact": {
       "email": "antonio.prado@dei.unipd.it"
@@ -289,6 +289,151 @@
         "responses": {
           "200": {
             "description": "Cancelled (also when it already was)"
+          }
+        }
+      }
+    },
+    "/api/v1/adoption.json": {
+      "get": {
+        "summary": "Adoption of ASPA by RIR, country and size of the network",
+        "description": "Built once a day from the validator, the RIPE RIS collectors, the RIR delegation files and the CAIDA AS Relationships dataset.",
+        "responses": {
+          "200": {
+            "description": "The adoption numbers",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "generated": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "seen": {
+                      "type": "integer",
+                      "description": "ASes seen in BGP"
+                    },
+                    "aspa": {
+                      "type": "integer",
+                      "description": "of those, with an ASPA"
+                    },
+                    "pct": {
+                      "type": "number"
+                    },
+                    "aspa_not_seen": {
+                      "type": "integer"
+                    },
+                    "by_rir": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "rir": {
+                            "type": "string"
+                          },
+                          "seen": {
+                            "type": "integer"
+                          },
+                          "aspa": {
+                            "type": "integer"
+                          },
+                          "pct": {
+                            "type": "number"
+                          }
+                        }
+                      }
+                    },
+                    "by_country": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "cc": {
+                            "type": "string"
+                          },
+                          "seen": {
+                            "type": "integer"
+                          },
+                          "aspa": {
+                            "type": "integer"
+                          },
+                          "pct": {
+                            "type": "number"
+                          }
+                        }
+                      }
+                    },
+                    "by_size": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "tier": {
+                            "enum": [
+                              "stub",
+                              "small",
+                              "medium",
+                              "large",
+                              "huge"
+                            ]
+                          },
+                          "label": {
+                            "type": "string"
+                          },
+                          "seen": {
+                            "type": "integer"
+                          },
+                          "aspa": {
+                            "type": "integer"
+                          },
+                          "pct": {
+                            "type": "number"
+                          }
+                        }
+                      }
+                    },
+                    "top_transit": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "asn": {
+                            "type": "string"
+                          },
+                          "cone": {
+                            "type": "integer"
+                          },
+                          "cc": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "rir": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "aspa": {
+                            "type": "boolean"
+                          },
+                          "providers": {
+                            "type": [
+                              "integer",
+                              "null"
+                            ]
+                          }
+                        }
+                      }
+                    },
+                    "sources": {
+                      "type": "object"
+                    }
+                  }
+                }
+              }
+            }
           }
         }
       }

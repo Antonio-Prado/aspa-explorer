@@ -18,6 +18,7 @@ sed -e "s|/usr/local/etc/nginx/tls|$work/tls|g" \
     -e "s|/usr/local/etc/nginx/rpki-proxy.conf|$root/deploy/nginx/rpki-proxy.conf|g" \
     -e "s|/usr/local/etc/nginx/security-headers.conf|$root/deploy/nginx/security-headers.conf|g" \
     -e "s|/var/cache/nginx/aspa|$work/cache|g" \
+    -e "s|/var/db/aspa-gen/adoption.json|$work/gen/adoption.json|g" \
     -e "s|/var/db/aspa-gen/current|$work/gen|g" \
     -e "s|192\.0\.2\.10|127.0.0.1|g" \
     -e "s|127\.0\.0\.1:8080;|127.0.0.1:18080;|" \

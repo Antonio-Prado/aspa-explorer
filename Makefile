@@ -7,10 +7,12 @@ js:
 	node --check site/footer.js
 	node --check site/verify.js
 	node --check scripts/build-api.mjs
+	node --check scripts/build-adoption.mjs
+	for f in site/adoption.js site/status.js site/examples.js site/subscription.js; do node --check $$f; done
 	for f in notifier/*.mjs; do node --check $$f; done
 
 html:
-	npx --yes html-validate@9 site/index.html site/guide.html site/api.html site/subscription.html
+	npx --yes html-validate@9 site/index.html site/guide.html site/api.html site/subscription.html site/adoption.html site/status.html site/examples.html
 
 # Validates the nginx configuration with a throwaway certificate.
 nginx:
@@ -21,7 +23,7 @@ version:
 
 # Static analysis of the browser code: no innerHTML, eval and similar sinks.
 lint-security:
-	npx --yes eslint@9 --no-config-lookup -c eslint.config.mjs site/app.js site/footer.js site/verify.js
+	npx --yes eslint@9 --no-config-lookup -c eslint.config.mjs site/app.js site/footer.js site/verify.js site/adoption.js site/status.js site/examples.js site/subscription.js
 
 # Secret scan of the whole git history (needs gitleaks: https://github.com/gitleaks/gitleaks).
 secrets:
@@ -31,4 +33,5 @@ secrets:
 test:
 	node scripts/test-verify.mjs
 	node scripts/test-api.mjs
+	node scripts/test-adoption.mjs
 	node --disable-warning=ExperimentalWarning scripts/test-notify.mjs

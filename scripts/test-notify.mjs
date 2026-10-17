@@ -255,6 +255,7 @@ await test('HTTP: methods, content types, origin, one-click unsubscribe', async 
   const call = async (path, opts = {}) => { const r = await fetch(base + path, opts); return [r.status, await r.json()]; };
   const json = { 'Content-Type': 'application/json' };
   assert.equal((await call('/api/v1/subscriptions'))[0], 405);
+  assert.equal((await call('/api/v1/subscriptions/health'))[0], 405);   // no health function given: not exposed
   assert.equal((await call('/api/v1/subscriptions', { method: 'POST', headers: { 'Content-Type': 'text/plain' }, body: '{}' }))[0], 415);
   assert.equal((await call('/api/v1/subscriptions', { method: 'POST', headers: json, body: '{bad' }))[0], 400);
   assert.equal((await call('/api/v1/subscriptions', { method: 'POST', headers: { ...json, Origin: 'https://evil.example.com' }, body: '{}' }))[0], 403);
@@ -269,6 +270,16 @@ await test('HTTP: methods, content types, origin, one-click unsubscribe', async 
   assert.equal(b2.status, 'unsubscribed');
   assert.equal(store.allActive().length, 0);
   await new Promise((r) => server.close(r));
+});
+
+await test('HTTP: the health answer, when a function is given', async () => {
+  const { api } = setup();
+  const server = http.createServer(httpHandler(api, { site: 'https://aspa.example.org', health: () => ({ ok: true, last_poll: 'x' }) }));
+  await new Promise((r) => server.listen(0, '127.0.0.1', r));
+  const r = await fetch(`http://127.0.0.1:${server.address().port}/api/v1/subscriptions/health`);
+  assert.equal(r.status, 200);
+  assert.deepEqual(await r.json(), { ok: true, last_poll: 'x' });
+  await new Promise((res) => server.close(res));
 });
 
 console.log(`${passed} tests passed`);

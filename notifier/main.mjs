@@ -99,10 +99,20 @@ async function notify(events) {
   }
 }
 
+// what /api/v1/subscriptions/health says: when the data was last read, and whether the last reads worked
+const pulse = { lastOk: null, lastTry: null, failures: 0 };
+const health = () => ({
+  ok: pulse.lastOk !== null && pulse.failures < 3 && Date.now() - pulse.lastOk < 3 * POLL,
+  last_poll: pulse.lastOk && new Date(pulse.lastOk).toISOString(),
+  failures_in_a_row: pulse.failures,
+  poll_seconds: POLL / 1000,
+});
+
 let busy = false;
 async function poll() {
   if (busy) return;
   busy = true;
+  pulse.lastTry = Date.now();
   try {
     const r = await fetch(DATA, { headers: { Accept: 'application/json', 'User-Agent': 'aspa-explorer-notifier' } });
     if (!r.ok) throw new Error(`HTTP ${r.status}`);
@@ -110,6 +120,7 @@ async function poll() {
     if (!Array.isArray(data.aspas) || !data.aspas.length) throw new Error('empty ASPA data, ignored');
     const current = stateOf(data.aspas);
     const saved = store.getState('committed');
+    pulse.lastOk = Date.now(); pulse.failures = 0;
     if (!saved) { store.setState('committed', [...current]); store.setState('pending', {}); log(`first run: ${current.size} ASPAs taken as the starting point`); return; }
     const out = stabilise(new Map(saved), current, store.getState('pending') || {});
     store.setState('committed', [...out.committed]);
@@ -117,10 +128,10 @@ async function poll() {
     if (out.events.length) { log(`${out.events.length} change(s) confirmed`); await notify(out.events); }
     const purged = store.purge(Math.floor(Date.now() / 1000) - 2 * 86400);
     if (purged) log(`${purged} unconfirmed request(s) deleted`);
-  } catch (err) { log(`poll failed: ${err.message}`); } finally { busy = false; }
+  } catch (err) { pulse.failures++; log(`poll failed: ${err.message}`); } finally { busy = false; }
 }
 
-const server = http.createServer(httpHandler(api, { site: SITE }));
+const server = http.createServer(httpHandler(api, { site: SITE, health }));
 server.requestTimeout = 15000; server.headersTimeout = 10000;
 server.listen(Number(env('NOTIFY_PORT', '8090')), '127.0.0.1', () => log(`listening on 127.0.0.1:${env('NOTIFY_PORT', '8090')}`));
 poll();

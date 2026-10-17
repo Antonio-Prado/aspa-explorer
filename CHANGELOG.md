@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.10.0] - 2026-10-17
+
+### Added
+- **Adoption page** (`adoption.html`): the networks seen in BGP that have an ASPA, by size of the network (customer cone, from the CAIDA AS Relationships dataset), by RIR and by country (from the delegation files of the five RIRs), and the 100 largest transit networks with a filter for those without an ASPA. The numbers come from `scripts/build-adoption.mjs`, run once a day, and are also served as `/api/v1/adoption.json`. `scripts/test-adoption.mjs` tests it.
+- **Status page** (`status.html`, linked from the footer): when the validator, the per-AS API files, the daily history, the BGP visibility file, the adoption numbers and the notifier were last updated, judged against how often each should change. The notifier answers `GET /api/v1/subscriptions/health` for it.
+- **Examples page** (`examples.html`): the rules for writing an ASPA, five cases (one upstream, several providers with a backup, a transit network, no provider, an IXP member), the common mistakes, and a checker that reviews a list of providers and compares it with the ASPA that is published.
+- Navigation: Adoption, Examples, API and Guide at the top.
+
 ## [1.9.0] - 2026-10-17
 
 ### Added

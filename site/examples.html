@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ASPA examples</title>
+<meta name="description" content="How to write the ASPA of a network: one upstream, several providers, a transit network, a network with no provider, and an IXP member, with the usual mistakes and a checker for your own list.">
+<meta name="color-scheme" content="light dark">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/style.css?v=1.10.0">
+<script src="/examples.js?v=1.10.0" defer></script>
+<script src="/footer.js?v=1.10.0" defer></script>
+</head>
+<body>
+<a class="skip" href="#main">Skip to main content</a>
+<header class="wrap masthead">
+  <p class="back"><a class="brandlink" href="/" title="Back to ASPA Explorer"><img class="brand" src="/img/logo-mark.svg?v=1.10.0" alt="" width="40" height="40"><span>ASPA Explorer</span></a></p>
+  <h1>Writing your ASPA</h1>
+  <p class="lede">What to put in the ASPA of your network, with the usual cases, the usual mistakes and a checker for your own list.</p>
+</header>
+
+<main class="wrap prose" id="main" tabindex="-1">
+  <nav class="toc card" aria-label="Contents">
+    <ol>
+      <li><a href="#rules">The rules in short</a></li>
+      <li><a href="#cases">Cases</a></li>
+      <li><a href="#mistakes">Common mistakes</a></li>
+      <li><a href="#check">Check your list</a></li>
+      <li><a href="#publish">Publishing it</a></li>
+    </ol>
+  </nav>
+
+  <section aria-labelledby="rules">
+    <h2 id="rules">The rules in short</h2>
+    <p>An ASPA is a signed statement by the holder of an AS number, the <strong>customer</strong>, naming the ASes that are allowed to be its <strong>providers</strong>: the networks it buys transit from, to which it sends its routes and the routes of its own customers so that they are announced to the world. Routers that check ASPAs use it to refuse a route that went from a customer up to a provider that the customer never named.</p>
+    <ul>
+      <li><strong>List every provider you have, the backup ones too.</strong> A route that reaches the world through an unlisted provider is judged invalid by those who check.</li>
+      <li><strong>List providers only.</strong> Not your peers, not your customers, not an IXP or its route server. The ASPA says who sits above you, nothing else.</li>
+      <li><strong>One ASPA per AS number.</strong> When you add or drop a provider, change it. Add the new provider to the ASPA <em>before</em> you start sending routes through it.</li>
+      <li><strong>A network with no provider at all</strong> publishes <code>AS0</code> alone. Never <code>AS0</code> together with other providers.</li>
+      <li>The examples use AS numbers reserved for documentation (AS64496 to AS64511); replace them with yours.</li>
+    </ul>
+  </section>
+
+  <section aria-labelledby="cases">
+    <h2 id="cases">Cases</h2>
+
+    <h3>One upstream</h3>
+    <p>AS64500 is a small company that buys Internet access from a single provider, AS64510.</p>
+    <pre><code>customer AS64500
+providers AS64510</code></pre>
+
+    <h3>Several providers, with a backup</h3>
+    <p>AS64501 is connected to two providers, AS64510 and AS64511, and has a third one, AS64512, that it uses only if the others fail.</p>
+    <pre><code>customer AS64501
+providers AS64510, AS64511, AS64512</code></pre>
+    <p>The backup provider must be there too. Without it, the day the main links fail and the routes go through AS64512, they look like a leak to everybody who checks.</p>
+
+    <h3>A transit network</h3>
+    <p>AS64510 sells transit to AS64500 and AS64501, and buys it from AS64520 and AS64521. Its ASPA names the networks <em>above</em> it. Its customers are not in it: each customer names AS64510 in its own ASPA.</p>
+    <pre><code>customer AS64510
+providers AS64520, AS64521</code></pre>
+
+    <h3>A network with no provider</h3>
+    <p>AS64520 is at the top of the hierarchy: it buys transit from nobody and exchanges routes with the other large networks as peers. It says so with an ASPA whose only provider is <code>AS0</code>, which lets everybody reject any route in which this AS appears as if it had a provider above it.</p>
+    <pre><code>customer AS64520
+providers AS0</code></pre>
+
+    <h3>A member of an IXP</h3>
+    <p>AS64501 also peers with others at an exchange point, through the route server AS64600 and bilaterally with AS64530. None of them is a provider, so none appears. Its ASPA stays as in the case with the backup provider.</p>
+    <pre><code>customer AS64501
+providers AS64510, AS64511, AS64512      (not AS64600, not AS64530)</code></pre>
+    <p>An exchange point's route server does not put its own AS number in the paths it passes on, so it is not part of the question. If the AS of the route server has no provider at all, <code>AS0</code> describes it correctly.</p>
+  </section>
+
+  <section aria-labelledby="mistakes">
+    <h2 id="mistakes">Common mistakes</h2>
+    <dl>
+      <dt>Listing a peer or a customer</dt>
+      <dd>It lets routes in that should be refused, and it weakens the check for everybody. The <a href="/guide.html#quality">quality checks</a> of this site flag an ASPA in which two networks list each other.</dd>
+      <dt>Forgetting a provider</dt>
+      <dd>The routes that your customers or you announce through it become invalid for the networks that check. The routes seen in BGP, in the check on the home page, show the neighbours next to your AS and whether your ASPA lists them.</dd>
+      <dt>AS0 together with real providers</dt>
+      <dd>It contradicts itself: AS0 means no provider. Use AS0 alone or the real providers alone.</dd>
+      <dt>Your own number, or a private or reserved one</dt>
+      <dd>An AS cannot be its own provider, and private numbers (64512 to 65534, 4200000000 and up) and documentation numbers never appear in the global routing system.</dd>
+      <dt>A typo in a provider's number</dt>
+      <dd>It names an AS that is not yours. The quality checks flag a provider that the route collectors never see.</dd>
+      <dt>Leaving it as it was after a change of provider</dt>
+      <dd>Drop the old provider only when no route goes through it any more.</dd>
+    </dl>
+  </section>
+
+  <section aria-labelledby="check">
+    <h2 id="check">Check your list</h2>
+    <p>Type your AS number and the providers you intend to list. Nothing leaves your browser except, if you ask, a request to this site for the ASPA that is already published.</p>
+    <form id="builder" autocomplete="off" class="builder">
+      <label for="b-as">Your AS number</label>
+      <input id="b-as" type="text" inputmode="text" spellcheck="false" placeholder="e.g. AS64501">
+      <label for="b-prov">Providers (separated by spaces or commas; AS0 for none)</label>
+      <input id="b-prov" type="text" inputmode="text" spellcheck="false" placeholder="e.g. AS64510 AS64511 AS64512">
+      <p><button type="submit">Check</button></p>
+    </form>
+    <div id="b-result" aria-live="polite"></div>
+  </section>
+
+  <section aria-labelledby="publish">
+    <h2 id="publish">Publishing it</h2>
+    <p>The ASPA is created by the holder of the AS number in the RPKI service of the regional registry that the number comes from. This site shows which trust anchors have ASPAs in them: RIPE NCC, ARIN, APNIC and LACNIC have, AFRINIC none so far (see the <a href="/">overview</a>). Look for the RPKI or resource-certification section of your registry's portal: <a href="https://www.ripe.net/" target="_blank" rel="noopener">RIPE NCC<span class="sr-only"> (opens in a new tab)</span></a>, <a href="https://www.arin.net/" target="_blank" rel="noopener">ARIN<span class="sr-only"> (opens in a new tab)</span></a>, <a href="https://www.apnic.net/" target="_blank" rel="noopener">APNIC<span class="sr-only"> (opens in a new tab)</span></a>, <a href="https://www.lacnic.net/" target="_blank" rel="noopener">LACNIC<span class="sr-only"> (opens in a new tab)</span></a>, <a href="https://afrinic.net/" target="_blank" rel="noopener">AFRINIC<span class="sr-only"> (opens in a new tab)</span></a>. Each portal has its own screens and the support changes with time, so follow the registry's own instructions.</p>
+    <p>Once it is published, it takes a while to reach the validators: the repository of the registry, then the validator, which here refreshes about every 10 minutes. Look up your AS on the <a href="/">home page</a> to see it, and subscribe to its changes from there. The <a href="/adoption.html">adoption page</a> shows how many networks like yours have done it.</p>
+  </section>
+</main>
+
+<footer class="wrap foot">
+  <p><a href="/">&larr; Back to ASPA Explorer</a></p>
+</footer>
+</body>
+</html>

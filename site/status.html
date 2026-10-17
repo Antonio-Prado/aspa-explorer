@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ASPA Explorer status</title>
+<meta name="description" content="Is the data fresh? When the validator, the daily history, the API files, the adoption numbers and the notifications were last updated.">
+<meta name="color-scheme" content="light dark">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/style.css?v=1.10.0">
+<script src="/status.js?v=1.10.0" defer></script>
+<script src="/footer.js?v=1.10.0" defer></script>
+</head>
+<body>
+<a class="skip" href="#main">Skip to main content</a>
+<header class="wrap masthead">
+  <p class="back"><a class="brandlink" href="/" title="Back to ASPA Explorer"><img class="brand" src="/img/logo-mark.svg?v=1.10.0" alt="" width="40" height="40"><span>ASPA Explorer</span></a></p>
+  <h1>Status</h1>
+  <p class="lede">How fresh the data behind this site is, checked from your browser each time you open the page.</p>
+</header>
+
+<main class="wrap" id="main" tabindex="-1">
+  <div class="card pad" id="summary" aria-live="polite"><p>Checking…</p></div>
+  <div class="card table-wrap" tabindex="0" role="region" aria-label="Status of each part">
+    <table class="checks live">
+      <caption class="sr-only">Each part of the service, its state and when it was last updated</caption>
+      <thead><tr><th scope="col">Part</th><th scope="col">State</th><th scope="col">Last update</th><th scope="col">Expected</th></tr></thead>
+      <tbody id="rows"></tbody>
+    </table>
+  </div>
+  <p class="hint" id="checked"></p>
+  <p class="hint">A part is <em>late</em> when it is older than expected and <em>down</em> when it is much older or does not answer. This page reads the same files as the rest of the site; it cannot see the server itself. Problems: <a href="mailto:antonio.prado@dei.unipd.it">antonio.prado@dei.unipd.it</a>.</p>
+</main>
+
+<footer class="wrap foot">
+  <p><a href="/">&larr; Back to ASPA Explorer</a></p>
+</footer>
+</body>
+</html>

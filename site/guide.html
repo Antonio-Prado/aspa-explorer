@@ -7,13 +7,13 @@
 <meta name="description" content="How to read and use the ASPA Explorer interface: lookup, overview charts, the table of all ASPAs and where the data comes from.">
 <meta name="color-scheme" content="light dark">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
-<link rel="stylesheet" href="/style.css?v=1.9.0">
-<script src="/footer.js?v=1.9.0" defer></script>
+<link rel="stylesheet" href="/style.css?v=1.10.0">
+<script src="/footer.js?v=1.10.0" defer></script>
 </head>
 <body>
 <a class="skip" href="#main">Skip to main content</a>
 <header class="wrap masthead">
-  <p class="back"><a class="brandlink" href="/" title="Back to ASPA Explorer"><img class="brand" src="/img/logo-mark.svg?v=1.9.0" alt="" width="40" height="40"><span>ASPA Explorer</span></a></p>
+  <p class="back"><a class="brandlink" href="/" title="Back to ASPA Explorer"><img class="brand" src="/img/logo-mark.svg?v=1.10.0" alt="" width="40" height="40"><span>ASPA Explorer</span></a></p>
   <h1>Guide</h1>
   <p class="lede">How the ASPA Explorer interface works, what each number means and where the data comes from.</p>
 </header>
@@ -29,6 +29,9 @@
       <li><a href="#live-routes">Checking the routes seen in BGP</a></li>
       <li><a href="#changes">Recent changes and the history of an AS</a></li>
       <li><a href="#quality">ASPA quality</a></li>
+      <li><a href="#adoption">Adoption</a></li>
+      <li><a href="#examples">Writing your ASPA</a></li>
+      <li><a href="#status">Status</a></li>
       <li><a href="#share">Sharing, badges, feeds and the API</a></li>
       <li><a href="#notify">Notifications by e-mail and webhook</a></li>
       <li><a href="#links">Links and keyboard use</a></li>
@@ -158,6 +161,28 @@
     </dl>
     <p>The checks that need to know which ASes appear in BGP use a list refreshed every day (<code>visibility.json</code>, from the RIPEstat call <em>ris-asns</em>) and are left out when it cannot be loaded. A finding is a reason to look, not a verdict: a mutual pair may be intentional, and an AS can be absent from the collectors for good reasons. In the lookup, the <em>Quality</em> block lists the findings of that AS's own ASPA.</p>
     <p>In <em>Check the routes seen in BGP</em>, a table of the <strong>neighbours</strong> of the origin lists the AS right before the origin in each path, how many routes go through it, whether the origin's ASPA lists it, and how many of those routes are valid, unknown or invalid. It also shows the providers that are listed but not seen. A neighbour that is a peer or a customer is not meant to be in an ASPA, so <em>not listed</em> is a gap only for a neighbour that is a provider; the invalid routes through not-listed neighbours are the ones to look at first.</p>
+  </section>
+
+  <section aria-labelledby="adoption">
+    <h2 id="adoption">Adoption</h2>
+    <p>The <a href="/adoption.html">adoption page</a> answers who has an ASPA and who has not. The base is the set of networks (ASes) that the RIPE RIS collectors see in BGP; <em>coverage</em> is the share of them with a valid ASPA. It is shown:</p>
+    <ul>
+      <li><strong>by size of the network</strong>, from the <em>customer cone</em>: the networks that one reaches through its customers, counting those of its customers' customers and so on, taken from the <a href="https://www.caida.org/catalog/datasets/as-relationships/" target="_blank" rel="noopener">CAIDA AS Relationships dataset<span class="sr-only"> (opens in a new tab)</span></a>. A network with no customers is a <em>stub</em>. The cone is inferred from observed routes, so it is an estimate and tends to be generous for large networks;</li>
+      <li><strong>by RIR</strong>, the registry where the AS number was registered (from the delegation files of the five RIRs), which is not always the trust anchor that holds the ASPA;</li>
+      <li><strong>by country</strong>, the country recorded in those files: where the number was registered, not necessarily where the network operates. Only countries with a minimum number of networks are listed by default, because a percentage of a handful of networks says little;</li>
+      <li><strong>the 100 largest networks</strong> by cone, each with its ASPA state, and a switch to show only those without one.</li>
+    </ul>
+    <p>The numbers are rebuilt once a day and available as <a href="/api/v1/adoption.json">JSON</a>. ASPAs of networks that the collectors do not see are not counted.</p>
+  </section>
+
+  <section aria-labelledby="examples">
+    <h2 id="examples">Writing your ASPA</h2>
+    <p>The <a href="/examples.html">examples page</a> explains what to put in an ASPA (list every provider, backups included; list providers only, never peers, customers or an exchange point) with five cases, the common mistakes and a checker: type your AS number and the providers you intend to list, and it points out contradictions (AS0 with other providers, an AS as its own provider, private numbers) and compares your list with the ASPA that is published now. Nothing is sent anywhere except a request to this site for the published ASPA.</p>
+  </section>
+
+  <section aria-labelledby="status">
+    <h2 id="status">Status</h2>
+    <p>The <a href="/status.html">status page</a> (also linked in the footer) shows when each part was last updated: the validator, the per-AS files of the API, the daily history, the BGP visibility file used by the quality checks, the adoption numbers and the notification service. A part is <em>late</em> when it is older than expected and <em>down</em> when it is much older or does not answer. The page checks from your browser, so it shows what you would get, and refreshes every minute.</p>
   </section>
 
   <section aria-labelledby="share">
