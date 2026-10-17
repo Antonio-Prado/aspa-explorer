@@ -65,7 +65,7 @@ test('a delay that comes from the access network, or that does not stay up, is n
 });
 
 test('a long round trip is flagged, and a path with no answer does not break', () => {
-  const far = summarise({ probe, result: { status: 'finished', hops: [hop('37.202.205.254', [3]), hop('193.0.0.1', [50])] } }, (ip) => asns[ip] || null);
+  const far = summarise({ probe, result: { status: 'finished', hops: [hop('37.202.205.254', [3]), hop('193.0.0.1', [60])] } }, (ip) => asns[ip] || null);
   assert.equal(far.verdict, 'long');
   const ocean = summarise({ probe, result: { status: 'finished', hops: [hop('37.202.205.254', [3]), hop('193.0.0.1', [140])] } }, (ip) => asns[ip] || null);
   assert.equal(ocean.verdict, 'trombone');

@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.24.7] - 2026-10-17
+
+### Changed
+- The band of the round trip that is normal inside a country goes up to 50 ms instead of 40, as in the LACNIC 2022 Connectivity Study, and the guide says where the figures come from (LACNIC, Shah and others, Edmundson and others).
+
 ## [1.24.6] - 2026-10-17
 
 ### Changed

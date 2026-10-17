@@ -6,7 +6,7 @@
 // What it can say is limited: a delay is not a distance (queues, tunnels, an access network and slow answers add milliseconds),
 // so a long delay between two points of one country is a lead, not proof, that the packet went somewhere else on the way.
 (function (root) {
-  const LONG_DELAY_MS = 40;      // a round trip longer than this between two points of one country is longer than it should be
+  const LONG_DELAY_MS = 50;      // a round trip longer than this between two points of one country is longer than it should be
   const TROMBONE_MS = 100;       // and from here it is a trombone: the packet has crossed an ocean, or gone round Europe twice
   const JUMP_MS = 10;            // a step of the delay between two hops that is worth saying
 
