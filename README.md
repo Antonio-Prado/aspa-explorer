@@ -280,13 +280,13 @@ The downstream verification implemented by the path check is analysed in the fol
 Released under the <a href="LICENSE" target="_blank" rel="noopener">MIT License</a>.
 
 <p align="center">
-  <a href="https://www.dei.unipd.it" target="_blank" rel="noopener"><img src="assets/credits/dei-logo.png" alt="DEI, Department of Information Engineering, University of Padova" height="40"></a>
+  <a href="https://www.dei.unipd.it" target="_blank" rel="noopener"><img src="assets/credits/dei-logo.png" alt="Powered by DEI, Department of Information Engineering, University of Padova" title="Powered by DEI, Department of Information Engineering, University of Padova" height="40"></a>
   &nbsp;&nbsp;&nbsp;
-  <a href="https://www.freebsd.org" target="_blank" rel="noopener"><img src="assets/credits/freebsd-logo.png" alt="FreeBSD" height="40"></a>
+  <a href="https://www.freebsd.org" target="_blank" rel="noopener"><img src="assets/credits/freebsd-logo.png" alt="Served by FreeBSD" title="Served by FreeBSD" height="40"></a>
   &nbsp;&nbsp;&nbsp;
-  <a href="https://nlnetlabs.nl/projects/routinator/" target="_blank" rel="noopener"><img src="assets/credits/routinator-avatar.png" alt="Routinator, by NLnet Labs" height="40"></a>
+  <a href="https://nlnetlabs.nl/projects/routinator/" target="_blank" rel="noopener"><img src="assets/credits/routinator-avatar.png" alt="Validated by Routinator, by NLnet Labs" title="Validated by Routinator, by NLnet Labs" height="40"></a>
   &nbsp;&nbsp;&nbsp;
-  <a href="https://en.wikipedia.org/wiki/Vi_(text_editor)" target="_blank" rel="noopener"><img src="assets/credits/vi-logo.svg" alt="vi, the text editor" height="32"></a>
+  <a href="https://en.wikipedia.org/wiki/Vi_(text_editor)" target="_blank" rel="noopener"><img src="assets/credits/vi-logo.svg" alt="Made with vi, the text editor" title="Made with vi, the text editor" height="32"></a>
   &nbsp;&nbsp;&nbsp;
-  ❤️
+  <span role="img" aria-label="Inspired by passion" title="Inspired by passion">❤️</span>
 </p>
