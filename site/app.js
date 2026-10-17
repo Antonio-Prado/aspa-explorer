@@ -318,6 +318,7 @@ function renderPathCheck(text, direction) {
 // learned from their own providers, which the upstream procedure would wrongly call leaks.
 const LIVE_API = 'https://stat.ripe.net/data/bgp-state/data.json?resource=';
 const LIVE_MAX_BYTES = 12 * 1024 * 1024;
+const GRAPH_ROW = 9; // as many nodes as a row of the graph draws (MAX_ROW in graph.js)
 const PREFIX_RE = /^(?:\d{1,3}(?:\.\d{1,3}){3}\/\d{1,2}|[0-9a-f:]+:[0-9a-f:]*\/\d{1,3})$/i;
 
 function parseLiveQuery(text) {
@@ -344,6 +345,29 @@ async function fetchRoutes(resource) {
   const data = JSON.parse(await new Blob(chunks).text());
   if (data.status !== 'ok') throw new Error((data.messages && data.messages[0] && data.messages[0][1]) || 'RIPEstat returned an error');
   return data.data;
+}
+
+const SAMPLE_PREFIXES = 24;
+// An AS whose answer is too large: read the routes of a sample of its prefixes (the shortest ones, IPv4 and IPv6 alike)
+// and say so. The result has `sample: {used, total}`.
+async function fetchRoutesSampled(resource) {
+  try { return await fetchRoutes(resource); } catch (err) {
+    if (!/AS\d+$/i.test(resource) || !/too large/.test(err.message)) throw err;
+  }
+  const list = await getJson(`https://stat.ripe.net/data/announced-prefixes/data.json?resource=${encodeURIComponent(resource)}`);
+  const all = (list.data.prefixes || []).map((x) => x.prefix);
+  const len = (pf) => Number(pf.split('/')[1]);
+  const pick = [...all.filter((x) => !x.includes(':')).sort((a, b) => len(a) - len(b)).slice(0, SAMPLE_PREFIXES * 2 / 3),
+    ...all.filter((x) => x.includes(':')).sort((a, b) => len(a) - len(b)).slice(0, SAMPLE_PREFIXES / 3)];
+  const routes = [];
+  let stamp = null;
+  const queue = [...pick];
+  await Promise.all(Array.from({ length: 4 }, async () => {
+    for (let pf = queue.shift(); pf; pf = queue.shift()) {
+      try { const d = await fetchRoutes(pf); stamp = stamp || d.timestamp || null; routes.push(...(d.bgp_state || []).filter((r) => Array.isArray(r.path) && r.path[r.path.length - 1] === asNum(resource))); } catch { /* one prefix less */ }
+    }
+  }));
+  return { bgp_state: routes, timestamp: stamp, sample: { used: pick.length, total: all.length } };
 }
 
 // Distinct AS paths of the routes, each with its verdict and the number of routes that have it.
@@ -456,14 +480,18 @@ function graphBlock(as) {
   const status = el('span', { class: 'hint' });
   let observed = [];
   const own = byCustomer.get(as);
-  const draw = () => AspaGraph.draw(box, AspaGraph.layout({
-    as, providers: own ? own.providers.filter((p) => p !== 'AS0') : [], customers: byProvider.get(as) || [], observed,
-  }), (id) => '#' + id);
+  const cap = el('p', { class: 'hint' });
+  const draw = () => {
+    const providers = own ? own.providers.filter((p) => p !== 'AS0') : [], customers = byProvider.get(as) || [];
+    AspaGraph.draw(box, AspaGraph.layout({ as, providers, customers, observed }), (id) => '#' + id);
+    const big = [providers.length > GRAPH_ROW && `${GRAPH_ROW} of its ${providers.length} providers`, customers.length > GRAPH_ROW && `${GRAPH_ROW} of the ${customers.length} ASes that name it as a provider`].filter(Boolean);
+    cap.textContent = big.length ? `There are too many to draw them all: the graph shows ${big.join(' and ')}.` : '';
+  };
   const btn = el('button', { type: 'button', class: 'linkish', text: 'Add the neighbours that the routes show' });
   btn.addEventListener('click', async () => {
     btn.disabled = true; status.textContent = ' Reading the routes…';
     try {
-      const data = await fetchRoutes(as);
+      const data = await fetchRoutesSampled(as);
       const routes = data.bgp_state || [];
       const ctx = await getEvidenceCtx();
       const ev = AspaEvidence.analyse(routes, asNum(as), ctx || {});
@@ -471,7 +499,8 @@ function graphBlock(as) {
       draw();
       const listed = new Set([...(own ? own.providers : []), ...(byProvider.get(as) || [])]);
       const extra = observed.filter((o) => !listed.has(o.asn)).length;
-      status.textContent = ` ${fmt.format(routes.length)} routes read; ` + (extra
+      const part = data.sample ? ` (a sample: its routes are too many to read, so only those of ${data.sample.used} of its ${data.sample.total} prefixes)` : '';
+      status.textContent = ` ${fmt.format(routes.length)} routes read${part}; ` + (extra
         ? `the ${extra > 6 ? 'six most seen of the ' + extra : extra} neighbours that the ASPAs do not list ${extra === 1 ? 'is' : 'are'} drawn on the right.`
         : 'every neighbour seen in the routes is already in the graph, so there is nothing to add.');
     } catch (err) { status.textContent = ` Could not read the routes (${err.message}).`; }
@@ -480,7 +509,7 @@ function graphBlock(as) {
   const swatch = (cls, text) => el('li', {}, el('span', { class: `sw-graph ${cls}`, 'aria-hidden': 'true' }), ' ', text);
   const det = el('details', { class: 'embed', id: 'as-graph' },
     el('summary', { text: 'Show its neighbourhood as a graph' }), box,
-    el('p', { class: 'hint' }, btn, status),
+    el('p', { class: 'hint' }, btn, status), cap,
     el('ul', { class: 'graph-legend' },
       swatch('n-provider', 'a provider listed in its ASPA (arrow from the customer)'), swatch('n-customer', 'an AS whose ASPA lists it as a provider'),
       swatch('n-mutual', 'two ASes that list each other'), swatch('n-seen-provider', 'seen in the routes, looks like a provider, not in its ASPA'),
@@ -684,7 +713,7 @@ async function renderLiveRoutes(text) {
   if (!aspas.length) { out.replaceChildren(el('p', { class: 'error', text: 'The ASPA data is still loading; try again in a moment.' })); return; }
   out.replaceChildren(el('p', { class: 'hint', text: `Fetching the routes for ${q.label} from RIPEstat…` }));
   let data;
-  try { data = await fetchRoutes(q.resource); } catch (err) {
+  try { data = await fetchRoutesSampled(q.resource); } catch (err) {
     out.replaceChildren(el('p', { class: 'error', text: `Could not get the routes for ${q.label} (${err.message}).` }));
     return;
   }
@@ -700,6 +729,7 @@ async function renderLiveRoutes(text) {
     el('div', { class: 'note', text: `route${routesOf(count(k)) === 1 ? '' : 's'} · ${fmt.format(count(k).length)} distinct path${count(k).length === 1 ? '' : 's'}` })));
   const ts = data.timestamp ? ` as of ${fmtDate(data.timestamp.endsWith('Z') ? data.timestamp : data.timestamp + 'Z')}` : '';
   const kids = [
+    ...(data.sample ? [el('p', { class: 'hint', text: `${q.label} originates ${fmt.format(data.sample.total)} prefixes, too many to read at once: the view is limited to the routes of ${fmt.format(data.sample.used)} of them, the shortest ones. Check a single prefix to see the others.` })] : []),
     el('p', { class: 'src', text: `${fmt.format(routes.length)} routes${q.kind === 'as' ? ` originated by ${q.label}` : ` for ${q.label}`}, seen by the RIPE RIS collectors${ts}, ${fmt.format(rows.length)} distinct AS path${rows.length === 1 ? '' : 's'}${skipped ? `; ${fmt.format(skipped)} with an AS_SET left out` : ''}.` }),
     ...(pairs.length ? [el('h3', { class: 'subhead', text: 'Origin validation (ROAs)' }), rovPanel(pairs)] : []),
     el('h3', { class: 'subhead', text: 'AS paths (ASPA)' }),

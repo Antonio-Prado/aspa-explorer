@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.18.4] - 2026-10-17
+
+### Changed
+- An AS whose routes are too many to load (AS6762, for example) no longer ends in an error, in the routes check and in the neighbourhood graph: the view is limited to the routes of a sample of its prefixes (the 24 shortest) and the page says so.
+
+## [1.18.3] - 2026-10-17
+
+### Changed
+- The neighbourhood graph says when it draws only part of the providers or of the ASes that name the AS as a provider.
+
 ## [1.18.2] - 2026-10-17
 
 ### Fixed
