@@ -7,15 +7,15 @@
 <meta name="description" content="Who has published an ASPA: by RIR, country and size of the network, and the largest transit networks with and without one.">
 <meta name="color-scheme" content="light dark">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
-<link rel="stylesheet" href="/style.css?v=1.10.2">
-<script src="/adoption.js?v=1.10.2" defer></script>
-<script src="/footer.js?v=1.10.2" defer></script>
+<link rel="stylesheet" href="/style.css?v=1.11.0">
+<script src="/adoption.js?v=1.11.0" defer></script>
+<script src="/footer.js?v=1.11.0" defer></script>
 </head>
 <body>
 <a class="skip" href="#main">Skip to main content</a>
 <header class="wrap masthead">
   <div class="top">
-    <p class="back"><a class="brandlink" href="/" title="Back to ASPA Explorer"><img class="brand" src="/img/logo-mark.svg?v=1.10.2" alt="" width="40" height="40"><span>ASPA Explorer</span></a></p>
+    <p class="back"><a class="brandlink" href="/" title="Back to ASPA Explorer"><img class="brand" src="/img/logo-mark.svg?v=1.11.0" alt="" width="40" height="40"><span>ASPA Explorer</span></a></p>
     <nav class="topnav" aria-label="Main"><a href="/">Home</a><a href="/adoption.html" aria-current="page">Adoption</a><a href="/examples.html">Examples</a><a href="/api.html">API</a><a href="/guide.html">Guide</a></nav>
   </div>
   <h1>Adoption</h1>
@@ -41,7 +41,7 @@
   <section aria-labelledby="top-title">
     <h2 id="top-title">The largest transit networks</h2>
     <p class="hint" id="top-sub"></p>
-    <p class="filters"><label class="chk"><input type="checkbox" id="top-missing"> Only those without an ASPA</label></p>
+    <p class="opts"><label class="chk"><input type="checkbox" id="top-missing"> Only those without an ASPA</label></p>
     <section class="card table-wrap" tabindex="0" aria-label="Table of the largest transit networks">
       <table class="checks live">
         <caption class="sr-only">The 100 largest networks seen in BGP by customer cone, and whether each has an ASPA</caption>
@@ -55,7 +55,7 @@
   <section aria-labelledby="cc-title">
     <h2 id="cc-title">By country</h2>
     <p class="hint">The country where the AS number was registered, not necessarily where the network operates.</p>
-    <p class="filters">
+    <p class="opts">
       <label>Sort by <select id="cc-sort"><option value="seen">networks</option><option value="pct">coverage</option></select></label>
       <label>Countries with at least <select id="cc-min"><option value="1">1 network</option><option value="10">10 networks</option><option value="30" selected>30 networks</option><option value="100">100 networks</option></select></label>
     </p>

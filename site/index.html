@@ -9,18 +9,18 @@
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <link rel="canonical" href="https://aspa.ping6.it/">
 <link rel="alternate" type="application/atom+xml" title="ASPA Explorer: changes" href="/changes.atom">
-<link rel="stylesheet" href="/style.css?v=1.10.2">
-<script src="/verify.js?v=1.10.2" defer></script>
-<script src="/history.js?v=1.10.2" defer></script>
-<script src="/quality.js?v=1.10.2" defer></script>
-<script src="/app.js?v=1.10.2" defer></script>
-<script src="/footer.js?v=1.10.2" defer></script>
+<link rel="stylesheet" href="/style.css?v=1.11.0">
+<script src="/verify.js?v=1.11.0" defer></script>
+<script src="/history.js?v=1.11.0" defer></script>
+<script src="/quality.js?v=1.11.0" defer></script>
+<script src="/app.js?v=1.11.0" defer></script>
+<script src="/footer.js?v=1.11.0" defer></script>
 </head>
 <body>
 <a class="skip" href="#main">Skip to main content</a>
 <header class="wrap masthead">
   <div class="top">
-    <h1><a class="homelink" href="/"><img class="brand" src="/img/logo-mark.svg?v=1.10.2" alt="" width="40" height="40"><span>ASPA Explorer</span></a></h1>
+    <h1><a class="homelink" href="/"><img class="brand" src="/img/logo-mark.svg?v=1.11.0" alt="" width="40" height="40"><span>ASPA Explorer</span></a></h1>
     <nav class="topnav" aria-label="Main"><a href="/" aria-current="page">Home</a><a href="/adoption.html">Adoption</a><a href="/examples.html">Examples</a><a href="/api.html">API</a><a href="/guide.html">Guide</a></nav>
   </div>
   <p class="lede">Validated ASPA objects from the RPKI, as seen by the Routinator validator at <a href="https://rpki.ping6.it/ui/" target="_blank" rel="noopener">rpki.ping6.it<span class="sr-only"> (opens in a new tab)</span></a>.</p>
@@ -29,139 +29,144 @@
 </header>
 
 <main class="wrap" id="main" tabindex="-1">
-  <section class="lookup card" aria-labelledby="lookup-title">
-    <h2 class="sr-only">Look up an AS</h2>
-    <form id="lookup" autocomplete="off">
-      <label id="lookup-title" for="asn">Look up an autonomous system</label>
-      <div class="field">
-        <input id="asn" name="asn" type="text" inputmode="text" spellcheck="false" placeholder="AS number, e.g. AS680" aria-describedby="lookup-hint">
-        <button type="submit">Look up</button>
-      </div>
-      <p class="hint" id="lookup-hint">Shows the AS's own ASPA and every ASPA that names it as a provider. Try
-        <a href="#AS680">AS680</a>, <a href="#AS12779">AS12779</a>, <a href="#AS1299">AS1299</a> or <a href="#AS6939">AS6939</a>.</p>
-    </form>
-    <div id="result" aria-live="polite"></div>
-  </section>
-
-  <section class="check card" aria-labelledby="check-title">
-    <h2 id="check-title">Check an AS path</h2>
-    <form id="pathform" autocomplete="off">
-      <label for="aspath">AS path, as your router shows it (neighbour first, origin last)</label>
-      <div class="field">
-        <input id="aspath" name="aspath" type="text" inputmode="text" spellcheck="false" placeholder="e.g. 3356 1299 680" aria-describedby="path-hint">
-      </div>
-      <div class="field">
-        <label for="from" class="inline">The route comes from</label>
-        <select id="from" name="from">
-          <option value="down">a provider (downstream check)</option>
-          <option value="up">a customer or a peer (upstream check)</option>
-        </select>
-        <button type="submit">Check path</button>
-      </div>
-      <p class="hint" id="path-hint">Applies the ASPA verification procedure of the IETF draft to the ASPA objects listed on this page. Try
-        <a href="#path=3356+680&amp;from=up">3356 680</a> or read <a href="/guide.html#path-check" target="_blank" rel="noopener">how it works<span class="sr-only"> (opens in a new tab)</span></a>.</p>
-    </form>
-    <div id="pathresult" aria-live="polite"></div>
-  </section>
-
-  <section class="check card" aria-labelledby="live-title">
-    <h2 id="live-title">Check the routes seen in BGP</h2>
-    <form id="liveform" autocomplete="off">
-      <label for="liveq">A prefix or an AS number</label>
-      <div class="field">
-        <input id="liveq" name="liveq" type="text" inputmode="text" spellcheck="false" placeholder="e.g. 193.0.0.0/21 or AS3333" aria-describedby="live-hint">
-        <button type="submit">Check routes</button>
-      </div>
-      <p class="hint" id="live-hint">Fetches the routes that the RIPE RIS route collectors see right now (through RIPEstat), checks each prefix and origin against the ROAs, and applies the ASPA verification to every distinct AS path. For an AS, the routes it originates. Try
-        <a href="#routes=193.0.0.0%2F21">193.0.0.0/21</a> or <a href="#routes=AS3333">AS3333</a>.</p>
-    </form>
-    <div id="liveresult" aria-live="polite"></div>
-  </section>
-
-  <section aria-labelledby="overview-title">
-    <h2 id="overview-title">Overview</h2>
-    <div class="tiles" id="tiles"></div>
-    <div class="charts">
-      <figure class="card wide">
-        <figcaption><span class="t">ASPAs over time</span><span class="s" id="history-sub">Validated ASPA objects per day, stacked by RIR</span></figcaption>
-        <div class="histctl">
-          <label>Show
-            <select id="hist-metric">
-              <option value="rir">ASPAs, by RIR</option>
-              <option value="total">ASPAs, total</option>
-              <option value="providers">Provider ASes</option>
-              <option value="median">Median providers per ASPA</option>
-              <option value="zero">No-provider ASPAs (AS0)</option>
-              <option value="coverage">Coverage of the ASes seen in BGP</option>
-            </select>
-          </label>
-          <label>Period
-            <select id="hist-range">
-              <option value="all">Since October 2023</option>
-              <option value="365">Last 12 months</option>
-              <option value="90">Last 90 days</option>
-            </select>
-          </label>
-          <label class="chk"><input type="checkbox" id="hist-log"> Logarithmic scale</label>
+  <section class="card tools" id="tools" aria-labelledby="tools-title">
+    <h2 id="tools-title" class="sr-only">Tools</h2>
+    <div class="tabs" role="tablist" aria-label="Tools" data-group="tool">
+      <button type="button" role="tab" class="tab" id="tab-lookup" aria-controls="panel-lookup" aria-selected="true" tabindex="0">Look up an AS</button>
+      <button type="button" role="tab" class="tab" id="tab-path" aria-controls="panel-path" aria-selected="false" tabindex="-1">Check an AS path</button>
+      <button type="button" role="tab" class="tab" id="tab-routes" aria-controls="panel-routes" aria-selected="false" tabindex="-1">Routes seen in BGP</button>
+    </div>
+    <div role="tabpanel" class="tabpanel" id="panel-lookup" aria-labelledby="tab-lookup">
+      <form id="lookup" autocomplete="off">
+        <label id="lookup-title" for="asn">Autonomous system</label>
+        <div class="field">
+          <input id="asn" name="asn" type="text" inputmode="text" spellcheck="false" placeholder="AS number, e.g. AS680" aria-describedby="lookup-hint">
+          <button type="submit">Look up</button>
         </div>
-        <ul class="legend" id="history-legend"></ul>
-        <div class="linechart" id="chart-history"><p class="hint">Loading the history…</p></div>
-        <p class="hint" id="history-note"></p>
-        <p class="hint export">Download the daily data: <button type="button" class="linkish" id="dl-csv">CSV</button> or <button type="button" class="linkish" id="dl-json">JSON</button>.</p>
-        <details class="tableview">
-          <summary>Show as a table</summary>
-          <section class="table-wrap" tabindex="0" aria-label="ASPAs at the end of each month">
-            <table>
-              <caption class="sr-only">ASPAs on the last day of each month: in total, per RIR, provider ASes, and the share of the ASes seen in BGP that have an ASPA</caption>
-              <thead><tr><th scope="col">Day</th><th scope="col">Total</th><th scope="col">RIPE NCC</th><th scope="col">ARIN</th><th scope="col">APNIC</th><th scope="col">LACNIC</th><th scope="col">Provider ASes</th><th scope="col">Coverage</th></tr></thead>
-              <tbody id="history-rows"></tbody>
-            </table>
-          </section>
-        </details>
-      </figure>
-      <figure class="card">
-        <figcaption><span class="t">ASPAs by RIR</span><span class="s">Validated ASPA objects per trust anchor</span></figcaption>
-        <div class="bars" id="chart-rir"></div>
-      </figure>
-      <figure class="card">
-        <figcaption><span class="t">Providers per ASPA</span><span class="s">How many provider ASes each customer AS declares</span></figcaption>
-        <div class="colchart" id="chart-size"></div>
-      </figure>
-      <figure class="card wide">
-        <figcaption><span class="t">Most-named providers</span><span class="s">Number of ASPAs listing the AS as a provider · select one to look it up</span></figcaption>
-        <div class="bars" id="chart-prov"></div>
-      </figure>
+        <p class="hint" id="lookup-hint">Shows the AS's own ASPA and every ASPA that names it as a provider. Try
+          <a href="#AS680">AS680</a>, <a href="#AS12779">AS12779</a>, <a href="#AS1299">AS1299</a> or <a href="#AS6939">AS6939</a>.</p>
+      </form>
+      <div id="result" aria-live="polite"></div>
+    </div>
+    <div role="tabpanel" class="tabpanel" id="panel-path" aria-labelledby="tab-path" hidden>
+      <form id="pathform" autocomplete="off">
+        <label for="aspath">AS path, as your router shows it (neighbour first, origin last)</label>
+        <div class="field">
+          <input id="aspath" name="aspath" type="text" inputmode="text" spellcheck="false" placeholder="e.g. 3356 1299 680" aria-describedby="path-hint">
+        </div>
+        <div class="field">
+          <label for="from" class="inline">The route comes from</label>
+          <select id="from" name="from">
+            <option value="down">a provider (downstream check)</option>
+            <option value="up">a customer or a peer (upstream check)</option>
+          </select>
+          <button type="submit">Check path</button>
+        </div>
+        <p class="hint" id="path-hint">Applies the ASPA verification procedure of the IETF draft to the ASPA objects listed on this page. Try
+          <a href="#path=3356+680&amp;from=up">3356 680</a> or read <a href="/guide.html#path-check" target="_blank" rel="noopener">how it works<span class="sr-only"> (opens in a new tab)</span></a>.</p>
+      </form>
+      <div id="pathresult" aria-live="polite"></div>
+    </div>
+    <div role="tabpanel" class="tabpanel" id="panel-routes" aria-labelledby="tab-routes" hidden>
+      <form id="liveform" autocomplete="off">
+        <label for="liveq">A prefix or an AS number</label>
+        <div class="field">
+          <input id="liveq" name="liveq" type="text" inputmode="text" spellcheck="false" placeholder="e.g. 193.0.0.0/21 or AS3333" aria-describedby="live-hint">
+          <button type="submit">Check routes</button>
+        </div>
+        <p class="hint" id="live-hint">Fetches the routes that the RIPE RIS route collectors see right now (through RIPEstat), checks each prefix and origin against the ROAs, and applies the ASPA verification to every distinct AS path. For an AS, the routes it originates. Try
+          <a href="#routes=193.0.0.0%2F21">193.0.0.0/21</a> or <a href="#routes=AS3333">AS3333</a>.</p>
+      </form>
+      <div id="liveresult" aria-live="polite"></div>
     </div>
   </section>
 
-  <section aria-labelledby="changes-title">
-    <h2 id="changes-title">Recent changes</h2>
-    <p class="hint">ASPAs that appeared, changed their providers or disappeared in the last 14 days, as seen by this validator. Subscribe to the <a href="/changes.atom">Atom feed</a>.</p>
-    <div class="card changes" id="changes-body"><p class="hint">Loading the changes…</p></div>
-  </section>
-
-  <section aria-labelledby="quality-title">
-    <h2 id="quality-title">ASPA quality</h2>
-    <p class="hint">Checks on the ASPAs listed here that point at likely mistakes: contradictions, private AS numbers, ASes that list each other as provider, providers that no collector sees in BGP, ASPAs about to expire. The counts are ASPAs, and each finding can be opened.</p>
-    <div class="tiles quality-tiles" id="quality-tiles"></div>
-    <div class="card changes" id="quality-body"><p class="hint">Checking the ASPAs…</p></div>
-  </section>
-
-  <section aria-labelledby="all-title">
-    <h2 id="all-title">All ASPAs</h2>
-    <div class="filters">
-      <input id="filter" type="search" inputmode="text" spellcheck="false" placeholder="Filter by AS number" aria-label="Filter by AS number (customer or provider)">
-      <select id="rir" aria-label="Filter by RIR"><option value="">All RIRs</option></select>
-      <span class="count" id="count"></span>
+  <section class="data" id="data" aria-labelledby="data-title">
+    <h2 id="data-title" class="sr-only">Explore the data</h2>
+    <div class="tabs" role="tablist" aria-label="Data" data-group="data">
+      <button type="button" role="tab" class="tab" id="tab-overview" aria-controls="panel-overview" aria-selected="true" tabindex="0">Overview</button>
+      <button type="button" role="tab" class="tab" id="tab-changes" aria-controls="panel-changes" aria-selected="false" tabindex="-1">Recent changes</button>
+      <button type="button" role="tab" class="tab" id="tab-quality" aria-controls="panel-quality" aria-selected="false" tabindex="-1">ASPA quality</button>
+      <button type="button" role="tab" class="tab" id="tab-all" aria-controls="panel-all" aria-selected="false" tabindex="-1">All ASPAs</button>
     </div>
-    <div class="table-wrap card">
-      <table>
-        <caption class="sr-only">All validated ASPAs: customer AS, its providers and the RIR</caption>
-        <thead><tr><th scope="col">Customer AS</th><th scope="col">Providers</th><th scope="col">RIR</th></tr></thead>
-        <tbody id="rows"></tbody>
-      </table>
+    <div role="tabpanel" class="tabpanel" id="panel-overview" aria-labelledby="tab-overview">
+      <div class="tiles" id="tiles"></div>
+      <div class="charts">
+        <figure class="card wide">
+          <figcaption><span class="t">ASPAs over time</span><span class="s" id="history-sub">Validated ASPA objects per day, stacked by RIR</span></figcaption>
+          <div class="histctl">
+            <label>Show
+              <select id="hist-metric">
+                <option value="rir">ASPAs, by RIR</option>
+                <option value="total">ASPAs, total</option>
+                <option value="providers">Provider ASes</option>
+                <option value="median">Median providers per ASPA</option>
+                <option value="zero">No-provider ASPAs (AS0)</option>
+                <option value="coverage">Coverage of the ASes seen in BGP</option>
+              </select>
+            </label>
+            <label>Period
+              <select id="hist-range">
+                <option value="all">Since October 2023</option>
+                <option value="365">Last 12 months</option>
+                <option value="90">Last 90 days</option>
+              </select>
+            </label>
+            <label class="chk"><input type="checkbox" id="hist-log"> Logarithmic scale</label>
+          </div>
+          <ul class="legend" id="history-legend"></ul>
+          <div class="linechart" id="chart-history"><p class="hint">Loading the history…</p></div>
+          <p class="hint" id="history-note"></p>
+          <p class="hint export">Download the daily data: <button type="button" class="linkish" id="dl-csv">CSV</button> or <button type="button" class="linkish" id="dl-json">JSON</button>.</p>
+          <details class="tableview">
+            <summary>Show as a table</summary>
+            <section class="table-wrap" tabindex="0" aria-label="ASPAs at the end of each month">
+              <table>
+                <caption class="sr-only">ASPAs on the last day of each month: in total, per RIR, provider ASes, and the share of the ASes seen in BGP that have an ASPA</caption>
+                <thead><tr><th scope="col">Day</th><th scope="col">Total</th><th scope="col">RIPE NCC</th><th scope="col">ARIN</th><th scope="col">APNIC</th><th scope="col">LACNIC</th><th scope="col">Provider ASes</th><th scope="col">Coverage</th></tr></thead>
+                <tbody id="history-rows"></tbody>
+              </table>
+            </section>
+          </details>
+        </figure>
+        <figure class="card">
+          <figcaption><span class="t">ASPAs by RIR</span><span class="s">Validated ASPA objects per trust anchor</span></figcaption>
+          <div class="bars" id="chart-rir"></div>
+        </figure>
+        <figure class="card">
+          <figcaption><span class="t">Providers per ASPA</span><span class="s">How many provider ASes each customer AS declares</span></figcaption>
+          <div class="colchart" id="chart-size"></div>
+        </figure>
+        <figure class="card wide">
+          <figcaption><span class="t">Most-named providers</span><span class="s">Number of ASPAs listing the AS as a provider · select one to look it up</span></figcaption>
+          <div class="bars" id="chart-prov"></div>
+        </figure>
+      </div>
     </div>
-    <button type="button" class="more" id="more" hidden>Show more</button>
+    <div role="tabpanel" class="tabpanel" id="panel-changes" aria-labelledby="tab-changes" hidden>
+      <p class="hint">ASPAs that appeared, changed their providers or disappeared in the last 14 days, as seen by this validator. Subscribe to the <a href="/changes.atom">Atom feed</a>.</p>
+      <div class="card changes" id="changes-body"><p class="hint">Loading the changes…</p></div>
+    </div>
+    <div role="tabpanel" class="tabpanel" id="panel-quality" aria-labelledby="tab-quality" hidden>
+      <p class="hint">Checks on the ASPAs listed here that point at likely mistakes: contradictions, private AS numbers, ASes that list each other as provider, providers that no collector sees in BGP, ASPAs about to expire. The counts are ASPAs, and each finding can be opened.</p>
+      <div class="tiles quality-tiles" id="quality-tiles"></div>
+      <div class="card changes" id="quality-body"><p class="hint">Checking the ASPAs…</p></div>
+    </div>
+    <div role="tabpanel" class="tabpanel" id="panel-all" aria-labelledby="tab-all" hidden>
+      <div class="filters">
+        <input id="filter" type="search" inputmode="text" spellcheck="false" placeholder="Filter by AS number" aria-label="Filter by AS number (customer or provider)">
+        <select id="rir" aria-label="Filter by RIR"><option value="">All RIRs</option></select>
+        <span class="count" id="count"></span>
+      </div>
+      <div class="table-wrap card">
+        <table>
+          <caption class="sr-only">All validated ASPAs: customer AS, its providers and the RIR</caption>
+          <thead><tr><th scope="col">Customer AS</th><th scope="col">Providers</th><th scope="col">RIR</th></tr></thead>
+          <tbody id="rows"></tbody>
+        </table>
+      </div>
+      <button type="button" class="more" id="more" hidden>Show more</button>
+    </div>
   </section>
 </main>
 

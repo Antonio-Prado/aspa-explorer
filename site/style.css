@@ -440,8 +440,8 @@ table.nb th.num, table.nb td.num { text-align: right; font-variant-numeric: tabu
 
 /* adoption page */
 .pad { padding: 1rem 1.25rem; margin-bottom: 12px; }
-.filters { display: flex; flex-wrap: wrap; gap: 0.5rem 1.25rem; align-items: center; font-size: 0.875rem; margin: 0.5rem 0; }
-.filters select { padding: 0.3rem 0.45rem; border: 1px solid var(--grid); border-radius: 6px; background: var(--surface); color: var(--ink); font: inherit; }
+.opts { display: flex; flex-wrap: wrap; gap: 0.5rem 1.25rem; align-items: center; font-size: 0.875rem; margin: 0.5rem 0; }
+.opts select { padding: 0.3rem 0.45rem; border: 1px solid var(--grid); border-radius: 6px; background: var(--surface); color: var(--ink); font: inherit; }
 .bar-row.wide { grid-template-columns: 15rem 1fr; }
 .cov-col { min-width: 9rem; white-space: nowrap; }
 .mini { display: inline-block; width: 4rem; height: 0.55rem; background: var(--track); border-radius: 3px; vertical-align: middle; overflow: hidden; }
@@ -454,8 +454,8 @@ table.nb th.num, table.nb td.num { text-align: right; font-variant-numeric: tabu
 .builder { display: grid; gap: 0.35rem; max-width: 36rem; }
 .builder input { padding: 0.5rem 0.6rem; border: 1px solid var(--grid); border-radius: 6px; background: var(--surface); color: var(--ink); font: inherit; }
 .pad .subhead { margin-top: 0; }
-.filters .chk { display: inline-flex; align-items: center; gap: 0.4rem; }
-.filters input[type="checkbox"] { width: auto; margin: 0; }
+.opts .chk { display: inline-flex; align-items: center; gap: 0.4rem; }
+.opts input[type="checkbox"] { width: auto; margin: 0; }
 table.live tbody th[scope="row"] { text-transform: none; letter-spacing: 0; font-family: inherit; font-size: inherit; font-weight: 600; color: inherit; text-align: left; }
 table.live thead th { white-space: nowrap; }
 .topnav a[aria-current="page"] { text-decoration: underline; text-underline-offset: 4px; }
@@ -464,3 +464,18 @@ table.live thead th { white-space: nowrap; }
 .top { row-gap: 0; }
 .prose code { overflow-wrap: anywhere; }
 .prose pre code { overflow-wrap: normal; }
+
+/* tabs: the tools and the data sections of the home page */
+.tabs { display: flex; gap: 0.25rem; overflow-x: auto; border-bottom: 1px solid var(--grid); }
+.tab { flex: none; background: none; color: var(--ink-2); border: 0; border-bottom: 2px solid transparent; border-radius: 0; margin-bottom: -1px; padding: 0.7rem 1rem; font-size: 0.9375rem; font-weight: 600; }
+.tab:hover { background: var(--wash); color: var(--ink); }
+.tab[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--accent); }
+.tools { padding: 0; margin-bottom: 1.5rem; }
+.tools .tabs { padding: 0 0.75rem; }
+.tools .tabpanel { padding: 1.1rem 1.25rem 1.25rem; }
+.tools .tabpanel > form > label { display: block; font-weight: 600; margin-bottom: 0.5rem; }
+.tools .field { max-width: 44rem; flex-wrap: wrap; }
+.tools .field + .field { margin-top: 0.6rem; }
+.data .tabpanel { padding-top: 1.25rem; }
+.data .tabs { margin-bottom: 0; }
+.tabpanel:focus-visible { outline-offset: -2px; }

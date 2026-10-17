@@ -7,14 +7,14 @@
 <meta name="description" content="How to read and use the ASPA Explorer interface: lookup, overview charts, the table of all ASPAs and where the data comes from.">
 <meta name="color-scheme" content="light dark">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
-<link rel="stylesheet" href="/style.css?v=1.10.2">
-<script src="/footer.js?v=1.10.2" defer></script>
+<link rel="stylesheet" href="/style.css?v=1.11.0">
+<script src="/footer.js?v=1.11.0" defer></script>
 </head>
 <body>
 <a class="skip" href="#main">Skip to main content</a>
 <header class="wrap masthead">
   <div class="top">
-    <p class="back"><a class="brandlink" href="/" title="Back to ASPA Explorer"><img class="brand" src="/img/logo-mark.svg?v=1.10.2" alt="" width="40" height="40"><span>ASPA Explorer</span></a></p>
+    <p class="back"><a class="brandlink" href="/" title="Back to ASPA Explorer"><img class="brand" src="/img/logo-mark.svg?v=1.11.0" alt="" width="40" height="40"><span>ASPA Explorer</span></a></p>
     <nav class="topnav" aria-label="Main"><a href="/">Home</a><a href="/adoption.html">Adoption</a><a href="/examples.html">Examples</a><a href="/api.html">API</a><a href="/guide.html" aria-current="page">Guide</a></nav>
   </div>
   <h1>Guide</h1>
@@ -51,12 +51,13 @@
     <h2 id="what">What you are looking at</h2>
     <p>An <strong>ASPA</strong> (Autonomous System Provider Authorization) is a signed object published in the RPKI. In it, a <em>customer</em> AS lists the ASes that are allowed to act as its upstream <em>providers</em>. Routers that validate AS paths use these lists to spot route leaks and some forged paths.</p>
     <p>ASPA Explorer shows every ASPA that a Routinator validator currently considers valid. Nothing here is edited or interpreted: the page reads the validator's output and presents it so you can search it and see the big picture.</p>
+    <p>The home page has two sets of tabs. The first, <em>Look up an AS</em>, <em>Check an AS path</em> and <em>Routes seen in BGP</em>, holds the three tools, one at a time; the result appears under the tool. The second, <em>Overview</em>, <em>Recent changes</em>, <em>ASPA quality</em> and <em>All ASPAs</em>, holds the data. The tabs work with the arrow keys, <kbd>Home</kbd> and <kbd>End</kbd>. Every address keeps working: <code>#AS680</code> opens the lookup, <code>#path=…</code> the path check, <code>#routes=…</code> the routes, and <code>#overview</code>, <code>#changes</code>, <code>#quality</code> and <code>#all</code> open the data tabs.</p>
     <p>At the top of the page a line summarises the data: the number of ASPAs, the time of the last validation run (always in UTC) and the version of the validator that produced it.</p>
   </section>
 
   <section aria-labelledby="lookup">
     <h2 id="lookup">Looking up an AS</h2>
-    <p>Type an AS number in the box at the top and press <em>Look up</em>. All of these are accepted: <code>AS680</code>, <code>as 680</code> and <code>680</code>. AS numbers go up to 4294967295. Anything else shows a short hint instead of a result.</p>
+    <p>Type an AS number in the first tab at the top and press <em>Look up</em>. All of these are accepted: <code>AS680</code>, <code>as 680</code> and <code>680</code>. AS numbers go up to 4294967295. Anything else shows a short hint instead of a result.</p>
     <p>The result has a header with the AS number and two outside links, <em>bgp.tools</em> and <em>RIPEstat</em>, that open in a new tab. Below it are two columns:</p>
     <dl>
       <dt>Its own ASPA</dt>

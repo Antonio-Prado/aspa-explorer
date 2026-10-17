@@ -1028,28 +1028,61 @@ function lookupFromHash() {
   const hash = location.hash.slice(1);
   // a new lookup on an AS page goes back to the plain address, so the address always matches what is shown
   if (hash && location.pathname !== '/' && pathAs()) window.history.replaceState(null, '', '/' + location.hash);   // `history` is the daily series here
+  const dataTab = { overview: 'tab-overview', changes: 'tab-changes', quality: 'tab-quality', all: 'tab-all' }[hash];
+  if (dataTab) { showTab(dataTab); revealBox('data'); return; }
   if (hash.startsWith('path=')) {
+    showTab('tab-path');
     const q = new URLSearchParams(hash);
     const direction = q.get('from') === 'up' ? 'up' : 'down';
     $('aspath').value = q.get('path') || '';
     $('from').value = direction;
     renderPathCheck($('aspath').value, direction);
-    revealBox('check-title');
+    revealBox('tools');
     return;
   }
   if (hash.startsWith('routes=')) {
+    showTab('tab-routes');
     const res = decodeURIComponent(hash.slice(7));
     $('liveq').value = res;
     renderLiveRoutes(res);
-    revealBox('live-title');
+    revealBox('tools');
     return;
   }
   const as = hash ? normalizeAsn(decodeURIComponent(hash)) : pathAs();
   if (!as) return;
+  showTab('tab-lookup');
   $('asn').value = as;
   if (aspas.length) {
     renderLookup(as);
-    $('result').scrollIntoView({ block: 'nearest', behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
+    revealBox('tools');
+  }
+}
+
+/* ---------- tabs: the tools, and the data sections ---------- */
+function selectTab(tab, { focus = false } = {}) {
+  for (const t of tab.closest('[role="tablist"]').querySelectorAll('[role="tab"]')) {
+    const on = t === tab;
+    t.setAttribute('aria-selected', String(on));
+    t.tabIndex = on ? 0 : -1;
+    const panel = $(t.getAttribute('aria-controls'));
+    if (panel) panel.hidden = !on;
+  }
+  if (focus) tab.focus();
+}
+const showTab = (id) => { const t = $(id); if (t && t.getAttribute('aria-selected') !== 'true') selectTab(t); };
+
+function setupTabs() {
+  for (const list of document.querySelectorAll('[role="tablist"]')) {
+    const tabs = [...list.querySelectorAll('[role="tab"]')];
+    tabs.forEach((t, i) => {
+      t.addEventListener('click', () => selectTab(t));
+      t.addEventListener('keydown', (e) => {
+        const to = { ArrowRight: i + 1, ArrowLeft: i - 1, Home: 0, End: tabs.length - 1 }[e.key];
+        if (to === undefined) return;
+        e.preventDefault();
+        selectTab(tabs[(to + tabs.length) % tabs.length], { focus: true });
+      });
+    });
   }
 }
 
@@ -1156,6 +1189,7 @@ document.addEventListener('DOMContentLoaded', () => {
   $('filter').addEventListener('input', applyFilter);
   $('rir').addEventListener('change', applyFilter);
   $('more').addEventListener('click', showMore);
+  setupTabs();
   setupHistoryControls();
   load();
   loadHistory();
