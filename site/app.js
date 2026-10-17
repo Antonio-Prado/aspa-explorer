@@ -87,8 +87,8 @@ function renderOverview(status) {
   const tile = (label, value, note) => el('div', { class: 'tile card' },
     el('div', { class: 'label', text: label }), el('div', { class: 'value', text: value }), note && el('div', { class: 'note', text: note }));
   $('tiles').replaceChildren(
-    tile('ASPAs', fmt.format(aspas.length), 'customer ASes with a valid ASPA'),
-    tile('Provider ASes', fmt.format(providerCount), 'distinct ASes named as a provider'),
+    tile('ASPAs', fmt.format(aspas.length), 'with a valid ASPA'),
+    tile('Provider ASes', fmt.format(providerCount), 'named as a provider'),
     tile('Median providers', String(median), `largest set: ${fmt.format(sizes[sizes.length - 1] || 0)}`),
     tile('No-provider ASPAs', fmt.format(zero), 'customer declares AS0'),
   );
@@ -108,7 +108,7 @@ async function addCoverageTile() {
     $('tiles').append(el('div', { class: 'tile card', id: 'tile-coverage' },
       el('div', { class: 'label', text: 'Coverage' }),
       el('div', { class: 'value', text: `${d.pct.toFixed(d.pct < 10 ? 2 : 1)}%` }),
-      el('div', { class: 'note', text: `of ${fmt.format(d.seen)} ASes seen in BGP have an ASPA` })));
+      el('div', { class: 'note', text: `of ${fmt.format(d.seen)} ASes in BGP` })));
   } catch { /* the tile is simply not shown */ }
 }
 

@@ -7,7 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.15.4] - 2026-10-17
+
 ### Changed
+- **The home page fits one screen** (757 px high on a laptop) without scrolling: less space around the header, the intro text and the footer, a 32 px logo, tighter tiles with shorter notes, a shorter pointer to the statistics page. Nothing was removed.
 - In the README and the wiki, where the credits are icons without words, the heart stands alone, without *Inspired by passion*.
 
 ## [1.15.3] - 2026-10-17

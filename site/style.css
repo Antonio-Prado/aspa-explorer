@@ -489,3 +489,17 @@ td.muted { color: var(--muted); }
 .status-dot.warn { background: #d97706; }
 .status-dot.down { background: #d92d20; }
 .credits .heart { color: #e0245e; font-size: 1.1em; }
+
+/* a shorter page: the home fits a laptop screen without scrolling */
+.masthead { padding-top: 1.5rem; padding-bottom: 0.9rem; }
+.masthead .lede { max-width: 64rem; }
+.tools { margin-bottom: 1rem; }
+.tile { padding: 0.75rem 1rem; }
+.foot { padding-top: 1rem; padding-bottom: 1.25rem; }
+.foot p { max-width: 64rem; }
+.build { margin-top: 0.5rem; }
+.credits { margin-top: 0.5rem; }
+.masthead h1 .brand, .brandlink .brand { height: 32px; width: 32px; }
+.tools .tabpanel { padding: 0.85rem 1.25rem 1rem; }
+.data .tabpanel { padding-top: 1rem; }
+.more-stats { margin-top: 0.4rem; }
