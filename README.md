@@ -152,9 +152,7 @@ sequenceDiagram
     end
 ```
 
-The diagram above is a UML sequence diagram: the visitor's browser gets the static page from nginx and then the data, which nginx serves from its 2-minute cache or fetches from Routinator, while Routinator validates the RPKI repositories on its own schedule.
-
-The diagram shows the data of the home page. Around it there are a few more pieces, which the wiki describes in *Deployment*:
+The diagram above is a UML sequence diagram of the data of the home page: the visitor's browser gets the static page from nginx and then the data, which nginx serves from its 2-minute cache or fetches from Routinator, while Routinator validates the RPKI repositories on its own schedule. Around it there are a few more pieces, which the wiki describes in *Deployment*:
 
 ```mermaid
 flowchart LR
