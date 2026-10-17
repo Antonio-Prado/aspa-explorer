@@ -52,35 +52,14 @@
     return a === 10 || a === 127 || (a === 172 && b >= 16 && b <= 31) || (a === 192 && b === 168) || (a === 169 && b === 254) || (a === 100 && b >= 64 && b <= 127) || a === 0 || a >= 224;
   }
 
-  // Distance on the ground, in km, between two points (degrees).
-  function distanceKm(lat1, lon1, lat2, lon2) {
-    const rad = Math.PI / 180, dLat = (lat2 - lat1) * rad, dLon = (lon2 - lon1) * rad;
-    const h = Math.sin(dLat / 2) ** 2 + Math.cos(lat1 * rad) * Math.cos(lat2 * rad) * Math.sin(dLon / 2) ** 2;
-    return 12742 * Math.asin(Math.sqrt(h));
-  }
-
-  // Where a hop is, from the candidates of RIPE IPmap ({cityName, countryCodeAlpha2, latitude, longitude, score}): the best scored one that the
-  // delay allows. A packet covers about 100 km each way in a millisecond of round trip, so a place farther than that from the probe is
-  // impossible whatever the score says.
-  function pickLocation(locations, probe, rtt) {
-    const list = [...(locations || [])].filter((l) => l && l.countryCodeAlpha2 && typeof l.latitude === 'number').sort((a, b) => (b.score || 0) - (a.score || 0));
-    for (const l of list) {
-      if (rtt !== null && probe && typeof probe.latitude === 'number' && distanceKm(probe.latitude, probe.longitude, l.latitude, l.longitude) > rtt * 100 + 30) continue;
-      return { city: l.cityName || null, cc: l.countryCodeAlpha2 };
-    }
-    return null;
-  }
-
-  // result: one entry of `results` of a finished Globalping traceroute; asnOf(ip) -> AS number | null;
-  // locationsOf(ip) -> the candidates of RIPE IPmap for the address (an array, possibly empty).
-  function summarise(result, asnOf, locationsOf) {
+  // result: one entry of `results` of a finished Globalping traceroute; asnOf(ip) -> AS number | null.
+  function summarise(result, asnOf) {
     const hops = (result.result.hops || []).map((h, i) => {
       const rtts = (h.timings || []).map((t) => t.rtt).filter((x) => typeof x === 'number');
       const ip = h.resolvedAddress || null;
       const asn = ip && !isPrivate(ip) ? asnOf(ip) : null;
       const rtt = rtts.length ? Math.min(...rtts) : null;
-      const geo = ip && !isPrivate(ip) && locationsOf ? pickLocation(locationsOf(ip), result.probe, rtt) : null;
-      return { n: i + 1, ip, host: h.resolvedHostname && h.resolvedHostname !== ip ? h.resolvedHostname : null, asn, rtt, geo };
+      return { n: i + 1, ip, host: h.resolvedHostname && h.resolvedHostname !== ip ? h.resolvedHostname : null, asn, rtt };
     });
     const answering = hops.filter((h) => h.ip);
     const last = answering[answering.length - 1] || null;
@@ -100,16 +79,10 @@
     const access = firstPublic ? firstPublic.rtt : 0;
     const path = [];
     for (const h of hops) if (h.asn && path[path.length - 1] !== h.asn) path.push(h.asn);
-    // the countries on the way, where the hops could be placed, and the first hop that is abroad
-    const countries = [];
-    for (const h of hops) if (h.geo && countries[countries.length - 1] !== h.geo.cc) countries.push(h.geo.cc);
-    const home = result.probe.country;
-    const abroad = [...new Set(countries.filter((cc) => cc !== home))];
-    const exit = hops.find((h) => h.geo && h.geo.cc !== home) || null;
     const lastRtt = last && last.rtt !== null ? last.rtt : null;
     return {
       probe: { city: result.probe.city, country: result.probe.country, asn: result.probe.asn, network: result.probe.network },
-      status: result.result.status, hops, path, countries, abroad, exit, jump, lastRtt, reachedAddress: last ? last.ip : null,
+      status: result.result.status, hops, path, jump, lastRtt, reachedAddress: last ? last.ip : null,
       access, net: lastRtt === null ? null : Math.max(0, lastRtt - access),
       // from the first public address to the end, supposing that the target is in the country of the probe
       verdict: lastRtt === null ? null : lastRtt - access >= TROMBONE_MS ? 'trombone' : lastRtt - access > LONG_DELAY_MS ? 'long' : 'ok',
@@ -127,13 +100,10 @@
     const counts = { ok: 0, long: 0, trombone: 0 };
     for (const s of done) counts[s.verdict]++;
     const near = nets.filter((x) => x < 10).length;       // probes that are close to the target
-    const detours = done.filter((s) => (s.abroad || []).length);  // probes whose path goes through another country
-    const abroadBy = {};
-    for (const s of detours) for (const cc of (s.abroad || [])) abroadBy[cc] = (abroadBy[cc] || 0) + 1;
-    return { n: done.length, median, min: nets[0], max: nets[nets.length - 1], counts, near, detours: detours.length, abroadBy, verdict: median >= TROMBONE_MS ? 'trombone' : median > LONG_DELAY_MS ? 'long' : 'ok' };
+    return { n: done.length, median, min: nets[0], max: nets[nets.length - 1], counts, near, verdict: median >= TROMBONE_MS ? 'trombone' : median > LONG_DELAY_MS ? 'long' : 'ok' };
   }
 
-  const api = { hostIn, targetOf, isPrivate, summarise, aggregate, pickLocation, distanceKm, LONG_DELAY_MS, TROMBONE_MS, JUMP_MS };
+  const api = { hostIn, targetOf, isPrivate, summarise, aggregate, LONG_DELAY_MS, TROMBONE_MS, JUMP_MS };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.AspaTraceroute = api;
 })(typeof self !== 'undefined' ? self : this);

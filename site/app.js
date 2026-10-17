@@ -482,16 +482,6 @@ async function asnOfIp(ip) {
   return asn;
 }
 
-// Where an address is: the candidates of RIPE IPmap (the best scored one that the delay allows is chosen by traceroute.js).
-const ipGeoCache = new Map();
-async function locateIp(ip) {
-  if (ipGeoCache.has(ip)) return ipGeoCache.get(ip);
-  let list = [];
-  try { list = (await getJson(`https://ipmap-api.ripe.net/v1/locate/${encodeURIComponent(ip)}`)).locations || []; } catch { /* the hop is shown without a place */ }
-  ipGeoCache.set(ip, list);
-  return list;
-}
-
 async function runTraceroute(address, country, onStatus) {
   const r = await fetch(GLOBALPING, {
     method: 'POST', headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
@@ -521,10 +511,10 @@ function measureBlock(origin, tr, routes) {
     try {
       const m = await runTraceroute(target.address, tr.country, (t) => status.replaceChildren(el('span', { class: 'busy', text: t })));
       const ips = [...new Set(m.results.flatMap((x) => (x.result.hops || []).map((h) => h.resolvedAddress)).filter((ip) => ip && !AspaTraceroute.isPrivate(ip)))];
-      status.replaceChildren(el('span', { class: 'busy', text: `Finding the network and the place of ${ips.length} addresses` }));
+      status.replaceChildren(el('span', { class: 'busy', text: `Mapping ${ips.length} addresses to their networks` }));
       const queue = [...ips];
-      await Promise.all(Array.from({ length: 4 }, async () => { for (let ip = queue.shift(); ip; ip = queue.shift()) await Promise.all([asnOfIp(ip), locateIp(ip)]); }));
-      const results = m.results.map((x) => AspaTraceroute.summarise(x, (ip) => ipAsnCache.get(ip) || null, (ip) => ipGeoCache.get(ip) || []));
+      await Promise.all(Array.from({ length: 4 }, async () => { for (let ip = queue.shift(); ip; ip = queue.shift()) await asnOfIp(ip); }));
+      const results = m.results.map((x) => AspaTraceroute.summarise(x, (ip) => ipAsnCache.get(ip) || null));
       status.textContent = `Traceroute towards ${target.address}, in ${target.prefix} of ${as}, from ${results.length} probe${results.length === 1 ? '' : 's'} in ${home}.`;
       const all = AspaTraceroute.aggregate(results);
       const sorted = [...results].sort((a, b) => (b.net === null ? -1 : b.net) - (a.net === null ? -1 : a.net));
@@ -536,7 +526,7 @@ function measureBlock(origin, tr, routes) {
     btn.disabled = false;
   });
   return el('div', { class: 'measure' }, btn,
-    el('p', { class: 'hint', text: `It runs a traceroute towards ${target.address} (in ${target.prefix}) from up to ${PROBES} probes in ${home} (the country of the AS) through Globalping (globalping.io), and asks RIPEstat which network each hop belongs to and RIPE IPmap where it is. They all see your address and what is asked, and the test uses ${PROBES} of the 250 measurements an hour that Globalping allows to your address.` }),
+    el('p', { class: 'hint', text: `It runs a traceroute towards ${target.address} (in ${target.prefix}) from up to ${PROBES} probes in ${home} (the country of the AS) through Globalping (globalping.io), and asks RIPEstat which network each hop belongs to. They both see your address and what is asked, and the test uses ${PROBES} of the 250 measurements an hour that Globalping allows to your address.` }),
     status, out);
 }
 
@@ -560,11 +550,7 @@ function resultBox(a, total, home) {
   else if (a.verdict === 'long') lines.push('The median is longer than it should be inside a country (50 ms): many routes probably go abroad, but not as far as an ocean.');
   else if (c.trombone) lines.push(`${c.trombone === 1 ? 'One probe is' : `${c.trombone} probes are`} at 100 ms or more: look at ${c.trombone === 1 ? 'it' : 'them'} in the table, it can be the probe (a mobile network, for instance) or its route.`);
   else lines.push('No probe is at 100 ms or more, the delay of a packet that crosses an ocean.');
-  if (a.detours) {
-    const by = Object.entries(a.abroadBy).sort((x, y) => y[1] - x[1]).map(([cc, n]) => `${countryName(cc)} (${n})`).join(', ');
-    lines.push(`${a.detours} of ${a.n} probes go through another country: ${by}. A detour, ${a.verdict === 'ok' && !c.trombone ? 'but a short one: the delay stays normal' : 'to be read with the delays below'}.`);
-  } else lines.push(`No probe goes through another country, as far as the hops could be placed.`);
-  const notes = ['What this does not tell: the places are estimates of RIPE IPmap, and one that looks odd (a router of Rome that falls in another country) is more likely a wrong estimate than a detour: look at it in the hops. The addresses that IPmap does not know are not placed (the network of the target itself, often), a target that is far inside the country looks like a short detour in the delay, and the probes are only a sample of where the traffic comes from.'];
+  const notes = ['What this does not tell: a short detour inside Europe (a few tens of milliseconds) cannot be told apart from a target that is far inside the country, and the probes are only a sample of where the traffic comes from.'];
   if (a.verdict === 'ok' && a.near / a.n < 0.25) notes.unshift(`Only ${a.near} of the ${a.n} probes get within 10 ms of the target: it is far from them, inside the country, or the last part of its network is long.`);
   return el('div', { class: `result r-${kind}`, role: 'group', 'aria-label': 'Result of the measurement' },
     el('p', { class: 'headline', text: headline }), ...lines.map((x) => el('p', { text: x })), ...notes.map((x) => el('p', { class: 'hint', text: x })));
@@ -576,7 +562,7 @@ function probeTable(probes, all, target) {
   const badge = { ok: ['v-valid', 'normal'], long: ['v-unknown', 'longer than it should be'], trombone: ['v-invalid', 'trombone'] };
   const rows = [];
   if (all) {
-    rows.push(el('tr', { class: 'median' }, el('th', { scope: 'row', text: `Median of ${all.n} probes (from ${ms(all.min)} to ${ms(all.max)})` }), el('td', { text: '' }), el('td', { text: '' }), el('td', { class: 'num', text: ms(all.median) }), el('td', { text: '' }),
+    rows.push(el('tr', { class: 'median' }, el('th', { scope: 'row', text: `Median of ${all.n} probes (from ${ms(all.min)} to ${ms(all.max)})` }), el('td', { text: '' }), el('td', { class: 'num', text: ms(all.median) }), el('td', { text: '' }),
       el('td', {}, el('span', { class: 'badge ' + badge[all.verdict][0], text: badge[all.verdict][1] })), el('td', { text: '' })));
   }
   for (const r of probes) {
@@ -584,14 +570,13 @@ function probeTable(probes, all, target) {
     const v = r.verdict ? badge[r.verdict] : null;
     const tr = el('tr', {}, el('th', { scope: 'row', class: 'probe', text: `${r.probe.city || 'A probe'}${r.probe.network ? ` · ${r.probe.network}` : ''}` }),
       el('td', { class: 'mono pathcell', text: r.path.map((a) => `AS${a}`).join(' → ') || '–' }),
-      el('td', { text: r.countries.map((cc) => countryName(cc)).join(' → ') || '–' }),
       el('td', { class: 'num', text: ms(r.net) }), el('td', { class: 'num', text: ms(r.lastRtt) }),
       el('td', {}, v ? el('span', { class: 'badge ' + v[0], text: v[1] }) : el('span', { class: 'muted', text: 'no answer' })),
       el('td', { class: 'nowrap' }, more));
     let open = null;
     more.addEventListener('click', () => {
       if (open) { open.remove(); open = null; more.setAttribute('aria-expanded', 'false'); more.textContent = 'hops'; return; }
-      open = el('tr', { class: 'detailrow' }, el('td', { colspan: '7' }, traceCard(r, target)));
+      open = el('tr', { class: 'detailrow' }, el('td', { colspan: '6' }, traceCard(r, target)));
       tr.after(open);
       more.setAttribute('aria-expanded', 'true'); more.textContent = 'hide';
     });
@@ -599,7 +584,7 @@ function probeTable(probes, all, target) {
   }
   return el('section', { class: 'table-wrap card', tabindex: '0', 'aria-label': 'The probes of the measurement, the slowest first' }, el('table', { class: 'checks live nb' },
     el('caption', { class: 'sr-only', text: 'The probes of the measurement, with the networks on the way and the round trip from the first public address' }),
-    el('thead', {}, el('tr', {}, ...['Probe', 'Networks on the way', 'Countries', 'Net round trip', 'Total round trip', 'Reading', 'Hops'].map((t, i) => el('th', { scope: 'col', class: i === 3 || i === 4 ? 'num' : undefined }, i === 6 ? el('span', { class: 'sr-only', text: t }) : t)))),
+    el('thead', {}, el('tr', {}, ...['Probe', 'Networks on the way', 'Net round trip', 'Total round trip', 'Reading', 'Hops'].map((t, i) => el('th', { scope: 'col', class: i === 2 || i === 3 ? 'num' : undefined }, i === 5 ? el('span', { class: 'sr-only', text: t }) : t)))),
     el('tbody', {}, ...rows)));
 }
 
@@ -607,9 +592,6 @@ function traceCard(r, target) {
   const rttText = (v) => (v === null ? '–' : `${v < 10 ? v.toFixed(1) : Math.round(v)} ms`);
   const notes = [];
   if (r.path.length) notes.push(`Networks on the way: ${r.path.map((a) => `AS${a}`).join(' → ')}.`);
-  const places = []; for (const h of r.hops) if (h.geo) { const p = `${h.geo.city || countryName(h.geo.cc)} (${countryName(h.geo.cc)})`; if (places[places.length - 1] !== p) places.push(p); }
-  if (places.length) notes.push(`Placed by RIPE IPmap: ${places.join(' → ')}.`);
-  if (r.exit) notes.push(`It goes through another country, from hop ${r.exit.n}: ${r.exit.geo.city || countryName(r.exit.geo.cc)} (${countryName(r.exit.geo.cc)}), at ${rttText(r.exit.rtt)}.`);
   if (r.status !== 'finished') notes.push('The probe could not run the measurement.');
   else if (r.reachedAddress !== target.address) notes.push(`The last answer comes from ${r.reachedAddress || 'no address'}, not from ${target.address}: the target does not answer, which is common, so the last network that answers is the last one that is seen.`);
   if (r.jump) notes.push(`The delay rises by ${Math.round(r.jump.by)} ms between hop ${r.jump.from} and hop ${r.jump.hop} and stays up to the end: from there the path is longer, or slower, by that much (queues, tunnels and slow answers add milliseconds too).`);
@@ -620,15 +602,14 @@ function traceCard(r, target) {
   const rows = r.hops.map((h) => el('tr', {}, el('td', { class: 'num', text: String(h.n) }),
     el('td', {}, h.ip ? el('span', { class: 'mono', text: h.ip }) : el('span', { class: 'muted', text: 'no answer' })),
     el('td', { text: h.asn ? `AS${h.asn}` : (h.ip ? (AspaTraceroute.isPrivate(h.ip) ? 'private' : '–') : '') }),
-    el('td', { text: h.geo ? `${h.geo.city ? `${h.geo.city}, ` : ''}${countryName(h.geo.cc)}` : '' }),
     el('td', { class: 'num', text: rttText(h.rtt) })));
   return el('div', { class: 'trace' },
     el('h4', { text: `${r.probe.city || 'A probe'}, ${countryName(r.probe.country)}${r.probe.asn ? ` · AS${r.probe.asn}${r.probe.network ? ` ${r.probe.network}` : ''}` : ''}` }),
     ...notes.map((t) => el('p', { class: 'hint', text: t })),
     el('details', { class: 'embed' }, el('summary', { text: `The ${r.hops.length} hops` }),
       el('section', { class: 'table-wrap card', tabindex: '0', 'aria-label': `Hops of the traceroute from ${r.probe.city || 'the probe'}` }, el('table', { class: 'checks live nb' },
-        el('caption', { class: 'sr-only', text: 'Hops of the traceroute: address, network, place and shortest delay' }),
-        el('thead', {}, el('tr', {}, ...['Hop', 'Address', 'Network', 'Place', 'Delay'].map((t, i) => el('th', { scope: 'col', class: i === 0 || i === 4 ? 'num' : undefined, text: t })))),
+        el('caption', { class: 'sr-only', text: 'Hops of the traceroute: address, network and shortest delay' }),
+        el('thead', {}, el('tr', {}, ...['Hop', 'Address', 'Network', 'Delay'].map((t, i) => el('th', { scope: 'col', class: i === 0 || i === 3 ? 'num' : undefined, text: t })))),
         el('tbody', {}, ...rows)))));
 }
 

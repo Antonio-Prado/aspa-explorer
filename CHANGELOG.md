@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.27.1] - 2026-10-17
+
+### Removed
+- The places and the countries of the hops of the measurement of the tromboning (RIPE IPmap): the estimates are not sure enough to be shown, and the page does not use `ipmap-api.ripe.net` any more. The measurement says what the delays say, the networks on the way and where the delay rises.
+
 ## [1.27.0] - 2026-10-17
 
 ### Changed
