@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.11.0] - 2026-10-17
+
+### Changed
+- **The home page is less dense.** The three tools (look up an AS, check an AS path, routes seen in BGP) share one card with three tabs, one tool at a time; the overview with its charts, the recent changes, the ASPA quality and the table of all ASPAs share a second set of tabs, with the overview open. Nothing was removed: every address (`#AS680`, `#path=…`, `#routes=…`) still opens its tool, and `#overview`, `#changes`, `#quality` and `#all` open the data tabs. The tabs follow the ARIA tabs pattern (arrow keys, Home and End). The README and wiki screenshots were retaken.
+
 ## [1.10.2] - 2026-10-17
 
 ### Added
