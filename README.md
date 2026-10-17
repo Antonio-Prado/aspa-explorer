@@ -23,7 +23,7 @@
   <a href="CONTRIBUTING.md" target="_blank" rel="noopener">Contributing</a>
 </p>
 
-<p align="center"><sub>This is the public, read-only mirror of the project's development repository. To report a problem or suggest a change, write to <a href="mailto:antonio.prado@dei.unipd.it">antonio.prado@dei.unipd.it</a>.</sub></p>
+<p align="center"><sub>This is the public, read-only mirror of the project's development repository (it is copied to <a href="https://github.com/Antonio-Prado/aspa-explorer" target="_blank" rel="noopener">GitHub</a> as well). To report a problem or suggest a change, write to <a href="mailto:antonio.prado@dei.unipd.it">antonio.prado@dei.unipd.it</a>.</sub></p>
 
 <table>
   <tr>

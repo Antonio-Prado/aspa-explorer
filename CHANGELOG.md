@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- A read-only mirror on GitHub (`.github/workflows/mirror.yml`): every 30 minutes the main branch and the tags are copied from the public project, and a release is made for the latest tags.
+
 ## [1.19.0] - 2026-10-17
 
 ### Added
