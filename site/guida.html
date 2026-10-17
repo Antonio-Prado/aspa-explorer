@@ -8,15 +8,15 @@
 <meta name="color-scheme" content="light dark">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <link rel="alternate" hreflang="en" href="/guide.html">
-<link rel="stylesheet" href="/style.css?v=1.19.0">
-<script src="/status-checks.js?v=1.19.0" defer></script>
-<script src="/footer.js?v=1.19.0" defer></script>
+<link rel="stylesheet" href="/style.css?v=1.20.0">
+<script src="/status-checks.js?v=1.20.0" defer></script>
+<script src="/footer.js?v=1.20.0" defer></script>
 </head>
 <body>
 <a class="skip" href="#main">Vai al contenuto principale</a>
 <header class="wrap masthead">
   <div class="top">
-    <p class="back"><a class="brandlink" href="/" title="Torna a ASPA Explorer"><img class="brand" src="/img/logo-mark.svg?v=1.19.0" alt="" width="40" height="40"><span>ASPA Explorer</span></a></p>
+    <p class="back"><a class="brandlink" href="/" title="Torna a ASPA Explorer"><img class="brand" src="/img/logo-mark.svg?v=1.20.0" alt="" width="40" height="40"><span>ASPA Explorer</span></a></p>
     <nav class="topnav" aria-label="Main"><a href="/">Home</a><a href="/statistics.html">Statistics</a><a href="/examples.html">Examples</a><a href="/api.html">API</a><a href="/guide.html" aria-current="page">Guide</a><a href="/status.html">Status</a></nav>
   </div>
   <h1>Guida</h1>
@@ -143,7 +143,7 @@
     <h2 id="changes">Modifiche recenti e storia di un AS</h2>
     <p><em>Recent changes</em> elenca, per ciascuno degli ultimi 14 giorni, le ASPA comparse (<em>new</em>), che hanno cambiato i provider (quelli aggiunti sono marcati <code>+</code>, quelli tolti <code>−</code>) o sono scomparse. Lo stesso elenco è disponibile come <a href="/changes.atom">feed Atom</a>. Cercando un AS compare un blocco <em>History</em> con ogni modifica della sua ASPA e il giorno in cui un'ASPA lo ha nominato per la prima volta come provider.</p>
     <p>Le modifiche dal 12 ottobre 2023 sono state ricostruite dall'output giornaliero dell'<a href="https://ftp.ripe.net/rpki/" target="_blank" rel="noopener">archivio del repository RPKI del RIPE NCC<span class="sr-only"> (si apre in una nuova scheda)</span></a>; dal 16 ottobre 2026 provengono dal validatore che sta dietro a questa pagina, che può mostrare una breve scomparsa quando un repository era irraggiungibile. Un'ASPA già esistente il 12 ottobre 2023 risulta nuova in quel giorno.</p>
-    <p>Nella pagina di un AS, <em>Compare two dates</em> mostra che cosa è cambiato tra due giorni: i provider che la sua ASPA ha aggiunto o tolto, le ASPA che hanno iniziato o smesso di nominarlo come provider e, per i giorni dal 17 ottobre 2026, i luoghi di valle che lo riguardano (i file giornalieri degli ultimi 60 giorni vengono conservati). Lo stato è quello di fine giornata.</p>
+    <p>Nella pagina di un AS, <em>Compare two dates</em> mostra che cosa è cambiato tra due giorni: i provider che la sua ASPA ha aggiunto o tolto, le ASPA che hanno iniziato o smesso di nominarlo come provider e, per i giorni che hanno un file, i luoghi di valle che lo riguardano (i file giornalieri degli ultimi 60 giorni vengono conservati). Lo stato è quello di fine giornata.</p>
   </section>
 
   <section aria-labelledby="quality">
@@ -185,7 +185,7 @@
       <li><strong>ASPAs that seem to miss a provider:</strong> quell'AS è un provider dell'AS che lo precede, la cui ASPA non lo elenca: le rotte valide che passano da lui sembrano valley. A dover essere avvisato è il titolare di quell'ASPA. La maggior parte dei luoghi è di questo tipo.</li>
     </ul>
     <p>I luoghi senza relazione nel dataset sono contati ma non elencati. Le relazioni sono dedotte dalle rotte osservate, quindi possono essere superate, e un luogo è un candidato, non un verdetto. Le ASPA dimostrano una valley solo dove sono pubblicate: una larga quota delle rotte attraversa un AS senza ASPA e resta <em>unknown</em>. Un leak visto da un solo feeder può essere un leak nel feeder stesso. Lo stesso file è disponibile in <a href="/api/v1/leaks.json">JSON</a>.</p>
-    <p><em>Over time</em> è il grafico dei luoghi di possibile leak e di lacuna, un punto al giorno (<code>/api/v1/leaks-history.json</code>). È iniziato il 17 ottobre 2026, quindi all'inizio è corto. Una variazione può venire dalle rotte, dalle ASPA pubblicate quel giorno o dal dataset delle relazioni.</p>
+    <p><em>Over time</em> è il grafico dei luoghi di possibile leak e di lacuna, un punto al giorno (<code>/api/v1/leaks-history.json</code>). È un punto al giorno dal 17 ottobre 2026; i giorni precedenti sono stati ricostruiti dopo, dai dump delle tabelle delle 00:00 UTC di ciascun giorno, con le ASPA com'erano quel giorno (riprodotte dalla storia dei cambiamenti) e il dataset delle relazioni di oggi, e un giorno che non si è potuto ricostruire manca. Una variazione può venire dalle rotte, dalle ASPA pubblicate quel giorno o dal dataset delle relazioni.</p>
     <h3 id="validators">Validatori a confronto</h3>
     <p>Ogni ora il sito confronta le ASPA di tre validatori: il Routinator di questo sito (NLnet Labs), <a href="https://console.rpki-client.org/" target="_blank" rel="noopener">rpki-client<span class="sr-only"> (si apre in una nuova scheda)</span></a> (OpenBSD, la console del progetto) e il rpki-client gestito da Cloudflare. Leggono gli stessi repository con codice diverso, quindi si controllano a vicenda in modo indipendente. La sezione mostra quante ASPA ha ciascuno e quando è stata costruita, per quanti customer i provider coincidono in tutti e tre, e le ASPA su cui differiscono con un possibile motivo. Alcune differenze sono normali (leggono in momenti diversi, e ciascuno può scartare un oggetto che un altro accetta); una che dura merita una segnalazione al validatore. Il caso comune è un'ASPA che elenca <code>AS0</code> accanto ad altri provider, cosa che il profilo vieta: Routinator la mantiene e rpki-client la scarta o la riduce. Gli stessi dati sono disponibili in <a href="/api/v1/validators.json">JSON</a>.</p>
     <p>I numeri sull'adozione sono ricostruiti una volta al giorno e disponibili in <a href="/api/v1/adoption.json">JSON</a>. Le ASPA di reti che i collector non vedono non sono contate. La pagina si chiamava <em>Adoption</em>.</p>

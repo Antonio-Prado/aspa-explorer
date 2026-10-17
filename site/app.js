@@ -860,7 +860,7 @@ function compareBlock(as) {
     out.replaceChildren(...kids, el('p', { class: 'hint', text: 'Looking at the places of valley…' }));
     const [pa, pb] = await Promise.all([dayPlaces(a), dayPlaces(b)]);
     const last = out.lastChild;
-    if (!pa || !pb) last.textContent = 'Places of valley: the daily files are kept for the last 60 days and start on 17 October 2026, so there is nothing to compare for one of the two days.';
+    if (!pa || !pb) last.textContent = 'Places of valley: the daily files are kept for the last 60 days, so there is nothing to compare for one of the two days.';
     else {
       const p = AspaHistory.comparePlaces(pa, pb, as);
       const row = (x) => el('li', {}, x.role === 'gap' ? `its ASPA seems to miss ${x.between[0]}` : `inside a valley between ${x.from} and ${x.to} (${x.between.join(' ')})`, ` · ${x.feeders} feeders`);
@@ -871,7 +871,7 @@ function compareBlock(as) {
     btn.disabled = false;
   });
   return el('details', { class: 'embed' }, el('summary', { text: 'Compare two dates' }),
-    el('p', { class: 'hint', text: `What changed for ${as} between two days: its providers, the ASPAs that name it and, for days since 17 October 2026, the places of valley that involve it.` }), form, out);
+    el('p', { class: 'hint', text: `What changed for ${as} between two days: its providers, the ASPAs that name it and, for the days that have a file, the places of valley that involve it.` }), form, out);
 }
 
 function graphHolder(as) { return el('div', { class: 'res-hist' }, el('h4', { text: 'Neighbourhood' }), graphBlock(as)); }

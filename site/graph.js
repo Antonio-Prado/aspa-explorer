@@ -53,7 +53,7 @@
 
   // container gets the SVG; href(id) gives the address of a node, or null for a node that is not a link
   function draw(container, lay, href) {
-    const g = svg('svg', { viewBox: `0 0 ${lay.width} ${lay.height}`, class: 'graph-svg', role: 'img', 'aria-label': lay.summary });
+    const g = svg('svg', { viewBox: `0 0 ${lay.width} ${lay.height}`, class: 'graph-svg', role: 'group', 'aria-label': lay.summary });
     g.append(svg('defs', {}, svg('marker', { id: 'arrow', viewBox: '0 0 10 10', refX: '9', refY: '5', markerWidth: '7', markerHeight: '7', orient: 'auto-start-reverse' }, svg('path', { d: 'M0 0 L10 5 L0 10 z', class: 'arrowhead' }))));
     const byId = new Map(lay.nodes.map((n) => [n.id, n]));
     for (const e of lay.edges) {

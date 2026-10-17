@@ -8,15 +8,15 @@
 <meta name="color-scheme" content="light dark">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <link rel="alternate" hreflang="it" href="/guida.html">
-<link rel="stylesheet" href="/style.css?v=1.19.0">
-<script src="/status-checks.js?v=1.19.0" defer></script>
-<script src="/footer.js?v=1.19.0" defer></script>
+<link rel="stylesheet" href="/style.css?v=1.20.0">
+<script src="/status-checks.js?v=1.20.0" defer></script>
+<script src="/footer.js?v=1.20.0" defer></script>
 </head>
 <body>
 <a class="skip" href="#main">Skip to main content</a>
 <header class="wrap masthead">
   <div class="top">
-    <p class="back"><a class="brandlink" href="/" title="Back to ASPA Explorer"><img class="brand" src="/img/logo-mark.svg?v=1.19.0" alt="" width="40" height="40"><span>ASPA Explorer</span></a></p>
+    <p class="back"><a class="brandlink" href="/" title="Back to ASPA Explorer"><img class="brand" src="/img/logo-mark.svg?v=1.20.0" alt="" width="40" height="40"><span>ASPA Explorer</span></a></p>
     <nav class="topnav" aria-label="Main"><a href="/">Home</a><a href="/statistics.html">Statistics</a><a href="/examples.html">Examples</a><a href="/api.html">API</a><a href="/guide.html" aria-current="page">Guide</a><a href="/status.html">Status</a></nav>
   </div>
   <h1>Guide</h1>
@@ -143,7 +143,7 @@
     <h2 id="changes">Recent changes and the history of an AS</h2>
     <p><em>Recent changes</em> lists, for each of the last 14 days, the ASPAs that appeared (<em>new</em>), changed their providers (the providers added are marked <code>+</code>, the ones dropped <code>−</code>) or disappeared. The same list is available as an <a href="/changes.atom">Atom feed</a>. Looking up an AS adds a <em>History</em> block with every change of its own ASPA and the day an ASPA first named it as a provider.</p>
     <p>The changes since 12 October 2023 were reconstructed from the daily output of the <a href="https://ftp.ripe.net/rpki/" target="_blank" rel="noopener">RIPE NCC RPKI repository archive<span class="sr-only"> (opens in a new tab)</span></a>; since 16 October 2026 they come from the validator behind this page, which can show a brief disappearance when a repository was unreachable. An ASPA that already existed on 12 October 2023 is shown as new on that day.</p>
-    <p>On the page of an AS, <em>Compare two dates</em> shows what changed for it between two days: the providers its ASPA added or dropped, the ASPAs that began or stopped naming it as a provider and, for the days since 17 October 2026, the places of valley that involve it (the daily files of the last 60 days are kept). The state is the one at the end of each day.</p>
+    <p>On the page of an AS, <em>Compare two dates</em> shows what changed for it between two days: the providers its ASPA added or dropped, the ASPAs that began or stopped naming it as a provider and, for the days that have a file, the places of valley that involve it (the daily files of the last 60 days are kept). The state is the one at the end of each day.</p>
   </section>
 
   <section aria-labelledby="quality">
@@ -185,7 +185,7 @@
       <li><strong>ASPAs that seem to miss a provider:</strong> that AS is a provider of the AS before it, which has an ASPA that does not list it: valid routes through it look like valleys. The owner of that ASPA is the one to tell. Most of the places are of this kind.</li>
     </ul>
     <p>Places with no relation in the dataset are counted but not listed. The relations are inferred from observed routes, so they can be out of date, and a place is a candidate, not a verdict. The ASPAs prove a valley only where they are published: a large share of the routes cross an AS without an ASPA and stay <em>unknown</em>. A leak seen by one feeder only can be a leak at the feeder itself. The same file is available as <a href="/api/v1/leaks.json">JSON</a>.</p>
-    <p><em>Over time</em> is the chart of the places of possible leak and of gap, one point a day (<code>/api/v1/leaks-history.json</code>). It started on 17 October 2026, so it is short at first. A change can come from the routes, from the ASPAs published that day or from the relationships dataset.</p>
+    <p><em>Over time</em> is the chart of the places of possible leak and of gap, one point a day (<code>/api/v1/leaks-history.json</code>). It is one point a day since 17 October 2026; the days before were rebuilt afterwards from the table dumps of 00:00 UTC of each day, with the ASPAs as they were that day (replayed from the history of changes) and the relationships dataset of today, and a day that could not be rebuilt is missing. A change can come from the routes, from the ASPAs published that day or from the relationships dataset.</p>
     <h3 id="validators">Validators compared</h3>
     <p>Every hour the site compares the ASPAs of three validators: the Routinator of this site (NLnet Labs), <a href="https://console.rpki-client.org/" target="_blank" rel="noopener">rpki-client<span class="sr-only"> (opens in a new tab)</span></a> (OpenBSD, the console of the project) and the rpki-client that Cloudflare runs. They read the same repositories with different code, so they are an independent check on each other. The section shows how many ASPAs each has and when it was built, how many customers have the same providers in all three, and the ASPAs on which they differ with a possible reason. A few differences are normal (they read at different moments, and each can reject an object that another accepts); one that lasts is worth a report to the validator. The common one is an ASPA that lists <code>AS0</code> next to other providers, which the profile forbids: Routinator keeps it and rpki-client rejects or trims it. The same data is available as <a href="/api/v1/validators.json">JSON</a>.</p>
     <p>The adoption numbers are rebuilt once a day and available as <a href="/api/v1/adoption.json">JSON</a>. ASPAs of networks that the collectors do not see are not counted. The page used to be called <em>Adoption</em>.</p>

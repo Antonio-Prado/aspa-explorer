@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.20.0] - 2026-10-17
+
 ### Changed
 - The route leaks are read from ten RIPE RIS collectors (rrc00, 01, 03, 04, 10, 11, 12, 15, 19 and 23: Europe, North and South America, Africa and Asia) instead of three.
 - The history of the leaks is filled in backwards: `build-leaks.mjs --day=YYYYMMDD` rebuilds a past day from the table dumps of 00:00 UTC and the ASPAs as they were that day, and `scripts/backfill-leaks.sh` does it for the last days.
@@ -14,6 +16,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 - A read-only mirror on GitHub (`.github/workflows/mirror.yml`): every 30 minutes the main branch and the tags are copied from the public project, and a release is made for the latest tags.
+
+### Fixed
+- The neighbourhood graph is a group of links, no longer an image with links inside (an axe violation, *nested-interactive*, found by the new check).
+
 
 ## [1.19.0] - 2026-10-17
 

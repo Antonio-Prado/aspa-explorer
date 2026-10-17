@@ -56,7 +56,7 @@
     } catch { box.replaceChildren(); $('leaks-history-note').textContent = 'The history of the leaks is not available.'; return; }
     if (!rows.length) return;
     $('leaks-history-note').textContent = rows.length < 2
-      ? 'One point a day: the history starts on ' + dayLabel(rows[0].date) + ' and grows from tomorrow.'
+      ? 'One point a day: the history starts on ' + dayLabel(rows[0].date) + ' and grows every day.'
       : `One point a day, ${rows.length} days. A change can come from the routes, from the ASPAs published that day or from the relationships dataset.`;
     const legend = $('leaks-history-legend');
     legend.replaceChildren(...SERIES.map((s) => el('li', {}, el('span', { class: `sw ${s.cls}`, 'aria-hidden': 'true' }), el('span', { class: 'lg', text: s.label }), ' ', el('span', { class: 'lv', text: fmt.format(rows[rows.length - 1][s.key]) }))));
