@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.10.2] - 2026-10-17
+
+### Added
+- A *Home* item at the start of the navigation on every page (it is marked on the home page).
+
 ## [1.10.1] - 2026-10-17
 
 ### Fixed
