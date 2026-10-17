@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- Version numbers that were never tagged because they were deployed and then folded into the next one: 1.13.0, 1.14.0, 1.16.0, 1.17.0, 1.18.3, 1.20.1 and 1.20.2. Their changes are in 1.13.1, 1.15.0, 1.16.1, 1.17.1, 1.18.4 and 1.20.3. The release 1.15.0 was tagged afterwards, on its own commit.
+
 ## [1.20.3] - 2026-10-17
 
 ### Added
