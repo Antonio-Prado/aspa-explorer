@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.24.2] - 2026-10-17
+
+### Fixed
+- The measurement of the tromboning chose the default route (`0.0.0.0/0`) as the prefix of an AS that has one in its routes, and Globalping refused the target `0.0.0.1`. The target is now taken from the prefixes of a usual length (12 to 24 for IPv4, 24 to 48 for IPv6), leaving out a default route, very short prefixes and private addresses.
+
 ## [1.24.1] - 2026-10-17
 
 ### Fixed

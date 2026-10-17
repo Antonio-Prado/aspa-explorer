@@ -28,16 +28,19 @@
     return Number(len) <= 128 ? (addr.endsWith('::') ? `${addr}1` : addr) : null;
   }
 
-  // The address to measure for an origin: from the prefixes that it originates in the routes, an IPv4 one by preference, the shortest first.
+  // The address to measure for an origin: from the prefixes that it originates in the routes. A default route or a very short prefix
+  // says nothing about where the AS is, and a private address leads nowhere: those are left out. IPv4 by preference; among the
+  // prefixes of a usual length (12 to 24 for IPv4, 24 to 48 for IPv6) the shortest, then the others.
   function targetOf(routes, origin) {
     const seen = new Set();
     for (const rt of routes) {
       if (Array.isArray(rt.path) && rt.path[rt.path.length - 1] === origin && rt.target_prefix) seen.add(String(rt.target_prefix).toLowerCase());
     }
     const len = (p) => Number(p.split('/')[1]);
-    const v4 = [...seen].filter((p) => !p.includes(':')).sort((a, b) => len(a) - len(b));
-    const v6 = [...seen].filter((p) => p.includes(':')).sort((a, b) => len(a) - len(b));
-    const prefix = v4[0] || v6[0];
+    const usable = (p) => { const h = hostIn(p); return h && !isPrivate(h) && (p.includes(':') ? len(p) >= 19 && len(p) <= 64 : len(p) >= 8 && len(p) <= 24); };
+    const order = (list, lo, hi) => [...list.filter((p) => len(p) >= lo && len(p) <= hi).sort((a, b) => len(a) - len(b)), ...list.filter((p) => len(p) < lo || len(p) > hi).sort((a, b) => len(a) - len(b))];
+    const ok = [...seen].filter(usable);
+    const prefix = order(ok.filter((p) => !p.includes(':')), 12, 24)[0] || order(ok.filter((p) => p.includes(':')), 24, 48)[0];
     return prefix ? { prefix, address: hostIn(prefix) } : null;
   }
 

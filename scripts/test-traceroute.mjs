@@ -25,6 +25,12 @@ test('the target of an origin: its own prefixes, IPv4 first, the shortest', () =
   assert.equal(targetOf(routes, 77), null);
 });
 
+test('a default route, a very short prefix or a private one is not a target', () => {
+  assert.deepEqual(targetOf([{ path: [1, 9], target_prefix: '0.0.0.0/0' }, { path: [1, 9], target_prefix: '::/0' }, { path: [1, 9], target_prefix: '10.0.0.0/8' }, { path: [1, 9], target_prefix: '2.0.0.0/4' }], 9), null);
+  assert.deepEqual(targetOf([{ path: [1, 9], target_prefix: '0.0.0.0/0' }, { path: [1, 9], target_prefix: '8.0.0.0/9' }, { path: [1, 9], target_prefix: '193.0.0.0/21' }], 9), { prefix: '193.0.0.0/21', address: '193.0.0.1' });
+  assert.equal(targetOf([{ path: [1, 9], target_prefix: '2001:db8::/32' }, { path: [1, 9], target_prefix: '2001:db8:1::/48' }], 9).prefix, '2001:db8::/32');
+});
+
 test('addresses that map to no AS', () => {
   for (const ip of ['10.1.2.3', '192.168.0.1', '172.16.0.1', '100.64.0.1', '127.0.0.1', '169.254.1.1', '224.0.0.1', 'fd00::1', 'fe80::1', null]) assert.equal(isPrivate(ip), true, String(ip));
   for (const ip of ['193.0.0.1', '172.32.0.1', '8.8.8.8', '2001:67c:2e8::1']) assert.equal(isPrivate(ip), false, ip);
