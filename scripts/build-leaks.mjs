@@ -108,6 +108,8 @@ export class Leaks {
     this.total = { routes: 0, valid: 0, unknown: 0, invalid: 0 };
     this.groups = new Map();
     this.feederSet = new Set();                                       // the networks that feed the collectors, whichever collector
+    this.byCollector = new Map();                                     // collector -> {routes, invalid, feeders}
+    this.lastCollector = null; this.cur = null;
   }
 
   // path: AS numbers, collector side first; feeder: the AS of the peer; collector: its name
@@ -120,6 +122,12 @@ export class Leaks {
     }
     this.total.routes++;
     this.feederSet.add(feeder);
+    if (collector !== this.lastCollector) {
+      this.lastCollector = collector;
+      this.cur = this.byCollector.get(collector) || { routes: 0, invalid: 0, feeders: new Set() };
+      this.byCollector.set(collector, this.cur);
+    }
+    this.cur.routes++; this.cur.feeders.add(feeder);
     if (p.length < 2) { this.total.valid++; return; }
     // cheap filter: a valley needs a hop that an ASPA attests as not a provider
     let suspect = false;
@@ -132,16 +140,17 @@ export class Leaks {
     if (v.result === 'Valid') { this.total.valid++; return; }
     if (v.result === 'Unknown') { this.total.unknown++; return; }
     this.total.invalid++;
+    this.cur.invalid++;
     const from = v.path[v.maxUp - 1], to = v.path[v.N - v.maxDown];
     const between = v.path.slice(v.maxUp, v.N - v.maxDown);
     const key = `${from}|${between[0]}|${to}`;           // the first AS after the ramp decides the kind: it is part of the place
     let g = this.groups.get(key);
     if (!g) {
       const caida = this.relOf(from, between[0]);
-      g = { from, to, between, caida, kind: KIND[caida], routes: 0, feeders: new Set(), origins: new Set(), example: p.slice().reverse() };
+      g = { from, to, between, caida, kind: KIND[caida], routes: 0, feeders: new Set(), origins: new Set(), sources: new Set(), example: p.slice().reverse() };
       this.groups.set(key, g);
     }
-    g.routes++; g.feeders.add(feeder); g.origins.add(p[0]);
+    g.routes++; g.feeders.add(feeder); g.origins.add(p[0]); g.sources.add(collector);
   }
 
   result(limit = 40) {
@@ -161,7 +170,27 @@ export class Leaks {
       return [...m.values()].sort((a, b) => b.feeders - a.feeders || b.routes - a.routes).slice(0, 30);
     };
     this.list = list;
+    // each collector: how much it reads, how many places of valley it sees and how many only it sees
+    const per = {};
+    for (const [c, e] of this.byCollector) per[c] = { source: isRis(c) ? 'RIS' : 'RouteViews', routes: e.routes, invalid: e.invalid, feeders: e.feeders.size, places: 0, only: 0 };
+    // the same places, seen by RIS, by RouteViews or by both (all of them, and the ones seen by at least MIN_FEEDERS feeders)
+    const blank = () => ({ both: 0, ris: 0, rv: 0 });
+    const cmp = { all: { ...blank(), kinds: { leak: blank(), gap: blank(), unclear: blank() } }, strong: { ...blank(), kinds: { leak: blank(), gap: blank(), unclear: blank() } } };
+    const risFeeders = new Set(), rvFeeders = new Set();
+    for (const [c, e] of this.byCollector) for (const f of e.feeders) (isRis(c) ? risFeeders : rvFeeders).add(f);
+    for (const g of this.groups.values()) {
+      let ris = false, rv = false;
+      for (const c of g.sources) { per[c].places++; if (isRis(c)) ris = true; else rv = true; }
+      if (g.sources.size === 1) per[[...g.sources][0]].only++;
+      const k = ris && rv ? 'both' : ris ? 'ris' : 'rv';
+      for (const [name, on] of [['all', true], ['strong', g.feeders.size >= MIN_FEEDERS]]) {
+        if (!on) continue;
+        cmp[name][k]++; cmp[name].kinds[g.kind][k]++;
+      }
+    }
+    cmp.feeders = { ris: risFeeders.size, rv: rvFeeders.size, both: [...risFeeders].filter((f) => rvFeeders.has(f)).length };
     return {
+      per_collector: per, comparison: cmp,
       total: { ...this.total, feeders: this.feederSet.size }, places: list.length,
       kinds: { gap: list.filter((g) => g.kind === 'gap').length, leak: list.filter((g) => g.kind === 'leak').length, unclear: list.filter((g) => g.kind === 'unclear').length },
       // the most seen places of each kind, so that no kind crowds the others out
@@ -261,7 +290,10 @@ async function main() {
     if (dayIso) await unlink(file);                  // a day of the past is read once
   }
   const generated = dayIso ? `${dayIso}T00:00:00Z` : new Date().toISOString().replace(/\.\d+Z$/, 'Z');
-  const doc = { generated, aspas: aspas.length, collectors: used, relationships: rel.source, ...leaks.result() };
+  const res = leaks.result();
+  for (const u of used) Object.assign(u, res.per_collector[u.collector]);
+  delete res.per_collector;
+  const doc = { generated, aspas: aspas.length, collectors: used, relationships: rel.source, ...res };
   const write = async (file, value) => { const tmp = `${file}.tmp`; await writeFile(tmp, JSON.stringify(value) + '\n'); await rename(tmp, file); };
   const dir = join(outFile, '..'), day = generated.slice(0, 10);
   const perAs = { generated, min_feeders: MIN_FEEDERS, as: byAs(leaks.list) };

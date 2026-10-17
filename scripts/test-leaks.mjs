@@ -141,4 +141,27 @@ await test('the networks that feed the collectors are counted once, whichever co
   assert.equal(addHistory([], '2026-10-17', { total: r.total, places: 0, kinds: { leak: 0, gap: 0, unclear: 0 } })[0].feeders, 2);
 });
 
+await test('each collector, and the same places seen by RIS, by RouteViews or by both', () => {
+  const asp = aspaMap([{ customer: 'AS10', providers: ['AS99'] }, { customer: 'AS40', providers: ['AS99'] }]);
+  const rel = (c, n) => (n === 21 ? 'peer' : 'unknown');
+  const l = new Leaks(asp, new Set(), rel);
+  const leak = (peer, collector, mid) => l.add(peer, collector, [50, 40, 30, mid, 10]);   // 10 -> mid -> 30 -> 40 -> 50: a valley
+  leak(1, 'rrc00', 21); leak(2, 'rrc01', 21); leak(3, 'rrc00', 21);                       // the place of AS21: RIS
+  leak(1, 'route-views2', 21); leak(4, 'route-views2', 21);                               // the same place: RouteViews too
+  leak(5, 'route-views.sg', 23);                                                          // another place, RouteViews alone (unknown relation)
+  l.add(6, 'rrc01', [99, 10]);                                                            // a valid route
+  const r = l.result();
+  const pc = r.per_collector;
+  assert.deepEqual([pc.rrc00.source, pc['route-views2'].source], ['RIS', 'RouteViews']);
+  assert.deepEqual([pc.rrc00.routes, pc.rrc00.invalid, pc.rrc00.feeders, pc.rrc00.places, pc.rrc00.only], [2, 2, 2, 1, 0]);
+  assert.deepEqual([pc['route-views.sg'].places, pc['route-views.sg'].only], [1, 1]);
+  assert.equal(pc.rrc01.routes, 2);
+  assert.deepEqual([r.comparison.all.both, r.comparison.all.ris, r.comparison.all.rv], [1, 0, 1]);
+  assert.deepEqual(r.comparison.all.kinds.leak, { both: 1, ris: 0, rv: 0 });
+  assert.deepEqual(r.comparison.all.kinds.unclear, { both: 0, ris: 0, rv: 1 });
+  assert.deepEqual(r.comparison.strong.both, 1);                                          // four feeders see the place of AS21
+  assert.equal(r.comparison.strong.rv, 0);                                                // one feeder only: not strong
+  assert.deepEqual(r.comparison.feeders, { ris: 4, rv: 3, both: 1 });                     // peers 1,2,3,6 at RIS, 1,4,5 at RouteViews: 1 is in both
+});
+
 console.log(`${passed} tests passed`);

@@ -85,6 +85,101 @@
     routeBox.textContent = `${second.join(' · ')}.`;
   }
 
+
+  // ---- the collectors compared, and RIS against RouteViews on the same places
+  const pct1 = (a, b) => (b ? `${((100 * a) / b).toFixed(a / b < 0.1 ? 2 : 1)}%` : '0%');
+  const METRICS = {
+    places: { label: 'Places of valley seen', value: (c) => c.places, fmt: (v) => fmt.format(v) },
+    only: { label: 'Places that only this collector sees', value: (c) => c.only, fmt: (v) => fmt.format(v) },
+    invalid: { label: 'Invalid routes, as a share of its routes', value: (c) => (c.routes ? (100 * c.invalid) / c.routes : 0), fmt: (v) => `${v.toFixed(v < 1 ? 3 : 2)}%` },
+    feeders: { label: 'Feeder networks', value: (c) => c.feeders, fmt: (v) => fmt.format(v) },
+    routes: { label: 'Routes read', value: (c) => c.routes, fmt: (v) => short(v) },
+  };
+  const swatch = (cls, label, value) => el('li', {}, el('span', { class: `sw ${cls}`, 'aria-hidden': 'true' }), el('span', { class: 'lg', text: label }), value === undefined ? null : ' ', value === undefined ? null : el('span', { class: 'lv', text: value }));
+
+  // One horizontal bar for each row {label, value, text, cls, tip}; the table for screen readers has the same numbers.
+  function barsChart(box, rows, caption) {
+    const W = Math.max(300, box.clientWidth || 640), L = Math.min(150, W * 0.45), R = 84, rh = 22, H = rows.length * rh + 6;
+    const max = Math.max(...rows.map((r) => r.value), 1e-9), iw = W - L - R;
+    const g = svg('svg', { viewBox: `0 0 ${W} ${H}`, class: 'bars-svg', 'aria-hidden': 'true' });
+    rows.forEach((r, i) => {
+      const y = 3 + i * rh, w = Math.max(r.value > 0 ? 2 : 0, (iw * r.value) / max);
+      g.append(svg('text', { class: 'tick', x: L - 6, y: y + 14, 'text-anchor': 'end' }, r.label),
+        svg('rect', { class: r.cls, x: L, y, width: w.toFixed(1), height: rh - 6, rx: 2 }, svg('title', {}, r.tip || `${r.label}: ${r.text}`)),
+        svg('text', { class: 'tick', x: L + w + 6, y: y + 14 }, r.text));
+    });
+    const table = el('table', { class: 'sr-only' }, el('caption', { text: caption }),
+      el('thead', {}, el('tr', {}, el('th', { scope: 'col', text: 'Collector' }), el('th', { scope: 'col', text: 'Value' }))),
+      el('tbody', {}, ...rows.map((r) => el('tr', {}, el('th', { scope: 'row', text: r.label }), el('td', { text: r.text })))));
+    box.replaceChildren(g, table);
+  }
+
+  function drawCollectors(d) {
+    const key = $('coll-metric').value, mt = METRICS[key];
+    const rows = d.collectors.map((c) => ({ label: c.collector, value: mt.value(c), text: mt.fmt(mt.value(c)), cls: c.source === 'RIS' ? 's1' : 's2', tip: `${c.collector} (${c.source}): ${mt.fmt(mt.value(c))}` }))
+      .sort((a, b) => b.value - a.value);
+    barsChart($('coll-chart'), rows, `${mt.label}, for each collector`);
+  }
+
+  function collectors(d) {
+    const sub = $('coll-sub');
+    if (!sub) return;
+    if (!d.collectors.every((c) => typeof c.places === 'number')) {
+      sub.textContent = 'The figures of each collector come with the next daily build.';
+      $('coll-metric').closest('.histctl').hidden = true;
+      return;
+    }
+    const ris = d.collectors.filter((c) => c.source === 'RIS'), rv = d.collectors.filter((c) => c.source !== 'RIS');
+    sub.textContent = `The ${ris.length} collectors of RIPE RIS and the ${rv.length} of RouteViews, each with the routes it reads, the places of valley it sees and the places that no other collector sees. A collector that sees many places alone has peers that the others do not have.`;
+    $('coll-legend').replaceChildren(swatch('s1', 'RIPE RIS'), swatch('s2', 'RouteViews'));
+    $('coll-metric').addEventListener('change', () => drawCollectors(d));
+    drawCollectors(d);
+    let t = 0;
+    window.addEventListener('resize', () => { clearTimeout(t); t = setTimeout(() => drawCollectors(d), 150); });
+  }
+
+  // 100% stacked bars: the places seen by RIS alone, by both projects and by RouteViews alone
+  function drawCompare(rows) {
+    const box = $('cmp-chart');
+    const W = Math.max(300, box.clientWidth || 640), L = Math.min(190, W * 0.45), R = 8, rh = 26, H = rows.length * rh + 6, iw = W - L - R;
+    const g = svg('svg', { viewBox: `0 0 ${W} ${H}`, class: 'bars-svg', 'aria-hidden': 'true' });
+    rows.forEach((r, i) => {
+      const y = 3 + i * rh, total = r.ris + r.both + r.rv;
+      g.append(svg('text', { class: 'tick', x: L - 6, y: y + 15, 'text-anchor': 'end' }, `${r.label} (${fmt.format(total)})`));
+      let x = L;
+      for (const [cls, n, name] of [['s1', r.ris, 'RIS only'], ['s3', r.both, 'both'], ['s2', r.rv, 'RouteViews only']]) {
+        const w = total ? (iw * n) / total : 0;
+        if (!w) continue;
+        g.append(svg('rect', { class: cls, x: x.toFixed(1), y, width: w.toFixed(1), height: rh - 6 }, svg('title', {}, `${r.label}, ${name}: ${fmt.format(n)} (${pct1(n, total)})`)));
+        x += w;
+      }
+    });
+    const table = el('table', { class: 'sr-only' }, el('caption', { text: 'Places of valley seen by RIPE RIS only, by both projects and by RouteViews only' }),
+      el('thead', {}, el('tr', {}, ...['Places', 'RIS only', 'Both', 'RouteViews only'].map((h) => el('th', { scope: 'col', text: h })))),
+      el('tbody', {}, ...rows.map((r) => el('tr', {}, el('th', { scope: 'row', text: r.label }), el('td', { text: fmt.format(r.ris) }), el('td', { text: fmt.format(r.both) }), el('td', { text: fmt.format(r.rv) })))));
+    box.replaceChildren(g, table);
+  }
+
+  function compare(d) {
+    const sub = $('cmp-sub');
+    if (!sub) return;
+    const c = d.comparison;
+    if (!c) { sub.textContent = 'The comparison comes with the next daily build.'; return; }
+    const all = c.all, tot = all.ris + all.both + all.rv;
+    const rows = [
+      { label: 'All places', ...all }, { label: 'Possible leaks', ...all.kinds.leak }, { label: 'Gaps in ASPAs', ...all.kinds.gap },
+      { label: '3+ feeders', ...c.strong },
+    ];
+    sub.textContent = `The same places of valley, told apart by who sees them: ${fmt.format(all.both)} of ${fmt.format(tot)} (${pct1(all.both, tot)}) are seen by both RIPE RIS and RouteViews, ${fmt.format(all.ris)} (${pct1(all.ris, tot)}) only by RIS and ${fmt.format(all.rv)} (${pct1(all.rv, tot)}) only by RouteViews.`;
+    $('cmp-legend').replaceChildren(swatch('s1', 'RIS only'), swatch('s3', 'both'), swatch('s2', 'RouteViews only'));
+    drawCompare(rows);
+    let t = 0;
+    window.addEventListener('resize', () => { clearTimeout(t); t = setTimeout(() => drawCompare(rows), 150); });
+    const s = c.strong, st = s.ris + s.both + s.rv;
+    const f = c.feeders;
+    $('cmp-note').textContent = `Of the places seen by at least ${d.min_feeders || 3} feeders, ${pct1(s.both, st)} are seen by both projects. ${f ? `RIS has ${fmt.format(f.ris)} feeder networks, RouteViews ${fmt.format(f.rv)}, and ${fmt.format(f.both)} feed both.` : ''} A place that only one project sees is not wrong: it can come from a peer that the other has not, or from a leak that lasts a few hours, since the tables are taken at different times.`;
+  }
+
   async function main() {
     if (!$('leaks-sub')) return;
     let d;
@@ -97,6 +192,8 @@
       return;
     }
     numbers(d);
+    collectors(d);
+    compare(d);
     const t = d.total;
     const when = d.collectors.map((c) => c.built).sort()[0];
     $('leaks-sub').textContent = `Every route of ${d.collectors.length} collectors, ${d.collectors.filter((c) => /^rrc/.test(c.collector)).length} of RIPE RIS and ${d.collectors.filter((c) => !/^rrc/.test(c.collector)).length} of RouteViews (${fmt.format(t.routes)} routes in the table dumps of ${new Date(when).toLocaleString('en-GB', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'UTC' })} UTC) checked with the downstream ASPA verification. A valley is a route that came down from a provider or a peer and went up again.`;

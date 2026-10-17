@@ -546,3 +546,8 @@ table.live td { overflow-wrap: anywhere; }
 /* Something is going on: three dots that appear one at a time after the text. Nothing moves, characters appear (two or three a second at most), so it is kept for people who ask for less motion too: it is the only sign that the page is working */
 .busy::after { content: '...'; display: inline-block; width: 0; overflow: hidden; vertical-align: bottom; white-space: nowrap; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; animation: busy-dots 1.6s steps(1, end) infinite !important; }
 @keyframes busy-dots { 0% { width: 0; } 25% { width: 0.6em; } 50% { width: 1.2em; } 75% { width: 1.8em; } 100% { width: 1.8em; } }
+
+/* bars of the collectors compared (statistics page) */
+.bars-svg { display: block; width: 100%; height: auto; }
+.bars-svg .tick { font-size: 12px; fill: var(--ink-2); font-variant-numeric: tabular-nums; }
+.barchart { margin-bottom: 0.5rem; }

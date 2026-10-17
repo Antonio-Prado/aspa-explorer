@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.23.1] - 2026-10-17
+
+### Added
+- *Collectors compared* on the statistics page: one bar for each of the 18 collectors, coloured by project, for the figure chosen in the menu (places of valley seen, places that only that collector sees, invalid routes as a share of its routes, feeder networks, routes read).
+- *RIS and RouteViews on the same places*: the same places of valley told apart by who sees them (RIS only, both, RouteViews only), for all of them, for the possible leaks, for the gaps in ASPAs and for the ones seen by three feeders or more, with the feeder networks of each project.
+- `leaks.json` has, for each collector, the routes, the invalid routes, the feeders, the places it sees and the ones that only it sees, and the comparison of the two projects.
+
 ## [1.22.0] - 2026-10-17
 
 ### Added
