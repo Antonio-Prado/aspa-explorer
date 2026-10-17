@@ -6,9 +6,10 @@ js:
 	node --check site/app.js
 	node --check site/footer.js
 	node --check site/verify.js
+	node --check scripts/build-api.mjs
 
 html:
-	npx --yes html-validate@9 site/index.html site/guide.html
+	npx --yes html-validate@9 site/index.html site/guide.html site/api.html
 
 # Validates the nginx configuration with a throwaway certificate.
 nginx:
@@ -28,3 +29,4 @@ secrets:
 # Unit tests of the ASPA path verification (no dependencies).
 test:
 	node scripts/test-verify.mjs
+	node scripts/test-api.mjs

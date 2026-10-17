@@ -12,7 +12,7 @@ if [ -z "$changelog" ] || [ "$changelog" != "$shown" ]; then
   echo "version mismatch: CHANGELOG.md says '$changelog', site/version.json says '$shown'" >&2
   exit 1
 fi
-for page in index guide; do
+for page in index guide api; do
   for asset in style.css app.js footer.js; do
     if ! grep -q "$asset?v=$shown\"" "$root/site/$page.html" && grep -q "/$asset" "$root/site/$page.html"; then
       echo "site/$page.html: $asset is not requested with ?v=$shown" >&2

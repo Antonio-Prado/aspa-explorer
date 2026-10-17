@@ -57,6 +57,9 @@ The validator is a [Routinator](https://github.com/NLnetLabs/routinator) instanc
 - **Lookup:** type `AS680`, `as 680` or `680` to see the AS's own ASPA and every ASPA that names it as a provider. Each lookup has a shareable address (`/#AS680`).
 - **AS path check:** paste a path as your router shows it (neighbour first, origin last) and see whether it passes the ASPA verification procedure of the IETF draft (upstream or downstream), hop by hop, with the reason for a *Valid*, *Unknown* or *Invalid* verdict. It runs in the browser on the ASPA objects listed on the page, and a result can be shared with a link.
 - **Routes seen in BGP:** for a prefix or an AS, the routes that the RIPE RIS collectors see (through RIPEstat), each distinct AS path checked with the downstream procedure: how many routes are valid, unknown or invalid, and the paths with a valley. This box sends the prefix or the AS to RIPEstat; the guide says so.
+- **Origin validation:** the same box checks every prefix and origin of those routes against the ROAs of the validator (valid, not found, invalid with the reason), asked of the page's own server, not of a third party.
+- **A page, a badge and a feed for every AS:** `/as/AS3333` opens the page on that AS, `/badge/AS3333.svg` is a badge with its number of providers (Markdown and HTML to paste are in the lookup), and `/feed/AS3333.atom` lists the changes of its ASPA and of the ASPAs that add or drop it as a provider.
+- **Public API:** `/api/v1/as/3333` returns the ASPA, the ASPAs that name it, BGP visibility, quality findings and history as JSON (CORS open); see `site/api.html` and the OpenAPI description in `site/api/openapi.json`.
 - **Overview:** summary tiles (with the coverage: the share of the ASes seen in BGP that have an ASPA) and four charts: ASPAs over time (daily since October 2023, by RIR, provider ASes, median providers, no-provider ASPAs or coverage, over any period, with a logarithmic scale and CSV/JSON download), ASPAs per RIR, providers per ASPA, most-named providers.
 - **Quality:** checks on every ASPA (AS0 mixed with other providers, a private or reserved provider, two ASes listing each other, providers no collector sees in BGP, expiring objects, very large provider sets) with counts and lists, a *Quality* block in the lookup, and, in the routes check, a table of the neighbours of the origin against its ASPA.
 - **Changes:** the ASPAs that appeared, changed or disappeared in the last 14 days, an Atom feed of them (`/changes.atom`), and the history of one AS in its lookup. The series is rebuilt from the RIPE NCC RPKI archive (`tools/backfill-history.py`) and extended every day by the `aspa-snapshot` job.
@@ -118,14 +121,14 @@ The page fetches two same-origin JSON files, which nginx proxies to Routinator a
 ## Repository layout
 
 ```
-site/                          the web root: index.html, guide.html, style.css, app.js,
-                               footer.js, verify.js, version.json, favicon.svg, img/
+site/                          the web root: index.html, guide.html, api.html, style.css, app.js,
+                               footer.js, verify.js, history.js, quality.js, version.json, api/openapi.json, img/
 assets/                        logo (SVG), screenshots and credit logos used in this README
 deploy/nginx/aspa.conf         nginx server blocks and proxy cache zone
 deploy/nginx/rpki-proxy.conf   proxy settings shared by the data endpoints
 deploy/nginx/security-headers.conf   security headers (server block and /client-ip)
 scripts/                       CI helpers and jobs: nginx check, version check, unit tests of the
-                               path verification, build info, package audit, ASPA snapshot,
+                               path verification and of the API builder, the builder itself (build-api.mjs), build info, package audit, ASPA snapshot,
                                release and wiki publishing
 .gitlab-ci.yml                 the CI pipeline (checks, security, scheduled and publishing jobs)
 deploy/freebsd/                daily refresh of the pkg vulnerability database
@@ -137,11 +140,12 @@ eslint.config.mjs              security rules for the browser code (no innerHTML
 1. Copy `site/*` to the web root (for example `/usr/local/www/aspa`).
 2. Copy `deploy/nginx/aspa.conf` into nginx's `conf.d/`, and `deploy/nginx/rpki-proxy.conf` and `deploy/nginx/security-headers.conf` next to `nginx.conf`. Adjust the listen IP, server name, TLS certificate paths and the Routinator host in `rpki-proxy.conf`.
 3. Write the build information shown in the footer next to `index.html`: `sh scripts/build-info.sh > build.json`.
-4. Make sure the Routinator HTTP(S) port is reachable from the web server, then `nginx -t && nginx -s reload`.
+4. For the per-AS API, badges and feeds, run `node scripts/build-api.mjs /var/db/aspa-gen` (Node.js 18+, with `site/history.js` and `site/quality.js` next to its `../site`) every 15 minutes as an unprivileged user; it builds into a new directory and switches a `current` symlink that nginx serves. Without it the AS endpoints still answer, with "no ASPA".
+5. Make sure the Routinator HTTP(S) port is reachable from the web server, then `nginx -t && nginx -s reload`.
 
 ## Development
 
-No build step and no dependencies. `make check` runs the same checks as the CI pipeline: JavaScript syntax, HTML validation, nginx configuration test, version consistency, a security lint of the browser code and the unit tests of the ASPA path verification (`make test`). The pipeline also scans the git history for secrets (`make secrets`). Scheduled jobs audit the packages of the host weekly and log a daily snapshot of the ASPA data to the project's *Model experiments* (adoption over time); see [CONTRIBUTING.md](CONTRIBUTING.md). Details in <a href="CONTRIBUTING.md" target="_blank" rel="noopener">CONTRIBUTING.md</a>.
+No build step and no dependencies. `make check` runs the same checks as the CI pipeline: JavaScript syntax, HTML validation, nginx configuration test, version consistency, a security lint of the browser code and the unit tests of the ASPA path verification (`make test`, which also covers the API builder). The pipeline also scans the git history for secrets (`make secrets`). Scheduled jobs audit the packages of the host weekly and log a daily snapshot of the ASPA data to the project's *Model experiments* (adoption over time); see [CONTRIBUTING.md](CONTRIBUTING.md). Details in <a href="CONTRIBUTING.md" target="_blank" rel="noopener">CONTRIBUTING.md</a>.
 
 Releases follow [Semantic Versioning](https://semver.org/); the version shown in the footer lives in <a href="site/version.json" target="_blank" rel="noopener"><code>site/version.json</code></a> and must match the latest entry of the <a href="CHANGELOG.md" target="_blank" rel="noopener">changelog</a>.
 

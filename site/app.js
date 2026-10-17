@@ -727,6 +727,84 @@ function neighbourPanel(origin, rows) {
     ...notes.map((t) => el('p', { class: 'hint', text: t })));
 }
 
+/* ---------- origin validation of the prefixes (ROAs) ---------- */
+const ROV_MAX = 200;       // prefix + origin pairs checked per request
+const ROV_PARALLEL = 6;
+
+// What Routinator says about a route: its validity state and, for an invalid one, why.
+async function fetchValidity(origin, prefix) {
+  const r = await fetch(`/data/validity/AS${origin}/${prefix}`, { headers: { Accept: 'application/json' } });
+  if (!r.ok) throw new Error(`HTTP ${r.status}`);
+  const v = (await r.json()).validated_route.validity;
+  return { state: v.state, reason: v.reason || '', vrps: v.VRPs || {} };
+}
+
+// Distinct prefix and origin pairs of the routes, with the number of routes that have each.
+function routePairs(routes) {
+  const pairs = new Map();
+  for (const rt of routes) {
+    if (!Array.isArray(rt.path) || !rt.path.length || !rt.path.every((n) => Number.isInteger(n)) || !PREFIX_RE.test(String(rt.target_prefix))) continue;
+    const origin = rt.path[rt.path.length - 1];
+    const key = `${origin} ${rt.target_prefix}`;
+    const e = pairs.get(key) || { origin, prefix: String(rt.target_prefix).toLowerCase(), routes: 0 };
+    e.routes++;
+    pairs.set(key, e);
+  }
+  return [...pairs.values()];
+}
+
+function whyInvalid(v) {
+  const roas = (list) => [...new Set((list || []).map((x) => x.asn))];
+  if (v.reason === 'length') {
+    const max = Math.max(...(v.vrps.unmatched_length || []).map((x) => Number(x.max_length)));
+    return `longer than the ROA allows${Number.isFinite(max) ? ` (maximum /${max})` : ''}`;
+  }
+  const others = roas(v.vrps.unmatched_as);
+  return others.length ? `the ROA is for ${others.slice(0, 3).join(', ')}${others.length > 3 ? ` and ${others.length - 3} more` : ''}` : 'no ROA for this origin';
+}
+
+// The answer for the pairs, filled in as the checks come back (a few at a time).
+function rovPanel(all) {
+  const pairs = all.slice(0, ROV_MAX);
+  const counts = { valid: 0, invalid: 0, 'not-found': 0, error: 0 };
+  const bad = [];
+  let done = 0, next = 0;
+  const progress = el('p', { class: 'src' });
+  const tiles = el('div', { class: 'tiles live-tiles' });
+  const detail = el('div');
+  const tile = (cls, label, key, note) => el('div', { class: 'tile card ' + cls },
+    el('div', { class: 'label', text: label }), el('div', { class: 'value', text: fmt.format(counts[key]) }), el('div', { class: 'note', text: note }));
+  const paint = () => {
+    tiles.replaceChildren(tile('v-valid', 'Valid', 'valid', 'a ROA matches'), tile('v-unknown', 'Not found', 'not-found', 'no ROA covers it'), tile('v-invalid', 'Invalid', 'invalid', 'a ROA says otherwise'));
+    const finished = done === pairs.length;
+    progress.textContent = `${finished ? 'Checked' : `Checking… ${fmt.format(done)} of`} ${fmt.format(pairs.length)} prefix${pairs.length === 1 ? '' : 'es'} against the ROAs of the validator${all.length > pairs.length ? `; the first ${fmt.format(pairs.length)} of ${fmt.format(all.length)}` : ''}${counts.error ? `; ${fmt.format(counts.error)} could not be checked` : ''}.`;
+    if (!finished || !bad.length) { detail.replaceChildren(); return; }
+    bad.sort((a, b) => b.routes - a.routes);
+    detail.replaceChildren(
+      el('section', { class: 'table-wrap card', tabindex: '0', 'aria-label': 'Invalid prefixes' }, el('table', { class: 'checks live' },
+        el('caption', { class: 'sr-only', text: 'Prefixes whose origin is invalid according to the ROAs, with the reason' }),
+        el('thead', {}, el('tr', {}, ...['Prefix', 'Origin', 'Why'].map((t) => el('th', { scope: 'col', text: t })), el('th', { scope: 'col', class: 'num', text: 'Routes' }))),
+        el('tbody', {}, ...bad.slice(0, 30).map((b) => el('tr', {},
+          el('td', { class: 'mono', text: b.prefix }), el('td', {}, asChip('AS' + b.origin)), el('td', { text: whyInvalid(b) }), el('td', { class: 'num', text: fmt.format(b.routes) })))))),
+      ...(bad.length > 30 ? [el('p', { class: 'hint', text: `${fmt.format(bad.length - 30)} more invalid, not listed.` })] : []));
+  };
+  const worker = async () => {
+    while (next < pairs.length) {
+      const p = pairs[next++];
+      try {
+        const v = await fetchValidity(p.origin, p.prefix);
+        if (v.state in counts && v.state !== 'error') counts[v.state]++; else counts.error++;
+        if (v.state === 'invalid') bad.push(Object.assign({}, p, v));
+      } catch { counts.error++; }
+      done++;
+      if (done % 10 === 0 || done === pairs.length) paint();
+    }
+  };
+  paint();
+  Promise.all(Array.from({ length: Math.min(ROV_PARALLEL, pairs.length) }, worker));
+  return el('div', {}, progress, tiles, detail);
+}
+
 async function renderLiveRoutes(text) {
   const out = $('liveresult');
   const q = parseLiveQuery(text);
@@ -741,6 +819,7 @@ async function renderLiveRoutes(text) {
   const routes = data.bgp_state || [];
   if (!routes.length) { out.replaceChildren(el('p', { text: `The RIPE RIS collectors see no route for ${q.label}${q.kind === 'as' ? ' originated by it' : ''} right now.` })); return; }
   const { rows, skipped } = checkRoutes(routes);
+  const pairs = routePairs(routes);
   const count = (k) => rows.filter((r) => r.result === k);
   const routesOf = (list) => list.reduce((n, r) => n + r.routes, 0);
   const tiles = ['Valid', 'Unknown', 'Invalid'].map((k) => el('div', { class: 'tile card v-' + k.toLowerCase() },
@@ -750,6 +829,8 @@ async function renderLiveRoutes(text) {
   const ts = data.timestamp ? ` as of ${fmtDate(data.timestamp.endsWith('Z') ? data.timestamp : data.timestamp + 'Z')}` : '';
   const kids = [
     el('p', { class: 'src', text: `${fmt.format(routes.length)} routes${q.kind === 'as' ? ` originated by ${q.label}` : ` for ${q.label}`}, seen by the RIPE RIS collectors${ts}, ${fmt.format(rows.length)} distinct AS path${rows.length === 1 ? '' : 's'}${skipped ? `; ${fmt.format(skipped)} with an AS_SET left out` : ''}.` }),
+    ...(pairs.length ? [el('h3', { class: 'subhead', text: 'Origin validation (ROAs)' }), rovPanel(pairs)] : []),
+    el('h3', { class: 'subhead', text: 'AS paths (ASPA)' }),
     el('div', { class: 'tiles live-tiles' }, ...tiles),
   ];
   const tbody = el('tbody');
@@ -798,7 +879,7 @@ async function renderLiveRoutes(text) {
     const panel = neighbourPanel(origin, rows);
     if (panel) kids.push(panel);
   }
-  kids.push(el('p', { class: 'hint', text: 'The verification is the downstream procedure, because the networks that feed a route collector mostly send their full table, as a provider would; a feeder that sends only its customers\' routes passes it too. Paths with an AS_SET are skipped. ASPAs are the validated ones listed on this page.' }));
+  kids.push(el('p', { class: 'hint', text: 'The verification is the downstream procedure, because the networks that feed a route collector mostly send their full table, as a provider would; a feeder that sends only its customers\' routes passes it too. Paths with an AS_SET are skipped. ASPAs are the validated ones listed on this page; the ROAs are the ones this validator has validated.' }));
   out.replaceChildren(...kids);
 }
 
@@ -843,10 +924,43 @@ function renderLookup(as) {
     right.append(el('p', { text: `No ASPA names ${as} as a provider.` }));
   }
 
-  out.replaceChildren(head, el('div', { class: 'res-grid' }, left, right), el('div', { class: 'res-hist', id: 'as-history' }), el('div', { class: 'res-hist', id: 'as-quality' }));
+  out.replaceChildren(head, el('div', { class: 'res-grid' }, left, right), el('div', { class: 'res-hist', id: 'as-history' }), el('div', { class: 'res-hist', id: 'as-quality' }), shareBlock(as));
+  document.title = `${as} · ASPA Explorer`;
+  const canon = document.querySelector('link[rel="canonical"]');
+  if (canon) canon.setAttribute('href', `${location.origin}/as/${as}`);
   lookupAs = as;
   renderAsHistory(as);
   renderAsQuality(as);
+}
+
+/* ---------- share: page, badge, feed, API ---------- */
+function copyField(label, value) {
+  const input = el('input', { type: 'text', readonly: '', value, 'aria-label': label, class: 'copy-field', spellcheck: 'false' });
+  input.addEventListener('focus', () => input.select());
+  const btn = el('button', { type: 'button', class: 'linkish', text: 'Copy', 'aria-label': `Copy ${label}` });
+  btn.addEventListener('click', async () => {
+    try { await navigator.clipboard.writeText(value); btn.textContent = 'Copied'; } catch { input.select(); btn.textContent = 'Press Ctrl+C'; }
+    setTimeout(() => { btn.textContent = 'Copy'; }, 2000);
+  });
+  return el('div', { class: 'copy-row' }, el('span', { class: 'copy-label', text: label }), input, btn);
+}
+
+function shareBlock(as) {
+  const base = location.origin;
+  const page = `${base}/as/${as}`, badge = `${base}/badge/${as}.svg`;
+  return el('div', { class: 'res-hist', id: 'as-share' },
+    el('h4', { text: 'Share and follow' }),
+    el('p', { class: 'links' },
+      el('a', { href: `/as/${as}` }, 'Page of this AS'), ' · ',
+      el('a', { href: `/feed/${as}.atom` }, 'Atom feed of its changes'), ' · ',
+      el('a', { href: `/api/v1/as/${asNum(as)}` }, 'JSON'), ' · ',
+      el('a', { href: '/api.html' }, 'API')),
+    el('details', { class: 'embed' },
+      el('summary', { text: 'Add the badge to your site' }),
+      el('p', {}, el('img', { src: badge, alt: `ASPA badge of ${as}`, height: '20', class: 'badge-img' })),
+      copyField('Markdown', `[![ASPA of ${as}](${badge})](${page})`),
+      copyField('HTML', `<a href="${page}"><img src="${badge}" alt="ASPA of ${as}"></a>`),
+      copyField('Image address', badge)));
 }
 
 // Bring a box into view when a link elsewhere on the page fills it: only when it is not already near
@@ -859,8 +973,16 @@ function revealBox(id) {
   node.scrollIntoView({ block: 'start', behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
 }
 
+// The address of an AS page (/as/AS3333 or /as/3333): the same page, with the AS looked up on load.
+const pathAs = () => {
+  const m = /^\/as\/((?:AS)?\d{1,10})\/?$/i.exec(location.pathname);
+  return m ? normalizeAsn(m[1]) : null;
+};
+
 function lookupFromHash() {
   const hash = location.hash.slice(1);
+  // a new lookup on an AS page goes back to the plain address, so the address always matches what is shown
+  if (hash && location.pathname !== '/' && pathAs()) history.replaceState(null, '', '/' + location.hash);
   if (hash.startsWith('path=')) {
     const q = new URLSearchParams(hash);
     const direction = q.get('from') === 'up' ? 'up' : 'down';
@@ -877,7 +999,7 @@ function lookupFromHash() {
     revealBox('live-title');
     return;
   }
-  const as = normalizeAsn(decodeURIComponent(location.hash.slice(1)));
+  const as = hash ? normalizeAsn(decodeURIComponent(hash)) : pathAs();
   if (!as) return;
   $('asn').value = as;
   if (aspas.length) {

@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.8.0] - 2026-10-17
+
+### Added
+- **Origin validation (ROAs)** in *Check the routes seen in BGP*: every distinct prefix and origin of the routes is checked against the ROAs of the validator (valid, not found, invalid with the reason), above the ASPA verification of the paths. At most 200 pairs per request. nginx exposes Routinator's validity check at `/data/validity/AS<n>/<prefix>`.
+- **A page for every AS**: `/as/AS3333` (or `/as/3333`) is the same page already showing that AS. Looking up an AS has a *Share and follow* block with the links, a badge and the Markdown and HTML to paste.
+- **Badge** `/badge/AS3333.svg`: the number of providers in the ASPA of the AS, *none*, *no providers (AS0)* or *published, with errors*.
+- **Atom feed per AS** `/feed/AS3333.atom`: the latest 100 changes of its own ASPA and of the ASPAs that add or drop it as a provider.
+- **Public API** `/api/v1/as/3333`: the ASPA, the ASPAs that name it, BGP visibility, quality findings and history, as JSON (CORS open), with an `api.html` page and an OpenAPI 3.1 description at `/api/openapi.json`.
+- `scripts/build-api.mjs` builds the files of the API, the badges and the feeds from the validator data and the `history` branch; the host runs it every 15 minutes. `scripts/test-api.mjs` tests it.
+
 ## [1.7.3] - 2026-10-17
 
 ### Added

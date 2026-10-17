@@ -29,6 +29,7 @@ js-syntax:
     - node --check site/verify.js
     - node --check site/history.js
     - node --check site/quality.js
+    - node --check scripts/build-api.mjs
 
 unit-tests:
   extends: .regular
@@ -36,13 +37,14 @@ unit-tests:
   image: node:22-alpine
   script:
     - node scripts/test-verify.mjs
+    - node scripts/test-api.mjs
 
 html-validate:
   extends: .regular
   stage: lint
   image: node:22-alpine
   script:
-    - npx --yes html-validate@9 site/index.html site/guide.html
+    - npx --yes html-validate@9 site/index.html site/guide.html site/api.html
 
 nginx-config:
   extends: .regular
