@@ -1,6 +1,7 @@
 // Keeps the state of each part of the service over time (the chart of the status page): runs the same checks as the
 // page (site/status-checks.js) against the public site and adds one sample to a JSON file, served as
-// /api/v1/status-history.json. Meant for a cron job every 15 minutes; samples older than KEEP_DAYS are dropped.
+// /api/v1/status-history.json. Meant for a cron job every 15 minutes; samples older than KEEP_DAYS are dropped. The tallies of each
+// month (how many samples were OK, late or down, kept for good) go to status-months.json in the same directory.
 //
 //   node scripts/build-status.mjs OUT_FILE [BASE_URL]
 //
@@ -9,6 +10,7 @@
 // run) is a gap in the chart, not a green cell. `assumed` ({from, to}, seconds) marks samples that were not measured
 // but taken as OK (the history before the job existed); the page says so.
 import { readFile, writeFile, rename } from 'node:fs/promises';
+import { dirname, join } from 'node:path';
 import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
 
@@ -36,6 +38,28 @@ export function addSample(doc, t, letters, checks, now = t) {
   return { generated: new Date(now * 1000).toISOString(), interval: INTERVAL, ...assumed, checks: checks.map(({ id, name, expected }) => ({ id, name, expected })), samples };
 }
 
+// The tallies of each calendar month (UTC): how many samples found each part OK, late or down. The history keeps 90 days; the months
+// are kept for good, one tally added for each new sample (a sample less than a minute after the last one replaces it and is not counted again).
+// `doc` is the history (as addSample returns it), `prev` the months written before (or null: the first time, every sample of the history is counted).
+export function addMonths(prev, doc, now = Math.floor(Date.now() / 1000)) {
+  const months = prev && prev.months ? JSON.parse(JSON.stringify(prev.months)) : {};
+  let last = prev && prev.last ? prev.last : 0;
+  const slot = { o: 0, l: 1, d: 2 };
+  for (const [t, letters] of doc.samples) {
+    if (t - last < 60 && last) continue;
+    const key = new Date(t * 1000).toISOString().slice(0, 7);
+    const m = months[key] || (months[key] = { samples: 0, parts: {} });
+    m.samples++;
+    doc.checks.forEach((c, i) => {
+      if (!(letters[i] in slot)) return;
+      const part = m.parts[c.id] || (m.parts[c.id] = [0, 0, 0]);
+      part[slot[letters[i]]]++;
+    });
+    last = Math.max(last, t);
+  }
+  return { generated: new Date(now * 1000).toISOString(), interval: doc.interval || INTERVAL, last, ...(doc.assumed ? { assumed: doc.assumed } : {}), checks: doc.checks.map(({ id, name }) => ({ id, name })), months };
+}
+
 async function main() {
   const out = process.argv[2];
   if (!out) { console.error('usage: node scripts/build-status.mjs OUT_FILE [BASE_URL]'); process.exit(2); }
@@ -57,6 +81,11 @@ async function main() {
   const next = addSample(doc, t, letters, checks);
   await writeFile(`${out}.tmp`, JSON.stringify(next));
   await rename(`${out}.tmp`, out);
+  const monthsFile = join(dirname(out), 'status-months.json');
+  let prev = null;
+  try { prev = JSON.parse(await readFile(monthsFile, 'utf8')); } catch { /* the first run */ }
+  await writeFile(`${monthsFile}.tmp`, JSON.stringify(addMonths(prev, next)));
+  await rename(`${monthsFile}.tmp`, monthsFile);
   console.log(`${next.generated}: ${letters} (${next.samples.length} samples)`);
 }
 

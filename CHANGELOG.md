@@ -5,6 +5,11 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.34.0] - 2026-10-18
+
+### Added
+- **Availability by month** on the status page: for each month and part, the share of the checks that found it OK (with late and down when they matter), and how many checks were recorded against a full month. The tallies are kept for good in `status-months.json` (`/api/v1/status-months.json`), written by `scripts/build-status.mjs` next to the history, which keeps 90 days; the first run counts the whole history.
+
 ## [1.33.0] - 2026-10-18
 
 ### Added

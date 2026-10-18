@@ -53,7 +53,26 @@
   }
   const fmtPct = (p) => (p === null ? 'no data' : p >= 99.995 ? '100%' : p >= 99 ? `${p.toFixed(2)}%` : `${p.toFixed(1)}%`);
 
-  const api = { RANGES, cellsOf, uptime, problems, fmtPct };
+  // The months of /api/v1/status-months.json as rows for a table, newest first: for each part the share of the checks that found it OK, and
+  // how complete the record is (the checks made against the checks that a full month would have, up to `now`, seconds).
+  function monthRows(doc2, now, limit = 12) {
+    const keys = Object.keys(doc2.months).sort().reverse().slice(0, limit);
+    return keys.map((key) => {
+      const start = Date.parse(`${key}-01T00:00:00Z`) / 1000;
+      const d = new Date(start * 1000);
+      const end = Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + 1, 1) / 1000;
+      const m = doc2.months[key];
+      const expected = Math.max(1, Math.floor((Math.min(now, end) - start) / doc2.interval));
+      const parts = {};
+      for (const c of doc2.checks) {
+        const [o, l, dn] = m.parts[c.id] || [0, 0, 0];
+        const all = o + l + dn;
+        parts[c.id] = { ok: all ? (100 * o) / all : null, late: all ? (100 * l) / all : 0, down: all ? (100 * dn) / all : 0, samples: all };
+      }
+      return { key, samples: m.samples, coverage: Math.min(100, (100 * m.samples) / expected), parts };
+    });
+  }
+  const api = { RANGES, cellsOf, uptime, problems, fmtPct, monthRows };
   if (typeof module !== 'undefined' && module.exports) { module.exports = api; return; }
 
   const $ = (id) => document.getElementById(id);
@@ -126,7 +145,30 @@
     for (const b of document.querySelectorAll('[data-range]')) b.setAttribute('aria-pressed', String(b.dataset.range === range));
   }
 
+  const monthName = (key) => new Date(`${key}-01T00:00:00Z`).toLocaleString('en-GB', { month: 'short', year: 'numeric', timeZone: 'UTC' });
+  async function months() {
+    if (!$('mo-table')) return;
+    try {
+      const res = await fetch('/api/v1/status-months.json', { headers: { Accept: 'application/json' } });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const d = await res.json();
+      const rows = monthRows(d, Math.floor(Date.now() / 1000), 6);
+      if (!rows.length) { $('mo-sub').textContent = 'No month recorded yet.'; return; }
+      $('mo-head').replaceChildren(el('th', { scope: 'col', text: 'Part' }), ...rows.map((r) => el('th', { scope: 'col', text: monthName(r.key) })));
+      const cell = (x) => {
+        if (x.ok === null) return el('td', { text: 'no data' });
+        const extra = [x.late > 0.05 && `late ${fmtPct(x.late)}`, x.down > 0.05 && `down ${fmtPct(x.down)}`].filter(Boolean);
+        return el('td', { class: 'num' }, fmtPct(x.ok), extra.length ? el('span', { class: 'hint', text: ` (${extra.join(', ')})` }) : null);
+      };
+      $('mo-rows').replaceChildren(
+        ...d.checks.map((c) => el('tr', {}, el('th', { scope: 'row', text: c.name }), ...rows.map((r) => cell(r.parts[c.id])))),
+        el('tr', { class: 'total' }, el('th', { scope: 'row', text: 'Checks recorded' }), ...rows.map((r) => el('td', { class: 'num', text: `${r.samples.toLocaleString('en-US')} (${Math.round(r.coverage)}%)` }))));
+      $('mo-sub').textContent = `Share of the checks, one every ${Math.round(d.interval / 60)} minutes, that found each part OK in each month (UTC); late and down are given when they are more than a twentieth of a percent. The last row says how many checks were recorded and what share of a full month that is: a month with gaps counts only the checks that were made.${d.assumed ? ` The checks from ${at(d.assumed.from)} to ${at(d.assumed.to)} were not measured and are taken as OK.` : ''}`;
+    } catch (err) { $('mo-sub').textContent = `The months are not available (${err.message}).`; }
+  }
+
   async function main() {
+    months();
     if (!$('upchart')) return;
     for (const b of document.querySelectorAll('[data-range]')) {
       b.addEventListener('click', () => {
