@@ -8,7 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [1.38.1] - 2026-10-18
 
 ### Fixed
-- The badge of an AS that has no ASPA and is named by none (`/badge/AS137.svg`) answered 404 instead of the grey "no ASPA" badge: the last argument of `try_files` is an address, which was looked for in the wrong web root. It is now a named location that serves `none.svg` from the right place.
+- The badge of an AS that has no ASPA and is named by none (`/badge/AS137.svg`) answered 404 instead of the grey "no ASPA" badge: the last argument of `try_files` is an address, which was looked for in the wrong web root. It is now a named location that serves `none.svg` from the right place. The grey badge now says *ASPA: not configured yet* instead of *none*, so that an AS that has not published its ASPA has a badge that tells it.
 
 ## [1.38.0] - 2026-10-18
 

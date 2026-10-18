@@ -53,7 +53,7 @@ test('badges', () => {
   assert.match(badgeFor(describe('AS10', ctx)), /2 providers/);
   assert.match(badgeFor(describe('AS40', ctx)), /no providers \(AS0\)/);
   assert.match(badgeFor(describe('AS50', ctx)), /with errors/);
-  assert.match(badgeFor(describe('AS30', ctx)), />none</);
+  assert.match(badgeFor(describe('AS30', ctx)), />not configured yet</);
   assert.match(badge('a<b', 'x&y', '#000'), /a&lt;b/);
 });
 

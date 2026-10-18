@@ -84,7 +84,7 @@ export function badge(label, value, color) {
 
 // Green: an ASPA with providers; blue: AS0 (no upstream); orange: it has an error-level finding; grey: none.
 export function badgeFor(doc) {
-  if (!doc.aspa.published) return badge('ASPA', 'none', '#9f9f9f');
+  if (!doc.aspa.published) return badge('ASPA', 'not configured yet', '#9f9f9f');
   if (doc.quality.some((f) => f.severity === 'error')) return badge('ASPA', 'published, with errors', '#e05d44');
   if (doc.aspa.no_providers) return badge('ASPA', 'no providers (AS0)', '#007ec6');
   const n = doc.aspa.providers.length;
@@ -241,7 +241,7 @@ async function main() {
   const list = aspaRows(ctx);
   await writeFile(join(dir, 'api/v1/aspas.json'), JSON.stringify(list) + '\n');
   await writeFile(join(dir, 'api/v1/aspas.csv'), toCsv(list));
-  await writeFile(join(dir, 'badge/none.svg'), badge('ASPA', 'none', '#9f9f9f'));
+  await writeFile(join(dir, 'badge/none.svg'), badge('ASPA', 'not configured yet', '#9f9f9f'));
   await writeFile(join(dir, 'api/v1/meta.json'), JSON.stringify({ generated, aspas: ctx.byCustomer.size, ases: n, events: events.length }) + '\n');
 
   if (!process.argv.includes('--no-switch')) {
