@@ -92,6 +92,22 @@
     <td colspan="2" align="center"><sub>The collectors compared, and RIPE RIS against RouteViews on the same places</sub></td>
   </tr>
   <tr>
+    <td width="50%"><img src="assets/screenshots/whatif-dark.jpg" alt="What if the ASPA of AS12779 listed the proposed providers: the routes valid, unknown and invalid before and after, and the paths whose verdict changes"></td>
+    <td width="50%"><img src="assets/screenshots/trends-dark.jpg" alt="Networks with an ASPA over time for Italy, with the HTML to embed the chart in another page"></td>
+  </tr>
+  <tr>
+    <td align="center"><sub>What if the ASPA listed other providers</sub></td>
+    <td align="center"><sub>Networks with an ASPA over time, by RIR or country, with an embeddable chart</sub></td>
+  </tr>
+  <tr>
+    <td width="50%"><img src="assets/screenshots/resources-dark.jpg" alt="From allocation to ASPA: the AS numbers allocated, advertised and with an ASPA, by RIR"></td>
+    <td width="50%"><img src="assets/screenshots/coverage-dark.jpg" alt="Valid routes by address space and by length of the AS path, with a bar of the three verdicts for each length"></td>
+  </tr>
+  <tr>
+    <td align="center"><sub>From allocation to ASPA, by RIR</sub></td>
+    <td align="center"><sub>Verdicts by address space and by length of the path</sub></td>
+  </tr>
+  <tr>
     <td colspan="2" align="center"><img src="assets/screenshots/tromboning-dark.jpg" width="60%" alt="Tromboning of AS41327: a table with the median of the round trips of twelve probes in Italy, and a row for each probe with the networks on the way and the reading"></td>
   </tr>
   <tr>
