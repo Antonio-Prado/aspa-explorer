@@ -5,6 +5,11 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.39.3] - 2026-10-18
+
+### Added
+- In *Routes seen in BGP*, the three tiles of the ROA check (*Valid*, *Not found*, *Invalid*) open the list of their prefixes when the check is over, with the origin and the number of routes of each (and the reason, for the invalid ones): so that "Not found, 1" says which prefix it is. The invalid ones are still listed at once when there are any.
+
 ## [1.39.2] - 2026-10-18
 
 ### Fixed

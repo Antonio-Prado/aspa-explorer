@@ -1121,34 +1121,43 @@ function whyInvalid(v) {
 function rovPanel(all) {
   const pairs = all.slice(0, ROV_MAX);
   const counts = { valid: 0, invalid: 0, 'not-found': 0, error: 0 };
-  const bad = [];
+  const lists = { valid: [], invalid: [], 'not-found': [] };      // the prefixes of each verdict, to say which they are
   let done = 0, next = 0;
+  let open = null;                                                // the verdict whose prefixes are listed (the invalid ones, when there are)
   const progress = el('p', { class: 'src' });
   const tiles = el('div', { class: 'tiles live-tiles' });
-  const detail = el('div');
-  const tile = (cls, label, key, note) => el('div', { class: 'tile card ' + cls },
-    el('div', { class: 'label', text: label }), el('div', { class: 'value', text: fmt.format(counts[key]) }), el('div', { class: 'note', text: note }));
+  const detail = el('div', { id: 'rov-detail', 'aria-live': 'polite' });
+  const NAMES = { valid: 'Valid', 'not-found': 'Not found', invalid: 'Invalid' };
+  // a tile is a button once the check is over and there is something to list: it opens the list of its prefixes
+  const tile = (cls, label, key, note, finished) => {
+    const kids = [el('div', { class: 'label', text: label }), el('div', { class: 'value', text: fmt.format(counts[key]) }), el('div', { class: 'note', text: note })];
+    if (!finished || !counts[key]) return el('div', { class: 'tile card ' + cls }, ...kids);
+    kids.push(el('div', { class: 'more', text: open === key ? '▾ hide the prefixes' : '▸ which prefixes' }));
+    return el('button', { type: 'button', class: 'tile card tile-btn ' + cls, 'aria-expanded': String(open === key), 'aria-controls': 'rov-detail',
+      onclick: () => { open = open === key ? null : key; paint(); } }, ...kids);
+  };
   const paint = () => {
-    tiles.replaceChildren(tile('v-valid', 'Valid', 'valid', 'a ROA matches'), tile('v-unknown', 'Not found', 'not-found', 'no ROA covers it'), tile('v-invalid', 'Invalid', 'invalid', 'a ROA says otherwise'));
     const finished = done === pairs.length;
-    progress.textContent = `${finished ? 'Checked' : `Checking… ${fmt.format(done)} of`} ${fmt.format(pairs.length)} prefix${pairs.length === 1 ? '' : 'es'} against the ROAs of the validator${all.length > pairs.length ? `; the first ${fmt.format(pairs.length)} of ${fmt.format(all.length)}` : ''}${counts.error ? `; ${fmt.format(counts.error)} could not be checked` : ''}.`;
-    if (!finished || !bad.length) { detail.replaceChildren(); return; }
-    bad.sort((a, b) => b.routes - a.routes);
+    if (finished && open === null && !paint.chosen) { paint.chosen = true; if (lists.invalid.length) open = 'invalid'; }
+    tiles.replaceChildren(tile('v-valid', 'Valid', 'valid', 'a ROA matches', finished), tile('v-unknown', 'Not found', 'not-found', 'no ROA covers it', finished), tile('v-invalid', 'Invalid', 'invalid', 'a ROA says otherwise', finished));
+    progress.textContent = `${finished ? 'Checked' : `Checking… ${fmt.format(done)} of`} ${fmt.format(pairs.length)} prefix${pairs.length === 1 ? '' : 'es'} against the ROAs of the validator${all.length > pairs.length ? `; the ${fmt.format(all.length - pairs.length)} others are not checked` : ''}.`;
+    if (!finished || !open || !lists[open].length) { detail.replaceChildren(); return; }
+    const rows = [...lists[open]].sort((a, b) => b.routes - a.routes);
+    const inv = open === 'invalid';
     detail.replaceChildren(
-      el('section', { class: 'table-wrap card', tabindex: '0', 'aria-label': 'Invalid prefixes' }, el('table', { class: 'checks live' },
-        el('caption', { class: 'sr-only', text: 'Prefixes whose origin is invalid according to the ROAs, with the reason' }),
-        el('thead', {}, el('tr', {}, ...['Prefix', 'Origin', 'Why'].map((t) => el('th', { scope: 'col', text: t })), el('th', { scope: 'col', class: 'num', text: 'Routes' }))),
-        el('tbody', {}, ...bad.slice(0, 30).map((b) => el('tr', {},
-          el('td', { class: 'mono', text: b.prefix }), el('td', {}, asChip('AS' + b.origin)), el('td', { text: whyInvalid(b) }), el('td', { class: 'num', text: fmt.format(b.routes) })))))),
-      ...(bad.length > 30 ? [el('p', { class: 'hint', text: `${fmt.format(bad.length - 30)} more invalid, not listed.` })] : []));
+      el('section', { class: 'table-wrap card', tabindex: '0', 'aria-label': `${NAMES[open]} prefixes` }, el('table', { class: 'checks live' },
+        el('caption', { class: 'sr-only', text: `Prefixes whose origin is ${NAMES[open].toLowerCase()} according to the ROAs${inv ? ', with the reason' : ''}` }),
+        el('thead', {}, el('tr', {}, ...['Prefix', 'Origin', ...(inv ? ['Why'] : [])].map((t) => el('th', { scope: 'col', text: t })), el('th', { scope: 'col', class: 'num', text: 'Routes' }))),
+        el('tbody', {}, ...rows.slice(0, 30).map((b) => el('tr', {},
+          el('td', { class: 'mono', text: b.prefix }), el('td', {}, asChip('AS' + b.origin)), ...(inv ? [el('td', { text: whyInvalid(b) })] : []), el('td', { class: 'num', text: fmt.format(b.routes) })))))),
+      ...(rows.length > 30 ? [el('p', { class: 'hint', text: `${fmt.format(rows.length - 30)} more ${NAMES[open].toLowerCase()}, not listed.` })] : []));
   };
   const worker = async () => {
     while (next < pairs.length) {
       const p = pairs[next++];
       try {
         const v = await fetchValidity(p.origin, p.prefix);
-        if (v.state in counts && v.state !== 'error') counts[v.state]++; else counts.error++;
-        if (v.state === 'invalid') bad.push(Object.assign({}, p, v));
+        if (v.state in counts && v.state !== 'error') { counts[v.state]++; lists[v.state].push(Object.assign({}, p, v)); } else counts.error++;
       } catch { counts.error++; }
       done++;
       if (done % 10 === 0 || done === pairs.length) paint();
