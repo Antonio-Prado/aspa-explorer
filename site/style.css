@@ -618,3 +618,4 @@ ul.plain { list-style: none; margin: 0.4rem 0; padding: 0; display: grid; gap: 0
 .charts > *, .charts figure, details.tableview { min-width: 0; max-width: 100%; }
 details.tableview .table-wrap { max-width: 100%; overflow-x: auto; }
 .tiles .tile { min-width: 0; overflow-wrap: anywhere; }
+#res-region th[scope="row"] { min-width: 11rem; overflow-wrap: normal; word-break: normal; }

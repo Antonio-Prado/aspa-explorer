@@ -13,8 +13,9 @@
   // a bar with the three verdicts side by side, each as wide as its share
   function stacked(parts, label) {
     const total = parts.reduce((s, p) => s + p.v, 0) || 1;
+    // the widths are set on the elements, not with a style attribute: the content security policy does not allow inline styles
     return el('span', { class: 'sbar', role: 'img', 'aria-label': label, title: label },
-      parts.map((p) => el('span', { class: `seg v-${p.k}`, style: `width:${((100 * p.v) / total).toFixed(2)}%` })));
+      parts.map((p) => { const seg = el('span', { class: `seg v-${p.k}` }); seg.style.width = `${((100 * p.v) / total).toFixed(2)}%`; return seg; }));
   }
 
   function byLength(box, f) {

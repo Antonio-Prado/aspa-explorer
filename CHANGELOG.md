@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.32.1] - 2026-10-18
+
+### Fixed
+- The bars with the three verdicts, in the table of the valid routes by length of the path, were empty: their widths were set with a `style` attribute, which the content security policy blocks. They are set on the elements now.
+- The region names in the table *From allocation to ASPA* no longer break inside a word.
+
 ## [1.32.0] - 2026-10-18
 
 ### Fixed
