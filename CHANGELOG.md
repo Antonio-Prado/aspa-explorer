@@ -12,6 +12,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 - **Availability by month** on the status page: for each month and part, the share of the checks that found it OK (with late and down when they matter), and how many checks were recorded against a full month. The tallies are kept for good in `status-months.json` (`/api/v1/status-months.json`), written by `scripts/build-status.mjs` next to the history, which keeps 90 days; the first run counts the whole history.
+- The alerts on the state of the service were tried with a real message: two parts that changed state together came in one mail.
 
 ## [1.33.0] - 2026-10-18
 
