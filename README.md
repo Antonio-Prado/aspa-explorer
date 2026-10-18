@@ -9,6 +9,7 @@
 
 <p align="center">
   <a href="https://gitlab.dei.unipd.it/Antonio-Prado/aspa-explorer/-/releases" target="_blank" rel="noopener"><img alt="latest release" src="https://gitlab.dei.unipd.it/Antonio-Prado/aspa-explorer/-/badges/release.svg"></a>
+  <a href="https://doi.org/10.5281/zenodo.23450622" target="_blank" rel="noopener"><img alt="DOI" src="https://zenodo.org/badge/DOI/10.5281/zenodo.23450622.svg"></a>
 </p>
 
 <p align="center">
@@ -163,7 +164,7 @@ The validator is a [Routinator](https://github.com/NLnetLabs/routinator) instanc
 - **From allocation to ASPA:** the AS numbers allocated, advertised and with an ASPA by RIR, region and economy, with the figures per million Internet users, by year of allocation and width of the number, and the ASPAs that name numbers that are not allocated (`scripts/build-resources.mjs`, `/api/v1/resources.json`).
 - **Valid routes by address space, IPv6 against IPv4:** the verdicts of the routes of 30 collectors weighted by the addresses they cover, by length of the AS path and by family, in a table with the ratio IPv6 / IPv4 (the `families` of `/api/v1/leaks.json`).
 - **Invalid announcements, as they happen:** a sample of the RIPE RIS Live stream checked with ASPA, by hour, origin AS and prefix for 14 days, with the origins and prefixes that have most (`scripts/watch-invalid.mjs`, `/api/v1/invalid.json`).
-- **Dated snapshots for research:** once a month a `.tar.gz` of the ASPAs, history, events, adoption, trends, leaks and validators with a manifest of SHA-256 sums (`scripts/build-dataset.mjs`, `/datasets/index.json`, CC BY 4.0); `.zenodo.json` has the metadata for a DOI.
+- **Dated snapshots for research:** once a month a `.tar.gz` of the ASPAs, history, events, adoption, trends, leaks and validators with a manifest of SHA-256 sums (`scripts/build-dataset.mjs`, `/datasets/index.json`, CC BY 4.0); `.zenodo.json` has the metadata of the archive on Zenodo ([10.5281/zenodo.23450622](https://doi.org/10.5281/zenodo.23450622), always the latest version; every release of the GitHub copy gets its own DOI).
 - **Status:** a page and a dot in the menu that say how fresh each piece of data is (validator, API files, daily history, BGP visibility, adoption numbers, notifications), and a chart of the state of each part over the last 24 hours to 90 days (`scripts/build-status.mjs` runs the checks every 15 minutes; the file is `/api/v1/status-history.json`).
 - **Download:** the whole list of ASPAs as CSV or JSON, for one RIR or all.
 

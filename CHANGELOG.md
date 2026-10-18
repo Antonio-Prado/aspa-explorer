@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- The software is archived on Zenodo, DOI [10.5281/zenodo.23450622](https://doi.org/10.5281/zenodo.23450622) (the latest version; 1.32.1 is 10.5281/zenodo.23452070). Badge in the README, `doi` in `CITATION.cff`.
+
 ## [1.32.1] - 2026-10-18
 
 ### Fixed
