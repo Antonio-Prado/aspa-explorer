@@ -196,7 +196,7 @@ sequenceDiagram
     end
 ```
 
-The diagram above is a UML sequence diagram of the data of the home page: the visitor's browser gets the static page from nginx and then the data, which nginx serves from its 2-minute cache or fetches from Routinator, while Routinator validates the RPKI repositories on its own schedule. Around it there are a few more pieces, which the wiki describes in *Deployment*:
+The diagram above is a UML sequence diagram of the data of the home page: the visitor's browser gets the static page from nginx and then the data, which nginx serves from its 2-minute cache or fetches from Routinator, while Routinator validates the RPKI repositories on its own schedule. Mermaid does not make the parts of a sequence diagram clickable, so here are their links: the browser is described in [Features](https://gitlab.dei.unipd.it/Antonio-Prado/aspa-explorer#features) and the [User guide](https://gitlab.dei.unipd.it/Antonio-Prado/aspa-explorer/-/wikis/User-guide), nginx and its 2-minute cache in [Deployment](https://gitlab.dei.unipd.it/Antonio-Prado/aspa-explorer/-/wikis/Deployment#what-the-nginx-configuration-does), Routinator at [rpki.ping6.it](https://rpki.ping6.it/) and in the [NLnet Labs documentation](https://routinator.docs.nlnetlabs.nl/), and the RPKI repositories in [Where the data comes from](https://gitlab.dei.unipd.it/Antonio-Prado/aspa-explorer/-/wikis/User-guide#where-the-data-comes-from). Around it there are a few more pieces, which the wiki describes in *Deployment*; in the next diagram the boxes are links:
 
 ```mermaid
 flowchart LR
