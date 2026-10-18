@@ -77,6 +77,15 @@ export function parseRelationships(text) {
   return customers;
 }
 
+// The providers that CAIDA infers for each AS, as one compact object {AS: [providers]} (only the ASes that have any): the page sets them next
+// to what the IRR object and the ASPA of an AS say. `customers` is what parseRelationships returns (provider -> customers).
+export function providersOf(customers) {
+  const out = {};
+  for (const [p, list] of customers) for (const c of list) (out[c] || (out[c] = [])).push(p);
+  for (const k of Object.keys(out)) out[k].sort((a, b) => a - b);
+  return out;
+}
+
 // The country and the registry of every AS seen in BGP, in one small object: AS number -> "NLr" (the country
 // and one letter for the registry: r RIPE NCC, a ARIN, p APNIC, l LACNIC, f AFRINIC). The page uses it to
 // tell which networks a route goes through are registered in another country.
@@ -221,6 +230,9 @@ async function main() {
   const regFile = join(outFile, '..', 'asn-registry.json');
   await writeFile(`${regFile}.tmp`, JSON.stringify({ generated: doc.generated, asns: registryDoc(seen, registry(ranges)) }) + '\n');
   await rename(`${regFile}.tmp`, regFile);
+  const relFile = join(outFile, '..', 'relations.json');
+  await writeFile(`${relFile}.tmp`, JSON.stringify({ generated: doc.generated, source: `CAIDA AS Relationships, serial-2, ${caida.date}`, serial: caida.date, providers: providersOf(rel) }) + '\n');
+  await rename(`${relFile}.tmp`, relFile);
   console.log(`${doc.generated}: ${doc.seen} ASes seen, ${doc.aspa} with an ASPA (${doc.pct}%), ${doc.by_country.length} countries, CAIDA ${caida.date}`);
 }
 

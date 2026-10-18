@@ -2,7 +2,7 @@
 import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
 
-const { rules, roles, compare, say } = createRequire(import.meta.url)('../site/irr.js');
+const { rules, roles, compare, say, threeWay } = createRequire(import.meta.url)('../site/irr.js');
 let passed = 0;
 const test = (name, fn) => { fn(); passed++; console.log('ok  ', name); };
 const attrs = (...lines) => lines.map((l) => { const i = l.indexOf(': '); return { name: l.slice(0, i), value: l.slice(i + 2) }; });
@@ -94,6 +94,31 @@ test('an object with no policy at all (as in the registries that keep only the n
   assert.equal(r.rules, 0);
   assert.equal(compare([1299], r).comparable, false);
   assert.deepEqual(rules([]), Object.assign([], { sections: 0 }));
+});
+
+test('the three sources side by side: who says what, and which one is the odd one out', () => {
+  const r = roles(CONNESI);
+  // a small ISP: the IRR and CAIDA agree on Zayo, Seeweb and Warian, CAIDA also has Sparkle, the ASPA has Zayo in less and Lumen, Sparkle and FT in more
+  const t = threeWay([3356, 6762, 12637, 41327, 56911], r, [6461, 6762, 12637, 56911]);
+  const by = Object.fromEntries(t.rows.map((x) => [x.as, x]));
+  assert.deepEqual(by[6461].by, ['IRR', 'CAIDA']);
+  assert.equal(by[6461].reading, 'IRR and CAIDA say it, the ASPA does not');
+  assert.deepEqual(by[12637].by, ['IRR', 'CAIDA', 'ASPA']);
+  assert.equal(by[12637].reading, 'all agree');
+  assert.equal(by[6762].reading, 'the ASPA and CAIDA say it, the IRR does not');
+  assert.equal(by[3356].reading, 'only ASPA says it');
+  assert.equal(by[41327].reading, 'only ASPA says it');
+  assert.deepEqual(t.aspaMissesWhatTheOthersSay, [6461]);
+  assert.equal(t.rows[0].as, 6461);          // what the others agree on and the ASPA lacks comes first
+  assert.equal(t.caidaAvailable, true);
+  // without the file of CAIDA only two sources are compared
+  const two = threeWay([6762], r, null);
+  assert.equal(two.caidaAvailable, false);
+  assert.equal(two.rows.find((x) => x.as === 6762).reading, 'only ASPA says it');
+  assert.equal(two.rows.find((x) => x.as === 6461).caida, null);
+  // a provider that the object calls an exchange point is described, not hidden
+  const ix = threeWay([57463], roles(attrs('remarks: Upstreams', 'import: from AS1299 accept ANY', 'export: to AS1299 announce AS5:AS-X', 'remarks: IXP', 'import-via: AS57463 from AS-ANY accept ANY')), []);
+  assert.match(ix.rows.find((x) => x.as === 57463).irr, /intermediary/);
 });
 
 console.log(`${passed} tests passed`);

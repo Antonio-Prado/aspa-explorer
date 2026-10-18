@@ -23,7 +23,7 @@ const FIX = join(here, 'fixtures', 'a11y');
 const TYPES = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.svg': 'image/svg+xml', '.json': 'application/json', '.png': 'image/png', '.jpg': 'image/jpeg', '.pdf': 'application/pdf' };
 const FIXTURE_OF = (p) => {
   if (p === '/data/aspas.json' || p === '/data/status.json') return p.slice(1);
-  if (/^\/api\/v1\/(adoption|leaks|validators|meta|leaks-history|status-history|trends|resources|invalid|status-months)\.json$/.test(p)) return p.slice(1);
+  if (/^\/api\/v1\/(adoption|leaks|validators|meta|leaks-history|status-history|trends|resources|invalid|status-months|relations)\.json$/.test(p)) return p.slice(1);
   if (/^\/api\/v1\/as\/\d+$/.test(p)) return 'api/v1/as.json';
   if (/^\/api\/v1\/reports\/[0-9a-f]{12}$/.test(p)) return 'api/v1/report.json';
   if (p === '/api/v1/subscriptions/health') return 'api/v1/health.json';
@@ -113,6 +113,12 @@ for (const [name, path] of PAGES) {
           const only = await page.locator('#as-irr .irr-line', { hasText: 'not said to be transit' }).first().innerText().catch(() => '');
           if (!/AS3223/.test(only) || !/AS200020/.test(only)) extra.push('irr: the providers of the ASPA that the object does not call transit are not shown');
           if (!(await page.locator('#as-irr .irr-line', { hasText: 'Intermediaries' }).count())) extra.push('irr: the intermediary AS (import-via) is not shown');
+          // the three sources side by side: AS6762 is transit in the object and not in CAIDA nor the ASPA; AS200020 is only in the ASPA
+          const rowsText = await page.locator('#as-irr tbody tr').allInnerTexts();
+          const row = (n) => rowsText.find((t) => t.startsWith(`AS${n}`)) || '';
+          if (!/only IRR says it/.test(row(6762))) extra.push(`irr: the row of AS6762 does not say that only the IRR has it (got: ${row(6762).replace(/\s+/g, ' ')})`);
+          if (!/the IRR and CAIDA|IRR and CAIDA|all agree/.test(row(174))) extra.push(`irr: the row of AS174 is not read as agreed (got: ${row(174).replace(/\s+/g, ' ')})`);
+          if (!/only ASPA says it/.test(row(200020))) extra.push('irr: the row of AS200020 does not say that only the ASPA has it');
         }
         if (name === 'peek') {
           // the quick look: a click on the name of an AS opens a window with rows, and it can be closed

@@ -92,6 +92,30 @@
     };
   }
 
+  // The three sources side by side for the providers of one AS: the IRR object (`r`, from roles), CAIDA (a list of numbers, or null when its file is not
+  // there) and the ASPA. One row for each AS that any of them calls a provider, with who says so and how the IRR describes it when it does not.
+  // `reading` puts the rows in order of how much they say: where two sources agree against the third, the third is the one to ask about.
+  function threeWay(aspaProviders, r, caida) {
+    const aspa = new Set(aspaProviders.filter((n) => n !== 0));
+    const irr = new Set(r.transit);
+    const cai = new Set(caida || []);
+    const all = [...new Set([...aspa, ...irr, ...cai])].sort((a, b) => a - b);
+    const rows = all.map((n) => {
+      const by = [irr.has(n) && 'IRR', cai.has(n) && 'CAIDA', aspa.has(n) && 'ASPA'].filter(Boolean);
+      const sources = caida ? 3 : 2;
+      let reading;
+      if (by.length === sources) reading = 'all agree';
+      else if (by.length === 1) reading = `only ${by[0]} says it`;
+      else if (!aspa.has(n)) reading = 'IRR and CAIDA say it, the ASPA does not';
+      else if (!irr.has(n)) reading = 'the ASPA and CAIDA say it, the IRR does not';
+      else reading = 'the IRR and the ASPA say it, CAIDA does not';
+      return { as: n, irr: irr.has(n) ? 'transit' : (say(r, n) ? say(r, n) : null), caida: caida ? cai.has(n) : null, aspa: aspa.has(n), by, reading };
+    });
+    const order = (x) => (x.by.length === 3 ? 0 : x.reading.startsWith('IRR and CAIDA') ? 2 : 1);
+    rows.sort((a, b) => order(b) - order(a) || a.as - b.as);
+    return { rows, aspaMissesWhatTheOthersSay: rows.filter((x) => !x.aspa && x.irr === 'transit' && x.caida).map((x) => x.as), caidaAvailable: !!caida };
+  }
+
   // What the object says about one neighbour, in a few words (for a hop of a path).
   function say(r, n) {
     if (r.transit.includes(n)) return 'a transit provider';
@@ -102,7 +126,7 @@
     return null;
   }
 
-  const api = { rules, roles, compare, say };
+  const api = { rules, roles, compare, say, threeWay };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.AspaIrr = api;
 })(typeof self !== 'undefined' ? self : this);

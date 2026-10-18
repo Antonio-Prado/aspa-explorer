@@ -1376,6 +1376,13 @@ function renderRecent() {
 // The aut-num of the AS, from the RIPE database and the mirrors that it serves (the registries of the other RIRs and RADB): asked only when the
 // button is pressed, from the browser, with the number of the AS. Not every object has a policy: the ones in ARIN, for instance, have only the name.
 const IRR_SOURCES = ['RIPE', 'ARIN-GRS', 'APNIC-GRS', 'AFRINIC-GRS', 'LACNIC-GRS', 'JPIRR-GRS', 'RADB-GRS'].map((s) => `source=${s}`).join('&');
+let relationsDoc;
+async function getRelations() {
+  if (relationsDoc !== undefined) return relationsDoc;
+  try { relationsDoc = await getJson('/api/v1/relations.json'); } catch { relationsDoc = null; }
+  return relationsDoc;
+}
+
 async function fetchIrr(n) {
   const r = await fetch(`https://rest.db.ripe.net/search.json?query-string=AS${n}&type-filter=aut-num&flags=no-referenced&${IRR_SOURCES}`, { headers: { Accept: 'application/json' } });
   if (r.status === 404) return null;
@@ -1394,7 +1401,7 @@ function irrBlock(as) {
   const btn = el('button', { type: 'button', class: 'linkish', text: 'Compare its IRR object with the ASPA' });
   const chips = (list) => (list.length ? chipList(list.map((x) => 'AS' + x), 40) : el('span', { class: 'muted', text: 'none' }));
   const line = (label, list, note) => el('div', { class: 'irr-line' }, el('strong', { text: label }), ' ', chips(list), note ? el('p', { class: 'hint', text: note }) : null);
-  const render = (o) => {
+  const render = (o, rel) => {
     const roles = AspaIrr.roles(o.attrs);
     const aspa = own ? own.providers.map((p) => Number(p.slice(2))) : [];
     const kids = [el('p', { class: 'hint' }, `The aut-num of ${as} in ${o.source}${o.modified ? `, last changed ${o.modified.slice(0, 10)}` : ''}: ${fmt.format(roles.rules)} import and export lines.`)];
@@ -1418,15 +1425,28 @@ function irrBlock(as) {
         if (!c.onlyIrr.length && !c.onlyAspa.length) kids.push(el('p', { class: 'verdict v-valid' }, el('strong', { text: 'Consistent' }), ' The transit providers of the IRR object and the providers of the ASPA are the same.'));
       }
     }
-    kids.push(el('p', { class: 'hint', text: 'An IRR object says what its owner declared, when they last edited it; it is not a contract and it can be out of date. Where the object, CAIDA and the ASPA do not agree, ask the owner which one is right.' }));
+    // the three sources side by side for the providers: the IRR object, what CAIDA infers from the routes, and the ASPA
+    const caida = rel && rel.providers ? (rel.providers[n] || []) : null;
+    const tw = AspaIrr.threeWay(aspa, roles, caida);
+    if (tw.rows.length) {
+      const yes = (v) => (v === null ? 'no data' : v ? 'provider' : 'no');
+      const rowOf = (x) => el('tr', {}, el('th', { scope: 'row' }, asChip('AS' + x.as)), el('td', { text: x.irr === 'transit' ? 'transit provider' : (x.irr || 'no') }), el('td', { text: yes(x.caida) }), el('td', { text: yes(x.aspa) }), el('td', { text: x.reading }));
+      const head = el('thead', {}, el('tr', {}, ['AS', 'IRR object', 'CAIDA', 'ASPA', 'Reading'].map((t) => el('th', { scope: 'col', text: t }))));
+      const table = el('table', { class: 'checks live' }, el('caption', { class: 'sr-only', text: 'Each AS that the IRR object, CAIDA or the ASPA calls a provider, and what each source says' }), head, el('tbody', {}, tw.rows.map(rowOf)));
+      kids.push(el('h5', { class: 'irr-h', text: 'The three sources side by side' }),
+        el('section', { class: 'table-wrap card', tabindex: '0', 'aria-label': 'The providers of the AS according to the IRR object, CAIDA and the ASPA' }, table),
+        el('p', { class: 'hint', text: `CAIDA: ${rel ? rel.source : 'its file is not available'}, inferred from the routes, not declared by anybody.` }));
+      if (tw.aspaMissesWhatTheOthersSay.length) kids.push(el('p', { class: 'verdict v-unknown' }, el('strong', { text: 'The ASPA is the odd one out' }), ` for ${tw.aspaMissesWhatTheOthersSay.map((x) => 'AS' + x).join(', ')}: the IRR object and CAIDA both call ${tw.aspaMissesWhatTheOthersSay.length === 1 ? 'it a provider' : 'them providers'} and the ASPA does not list ${tw.aspaMissesWhatTheOthersSay.length === 1 ? 'it' : 'them'}.`));
+    }
+    kids.push(el('p', { class: 'hint', text: 'An IRR object says what its owner declared, when they last edited it; it is not a contract and it can be out of date; CAIDA infers from the routes. Where they do not agree with the ASPA, ask the owner which one is right.' }));
     out.replaceChildren(...kids);
   };
   btn.addEventListener('click', async () => {
     btn.disabled = true; status.replaceChildren(el('span', { class: 'busy', text: ' Asking the RIPE database' }));
     try {
-      const o = await fetchIrr(n);
+      const [o, rel] = await Promise.all([fetchIrr(n), getRelations()]);
       status.textContent = '';
-      if (!o) out.replaceChildren(el('p', { text: `No aut-num object of ${as} was found in the RIPE database or in the registries that it mirrors.` })); else render(o);
+      if (!o) out.replaceChildren(el('p', { text: `No aut-num object of ${as} was found in the RIPE database or in the registries that it mirrors.` })); else render(o, rel);
     } catch (err) { status.textContent = ` Could not read the registry (${err.message}).`; btn.disabled = false; return; }
     btn.hidden = true;
   });

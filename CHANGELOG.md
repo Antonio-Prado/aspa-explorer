@@ -5,6 +5,11 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.43.0] - 2026-10-18
+
+### Added
+- **The three sources side by side**: in the routing registry box of an AS, a table with the providers of the AS according to the IRR object, to CAIDA and to the ASPA, and a reading for each (all agree, IRR and CAIDA say it and the ASPA does not, only one source says it…), with a line when the ASPA is the odd one out. CAIDA is read from a new compact file, `/api/v1/relations.json` (the providers that CAIDA infers for each AS, from the same file as the adoption numbers, written by `scripts/build-adoption.mjs` once a day); without it the table compares the two others. `providersOf` in `scripts/build-adoption.mjs`, `threeWay` in `site/irr.js`.
+
 ## [1.42.0] - 2026-10-18
 
 ### Added

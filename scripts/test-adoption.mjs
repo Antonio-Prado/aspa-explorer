@@ -1,6 +1,6 @@
 // Unit tests for scripts/build-adoption.mjs (no dependencies). Run with: node scripts/test-adoption.mjs
 import assert from 'node:assert/strict';
-import { parseDelegated, registry, parseRelationships, coneSizes, aggregate, tierOf, parseCaidaHeader, registryDoc } from './build-adoption.mjs';
+import { providersOf, parseDelegated, registry, parseRelationships, coneSizes, aggregate, tierOf, parseCaidaHeader, registryDoc } from './build-adoption.mjs';
 
 let passed = 0;
 const test = (name, fn) => { fn(); passed++; console.log('ok  ', name); };
@@ -75,4 +75,10 @@ test('the country and registry of the ASes seen, in one small object', () => {
   const where = registry(parseDelegated(delegated, 'ripe'));
   assert.deepEqual(registryDoc(new Set([137, 1103, 2002, 99999]), where), { 137: 'ITr', 1103: 'NLr', 2002: 'EUr' });
 });
+test('the providers of each AS, inverted from the customers of each provider', () => {
+  const customers = parseRelationships('# a comment\n174|3333|-1|bgp\n3356|3333|-1|bgp\n3356|174|0|bgp\n3356|65000|-1|bgp\n174|65000|-1|bgp\n');
+  assert.deepEqual(providersOf(customers), { 3333: [174, 3356], 65000: [174, 3356] });   // peers are not providers, the lists are sorted
+  assert.deepEqual(providersOf(new Map()), {});
+});
+
 console.log(`${passed} tests passed`);
