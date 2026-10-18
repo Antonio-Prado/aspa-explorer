@@ -5,6 +5,11 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.39.5] - 2026-10-18
+
+### Fixed
+- The tiles of the ROA check that open a list of prefixes turned blue under the mouse and the text became unreadable: the style of a button (a blue background on hover) reached them. They keep the colours of their verdict, with a slight shading under the mouse.
+
 ## [1.39.4] - 2026-10-18
 
 ### Fixed
