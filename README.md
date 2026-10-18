@@ -201,15 +201,33 @@ The diagram above is a UML sequence diagram of the data of the home page: the vi
 ```mermaid
 flowchart LR
     V["Visitor's browser"] -->|"page, /data/*, /api/v1/*"| N["nginx<br>aspa.ping6.it"]
-    N -->|"/jsonext, /api/v1/status,<br>/api/v1/validity"| R["Routinator<br>rpki.ping6.it"]
-    N -->|"per-AS files, lists,<br>adoption numbers"| F[("files built by<br>build-api (15 min)<br>build-adoption (daily)")]
+    N -->|"/jsonext, status,<br>validity"| R["Routinator<br>rpki.ping6.it"]
+    N -->|"per-AS files, lists"| F[("JSON files<br>built by the jobs")]
     N -->|"/api/v1/subscriptions"| S["notifier<br>Node.js + SQLite"]
-    S -->|"mail with DKIM,<br>signed webhooks"| U["subscribers"]
-    V -->|"routes of a prefix or AS"| P["RIPEstat"]
-    V -->|"history, events,<br>visibility"| H["history branch<br>of the public project"]
-    J["daily job<br>on the runner"] -->|"adds the day"| H
-    F -.->|"RIR delegation files,<br>CAIDA relationships"| X["public datasets"]
+    S -->|"mail, webhooks"| U["subscribers"]
+    R -.->|"fetch, validate"| T["RPKI repositories<br>of the five RIRs"]
+    V -->|"routes"| P["RIPEstat"]
+    V -->|"history, events"| H["history branch<br>of the public project"]
+    click V "https://gitlab.dei.unipd.it/Antonio-Prado/aspa-explorer#features"
+    click N "https://gitlab.dei.unipd.it/Antonio-Prado/aspa-explorer/-/wikis/Deployment#what-the-nginx-configuration-does"
+    click F "https://aspa.ping6.it/api.html"
+    click S "https://gitlab.dei.unipd.it/Antonio-Prado/aspa-explorer/-/wikis/Deployment#notifications-optional"
+    click H "https://gitlab.dei.unipd.it/Antonio-Prado/aspa-explorer/-/wikis/Deployment#rebuilding-the-history"
 ```
+
+In a browser that allows it (GitLab does) the boxes of the diagram are links to the part of this README or of the wiki that explains them; the table below has the same links for everywhere else.
+
+| Part | Where it is explained |
+|---|---|
+| The page, the lookup, the path check, the routes, the leaks | [Features](https://gitlab.dei.unipd.it/Antonio-Prado/aspa-explorer#features) here, and the [User guide](https://gitlab.dei.unipd.it/Antonio-Prado/aspa-explorer/-/wikis/User-guide) of the wiki |
+| nginx: cache, headers, proxy | [Deployment, what the nginx configuration does](https://gitlab.dei.unipd.it/Antonio-Prado/aspa-explorer/-/wikis/Deployment#what-the-nginx-configuration-does) |
+| `build-api` (per-AS files, badges, feeds) | [Deployment, the per-AS API](https://gitlab.dei.unipd.it/Antonio-Prado/aspa-explorer/-/wikis/Deployment#the-per-as-api-badges-and-feeds) |
+| `build-adoption` | [Deployment, the adoption numbers](https://gitlab.dei.unipd.it/Antonio-Prado/aspa-explorer/-/wikis/Deployment#the-adoption-numbers) |
+| `build-leaks`, `build-validators` | [Deployment, the route-leak and validator builders](https://gitlab.dei.unipd.it/Antonio-Prado/aspa-explorer/-/wikis/Deployment#the-route-leak-and-validator-builders) |
+| `build-status` and the chart of the status page | [Deployment, the status history](https://gitlab.dei.unipd.it/Antonio-Prado/aspa-explorer/-/wikis/Deployment#the-status-history) and [User guide, Status](https://gitlab.dei.unipd.it/Antonio-Prado/aspa-explorer/-/wikis/User-guide#status) |
+| The notifier | [Deployment, notifications](https://gitlab.dei.unipd.it/Antonio-Prado/aspa-explorer/-/wikis/Deployment#notifications-optional) and [User guide](https://gitlab.dei.unipd.it/Antonio-Prado/aspa-explorer/-/wikis/User-guide#notifications-by-e-mail-and-webhook) |
+| The history branch and the daily job | [Deployment, rebuilding the history](https://gitlab.dei.unipd.it/Antonio-Prado/aspa-explorer/-/wikis/Deployment#rebuilding-the-history) and [scheduled jobs](https://gitlab.dei.unipd.it/Antonio-Prado/aspa-explorer/-/wikis/Deployment#scheduled-jobs) |
+| Behind Cloudflare or another proxy | [Deployment](https://gitlab.dei.unipd.it/Antonio-Prado/aspa-explorer/-/wikis/Deployment#behind-a-reverse-proxy-or-a-cdn) |
 
 The same-origin endpoints:
 
@@ -222,6 +240,8 @@ The same-origin endpoints:
 | `/api/v1/adoption.json`, `/api/v1/asn-registry.json` | numbers built once a day |
 | `/api/v1/subscriptions…` | subscriptions, confirmations, unsubscribe and health, served by the notifier |
 | `/changes.atom` | the Atom feed of the changes, proxied from the history branch |
+
+More diagrams are in the wiki: the [jobs that build the files](https://gitlab.dei.unipd.it/Antonio-Prado/aspa-explorer/-/wikis/Deployment#the-jobs-at-a-glance), with their sources; the [notifier](https://gitlab.dei.unipd.it/Antonio-Prado/aspa-explorer/-/wikis/Deployment#notifications-optional), as a sequence diagram of a subscription and of the announcement of a change; and the [status history](https://gitlab.dei.unipd.it/Antonio-Prado/aspa-explorer/-/wikis/User-guide#status), as a sequence diagram of the job and of the chart. (GitLab draws the first few thousand characters of diagrams on a page and asks for a click before drawing more, which is why they are not all here.)
 
 ## Repository layout
 
