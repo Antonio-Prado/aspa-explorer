@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [1.34.0] - 2026-10-18
 
+### Fixed
+- The link to confirm a subscription could fail: the token ended in `-` or `_` for one in thirty, and Gmail leaves that character out of the link, so the token arrived truncated and was refused ("this link is not valid any more"). The tokens are now hex; the links in the mails sent before still work.
+
 ### Added
 - **Availability by month** on the status page: for each month and part, the share of the checks that found it OK (with late and down when they matter), and how many checks were recorded against a full month. The tallies are kept for good in `status-months.json` (`/api/v1/status-months.json`), written by `scripts/build-status.mjs` next to the history, which keeps 90 days; the first run counts the whole history.
 

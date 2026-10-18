@@ -27,6 +27,14 @@ await test('tokens: genuine, wrong purpose, tampered, salted', () => {
   assert.equal(readToken(k, 'unsub', 'garbage'), null);
 });
 
+await test('tokens: nothing in them that a mail program leaves out of a link, and the old ones are still read', async () => {
+  const { createHmac } = await import('node:crypto');
+  for (let id = 1; id <= 300; id++) assert.match(makeToken('k', 'confirm', id, String(1792327991 + id)), /^\d+\.[0-9a-f]{32}$/);
+  const old = `7.${createHmac('sha256', 'k').update('unsub:7:').digest('base64url').slice(0, 32)}`;   // as the mails sent before 1.34.0 have it
+  assert.equal(readToken('k', 'unsub', old), 7);
+  assert.equal(readToken('k', 'confirm', old), null);
+});
+
 await test('addresses: which webhook targets are public', () => {
   for (const ip of ['8.8.8.8', '193.0.0.1', '2001:67c:2e8::1', '2a00:1450:4001::1']) assert.equal(isPublicIp(ip), true, ip);
   for (const ip of ['127.0.0.1', '10.1.2.3', '172.16.0.1', '172.31.255.255', '192.168.1.1', '169.254.169.254', '100.64.0.1', '0.0.0.0', '224.0.0.1', '255.255.255.255',
