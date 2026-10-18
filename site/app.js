@@ -573,10 +573,11 @@ async function asnOfIp(ip) {
   return asn;
 }
 
-async function runTraceroute(address, country, onStatus) {
+// `reuse`: the id of an earlier measurement, to run this one on the very same probes (the comparison of IPv4 and IPv6)
+async function runTraceroute(address, country, onStatus, reuse = null) {
   const r = await fetch(GLOBALPING, {
     method: 'POST', headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-    body: JSON.stringify({ type: 'traceroute', target: address, locations: [{ country, limit: PROBES }], measurementOptions: { protocol: 'ICMP' } }),
+    body: JSON.stringify({ type: 'traceroute', target: address, locations: reuse || [{ country, limit: PROBES }], measurementOptions: { protocol: 'ICMP' } }),
   });
   const body = await r.json().catch(() => ({}));
   if (!r.ok) throw new Error(r.status === 429 ? 'the limit of measurements per hour of your address has been reached, try later' : (body.error && body.error.message) || `Globalping answered HTTP ${r.status}`);
@@ -592,9 +593,63 @@ async function runTraceroute(address, country, onStatus) {
 // The countries that can be chosen for the probes: the one where the AS is registered first, then these.
 const PROBE_COUNTRIES = ['AR', 'AU', 'AT', 'BE', 'BR', 'BG', 'CA', 'CL', 'CN', 'CO', 'HR', 'CZ', 'DK', 'EG', 'EE', 'FI', 'FR', 'DE', 'GR', 'HK', 'HU', 'IS', 'IN', 'ID', 'IE', 'IL', 'IT', 'JP', 'KE', 'KR', 'LV', 'LT', 'LU', 'MY', 'MX', 'MA', 'NL', 'NZ', 'NG', 'NO', 'PK', 'PE', 'PH', 'PL', 'PT', 'RO', 'RU', 'SA', 'RS', 'SG', 'SK', 'SI', 'ZA', 'ES', 'SE', 'CH', 'TW', 'TH', 'TR', 'UA', 'AE', 'GB', 'US', 'VN'];
 
+// Both families, on the same probes: the measurement over IPv6 first (it picks probes that can use IPv6), then the one over IPv4 on the very same
+// probes (Globalping takes the id of the first as the places of the second). Each family aims at an address of the origin's own prefixes.
+async function measurePair(t4, t6, country, status) {
+  const m6 = await runTraceroute(t6.address, country, (t) => status(`IPv6: ${t}`));
+  const m4 = await runTraceroute(t4.address, country, (t) => status(`IPv4: ${t}`), m6.id);
+  const ips = [...new Set([...m6.results, ...m4.results].flatMap((x) => (x.result.hops || []).map((h) => h.resolvedAddress)).filter((ip) => ip && !AspaTraceroute.isPrivate(ip)))];
+  status(`Mapping ${ips.length} addresses to their networks`);
+  const queue = [...ips];
+  await Promise.all(Array.from({ length: 4 }, async () => { for (let ip = queue.shift(); ip; ip = queue.shift()) await asnOfIp(ip); }));
+  const sum = (m) => m.results.map((x) => AspaTraceroute.summarise(x, (ip) => ipAsnCache.get(ip) || null));
+  const s4 = sum(m4), s6 = sum(m6);
+  const rows = AspaTraceroute.pairProbes(s4, s6);
+  return { rows, cmp: AspaTraceroute.comparePairs(rows), a4: AspaTraceroute.aggregate(s4), a6: AspaTraceroute.aggregate(s6) };
+}
+
+function pairBlock(res, t4, t6, home, origin, atRegistered) {
+  const { rows, cmp, a4, a6 } = res;
+  const ms = (v) => (v === null || v === undefined ? '–' : v < 1 ? '<1 ms' : `${v < 10 ? v.toFixed(1) : Math.round(v)} ms`);
+  const signed = (v) => (v === null ? '–' : `${v > 0 ? '+' : v < 0 ? '−' : ''}${Math.abs(v) < 10 ? Math.abs(v).toFixed(1) : Math.round(Math.abs(v))} ms`);
+  const as = 'AS' + origin;
+  const read = { ok: 'normal', long: 'longer than it should be', trombone: 'a trombone' };
+  let headline;
+  if (!cmp.both) headline = 'No probe answered on both families, so there is nothing to compare';
+  else if (Math.abs(cmp.medianDelta) < 1) headline = `IPv6 and IPv4 take the same time (median ${ms(cmp.median6)} and ${ms(cmp.median4)})`;
+  else headline = `IPv6 is ${ms(Math.abs(cmp.medianDelta))} ${cmp.medianDelta > 0 ? 'slower' : 'faster'} than IPv4 (median ${ms(cmp.median6)} and ${ms(cmp.median4)})`;
+  const c = cmp.counts;
+  const lines = [`${cmp.both} of ${cmp.probes} probes in ${home} answered over both families. IPv4 is faster on ${c.v4}, IPv6 on ${c.v6}, ${c.tie} are even${c['v4 only'] || c['v6 only'] ? `; ${c['v4 only']} answered only over IPv4 and ${c['v6 only']} only over IPv6` : ''}. The networks on the way differ on ${cmp.differentNetworks} of the ${cmp.both}.`];
+  if (atRegistered && a4 && a6) lines.push(`Tromboning reading, as for one family: IPv4 ${read[a4.verdict]}, IPv6 ${read[a6.verdict]}.`);
+  const notes = [`IPv4 aims at ${t4.address} (in ${t4.prefix}) and IPv6 at ${t6.address} (in ${t6.prefix}), both of ${as}: two addresses of the same AS, not the same host. The probes are the same, and the delays are counted from the first public address, as in the single measurement. A difference of a few milliseconds is within what the probes and the queues add.`];
+  const kind = !cmp.both ? 'none' : cmp.medianDelta > 20 ? 'long' : 'ok';
+  const box = el('div', { class: `result r-${kind}`, role: 'group', 'aria-label': 'Result of the comparison' },
+    el('p', { class: 'headline', text: headline }), ...lines.map((x) => el('p', { text: x })), ...notes.map((x) => el('p', { class: 'hint', text: x })));
+  const nets = (x) => (x && x.path.length ? x.path.map((a) => `AS${a}`).join(' → ') : '–');
+  const winner = { v4: 'IPv4', v6: 'IPv6', tie: 'even', 'v4 only': 'IPv4 only', 'v6 only': 'IPv6 only', none: 'no answer' };
+  const body = rows.map((r) => el('tr', {},
+    el('th', { scope: 'row', class: 'probe', text: `${r.probe.city || 'A probe'}${r.probe.network ? ` · ${r.probe.network}` : ''}` }),
+    el('td', { class: 'mono pathcell', text: nets(r.v4) }), el('td', { class: 'num', text: ms(r.v4 && r.v4.net) }),
+    el('td', { class: 'mono pathcell', text: nets(r.v6) }), el('td', { class: 'num', text: ms(r.v6 && r.v6.net) }),
+    el('td', { class: 'num', text: signed(r.delta) }), el('td', { text: winner[r.winner] }),
+    el('td', { text: r.sameNetworks === null ? '–' : r.sameNetworks ? 'same' : 'different' })));
+  const table = el('section', { class: 'table-wrap card', tabindex: '0', 'aria-label': 'The probes of the comparison of IPv4 and IPv6' }, el('table', { class: 'checks live nb' },
+    el('caption', { class: 'sr-only', text: 'Each probe, with the networks on the way and the net round trip over IPv4 and over IPv6, the difference and the faster family' }),
+    el('thead', {}, el('tr', {}, ['Probe', 'IPv4 networks', 'IPv4 net round trip', 'IPv6 networks', 'IPv6 net round trip', 'IPv6 − IPv4', 'Faster', 'Networks'].map((t, i) => el('th', { scope: 'col', class: i === 2 || i === 4 || i === 5 ? 'num' : undefined, text: t })))),
+    el('tbody', {}, ...body)));
+  const report = () => ({
+    kind: 'tromboning', title: `${as} from ${home}: IPv6 against IPv4`, source: `/#${as}`,
+    sections: [{ heading: 'Summary', text: `${headline}. ${lines.join(' ')} ${notes[0]}` },
+      { heading: 'Probes', table: { columns: ['Probe', 'IPv4 networks', 'IPv4 ms', 'IPv6 networks', 'IPv6 ms', 'IPv6 − IPv4', 'Faster', 'Networks'],
+        rows: rows.slice(0, 100).map((r) => [`${r.probe.city || 'A probe'}${r.probe.network ? ` · ${r.probe.network}` : ''}`, nets(r.v4), ms(r.v4 && r.v4.net), nets(r.v6), ms(r.v6 && r.v6.net), signed(r.delta), winner[r.winner], r.sameNetworks === null ? '–' : r.sameNetworks ? 'same' : 'different']) } }],
+  });
+  return el('div', {}, box, table, AspaShare.button(report));
+}
+
 function measureBlock(origin, tr, routes) {
   const target = AspaTraceroute.targetOf(routes, origin);
   if (!target || !target.address) return null;
+  const t4 = AspaTraceroute.targetOf(routes, origin, 4), t6 = AspaTraceroute.targetOf(routes, origin, 6);
   const as = 'AS' + origin, registered = tr.country;
   const options = [registered, ...PROBE_COUNTRIES.filter((c) => c !== registered).sort((a, b) => countryName(a).localeCompare(countryName(b)))];
   const select = el('select', { id: `probe-country-${origin}`, 'aria-label': 'Country of the probes' },
@@ -603,11 +658,22 @@ function measureBlock(origin, tr, routes) {
   select.addEventListener('change', () => { btn.textContent = `Measure it now from probes in ${countryName(select.value)}`; });
   const status = el('p', { class: 'hint', 'aria-live': 'polite' });
   const out = el('div', {});
+  // both families on the same probes: possible when the origin has a prefix of each in the routes
+  const both = el('input', { type: 'checkbox', id: `pair-${origin}` });
+  if (!(t4 && t6)) both.disabled = true;
+  const bothLabel = el('label', { class: 'chk', for: both.id }, both, ` Compare IPv4 and IPv6 on the same probes${t4 && t6 ? '' : ` (${as} has no ${t4 ? 'IPv6' : 'IPv4'} prefix in the routes)`}`);
   btn.addEventListener('click', async () => {
     const country = select.value, home = countryName(country);
-    btn.disabled = true; select.disabled = true; out.replaceChildren();
+    btn.disabled = true; select.disabled = true; both.disabled = true; out.replaceChildren();
     status.replaceChildren(el('span', { class: 'busy', text: 'Starting the probes' }));
     try {
+      if (both.checked) {
+        const res = await measurePair(t4, t6, country, (t) => status.replaceChildren(el('span', { class: 'busy', text: t })));
+        status.textContent = `IPv4 and IPv6 towards ${as}, from ${res.rows.length} probe${res.rows.length === 1 ? '' : 's'} in ${home}.`;
+        out.replaceChildren(pairBlock(res, t4, t6, home, origin, country === registered));
+        btn.disabled = false; select.disabled = false; both.disabled = !(t4 && t6);
+        return;
+      }
       const m = await runTraceroute(target.address, country, (t) => status.replaceChildren(el('span', { class: 'busy', text: t })));
       const ips = [...new Set(m.results.flatMap((x) => (x.result.hops || []).map((h) => h.resolvedAddress)).filter((ip) => ip && !AspaTraceroute.isPrivate(ip)))];
       status.replaceChildren(el('span', { class: 'busy', text: `Mapping ${ips.length} addresses to their networks` }));
@@ -622,11 +688,12 @@ function measureBlock(origin, tr, routes) {
     } catch (err) {
       status.textContent = `The measurement did not work: ${err.message}.`;
     }
-    btn.disabled = false; select.disabled = false;
+    btn.disabled = false; select.disabled = false; both.disabled = !(t4 && t6);
   });
   return el('div', { class: 'measure' },
     el('p', { class: 'field' }, el('label', { for: select.id, class: 'inline', text: 'Probes in ' }), select, ' ', btn),
-    el('p', { class: 'hint', text: `It runs a traceroute towards ${target.address} (in ${target.prefix}) from up to ${PROBES} probes in the country that you choose, through Globalping (globalping.io), and asks RIPEstat which network each hop belongs to. They both see your address and what is asked, and the test uses ${PROBES} of the 250 measurements an hour that Globalping allows to an address.` }),
+    el('p', {}, bothLabel),
+    el('p', { class: 'hint', text: `It runs a traceroute towards ${target.address} (in ${target.prefix}) from up to ${PROBES} probes in the country that you choose, through Globalping (globalping.io), and asks RIPEstat which network each hop belongs to. They both see your address and what is asked, and the test uses ${PROBES} of the 250 measurements an hour that Globalping allows to an address (${2 * PROBES} when it compares IPv4 and IPv6).` }),
     status, out);
 }
 

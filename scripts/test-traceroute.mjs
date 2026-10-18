@@ -2,7 +2,7 @@
 import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
 
-const { hostIn, targetOf, isPrivate, summarise, aggregate } = createRequire(import.meta.url)('../site/traceroute.js');
+const { hostIn, targetOf, isPrivate, summarise, aggregate, pairProbes, comparePairs } = createRequire(import.meta.url)('../site/traceroute.js');
 let passed = 0;
 const test = (name, fn) => { fn(); passed++; console.log('ok  ', name); };
 
@@ -88,6 +88,42 @@ test('the probes together: median, range and the number in each fascia', () => {
   assert.equal(aggregate([s(5, 'ok')]).median, 5);
   assert.equal(aggregate([]), null);
   assert.equal(aggregate([{ net: null, verdict: null }]), null);
+});
+
+test('the target of an origin can be asked for one family', () => {
+  const routes = [{ path: [1, 9], target_prefix: '193.0.0.0/21' }, { path: [1, 9], target_prefix: '2001:67c:2e8::/48' }, { path: [1, 9], target_prefix: '2001:db8::/32' }];
+  assert.deepEqual(targetOf(routes, 9, 4), { prefix: '193.0.0.0/21', address: '193.0.0.1' });
+  assert.deepEqual(targetOf(routes, 9, 6), { prefix: '2001:db8::/32', address: '2001:db8::1' });         // the shortest of a usual length
+  assert.equal(targetOf([{ path: [1, 9], target_prefix: '193.0.0.0/21' }], 9, 6), null);
+  assert.equal(targetOf([{ path: [1, 9], target_prefix: '2001:db8::/32' }], 9, 4), null);
+  assert.equal(targetOf(routes, 9).prefix, '193.0.0.0/21');                                             // without a family: IPv4 first, as before
+});
+
+// a summary as summarise() makes it, with only what the pairing reads
+const sum = (asn, city, network, net, path) => ({ probe: { asn, city, network }, net, path });
+test('probes seen over IPv4 and IPv6 are paired, with the difference and the winner', () => {
+  const s4 = [sum(100, 'Rome', 'A', 20, [100, 200, 9]), sum(101, 'Milan', 'B', 30, [101, 200, 9]), sum(102, 'Turin', 'C', 40, [102, 9]), sum(104, 'Bari', 'E', 10, [104, 9])];
+  const s6 = [sum(101, 'Milan', 'B', 25, [101, 200, 9]), sum(100, 'Rome', 'A', 20.4, [100, 300, 9]), sum(102, 'Turin', 'C', null, []), sum(103, 'Pisa', 'D', 15, [103, 9])];
+  const rows = pairProbes(s4, s6);
+  assert.deepEqual(rows.map((r) => [r.probe.city, r.winner]), [['Milan', 'v6'], ['Rome', 'tie'], ['Turin', 'v4 only'], ['Pisa', 'v6 only'], ['Bari', 'v4 only']]);
+  assert.equal(rows[0].delta, -5);
+  assert.equal(rows[0].sameNetworks, true);
+  assert.equal(rows[1].sameNetworks, false);                // 200 over IPv4, 300 over IPv6
+  assert.equal(rows[2].delta, null);
+  const c = comparePairs(rows);
+  assert.equal(c.probes, 5);
+  assert.equal(c.both, 2);
+  assert.equal(c.median4, 25);
+  assert.equal(c.median6, 22.7);
+  assert.equal(c.medianDelta, -2.3);
+  assert.equal(c.differentNetworks, 1);
+  assert.deepEqual(c.counts, { v4: 0, v6: 1, tie: 1, 'v4 only': 2, 'v6 only': 1, none: 0 });
+});
+
+test('two probes of the same network and city are told apart by their order', () => {
+  const rows = pairProbes([sum(1, 'X', 'N', 10, []), sum(1, 'X', 'N', 50, [])], [sum(1, 'X', 'N', 12, []), sum(1, 'X', 'N', 40, [])]);
+  assert.deepEqual(rows.map((r) => r.delta), [2, -10]);
+  assert.equal(comparePairs([]).median4, null);
 });
 
 console.log(`${passed} tests passed`);

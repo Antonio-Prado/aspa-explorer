@@ -31,7 +31,8 @@
   // The address to measure for an origin: from the prefixes that it originates in the routes. A default route or a very short prefix
   // says nothing about where the AS is, and a private address leads nowhere: those are left out. IPv4 by preference; among the
   // prefixes of a usual length (12 to 24 for IPv4, 24 to 48 for IPv6) the shortest, then the others.
-  function targetOf(routes, origin) {
+  // `family` (4 or 6) limits the choice to that family, for the comparison of the two: without it, IPv4 by preference.
+  function targetOf(routes, origin, family) {
     const seen = new Set();
     for (const rt of routes) {
       if (Array.isArray(rt.path) && rt.path[rt.path.length - 1] === origin && rt.target_prefix) seen.add(String(rt.target_prefix).toLowerCase());
@@ -39,7 +40,7 @@
     const len = (p) => Number(p.split('/')[1]);
     const usable = (p) => { const h = hostIn(p); return h && !isPrivate(h) && (p.includes(':') ? len(p) >= 19 && len(p) <= 64 : len(p) >= 8 && len(p) <= 24); };
     const order = (list, lo, hi) => [...list.filter((p) => len(p) >= lo && len(p) <= hi).sort((a, b) => len(a) - len(b)), ...list.filter((p) => len(p) < lo || len(p) > hi).sort((a, b) => len(a) - len(b))];
-    const ok = [...seen].filter(usable);
+    const ok = [...seen].filter(usable).filter((p) => !family || (family === 6) === p.includes(':'));
     const prefix = order(ok.filter((p) => !p.includes(':')), 12, 24)[0] || order(ok.filter((p) => p.includes(':')), 24, 48)[0];
     return prefix ? { prefix, address: hostIn(prefix) } : null;
   }
@@ -103,7 +104,42 @@
     return { n: done.length, median, min: nets[0], max: nets[nets.length - 1], counts, near, verdict: median >= TROMBONE_MS ? 'trombone' : median > LONG_DELAY_MS ? 'long' : 'ok' };
   }
 
-  const api = { hostIn, targetOf, isPrivate, summarise, aggregate, LONG_DELAY_MS, TROMBONE_MS, JUMP_MS };
+  // The same probes seen in two measurements, one over IPv4 and one over IPv6 (the second was run on the probes of the first, so they are the
+  // same; Globalping gives no probe id, so a probe is told by its network, its city and the order in which it comes): one row for each probe, with
+  // the two summaries (null when the probe has no result in one of them), the difference of the net round trips (IPv6 minus IPv4, in ms),
+  // the winner and whether the networks on the way are the same.
+  function pairProbes(s4, s6) {
+    const key = (s) => `${s.probe.asn || ''}|${s.probe.city || ''}|${s.probe.network || ''}`;
+    const rest = new Map();
+    for (const s of s4) { const k = key(s); if (!rest.has(k)) rest.set(k, []); rest.get(k).push(s); }
+    const rows = [];
+    const row = (a, b) => {
+      const n4 = a && a.net !== null ? a.net : null, n6 = b && b.net !== null ? b.net : null;
+      const delta = n4 !== null && n6 !== null ? n6 - n4 : null;
+      const winner = n4 === null && n6 === null ? 'none' : n6 === null ? 'v4 only' : n4 === null ? 'v6 only' : Math.abs(delta) < 1 ? 'tie' : delta < 0 ? 'v6' : 'v4';
+      const transit = (x) => (x ? x.path.filter((as) => as !== x.probe.asn).join(' ') : null);
+      return { probe: (a || b).probe, v4: a, v6: b, delta, winner, sameNetworks: a && b && a.path.length && b.path.length ? transit(a) === transit(b) : null };
+    };
+    for (const b of s6) { const q = rest.get(key(b)); rows.push(row(q && q.length ? q.shift() : null, b)); }
+    for (const q of rest.values()) for (const a of q) rows.push(row(a, null));
+    return rows;
+  }
+
+  // The rows together: the probes that answered on both sides, the medians of the net round trips over IPv4 and IPv6 and of their difference,
+  // and how many probes each family wins. The median, as everywhere else: a probe with a slow access network is one voice.
+  function comparePairs(rows) {
+    const med = (xs) => { const a = [...xs].sort((x, y) => x - y); const m = Math.floor(a.length / 2); return a.length ? Math.round((a.length % 2 ? a[m] : (a[m - 1] + a[m]) / 2) * 10) / 10 : null; };
+    const both = rows.filter((r) => r.delta !== null);
+    const counts = { v4: 0, v6: 0, tie: 0, 'v4 only': 0, 'v6 only': 0, none: 0 };
+    for (const r of rows) counts[r.winner]++;
+    return {
+      probes: rows.length, both: both.length, counts,
+      median4: med(both.map((r) => r.v4.net)), median6: med(both.map((r) => r.v6.net)), medianDelta: med(both.map((r) => r.delta)),
+      differentNetworks: both.filter((r) => r.sameNetworks === false).length,
+    };
+  }
+
+  const api = { hostIn, targetOf, isPrivate, summarise, aggregate, pairProbes, comparePairs, LONG_DELAY_MS, TROMBONE_MS, JUMP_MS };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.AspaTraceroute = api;
 })(typeof self !== 'undefined' ? self : this);
