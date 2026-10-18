@@ -95,7 +95,7 @@ test('what the object says about one neighbour', () => {
   const r = roles(CONNESI);
   assert.equal(say(r, 6461), 'a transit provider');
   assert.equal(say(r, 39739), 'a customer');
-  assert.equal(say(r, 196959), 'a peer');
+  assert.equal(say(r, 196959), 'sets of prefixes only (a peer, a private link or a service)');
   assert.equal(say(r, 1), null);
 });
 

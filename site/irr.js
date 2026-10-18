@@ -8,7 +8,8 @@
 //   * a neighbour that the AS announces ANY to (and does not accept ANY from) is a customer;
 //   * import-via and export-via name the AS that stands between the AS and other ASes: in practice the route server of an exchange point. An AS that
 //     appears only so is an intermediary (list `ixp`); one that has ordinary import and export lines too keeps the role that they give it, and is also in `via`;
-//   * the others (a set of prefixes in both directions: peering, private interconnects, exchange points) are peers.
+//   * the others (a set of prefixes in both directions) are listed as `peer`, but all that the object says is that the sets are exchanged: it can be a peer,
+//     a private interconnect, an exchange point or a service that is bought, such as DDoS scrubbing, and the object cannot tell them apart.
 // Without the remarks, "accept ANY" alone is not enough (a route server is accepted from ANY too): such a neighbour is only a candidate.
 (function (root) {
   const SECTION = [
@@ -122,7 +123,7 @@
     if (r.transit.includes(n)) return 'a transit provider';
     if (r.customer.includes(n)) return 'a customer';
     if (r.ixp.includes(n)) return 'an intermediary AS (in practice the route server of an exchange point)';
-    if (r.peer.includes(n)) return r.via.includes(n) ? 'a peer, and also an intermediary (import-via)' : 'a peer';
+    if (r.peer.includes(n)) return r.via.includes(n) ? 'sets of prefixes only, and also an intermediary (import-via)' : 'sets of prefixes only (a peer, a private link or a service)';
     if (r.candidate.includes(n)) return 'accepted from ANY (not said what it is)';
     return null;
   }

@@ -5,6 +5,11 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.43.2] - 2026-10-18
+
+### Fixed
+- The routing registry box called *a peer* every neighbour that the object declares with sets of prefixes in both directions. That is only the form of the policy: a peer, a private interconnect or a service that is bought (the DDoS scrubbing of Voxility in the object of Fiber Telecom) are written the same way. It now says *sets of prefixes only (a peer, a private link or a service)* and does not claim a relationship that the object does not state.
+
 ## [1.43.1] - 2026-10-18
 
 ### Fixed
