@@ -5,6 +5,13 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.36.0] - 2026-10-18
+
+### Added
+- **Many paths at once**: under *Check an AS path*, a box that takes one path on each line (a prefix in front is kept), gives the verdict and the reason of each with the totals, and downloads the table as CSV (formula-safe) or JSON (`site/bulk.js`, up to 5000 lines).
+- **Shared results**: *Share this result* under a path check or a list of paths makes a link `/r/<id>` (30 days) that shows the frozen result with the data it was computed with; the page of the link has its own title and summary for the preview in a chat or on a social network. `POST /api/v1/reports`, `GET /api/v1/reports/<id>`, `notifier/reports.mjs`, `site/share.js`, `site/report.html`; plain text only, validated by the service, drawn with `textContent`.
+- `<meta name="author">` on the public pages.
+
 ## [1.35.0] - 2026-10-18
 
 ### Added

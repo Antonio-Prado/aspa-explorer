@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>ASPA Explorer API</title>
 <meta name="description" content="A small public API: the ASPA, its history and its quality for any AS, a badge and an Atom feed per AS. Open data, no key.">
+<meta name="author" content="Antonio Prado">
 <link rel="canonical" href="https://aspa.ping6.it/api.html">
 <meta name="theme-color" content="#2a78d6">
 <link rel="manifest" href="/manifest.webmanifest">
@@ -22,17 +23,17 @@
 <meta name="twitter:card" content="summary_large_image">
 <meta name="color-scheme" content="light dark">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
-<link rel="stylesheet" href="/style.css?v=1.35.0">
-<script src="/download.js?v=1.35.0" defer></script>
-<script src="/datasets.js?v=1.35.0" defer></script>
-<script src="/status-checks.js?v=1.35.0" defer></script>
-<script src="/footer.js?v=1.35.0" defer></script>
+<link rel="stylesheet" href="/style.css?v=1.36.0">
+<script src="/download.js?v=1.36.0" defer></script>
+<script src="/datasets.js?v=1.36.0" defer></script>
+<script src="/status-checks.js?v=1.36.0" defer></script>
+<script src="/footer.js?v=1.36.0" defer></script>
 </head>
 <body>
 <a class="skip" href="#main">Skip to main content</a>
 <header class="wrap masthead">
   <div class="top">
-    <p class="back"><a class="brandlink" href="/" title="Back to ASPA Explorer"><img class="brand" src="/img/logo-mark.svg?v=1.35.0" alt="" width="40" height="40"><span>ASPA Explorer</span></a></p>
+    <p class="back"><a class="brandlink" href="/" title="Back to ASPA Explorer"><img class="brand" src="/img/logo-mark.svg?v=1.36.0" alt="" width="40" height="40"><span>ASPA Explorer</span></a></p>
     <nav class="topnav" aria-label="Main"><a href="/">Home</a><a href="/statistics.html">Statistics</a><a href="/examples.html">Examples</a><a href="/api.html" aria-current="page">API</a><a href="/guide.html">Guide</a><a href="/status.html">Status</a></nav>
   </div>
   <h1>API</h1>
@@ -107,6 +108,11 @@ X-ASPA-Signature: sha256=…      HMAC-SHA256(secret, timestamp + "." + body), h
     <p>Instead of <code>"asn"</code>, <code>"topic": "status"</code> subscribes to the state of the parts of the service (the checks of the <a href="/status.html">status page</a>), with the same confirmation. A part that changes state, confirmed by two checks 15 minutes apart, is delivered as <code>"type": "aspa.status"</code> with the same signature: <code>{"type": "aspa.status", "text": "…", "time": "…", "changes": [{"part": "leaks", "name": "…", "from": "o", "to": "d", "at": "2026-10-18T12:00:00.000Z"}], "page": "https://aspa.ping6.it/status.html", "unsubscribe": "…"}</code>; the states are <code>o</code> (OK), <code>l</code> (late) and <code>d</code> (down). The part <code>monitor</code> is down when no check has been recorded for 45 minutes. The history behind it is <a href="/api/v1/status-history.json">/api/v1/status-history.json</a>.</p>
     <p><code>relation</code> is <code>own</code> for a change of the ASPA of the AS and <code>provider</code> when another ASPA adds or drops it; <code>kind</code> is <code>new</code>, <code>changed</code> or <code>removed</code>. Check the signature and reject a timestamp more than a few minutes old. Deliveries are not retried; five failures in a row switch the webhook off. To stop, send a <code>POST</code> to the <code>unsubscribe</code> address.</p>
     <p>Webhook addresses must be <code>https</code> with a public host name; the service refuses names that resolve to private or local addresses, does not follow redirects and waits five seconds at most.</p>
+  </section>
+
+    <section aria-labelledby="reports">
+    <h2 id="reports">Shared results</h2>
+    <p><code>POST https://aspa.ping6.it/api/v1/reports</code> with a JSON body freezes a result into a link, kept for 30 days: <code>{"kind": "path" | "bulk" | "routes" | "whatif" | "tromboning" | "other", "title": "…", "source": "/#path=3356+680&amp;from=up", "sections": [{"heading": "…", "text": "…", "table": {"columns": ["…"], "rows": [["…", ["…", "valid"]]]}}]}</code>. A cell is a string or <code>[string, class]</code> with a class of <code>valid</code>, <code>unknown</code>, <code>invalid</code>, <code>provider</code>, <code>not-provider</code> or <code>none</code>. Plain text only; at most 12 sections, 8 columns, 500 rows and 200 KB; 20 reports an hour from one address. The answer, <code>201</code>, has the <code>id</code> and the <code>url</code> (<code>/r/&lt;id&gt;</code>). <code>GET /api/v1/reports/&lt;id&gt;</code> returns the report with <code>created</code> and <code>expires</code>; a report that does not exist or has expired is a <code>404</code>.</p>
   </section>
 
   <section aria-labelledby="download">

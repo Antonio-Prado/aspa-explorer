@@ -23,8 +23,9 @@ const FIX = join(here, 'fixtures', 'a11y');
 const TYPES = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.svg': 'image/svg+xml', '.json': 'application/json', '.png': 'image/png', '.jpg': 'image/jpeg', '.pdf': 'application/pdf' };
 const FIXTURE_OF = (p) => {
   if (p === '/data/aspas.json' || p === '/data/status.json') return p.slice(1);
-  if (/^\/api\/v1\/(adoption|leaks|validators|meta|leaks-history|status-history|trends|resources|invalid)\.json$/.test(p)) return p.slice(1);
+  if (/^\/api\/v1\/(adoption|leaks|validators|meta|leaks-history|status-history|trends|resources|invalid|status-months)\.json$/.test(p)) return p.slice(1);
   if (/^\/api\/v1\/as\/\d+$/.test(p)) return 'api/v1/as.json';
+  if (/^\/api\/v1\/reports\/[0-9a-f]{12}$/.test(p)) return 'api/v1/report.json';
   if (p === '/api/v1/subscriptions/health') return 'api/v1/health.json';
   if (p === '/datasets/index.json') return 'datasets/index.json';
   return null;
@@ -41,6 +42,7 @@ const server = http.createServer(async (req, res) => {
     const fx = FIXTURE_OF(p);
     if (fx) { try { return send(200, 'application/json', await readFile(join(FIX, fx))); } catch { return send(404, 'application/json', '{}'); } }
     if (p === '/client-ip') return send(200, 'application/json', '{"ip":"192.0.2.1"}');
+    if (/^\/r\/[0-9a-f]{12}$/.test(p)) return send(200, TYPES['.html'], await readFile(join(SITE, 'report.html')));
     if (/^\/as\/(AS)?\d+\/?$/.test(p)) return send(200, TYPES['.html'], await readFile(join(SITE, 'index.html')));
     const file = join(SITE, p === '/' ? 'index.html' : p);
     if (!file.startsWith(SITE)) return send(403, 'text/plain', 'no');
@@ -54,6 +56,7 @@ const PAGES = [
   ['home', '/'], ['as', '/#AS12779'], ['path', '/#path=3356+12779&from=up'], ['changes', '/#changes'], ['quality', '/#quality'],
   ['statistics', '/statistics.html'], ['guide', '/guide.html'], ['guida', '/guida.html'], ['api', '/api.html'],
   ['examples', '/examples.html'], ['embed', '/embed.html?country=IT'], ['status', '/status.html'], ['subscription', '/subscription.html#confirm=abc'],
+  ['bulk', '/#path=3356+12779&from=up'], ['report', '/r/0123456789ab'],
 ];
 const VIEWPORTS = [['desktop', { width: 1280, height: 800 }], ['narrow', { width: 320, height: 640 }]];
 const SCHEMES = ['light', 'dark'];
@@ -81,10 +84,26 @@ for (const [name, path] of PAGES) {
           await page.evaluate(() => { const d = document.getElementById('as-graph'); if (d) d.open = true; });
           await page.waitForTimeout(300);
         }
+        const extra = [];
+        if (name === 'bulk') {
+          // many paths at once: open the box, check a few lines, and expect a table, the files and the button to share
+          await page.evaluate(() => { document.getElementById('bulk').open = true; });
+          await page.fill('#bulktext', '3356 1299 12779\n193.0.0.0/21 3333 12779\n# a comment\n1299 99 3356 680\nnot a path');
+          await page.click('#bulkform button[type=submit]');
+          await page.waitForTimeout(300);
+          const rows = await page.locator('#bulkresult tbody tr').count();
+          if (rows !== 4) extra.push(`bulk: ${rows} rows, expected 4`);
+          if (!(await page.locator('#bulkresult .share-result button').count())) extra.push('bulk: no button to share');
+        }
+        if (name === 'report') {
+          const rows = await page.locator('#rp-body tbody tr').count();
+          if (rows !== 6) extra.push(`report: ${rows} table rows, expected 6`);
+          if (!(await page.textContent('#rp-title')).includes('3 AS paths')) extra.push('report: the title is not there');
+        }
         await page.addScriptTag({ content: axeSource });
         const result = await page.evaluate(() => axe.run(document, { runOnly: ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'best-practice'] }));
         const over = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
-        const notes = result.violations.map((v) => `${v.id} (${v.nodes.length}): ${v.nodes[0].target.join(' ')} -- ${v.help}`);
+        const notes = extra.concat(result.violations.map((v) => `${v.id} (${v.nodes.length}): ${v.nodes[0].target.join(' ')} -- ${v.help}`));
         if (over > 1) {
           // name the elements that stick out (not those inside a scrollable table), to find what to fix
           const wide = await page.evaluate(() => [...document.body.querySelectorAll('*')].filter((e) => e.getBoundingClientRect().right > window.innerWidth + 1 && !e.closest('.table-wrap, svg, pre'))

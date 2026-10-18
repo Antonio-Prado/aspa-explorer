@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Guida di ASPA Explorer</title>
 <meta name="description" content="Come leggere e usare l'interfaccia di ASPA Explorer: ricerca, verifica di percorsi e rotte, statistiche, notifiche, l'API e l'origine dei dati.">
+<meta name="author" content="Antonio Prado">
 <link rel="canonical" href="https://aspa.ping6.it/guida.html">
 <link rel="alternate" hreflang="en" href="https://aspa.ping6.it/guide.html">
 <link rel="alternate" hreflang="it" href="https://aspa.ping6.it/guida.html">
@@ -25,15 +26,15 @@
 <meta name="color-scheme" content="light dark">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <link rel="alternate" hreflang="en" href="/guide.html">
-<link rel="stylesheet" href="/style.css?v=1.35.0">
-<script src="/status-checks.js?v=1.35.0" defer></script>
-<script src="/footer.js?v=1.35.0" defer></script>
+<link rel="stylesheet" href="/style.css?v=1.36.0">
+<script src="/status-checks.js?v=1.36.0" defer></script>
+<script src="/footer.js?v=1.36.0" defer></script>
 </head>
 <body>
 <a class="skip" href="#main">Vai al contenuto principale</a>
 <header class="wrap masthead">
   <div class="top">
-    <p class="back"><a class="brandlink" href="/" title="Torna a ASPA Explorer"><img class="brand" src="/img/logo-mark.svg?v=1.35.0" alt="" width="40" height="40"><span>ASPA Explorer</span></a></p>
+    <p class="back"><a class="brandlink" href="/" title="Torna a ASPA Explorer"><img class="brand" src="/img/logo-mark.svg?v=1.36.0" alt="" width="40" height="40"><span>ASPA Explorer</span></a></p>
     <nav class="topnav" aria-label="Main"><a href="/">Home</a><a href="/statistics.html">Statistics</a><a href="/examples.html">Examples</a><a href="/api.html">API</a><a href="/guide.html" aria-current="page">Guide</a><a href="/status.html">Status</a></nav>
   </div>
   <h1>Guida</h1>
@@ -141,6 +142,8 @@
     <p>Limiti: gli AS ripetuti (prepending) vengono rimossi prima della verifica; i percorsi con un AS_SET non sono accettati (la procedura li considera Invalid); la verifica del vicino e la validazione dell'origine della rotta non fanno parte di questo strumento; e il risultato riflette l'istantanea di ASPA validate mostrata in questa pagina, non la vista del tuo router. La procedura segue la bozza IETF <a href="https://datatracker.ietf.org/doc/draft-ietf-sidrops-aspa-verification/" target="_blank" rel="noopener">BGP AS_PATH Verification Based on ASPA Objects<span class="sr-only"> (si apre in una nuova scheda)</span></a>, ancora in lavorazione.</p>
     <p><strong>Contesto.</strong> La procedura downstream è analizzata in A. Prado, M. Centenaro e L. Vangelista, <em>Securing Multi-domain 5G/6G Routing: Towards Path Verification with ASPA</em>, IEEE Conference on Standards for Communications and Networking (CSCN), Londra, 7–9 settembre 2026 (atti in arrivo su IEEE Xplore). L'articolo mostra che la validità ASPA downstream equivale a un test di unimodalità sull'AS path compresso.</p>
     <p><a href="/paper/prado-centenaro-vangelista-cscn2026.pdf" target="_blank" rel="noopener">Scarica l'articolo (PDF, 7 pagine, in inglese)<span class="sr-only"> (si apre in una nuova scheda)</span></a>. È la versione accettata dell'autore, resa disponibile per uso personale. This work has been accepted for publication in the proceedings of IEEE CSCN 2026; copyright may be transferred without notice, after which this version may no longer be accessible. © 2026 IEEE.</p>
+
+    <p><strong>Molti percorsi insieme.</strong> Sotto il modulo, <em>Check many paths at once</em> prende un percorso per riga (per esempio quelli di uno <code>show bgp</code> stampati da uno script; un prefisso davanti al percorso resta nella tabella; le righe vuote e quelle che iniziano con <code>#</code> sono saltate, fino a 5000 righe) e dà per ognuno il verdetto e poche parole di motivo, con i totali. La tabella si scarica in CSV o JSON; non si invia nulla, il file è fatto nel tuo browser.</p>
   </section>
 
   <section aria-labelledby="live-routes">
@@ -258,6 +261,12 @@
     <h3>Che cosa viene conservato</h3>
     <p>L'indirizzo (o l'indirizzo del webhook e il suo secret), l'AS e le date di iscrizione e dell'ultima notifica, finché l'iscrizione dura. Una richiesta mai confermata viene cancellata dopo due giorni. Gli indirizzi dei visitatori non sono memorizzati: sono solo contati in memoria per limitare gli abusi, a qualche richiesta all'ora. Nulla è usato per altro o ceduto a terzi; la disiscrizione cancella il record. Domande: <a href="mailto:antonio.prado@dei.unipd.it">antonio.prado@dei.unipd.it</a>.</p>
     <p>Questo è un servizio di ricerca gestito senza garanzie: una notifica può arrivare in ritardo o, se un server di posta rifiuta il messaggio, andare persa.</p>
+  </section>
+
+    <section aria-labelledby="share-result">
+    <h2 id="share-result">Condividere un risultato</h2>
+    <p><em>Share this result</em>, sotto il risultato di un controllo di percorso o di molti percorsi, lo trasforma in un link come <code>https://aspa.ping6.it/r/0123456789ab</code> da mandare a un collega o da citare. La pagina del link mostra il risultato com'era, con l'ora e i dati con cui è stato calcolato, e un link per rifare lo stesso controllo con i dati di oggi. Una chat o un social mostrano titolo e un breve riassunto quando il link viene incollato.</p>
+    <p>Viene conservato esattamente ciò che la pagina invia quando premi il pulsante: un titolo, qualche frase e una tabella, scritti dalla pagina e controllati dal servizio (accetta solo testo semplice, fino a 500 righe di tabella e 200 KB). Resta per 30 giorni e poi viene cancellato. Chiunque abbia il link può leggerlo, quindi non condividere un risultato che non mostreresti. L'indirizzo del visitatore non è memorizzato: è solo contato in memoria, 20 link all'ora, per limitare gli abusi. Il link non è firmato: mostra ciò che la pagina ha calcolato, non una dichiarazione di qualcuno. Il rapporto è anche disponibile in JSON su <code>/api/v1/reports/&lt;id&gt;</code>.</p>
   </section>
 
   <section aria-labelledby="links">

@@ -620,3 +620,8 @@ ul.plain { list-style: none; margin: 0.4rem 0; padding: 0; display: grid; gap: 0
 details.tableview .table-wrap { max-width: 100%; overflow-x: auto; }
 .tiles .tile { min-width: 0; overflow-wrap: anywhere; }
 #res-region th[scope="row"] { min-width: 11rem; overflow-wrap: normal; word-break: normal; }
+
+/* many paths at once, shared results */
+#bulktext { width: 100%; box-sizing: border-box; padding: 0.55rem 0.65rem; border: 1px solid var(--grid); border-radius: 6px; background: var(--surface); color: var(--ink); font: 0.9rem ui-monospace, SFMono-Regular, Menlo, monospace; resize: vertical; }
+.share-result { margin: 0.8rem 0 0.4rem; }
+.share-result > button { margin-right: 0.5rem; }

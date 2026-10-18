@@ -21,6 +21,14 @@ export function openStore(path) {
     );
     CREATE INDEX IF NOT EXISTS subs_asn ON subscriptions (asn, status);
     CREATE TABLE IF NOT EXISTS state (key TEXT PRIMARY KEY, value TEXT NOT NULL);
+    CREATE TABLE IF NOT EXISTS reports (
+      id TEXT PRIMARY KEY,
+      created INTEGER NOT NULL,
+      kind TEXT NOT NULL,
+      title TEXT NOT NULL,
+      body TEXT NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS reports_created ON reports (created);
   `);
   // 1.19.0: a subscription can ask for the places of valley that involve its AS as well (older files do not have the column)
   if (!db.prepare('PRAGMA table_info(subscriptions)').all().some((c) => c.name === 'leaks')) db.exec('ALTER TABLE subscriptions ADD COLUMN leaks INTEGER NOT NULL DEFAULT 0');
@@ -41,6 +49,10 @@ export function openStore(path) {
     perTarget: db.prepare('SELECT COUNT(*) AS n FROM subscriptions WHERE kind = ? AND target = ?'),
     perAsn: db.prepare('SELECT COUNT(*) AS n FROM subscriptions WHERE asn = ?'),
     counts: db.prepare('SELECT kind, status, COUNT(*) AS n FROM subscriptions GROUP BY kind, status'),
+    addReport: db.prepare('INSERT INTO reports (id, created, kind, title, body) VALUES (?, ?, ?, ?, ?)'),
+    getReport: db.prepare('SELECT id, created, kind, title, body FROM reports WHERE id = ?'),
+    purgeReports: db.prepare('DELETE FROM reports WHERE created < ?'),
+    countReports: db.prepare('SELECT COUNT(*) AS n FROM reports'),
     getState: db.prepare('SELECT value FROM state WHERE key = ?'),
     setState: db.prepare('INSERT INTO state (key, value) VALUES (?, ?) ON CONFLICT (key) DO UPDATE SET value = excluded.value'),
   };
@@ -62,6 +74,10 @@ export function openStore(path) {
     countTarget: (kind, target) => q.perTarget.get(kind, target).n,
     countAsn: (asn) => q.perAsn.get(asn).n,
     counts: () => q.counts.all().map(plain),
+    addReport: (id, now, kind, title, body) => q.addReport.run(id, now, kind, title, body),
+    getReport: (id) => { const r = q.getReport.get(id); return r ? { ...r, body: JSON.parse(r.body) } : null; },
+    purgeReports: (olderThan) => Number(q.purgeReports.run(olderThan).changes),
+    countReports: () => q.countReports.get().n,
     getState: (key) => { const r = q.getState.get(key); return r ? JSON.parse(r.value) : null; },
     setState: (key, value) => q.setState.run(key, JSON.stringify(value)),
     close: () => db.close(),

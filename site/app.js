@@ -15,6 +15,7 @@ let aspas = [];            // [{customer, providers, source}] sorted by customer
 let byCustomer = new Map(); // 'AS123' -> aspa
 let byProvider = new Map(); // 'AS123' -> ['AS456', ...] customers naming it
 let aspaSets = new Map();   // 'AS123' -> Set of its providers, for the path checker
+let dataStatus = null;      // the validator's status (when it last updated), for the stamp of a shared result
 
 function el(tag, attrs, ...children) {
   const node = document.createElement(tag);
@@ -316,8 +317,86 @@ function pathCheckNodes(text, direction) {
   return kids;
 }
 
+// "ASPA data: 3,229 ASPAs, validator updated 2026-10-18 12:00 UTC": which data a shared result was computed with
+function dataStamp() {
+  const done = dataStatus && dataStatus.lastUpdateDone;
+  return `ASPA data: ${fmt.format(aspas.length)} ASPAs${done ? `, validator updated ${new Date(done).toISOString().slice(0, 16).replace('T', ' ')} UTC` : ''}.`;
+}
+
+// The report of one path check, for AspaShare
+function pathReport(text, direction) {
+  const parsed = AspaVerify.parsePath(text);
+  const v = AspaVerify.verify(aspaSets, parsed.path, direction);
+  const missing = [...new Set(v.path.filter((as) => !aspaSets.has(as)))];
+  const cls = { 'Provider+': 'provider', 'Not Provider+': 'not-provider', 'No Attestation': 'none' };
+  const sections = [{ heading: 'Verdict', text: `${v.result}. ${pathVerdict(v, missing)} Path from the origin to the neighbour: ${v.path.join(' → ')}. The route comes from ${direction === 'down' ? 'a provider (downstream check)' : 'a customer or a peer (upstream check)'}. ${dataStamp()}` }];
+  if (v.N > 1) {
+    const down = direction === 'down';
+    const rows = [];
+    for (let i = 1; i < v.N; i++) {
+      const hop = (c, p, o) => [o === 'No Attestation' ? `${c} has no ASPA` : `${c} ${o === 'Provider+' ? 'lists' : 'does not list'} ${p}`, cls[o]];
+      const row = [`${v.path[i - 1]} → ${v.path[i]}`, hop(v.path[i - 1], v.path[i], v.up[i])];
+      if (down) row.push(hop(v.path[i], v.path[i - 1], v.down[i + 1]));
+      rows.push(row);
+    }
+    sections.push({ heading: 'Hop by hop', table: { columns: down ? ['Hop', 'Uphill check', 'Downhill check'] : ['Hop', 'Uphill check'], rows } });
+  }
+  return { kind: 'path', title: `AS path ${parsed.path.slice().reverse().join(' ')}: ${v.result}`, source: `/#${new URLSearchParams({ path: text.trim(), from: direction })}`, sections };
+}
+
 function renderPathCheck(text, direction) {
-  $('pathresult').replaceChildren(...pathCheckNodes(text, direction));
+  const nodes = pathCheckNodes(text, direction);
+  if (!AspaVerify.parsePath(text).error && aspas.length) nodes.push(AspaShare.button(() => pathReport(text, direction)));
+  $('pathresult').replaceChildren(...nodes);
+}
+
+/* ---------- many paths at once ---------- */
+function bulkReport(r, direction, text) {
+  const n = r.rows.length, c = r.counts;
+  const head = `${fmt.format(n)} AS paths checked as routes that come from ${direction === 'down' ? 'a provider (downstream check)' : 'a customer or a peer (upstream check)'}: ${c.Valid} valid, ${c.Unknown} unknown, ${c.Invalid} invalid${c.Error ? `, ${c.Error} not understood` : ''}. ${dataStamp()}`;
+  const shown = r.rows.slice(0, 500);
+  const klass = { Valid: 'valid', Unknown: 'unknown', Invalid: 'invalid', Error: 'invalid' };
+  return {
+    kind: 'bulk', title: `${fmt.format(n)} AS paths: ${c.Valid} valid, ${c.Unknown} unknown, ${c.Invalid} invalid`,
+    sections: [{ heading: 'Summary', text: head + (n > shown.length ? ` The table has the first ${shown.length}.` : '') },
+      { heading: 'Paths', table: { columns: ['Line', 'Prefix', 'Path', 'Verdict', 'Why'], rows: shown.map((x) => [String(x.line), x.prefix, x.path || x.input, [x.result, klass[x.result]], x.note]) } }],
+  };
+}
+
+function runBulk() {
+  const out = $('bulkresult');
+  if (!aspas.length) { out.replaceChildren(el('p', { class: 'error', text: 'The ASPA data is still loading; try again in a moment.' })); return; }
+  const direction = $('bulkfrom').value;
+  const text = $('bulktext').value;
+  const r = AspaBulk.checkMany(aspaSets, text, direction, AspaVerify);
+  if (!r.rows.length) { out.replaceChildren(el('p', { class: 'error', text: 'Nothing to check: write one AS path on each line, for example 3356 1299 680.' })); return; }
+  const c = r.counts;
+  const summary = el('p', { class: 'verdict' }, el('strong', { text: `${fmt.format(r.rows.length)} paths` }),
+    ` ${c.Valid} valid · ${c.Unknown} unknown · ${c.Invalid} invalid${c.Error ? ` · ${c.Error} not understood` : ''}.${r.truncated ? ` Only the first ${fmt.format(AspaBulk.MAX_LINES)} lines were checked.` : ''}`);
+  const klass = { Valid: 'v-valid', Unknown: 'v-unknown', Invalid: 'v-invalid', Error: 'v-invalid' };
+  const body = el('tbody');
+  const PAGE = 200;
+  let shown = 0;
+  const more = el('button', { type: 'button', class: 'linkish' });
+  const draw = () => {
+    for (const x of r.rows.slice(shown, shown + PAGE)) {
+      body.append(el('tr', {}, el('td', { class: 'num', text: String(x.line) }), el('td', { class: 'mono', text: x.prefix }), el('td', { class: 'mono', text: x.path || x.input }),
+        el('td', {}, el('span', { class: `badge ${klass[x.result]}`, text: x.result })), el('td', { text: x.note })));
+    }
+    shown = Math.min(r.rows.length, shown + PAGE);
+    more.hidden = shown >= r.rows.length;
+    more.textContent = `Show ${fmt.format(Math.min(PAGE, r.rows.length - shown))} more`;
+  };
+  more.addEventListener('click', draw);
+  draw();
+  const stamp = new Date().toISOString().slice(0, 10);
+  const files = el('p', { class: 'links' },
+    el('button', { type: 'button', class: 'linkish', text: 'Download CSV', onclick: () => AspaShare.download(`aspa-paths-${stamp}.csv`, AspaBulk.toCsv(r.rows), 'text/csv') }), ' · ',
+    el('button', { type: 'button', class: 'linkish', text: 'Download JSON', onclick: () => AspaShare.download(`aspa-paths-${stamp}.json`, JSON.stringify({ generated: new Date().toISOString(), direction, data: dataStamp(), counts: r.counts, rows: r.rows }, null, 1) + '\n', 'application/json') }));
+  out.replaceChildren(summary, el('div', { class: 'table-wrap card', tabindex: '0', role: 'group', 'aria-label': 'Verdict of each path' }, el('table', { class: 'checks' },
+    el('caption', { class: 'sr-only', text: 'Verdict of each AS path' }),
+    el('thead', {}, el('tr', {}, ['Line', 'Prefix', 'Path', 'Verdict', 'Why'].map((t) => el('th', { scope: 'col', text: t })))), body)),
+  el('p', {}, more), files, AspaShare.button(() => bulkReport(r, direction, text)));
 }
 
 /* ---------- routes seen in BGP ---------- */
@@ -1336,6 +1415,7 @@ async function load() {
         byProvider.get(p).push(a.customer);
       }
     }
+    dataStatus = status;
     renderOverview(status);
     addCoverageTile();
     await loadVisibility();
@@ -1369,6 +1449,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (location.hash === hash) lookupFromHash();
     else location.hash = hash;
   });
+  $('bulkform').addEventListener('submit', (e) => { e.preventDefault(); runBulk(); });
   $('liveform').addEventListener('submit', (e) => {
     e.preventDefault();
     const hash = '#routes=' + encodeURIComponent($('liveq').value.trim());

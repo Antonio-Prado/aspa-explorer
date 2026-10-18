@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>ASPA Explorer</title>
 <meta name="description" content="Browse the validated ASPA (Autonomous System Provider Authorization) objects published in the RPKI.">
+<meta name="author" content="Antonio Prado">
 <meta name="theme-color" content="#2a78d6">
 <link rel="manifest" href="/manifest.webmanifest">
 <link rel="apple-touch-icon" href="/img/apple-touch-icon.png">
@@ -23,24 +24,26 @@
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <link rel="canonical" href="https://aspa.ping6.it/">
 <link rel="alternate" type="application/atom+xml" title="ASPA Explorer: changes" href="/changes.atom">
-<link rel="stylesheet" href="/style.css?v=1.35.0">
-<script src="/verify.js?v=1.35.0" defer></script>
-<script src="/history.js?v=1.35.0" defer></script>
-<script src="/quality.js?v=1.35.0" defer></script>
-<script src="/evidence.js?v=1.35.0" defer></script>
-<script src="/whatif.js?v=1.35.0" defer></script>
-<script src="/traceroute.js?v=1.35.0" defer></script>
-<script src="/graph.js?v=1.35.0" defer></script>
-<script src="/live.js?v=1.35.0" defer></script>
-<script src="/app.js?v=1.35.0" defer></script>
-<script src="/status-checks.js?v=1.35.0" defer></script>
-<script src="/footer.js?v=1.35.0" defer></script>
+<link rel="stylesheet" href="/style.css?v=1.36.0">
+<script src="/verify.js?v=1.36.0" defer></script>
+<script src="/history.js?v=1.36.0" defer></script>
+<script src="/quality.js?v=1.36.0" defer></script>
+<script src="/evidence.js?v=1.36.0" defer></script>
+<script src="/whatif.js?v=1.36.0" defer></script>
+<script src="/traceroute.js?v=1.36.0" defer></script>
+<script src="/graph.js?v=1.36.0" defer></script>
+<script src="/live.js?v=1.36.0" defer></script>
+<script src="/bulk.js?v=1.36.0" defer></script>
+<script src="/share.js?v=1.36.0" defer></script>
+<script src="/app.js?v=1.36.0" defer></script>
+<script src="/status-checks.js?v=1.36.0" defer></script>
+<script src="/footer.js?v=1.36.0" defer></script>
 </head>
 <body>
 <a class="skip" href="#main">Skip to main content</a>
 <header class="wrap masthead">
   <div class="top">
-    <h1><a class="homelink" href="/"><img class="brand" src="/img/logo-mark.svg?v=1.35.0" alt="" width="40" height="40"><span>ASPA Explorer</span></a></h1>
+    <h1><a class="homelink" href="/"><img class="brand" src="/img/logo-mark.svg?v=1.36.0" alt="" width="40" height="40"><span>ASPA Explorer</span></a></h1>
     <nav class="topnav" aria-label="Main"><a href="/" aria-current="page">Home</a><a href="/statistics.html">Statistics</a><a href="/examples.html">Examples</a><a href="/api.html">API</a><a href="/guide.html">Guide</a><a href="/status.html">Status</a></nav>
   </div>
   <p class="lede">Validated ASPA objects from the RPKI, as seen by the Routinator validator at <a href="https://rpki.ping6.it/ui/" target="_blank" rel="noopener">rpki.ping6.it<span class="sr-only"> (opens in a new tab)</span></a>.</p>
@@ -86,6 +89,23 @@
           <a href="#path=3356+680&amp;from=up">3356 680</a> or read <a href="/guide.html#path-check" target="_blank" rel="noopener">how it works<span class="sr-only"> (opens in a new tab)</span></a>.</p>
       </form>
       <div id="pathresult" aria-live="polite"></div>
+      <details class="embed" id="bulk">
+        <summary>Check many paths at once</summary>
+        <p class="hint">One path on each line, as your router prints them (neighbour first, origin last); a prefix in front of the path is kept in the table. Empty lines and lines that start with # are skipped; up to 5000 lines.</p>
+        <form id="bulkform" autocomplete="off">
+          <label for="bulktext" class="sr-only">AS paths, one on each line</label>
+          <textarea id="bulktext" rows="8" spellcheck="false" placeholder="3356 1299 680&#10;193.0.0.0/21 3333 1299 680"></textarea>
+          <div class="field">
+            <label for="bulkfrom" class="inline">The routes come from</label>
+            <select id="bulkfrom" name="bulkfrom">
+              <option value="down">a provider (downstream check)</option>
+              <option value="up">a customer or a peer (upstream check)</option>
+            </select>
+            <button type="submit">Check all</button>
+          </div>
+        </form>
+        <div id="bulkresult" aria-live="polite"></div>
+      </details>
     </div>
     <div role="tabpanel" class="tabpanel" id="panel-routes" aria-labelledby="tab-routes" hidden>
       <form id="liveform" autocomplete="off">

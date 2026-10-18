@@ -7,6 +7,7 @@ import { randomBytes } from 'node:crypto';
 import { makeToken, readToken } from './tokens.mjs';
 import { EMAIL_RE } from './mail.mjs';
 import { parseWebhookUrl } from './webhook.mjs';
+import { checkReport, newId, shell, ID_RE, TTL_DAYS } from './reports.mjs';
 
 const MAX_AS = 4294967295;
 export const STATUS = 'STATUS';
@@ -112,8 +113,28 @@ export function makeApi(deps) {
     return reply(200, { status: 'unsubscribed', asn: row.asn, kind: row.kind });
   }
 
+  // shared results: kept TTL_DAYS days (the service purges them), at most MAX_REPORTS at a time
+  const perIpReport = deps.perIpReport || limiter(20, HOUR);
+  const globalReport = deps.globalReport || limiter(600, HOUR);
+  const MAX_REPORTS = deps.maxReports || 20000;
+  function createReport(body, ip) {
+    const c = checkReport(body);
+    if (c.error) return bad(c.error);
+    if (!perIpReport(ip)) return bad('too many reports from this address, try again later', 429);
+    if (!globalReport('all') || store.countReports() >= MAX_REPORTS) return bad('the service is busy, try again later', 503);
+    const id = newId();
+    store.addReport(id, now(), c.report.kind, c.report.title, JSON.stringify(c.report));
+    return reply(201, { id, url: `${site}/r/${id}`, expires_days: TTL_DAYS });
+  }
+  function getReport(id) {
+    const r = ID_RE.test(id) && store.getReport(id);
+    if (!r) return bad('this report does not exist or has expired', 404);
+    return reply(200, { id: r.id, created: new Date(r.created * 1000).toISOString(), expires: new Date((r.created + TTL_DAYS * 86400) * 1000).toISOString(), ...r.body });
+  }
+  const reportPage = (id, template) => { const r = ID_RE.test(id) && store.getReport(id); return r ? shell(template, id, r.body, site) : null; };
+
   const unsubscribePage = (id) => `${site}/subscription.html#unsubscribe=${unsubscribeToken(id)}`;
-  return { subscribe, confirm, unsubscribe, unsubscribeUrl, unsubscribePage, unsubscribeToken };
+  return { subscribe, confirm, unsubscribe, unsubscribeUrl, unsubscribePage, unsubscribeToken, createReport, getReport, reportPage };
 }
 
 const readBody = (req, limit = 2048) => new Promise((resolve, reject) => {
@@ -125,20 +146,29 @@ const readBody = (req, limit = 2048) => new Promise((resolve, reject) => {
 });
 
 // node:http request handler around makeApi
-export function httpHandler(api, { site, perIpUnsub = limiter(60, HOUR), health = null } = {}) {
+export function httpHandler(api, { site, perIpUnsub = limiter(60, HOUR), health = null, template = () => null } = {}) {
   return async (req, res) => {
-    const send = ({ status, body }) => {
-      res.writeHead(status, { ...(status === 413 ? { Connection: 'close' } : {}), 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff' });
+    const send = ({ status, body }, cache = 'no-store') => {
+      res.writeHead(status, { ...(status === 413 ? { Connection: 'close' } : {}), 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': cache, 'X-Content-Type-Options': 'nosniff' });
       res.end(JSON.stringify(body) + '\n');
     };
     try {
       const url = new URL(req.url, 'http://localhost');
       const ip = String(req.headers['x-real-ip'] || req.socket.remoteAddress || '');
       if (req.method === 'GET' && url.pathname === '/api/v1/subscriptions/health' && health) return send({ status: 200, body: health() });
+      const rep = /^\/api\/v1\/reports\/([^/]+)$/.exec(url.pathname);
+      if (req.method === 'GET' && rep) { const r = api.getReport(rep[1]); return send(r, r.status === 200 ? 'public, max-age=3600' : 'no-store'); }
+      const page = /^\/r\/([^/]+)$/.exec(url.pathname);
+      if (req.method === 'GET' && page) {
+        const tpl = template();
+        const html = tpl && api.reportPage(page[1], tpl);
+        res.writeHead(html ? 200 : 404, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': html ? 'public, max-age=300' : 'no-store', 'X-Robots-Tag': 'noindex', 'X-Content-Type-Options': 'nosniff' });
+        return res.end(html || '<!doctype html><title>Not found</title><p>This report does not exist or has expired.</p>');
+      }
       if (req.method !== 'POST') return send({ status: 405, body: { error: 'POST only' } });
       const origin = req.headers.origin;
       if (origin && origin !== site) return send({ status: 403, body: { error: 'cross-origin requests are not accepted' } });
-      const raw = await readBody(req);
+      const raw = await readBody(req, url.pathname === '/api/v1/reports' ? 220 * 1024 : 2048);
       const type = String(req.headers['content-type'] || '').split(';')[0].trim().toLowerCase();
       if (url.pathname === '/api/v1/subscriptions/unsubscribe') {
         if (!perIpUnsub(ip)) return send({ status: 429, body: { error: 'too many requests' } });
@@ -149,6 +179,7 @@ export function httpHandler(api, { site, perIpUnsub = limiter(60, HOUR), health 
       if (type !== 'application/json') return send({ status: 415, body: { error: 'send application/json' } });
       let body;
       try { body = JSON.parse(raw); } catch { return send({ status: 400, body: { error: 'invalid JSON' } }); }
+      if (url.pathname === '/api/v1/reports') return send(api.createReport(body, ip));
       if (url.pathname === '/api/v1/subscriptions') return send(await api.subscribe(body, ip));
       if (url.pathname === '/api/v1/subscriptions/confirm') {
         if (!perIpUnsub(ip)) return send({ status: 429, body: { error: 'too many requests' } });

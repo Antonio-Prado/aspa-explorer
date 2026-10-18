@@ -9,6 +9,7 @@ import { sign, verify, relaxBody } from '../notifier/dkim.mjs';
 import { compose, serialize, sendmail, EMAIL_RE } from '../notifier/mail.mjs';
 import { openStore } from '../notifier/store.mjs';
 import { makeApi, httpHandler, parseAsn, limiter } from '../notifier/server.mjs';
+import { checkReport, shell, headTags, newId, ID_RE, LIMITS } from '../notifier/reports.mjs';
 import { watchStatus, describeStatusEvent, statusSubject, MONITOR } from '../notifier/status.mjs';
 
 let passed = 0;
@@ -407,6 +408,92 @@ await test('API: a subscription to the status alerts, not to an AS', async () =>
   const w = await api.subscribe({ kind: 'webhook', target: 'https://hooks.example.org/s', topic: 'status' }, '3.3.3.5');
   assert.equal(w.status, 201);
   assert.equal(w.body.asn, 'STATUS');
+});
+
+// ---- shared results ----
+const goodReport = () => ({ kind: 'path', title: 'AS path 3356 1299 680: Valid', source: '/#path=3356+1299+680&from=down', sections: [{ heading: 'Verdict', text: 'Valid.' }, { heading: 'Hops', table: { columns: ['Hop', 'Check'], rows: [['AS680 → AS1299', ['AS680 lists AS1299', 'provider']], ['AS1299 → AS3356', 'ok']] } }] });
+
+await test('reports: a good one is kept as it is, with the classes of its cells', () => {
+  const c = checkReport(goodReport());
+  assert.equal(c.error, undefined);
+  assert.deepEqual(c.report.sections[1].table.rows[0], ['AS680 → AS1299', ['AS680 lists AS1299', 'provider']]);
+  assert.equal(c.report.source, '/#path=3356+1299+680&from=down');
+});
+
+await test('reports: what is not understood is refused or dropped', () => {
+  const bad = (f, re) => { const r = goodReport(); f(r); assert.match(checkReport(r).error, re); };
+  assert.match(checkReport(null).error, /JSON object/);
+  bad((r) => { r.kind = 'script'; }, /kind must be/);
+  bad((r) => { r.title = '   '; }, /title/);
+  bad((r) => { r.sections = []; }, /sections/);
+  bad((r) => { r.source = 'https://evil.example/'; }, /on this site/);
+  bad((r) => { r.source = '//evil.example/x'; }, /on this site/);
+  bad((r) => { r.sections[1].table.rows[0] = ['one cell only']; }, /as many cells/);
+  bad((r) => { r.sections[1].table.rows[0][1] = ['x', 'blink']; }, /class/);
+  bad((r) => { r.sections[1].table.rows = Array.from({ length: LIMITS.rows + 1 }, () => ['a', 'b']); }, /rows/);
+  const long = goodReport(); long.title = 'x'.repeat(500); long.sections[0].text = '<b>hi</b>\u202e';
+  const c = checkReport(long);
+  assert.equal(c.report.title.length, LIMITS.title);
+  assert.equal(c.report.sections[0].text, '<b>hi</b>');                     // kept as text (the viewer never reads it as markup), without the control character
+  const big = goodReport(); big.sections = Array.from({ length: 12 }, () => ({ text: 'y'.repeat(LIMITS.text) })); big.sections.push(...[]);
+  assert.equal(checkReport(big).error, undefined);
+});
+
+await test('reports: the tags of the head are escaped and replace the ones between the markers', () => {
+  const r = goodReport(); r.title = 'A "quoted" <title>'; r.sections[0].text = 'Valid & sound';
+  const out = shell('<head><!--og-->\n<title>x</title>\n<!--/og-->\n<meta name="robots" content="noindex"></head>', 'abcdef012345', checkReport(r).report, 'https://aspa.example.org');
+  assert.match(out, /<title>A &quot;quoted&quot; &lt;title&gt; · ASPA Explorer<\/title>/);
+  assert.match(out, /og:description" content="Valid &amp; sound"/);
+  assert.match(out, /og:url" content="https:\/\/aspa.example.org\/r\/abcdef012345"/);
+  assert.match(out, /<meta name="robots" content="noindex">/);
+  assert.equal((out.match(/<title>/g) || []).length, 1);
+  assert.match(newId(), ID_RE);
+});
+
+await test('API: a report is made, read back and refused when it is bad; the limits hold', async () => {
+  const { api, tick, store } = setup({ perIpReport: limiter(2, 3600, () => 0) });
+  const made = api.createReport(goodReport(), '1.1.1.1');
+  assert.equal(made.status, 201);
+  assert.match(made.body.id, ID_RE);
+  assert.equal(made.body.url, `https://aspa.example.org/r/${made.body.id}`);
+  const got = api.getReport(made.body.id);
+  assert.equal(got.status, 200);
+  assert.equal(got.body.title, 'AS path 3356 1299 680: Valid');
+  assert.equal(got.body.expires.slice(0, 4), '1970');
+  assert.equal(api.getReport('nothex').status, 404);
+  assert.equal(api.getReport('0123456789ab').status, 404);
+  assert.equal(api.createReport({ kind: 'path' }, '1.1.1.1').status, 400);
+  assert.equal(api.createReport(goodReport(), '1.1.1.1').status, 201);
+  assert.equal(api.createReport(goodReport(), '1.1.1.1').status, 429);      // two an hour from one address
+  assert.equal(store.purgeReports(5000), 2);                                 // purged when old enough
+  assert.equal(api.getReport(made.body.id).status, 404);
+  const { api: small } = setup({ maxReports: 1 });
+  assert.equal(small.createReport(goodReport(), '2.2.2.2').status, 201);
+  assert.equal(small.createReport(goodReport(), '2.2.2.3').status, 503);
+});
+
+await test('HTTP: POST /api/v1/reports, GET as JSON and as a page', async () => {
+  const { api } = setup();
+  const server = http.createServer(httpHandler(api, { site: 'https://aspa.example.org', template: () => '<head><!--og-->\n<title>x</title>\n<!--/og--></head><body>shell</body>' }));
+  await new Promise((r) => server.listen(0, '127.0.0.1', r));
+  const base = `http://127.0.0.1:${server.address().port}`;
+  const post = (body, headers = {}) => fetch(`${base}/api/v1/reports`, { method: 'POST', headers: { 'Content-Type': 'application/json', ...headers }, body: JSON.stringify(body) });
+  const r = await post(goodReport());
+  assert.equal(r.status, 201);
+  const { id } = await r.json();
+  const j = await fetch(`${base}/api/v1/reports/${id}`);
+  assert.equal(j.status, 200);
+  assert.match(j.headers.get('cache-control'), /max-age/);
+  assert.equal((await j.json()).kind, 'path');
+  const page = await fetch(`${base}/r/${id}`);
+  assert.equal(page.status, 200);
+  assert.match(page.headers.get('content-type'), /text\/html/);
+  assert.equal(page.headers.get('x-robots-tag'), 'noindex');
+  assert.match(await page.text(), /<title>AS path 3356 1299 680: Valid · ASPA Explorer<\/title>[\s\S]*shell/);
+  assert.equal((await fetch(`${base}/r/ffffffffffff`)).status, 404);
+  assert.equal((await fetch(`${base}/api/v1/reports/ffffffffffff`)).status, 404);
+  assert.equal((await post(goodReport(), { Origin: 'https://evil.example' })).status, 403);
+  server.close();
 });
 
 console.log(`${passed} tests passed`);

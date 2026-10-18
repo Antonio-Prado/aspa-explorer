@@ -1,0 +1,90 @@
+{
+ "id": "0123456789ab",
+ "created": "2026-10-18T12:00:00.000Z",
+ "expires": "2026-11-17T12:00:00.000Z",
+ "kind": "bulk",
+ "title": "3 AS paths: 1 valid, 1 unknown, 1 invalid",
+ "source": "/#path=3356+1299+680&from=down",
+ "sections": [
+  {
+   "heading": "Summary",
+   "text": "3 AS paths checked as routes that come from a provider (downstream check): 1 valid, 1 unknown, 1 invalid. ASPA data: 3,229 ASPAs, validator updated 2026-10-18 12:00 UTC."
+  },
+  {
+   "heading": "Paths",
+   "table": {
+    "columns": [
+     "Line",
+     "Prefix",
+     "Path",
+     "Verdict",
+     "Why"
+    ],
+    "rows": [
+     [
+      "1",
+      "193.0.0.0/21",
+      "3356 1299 680",
+      [
+       "Valid",
+       "valid"
+      ],
+      "up-ramp and down-ramp cover the path"
+     ],
+     [
+      "2",
+      "",
+      "9999 680",
+      [
+       "Unknown",
+       "unknown"
+      ],
+      "no ASPA for AS9999"
+     ],
+     [
+      "3",
+      "",
+      "1299 99 3356 680",
+      [
+       "Invalid",
+       "invalid"
+      ],
+      "a valley: the up-ramp (1) and the down-ramp (1) do not meet in 4 ASes"
+     ]
+    ]
+   }
+  },
+  {
+   "heading": "Hops",
+   "table": {
+    "columns": [
+     "Hop",
+     "Check"
+    ],
+    "rows": [
+     [
+      "AS680 \u2192 AS1299",
+      [
+       "AS680 lists AS1299",
+       "provider"
+      ]
+     ],
+     [
+      "AS1299 \u2192 AS99",
+      [
+       "AS1299 does not list AS99",
+       "not-provider"
+      ]
+     ],
+     [
+      "AS99 \u2192 AS3356",
+      [
+       "AS99 has no ASPA",
+       "none"
+      ]
+     ]
+    ]
+   }
+  }
+ ]
+}

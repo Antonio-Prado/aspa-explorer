@@ -13,6 +13,7 @@
 //   ASPA_DATA        http://127.0.0.1:8080/data/aspas.json
 //   LEAKS_BY_AS      http://127.0.0.1:8080/api/v1/leaks-by-as.json   places of valley of each AS (built once a day)
 //   STATUS_HISTORY   http://127.0.0.1:8080/api/v1/status-history.json   the states of the parts of the service (every 15 minutes)
+//   NOTIFY_SITE_DIR  /usr/local/www/aspa                           where site/report.html is (the shell of the pages /r/<id>)
 //   NOTIFY_PORT      8090 (127.0.0.1)
 //   NOTIFY_POLL      600 seconds between polls
 import http from 'node:http';
@@ -22,6 +23,7 @@ import { openStore } from './store.mjs';
 import { stabilise, audience, describeEvent, stateOf, newPlaces, describePlace } from './changes.mjs';
 import { compose, serialize, sendmail } from './mail.mjs';
 import { post } from './webhook.mjs';
+import { TTL_DAYS } from './reports.mjs';
 import { watchStatus, describeStatusEvent, statusSubject } from './status.mjs';
 import { makeApi, httpHandler, STATUS } from './server.mjs';
 
@@ -33,6 +35,7 @@ const REPLY_TO = env('NOTIFY_REPLY_TO', 'antonio.prado@dei.unipd.it');
 const DATA = env('ASPA_DATA', 'http://127.0.0.1:8080/data/aspas.json');
 const LEAKS = env('LEAKS_BY_AS', 'http://127.0.0.1:8080/api/v1/leaks-by-as.json');
 const STATUS_FILE = env('STATUS_HISTORY', 'http://127.0.0.1:8080/api/v1/status-history.json');
+const SITE_DIR = env('NOTIFY_SITE_DIR', '/usr/local/www/aspa');
 const POLL = Number(env('NOTIFY_POLL', '600')) * 1000;
 const MAX_FAILS = 5;
 const log = (m) => console.log(`${new Date().toISOString()} ${m}`);
@@ -234,10 +237,18 @@ async function poll() {
     try { await pollStatus(); } catch (err) { log(`status not read: ${err.message}`); }
     const purged = store.purge(Math.floor(Date.now() / 1000) - 2 * 86400);
     if (purged) log(`${purged} unconfirmed request(s) deleted`);
+    const old = store.purgeReports(Math.floor(Date.now() / 1000) - TTL_DAYS * 86400);
+    if (old) log(`${old} expired report(s) deleted`);
   } catch (err) { pulse.failures++; log(`poll failed: ${err.message}`); } finally { busy = false; }
 }
 
-const server = http.createServer(httpHandler(api, { site: SITE, health }));
+// the shell of the page of a report, read from the web root and kept a minute
+let tpl = { at: 0, html: null };
+const template = () => {
+  if (Date.now() - tpl.at > 60000) { try { tpl = { at: Date.now(), html: readFileSync(`${SITE_DIR}/report.html`, 'utf8') }; } catch (err) { tpl = { at: Date.now(), html: null }; log(`report.html not read: ${err.message}`); } }
+  return tpl.html;
+};
+const server = http.createServer(httpHandler(api, { site: SITE, health, template }));
 server.requestTimeout = 15000; server.headersTimeout = 10000;
 server.listen(Number(env('NOTIFY_PORT', '8090')), '127.0.0.1', () => log(`listening on 127.0.0.1:${env('NOTIFY_PORT', '8090')}`));
 poll();
