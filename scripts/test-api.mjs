@@ -54,6 +54,7 @@ test('badges', () => {
   assert.match(badgeFor(describe('AS40', ctx)), /no providers \(AS0\)/);
   assert.match(badgeFor(describe('AS50', ctx)), /with errors/);
   assert.match(badgeFor(describe('AS30', ctx)), />not configured yet</);
+  assert.match(badgeFor(describe('AS30', ctx)), />ASPA AS30</);       // the badge says which AS it is about
   assert.match(badge('a<b', 'x&y', '#000'), /a&lt;b/);
 });
 

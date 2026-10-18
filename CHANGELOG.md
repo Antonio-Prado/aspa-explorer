@@ -5,6 +5,11 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.38.2] - 2026-10-18
+
+### Changed
+- The badge of an AS says which AS it is about: *ASPA AS137: not configured yet*, *ASPA AS8283: 5 providers*. The grey badge of an AS with no data is made by nginx with the number in the address (its width follows the digits), no longer a single file that was the same for every AS.
+
 ## [1.38.1] - 2026-10-18
 
 ### Fixed
