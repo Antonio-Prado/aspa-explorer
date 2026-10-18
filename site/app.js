@@ -15,6 +15,7 @@ let aspas = [];            // [{customer, providers, source}] sorted by customer
 let byCustomer = new Map(); // 'AS123' -> aspa
 let byProvider = new Map(); // 'AS123' -> ['AS456', ...] customers naming it
 let aspaSets = new Map();   // 'AS123' -> Set of its providers, for the path checker
+let ixpSet = new Set();      // the exchange-point ASes (CAIDA), to say when one is in a path
 let dataStatus = null;      // the validator's status (when it last updated), for the stamp of a shared result
 
 function el(tag, attrs, ...children) {
@@ -264,6 +265,19 @@ function hopCell(customer, provider, outcome) {
   return el('td', { class: 'hop ' + HOP_CLASS[outcome] }, text);
 }
 
+// An exchange-point AS in a path that is not Valid: say what it may mean (RFC 7947 asks a route server not to be in the path).
+const ixpIn = (path) => path.filter((as) => ixpSet.has(Number(as.slice(2))));
+function ixpNote(v) {
+  const found = v.result === 'Valid' ? [] : ixpIn(v.path);
+  if (!found.length) return [];
+  const names = found.join(', ');
+  return [el('p', { class: 'hint ixp-note' },
+    el('strong', { text: `${names} ${found.length === 1 ? 'is' : 'are'} in the list of exchange-point ASes` }), ' (from the CAIDA data). ',
+    'A route server of an exchange point should not put its own AS number in the AS path: ',
+    el('a', { href: 'https://www.rfc-editor.org/rfc/rfc7947#section-2.2.2.1', target: '_blank', rel: 'noopener' }, 'RFC 7947, section 2.2.2.1', el('span', { class: 'sr-only', text: ' (opens in a new tab)' })),
+    ' says it SHOULD NOT prepend it, a recommendation kept only for compatibility with old route server clients, so that the members see the path as if they peered directly. Where it does, the ASPA verification meets a hop that nobody declared and the path comes out Invalid without any leak. The same AS number can also belong to a real network that peers and sells transit (NetIX is both): then the valley may be real. Check who it is, and where the route was learned, before blaming anybody.')];
+}
+
 function pathVerdict(v, missing) {
   const first = v.path[0];
   const last = v.path[v.N - 1];
@@ -294,6 +308,7 @@ function pathCheckNodes(text, direction) {
   const missing = [...new Set(v.path.filter((as) => !aspaSets.has(as)))];
   const kids = [
     el('p', { class: 'verdict v-' + v.result.toLowerCase() }, el('strong', { text: v.result }), ' ', pathVerdict(v, missing)),
+    ...ixpNote(v),
     el('p', { class: 'src' }, `Path from the origin to the neighbour${v.path.length < parsed.path.length ? ' (prepending removed)' : ''}: ${v.path.join(' → ')}`),
   ];
   if (v.N > 1) {
@@ -498,6 +513,8 @@ function checkRoutes(routes) {
     let why = '';
     if (v.result === 'Invalid') why = `a valley between ${v.path[v.maxUp - 1]} and ${v.path[v.N - v.maxDown]}`;
     else if (v.result === 'Unknown') why = `no ASPA from ${missing.slice(0, 4).join(', ')}${missing.length > 4 ? ` and ${missing.length - 4} more` : ''}`;
+    const ixps = v.result === 'Valid' ? [] : ixpIn(v.path);
+    if (ixps.length) why += `${why ? ' · ' : ''}${ixps.join(', ')} ${ixps.length === 1 ? 'is an' : 'are'} exchange-point AS${ixps.length === 1 ? '' : 'es'}`;
     return { v, result: v.result, why, shown: compressBgp(e.bgp), routes: e.routes, prefixes: e.prefixes.size, feeders: e.feeders };
   });
   const order = { Invalid: 0, Unknown: 1, Valid: 2 };
@@ -1600,6 +1617,7 @@ async function load() {
     await loadVisibility();
     computeQuality();
     renderQuality();
+    try { const c = await getEvidenceCtx(); if (c) ixpSet = c.ixp; } catch { /* no list: no note */ }
     renderRecent();
     lookupFromHash();
   } catch (err) {

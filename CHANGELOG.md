@@ -5,6 +5,11 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.41.0] - 2026-10-18
+
+### Added
+- When a path that is not Valid goes through an exchange-point AS (the CAIDA list), the table of the routes says so in its *Why* column, and the detail of the path (also in the AS path check and in the live updates) has a note: a route server should not put its own AS number in the AS path (RFC 7947, section 2.2.2.1: *SHOULD NOT*, a recommendation kept for compatibility with old clients), and where it does the ASPA verification meets a hop that nobody declared and the path is Invalid without any leak; but the same AS number can belong to a real network that peers and sells transit, as NetIX does, and then the valley may be real. The note does not decide; it says what to look at.
+
 ## [1.40.0] - 2026-10-18
 
 ### Added

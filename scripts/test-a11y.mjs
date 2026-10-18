@@ -56,7 +56,7 @@ const PAGES = [
   ['home', '/'], ['as', '/#AS12779'], ['path', '/#path=3356+12779&from=up'], ['changes', '/#changes'], ['quality', '/#quality'],
   ['statistics', '/statistics.html'], ['guide', '/guide.html'], ['api', '/api.html'],
   ['examples', '/examples.html'], ['embed', '/embed.html?country=IT'], ['status', '/status.html'], ['subscription', '/subscription.html#confirm=abc'],
-  ['bulk', '/#path=3356+12779&from=up'], ['peek', '/#AS12779'], ['recent', '/#AS12779'], ['report', '/r/0123456789ab'],
+  ['bulk', '/#path=3356+12779&from=up'], ['peek', '/#AS12779'], ['ixp', '/#path=12779+1200+24796&from=up'], ['recent', '/#AS12779'], ['report', '/r/0123456789ab'],
 ];
 const VIEWPORTS = [['desktop', { width: 1280, height: 800 }], ['narrow', { width: 320, height: 640 }]];
 const SCHEMES = ['light', 'dark'];
@@ -94,6 +94,12 @@ for (const [name, path] of PAGES) {
           const rows = await page.locator('#bulkresult tbody tr').count();
           if (rows !== 4) extra.push(`bulk: ${rows} rows, expected 4`);
           if (!(await page.locator('#bulkresult .share-result button').count())) extra.push('bulk: no button to share');
+        }
+        if (name === 'ixp') {
+          // an exchange-point AS (1200 is in the list of the fixture) in a path that is not Valid: the note must be there, with the RFC
+          const note = await page.locator('.ixp-note').count();
+          if (note !== 1) extra.push(`ixp: ${note} notes about the exchange point, expected 1`);
+          else if (!(await page.locator('.ixp-note a[href*="rfc7947"]').count())) extra.push('ixp: the note does not link RFC 7947');
         }
         if (name === 'peek') {
           // the quick look: a click on the name of an AS opens a window with rows, and it can be closed
