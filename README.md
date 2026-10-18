@@ -123,7 +123,7 @@ An **ASPA** (Autonomous System Provider Authorization) is a signed RPKI object i
 
 ASPA Explorer shows every ASPA that the validator currently considers valid, so you can search it, check AS paths and the routes seen in BGP against it, follow its changes and see the big picture. It runs at <https://aspa.ping6.it/> (Department of Information Engineering, University of Padova).
 
-<sub>In numbers, on 18 October 2026: 3,229 of 88,221 networks seen in BGP have an ASPA (3.66%); 607 M routes of 30 collectors are checked every day: 59 M valid (9.8%), 547 M with no ASPA to say about some hop and 691 k invalid; 10,011 places of valley, 16 days of history. The [statistics page](https://aspa.ping6.it/statistics.html) has the numbers of today.</sub>
+<sub>In numbers, on 18 October 2026: 3,229 of 88,221 networks seen in BGP have an ASPA (3.66%); 607 M routes of 30 collectors are checked every day: 59 M valid (9.8%), 547 M with no ASPA to say about some hop and 691 k invalid; 10,011 places of valley, 17 days of history. The [statistics page](https://aspa.ping6.it/statistics.html) has the numbers of today.</sub>
 
 The validator is a [Routinator](https://github.com/NLnetLabs/routinator) instance run at **[rpki.ping6.it](https://rpki.ping6.it/)**, which also publishes its own web UI (<https://rpki.ping6.it/ui/>) and the raw ASPA data (<https://rpki.ping6.it/jsonext?exclude=routeOrigins,routerKeys>).
 
