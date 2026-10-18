@@ -1430,7 +1430,7 @@ function irrBlock(as) {
     const tw = AspaIrr.threeWay(aspa, roles, caida);
     if (tw.rows.length) {
       const yes = (v) => (v === null ? 'no data' : v ? 'provider' : 'no');
-      const rowOf = (x) => el('tr', {}, el('th', { scope: 'row' }, asChip('AS' + x.as)), el('td', { text: x.irr === 'transit' ? 'transit provider' : (x.irr || 'not named') }), el('td', { text: yes(x.caida) }), el('td', { text: yes(x.aspa) }), el('td', { text: x.reading }));
+      const rowOf = (x) => el('tr', {}, el('th', { scope: 'row' }, asChip('AS' + x.as)), el('td', { text: x.irr === 'transit' ? 'transit provider' : (x.irr || 'not named') }), el('td', { class: 'nowrap', text: yes(x.caida) }), el('td', { class: 'nowrap', text: yes(x.aspa) }), el('td', { text: x.reading }));
       const head = el('thead', {}, el('tr', {}, ['AS', 'IRR object', 'CAIDA', 'ASPA', 'Reading'].map((t) => el('th', { scope: 'col', text: t }))));
       const table = el('table', { class: 'checks live' }, el('caption', { class: 'sr-only', text: 'Each AS that the IRR object, CAIDA or the ASPA calls a provider, and what each source says' }), head, el('tbody', {}, tw.rows.map(rowOf)));
       kids.push(el('h5', { class: 'irr-h', text: 'The three sources side by side' }),

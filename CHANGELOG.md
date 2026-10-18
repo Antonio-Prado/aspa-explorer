@@ -5,6 +5,11 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.43.3] - 2026-10-18
+
+### Fixed
+- In the table of the three sources the word *provider* broke into *provide* and *r* in the CAIDA and ASPA columns, squeezed by the long text of the IRR column. Those two columns do not wrap now, and the accessibility test checks it.
+
 ## [1.43.2] - 2026-10-18
 
 ### Fixed

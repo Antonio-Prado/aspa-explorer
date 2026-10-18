@@ -119,6 +119,9 @@ for (const [name, path] of PAGES) {
           if (!/only IRR says it/.test(row(6762))) extra.push(`irr: the row of AS6762 does not say that only the IRR has it (got: ${row(6762).replace(/\s+/g, ' ')})`);
           if (!/the IRR and CAIDA|IRR and CAIDA|all agree/.test(row(174))) extra.push(`irr: the row of AS174 is not read as agreed (got: ${row(174).replace(/\s+/g, ' ')})`);
           if (!/only ASPA says it/.test(row(200020))) extra.push('irr: the row of AS200020 does not say that only the ASPA has it');
+          // the words of the CAIDA and ASPA columns stay on one line, whatever the width of the page (a word broken in two was seen at the width of a laptop)
+          const broken = await page.evaluate(() => [...document.querySelectorAll('#as-irr tbody td.nowrap')].filter((td) => { const r = document.createRange(); r.selectNodeContents(td); return r.getClientRects().length > 1; }).length);
+          if (broken) extra.push(`irr: ${broken} cells of the CAIDA and ASPA columns are broken on two lines`);
         }
         if (name === 'peek') {
           // the quick look: a click on the name of an AS opens a window with rows, and it can be closed
