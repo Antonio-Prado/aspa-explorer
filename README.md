@@ -307,7 +307,8 @@ Releases follow [Semantic Versioning](https://semver.org/); the version shown in
 |---|---|
 | <a href="CHANGELOG.md" target="_blank" rel="noopener">CHANGELOG.md</a> | release history |
 | <a href="CONTRIBUTING.md" target="_blank" rel="noopener">CONTRIBUTING.md</a> | how to contribute |
-| <a href="SECURITY.md" target="_blank" rel="noopener">SECURITY.md</a> | how to report a vulnerability |
+| <a href="SECURITY.md" target="_blank" rel="noopener">SECURITY.md</a> | how to report a vulnerability (also `/.well-known/security.txt`) |
+| <a href="CODE_OF_CONDUCT.md" target="_blank" rel="noopener">CODE_OF_CONDUCT.md</a> | how we expect people to behave |
 | <a href="https://gitlab.dei.unipd.it/Antonio-Prado/aspa-explorer/-/wikis/home#" target="_blank" rel="noopener">Wiki</a> | user guide, accessibility, deployment |
 | <a href="LICENSE" target="_blank" rel="noopener">LICENSE</a> | MIT |
 

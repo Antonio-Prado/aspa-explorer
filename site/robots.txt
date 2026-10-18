@@ -1,0 +1,8 @@
+User-agent: *
+Allow: /
+Disallow: /api/
+Disallow: /data/
+Disallow: /datasets/
+Disallow: /subscription.html
+
+Sitemap: https://aspa.ping6.it/sitemap.xml

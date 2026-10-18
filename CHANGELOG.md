@@ -5,6 +5,12 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.35.0] - 2026-10-18
+
+### Added
+- The standard files that were missing: `/.well-known/security.txt` (RFC 9116, with the contact and the policy), `robots.txt`, `sitemap.xml`, the web app manifest with its icons (`/manifest.webmanifest`, 192 and 512 px, one maskable, and the Apple touch icon), and the preview image `og.png` (1200 x 630) with the Open Graph and Twitter tags on every page, so that a link pasted in a chat or a social network shows a title, a description and a picture. `hreflang` links join the English and the Italian guide. nginx serves the manifest with its own type.
+- `CODE_OF_CONDUCT.md` (Contributor Covenant 2.1), linked from `CONTRIBUTING.md`.
+
 ## [1.34.0] - 2026-10-18
 
 ### Fixed

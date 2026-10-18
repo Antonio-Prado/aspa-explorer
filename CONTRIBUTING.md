@@ -4,7 +4,7 @@ Thanks for your interest in ASPA Explorer.
 
 ## Reporting problems and ideas
 
-Development happens in a private repository of the Department of Information Engineering (group `internet_routing_sec`); the public repository is a read-only mirror of it, with issues and merge requests switched off. Send problems and ideas by email to antonio.prado@dei.unipd.it. For anything security-related, follow [SECURITY.md](SECURITY.md).
+Development happens in a private repository of the Department of Information Engineering (group `internet_routing_sec`); the public repository is a read-only mirror of it, with issues and merge requests switched off. Send problems and ideas by email to antonio.prado@dei.unipd.it. For anything security-related, follow [SECURITY.md](SECURITY.md) (the contact is also in [`/.well-known/security.txt`](https://aspa.ping6.it/.well-known/security.txt)). Everyone taking part is expected to follow the [Code of Conduct](CODE_OF_CONDUCT.md).
 
 ## Development
 
