@@ -8,15 +8,15 @@
 <meta name="color-scheme" content="light dark">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <link rel="alternate" hreflang="it" href="/guida.html">
-<link rel="stylesheet" href="/style.css?v=1.32.1">
-<script src="/status-checks.js?v=1.32.1" defer></script>
-<script src="/footer.js?v=1.32.1" defer></script>
+<link rel="stylesheet" href="/style.css?v=1.33.0">
+<script src="/status-checks.js?v=1.33.0" defer></script>
+<script src="/footer.js?v=1.33.0" defer></script>
 </head>
 <body>
 <a class="skip" href="#main">Skip to main content</a>
 <header class="wrap masthead">
   <div class="top">
-    <p class="back"><a class="brandlink" href="/" title="Back to ASPA Explorer"><img class="brand" src="/img/logo-mark.svg?v=1.32.1" alt="" width="40" height="40"><span>ASPA Explorer</span></a></p>
+    <p class="back"><a class="brandlink" href="/" title="Back to ASPA Explorer"><img class="brand" src="/img/logo-mark.svg?v=1.33.0" alt="" width="40" height="40"><span>ASPA Explorer</span></a></p>
     <nav class="topnav" aria-label="Main"><a href="/">Home</a><a href="/statistics.html">Statistics</a><a href="/examples.html">Examples</a><a href="/api.html">API</a><a href="/guide.html" aria-current="page">Guide</a><a href="/status.html">Status</a></nav>
   </div>
   <h1>Guide</h1>
@@ -231,12 +231,13 @@
     <h2 id="notify">Notifications by e-mail and webhook</h2>
     <p>Under each result, <em>Get notified by e-mail or webhook</em> subscribes you to one AS. You receive a message when its own ASPA appears, changes or disappears, and when another ASPA adds or drops it as a provider (the same events as its <a href="#share">feed</a>). The validator is checked every ten minutes, and a change is announced only when two checks in a row show it, so that a repository that is unreachable for a moment does not cause a false alarm.</p>
     <p>A box under the form asks, as an extra, for the <strong>places of valley</strong> that involve the AS: once a day, when a new one appears (the AS inside a valley, or its ASPA that seems to miss a provider), you get one message each. The places that exist when you subscribe are not announced, only the new ones. The box is chosen when you subscribe; to change it, stop and subscribe again. A webhook receives these as <code>aspa.leak</code> (see the <a href="/api.html#subscriptions">API page</a>).</p>
+    <p>The <a href="/status.html#alerts-title">Status page</a> has the same subscription for the <strong>state of the service</strong>: a message when a part (the validator, the API, the daily jobs) becomes late or down, and when it is back to OK. As for the ASPAs, a change is announced when two checks in a row, 15 minutes apart, show it, and the parts that changed in the same check come in one message. The monitor is a part as well: if no check has been recorded for three quarters of an hour, you are told that nothing is being watched. A webhook receives these as <code>aspa.status</code>. If the server itself is down no message can be sent, so this is not a replacement for a monitor of your own.</p>
     <h3>E-mail</h3>
     <p>Type your address. A message with a link comes to it; nothing is sent until you open the link and press the button. Every notification has a link to stop, and a <code>List-Unsubscribe</code> header that mail programs show as an unsubscribe button. The messages come from <code>notifications@aspa.ping6.it</code>, are signed with DKIM and are plain text. If they land in the spam folder, mark them as not spam.</p>
     <h3>Webhook</h3>
     <p>Give an <code>https</code> address with a public host name (port 443 or 8443; not an IP address, not a private network). The service first sends a <code>verification</code> request with a random <code>challenge</code>, and the address must answer with a 2xx status and repeat the challenge in the body; only then the subscription is active, and the <strong>secret</strong> is shown once. Each delivery is a JSON <code>POST</code> signed in the <code>X-ASPA-Signature</code> header (HMAC-SHA256 of the timestamp, a dot and the body, with the secret). The <a href="/api.html#subscriptions">API page</a> has the format. A webhook that fails five deliveries in a row is switched off.</p>
     <h3>What is kept</h3>
-    <p>The address (or the webhook address and its secret), the AS and the dates of subscription and of the last notification, for as long as the subscription lasts. A request that is never confirmed is deleted after two days. Visitor addresses are not stored: they are only counted in memory to limit abuse, a few requests an hour. Nothing is used for anything else or given to anyone; stopping deletes the record. Questions: <a href="mailto:antonio.prado@dei.unipd.it">antonio.prado@dei.unipd.it</a>.</p>
+    <p>The address (or the webhook address and its secret), the AS (or the status alerts) and the dates of subscription and of the last notification, for as long as the subscription lasts. A request that is never confirmed is deleted after two days. Visitor addresses are not stored: they are only counted in memory to limit abuse, a few requests an hour. Nothing is used for anything else or given to anyone; stopping deletes the record. Questions: <a href="mailto:antonio.prado@dei.unipd.it">antonio.prado@dei.unipd.it</a>.</p>
     <p>This is a research service run without guarantees: a notification may be late or, if a mail server rejects the message, lost.</p>
   </section>
 

@@ -9,6 +9,7 @@ import { sign, verify, relaxBody } from '../notifier/dkim.mjs';
 import { compose, serialize, sendmail, EMAIL_RE } from '../notifier/mail.mjs';
 import { openStore } from '../notifier/store.mjs';
 import { makeApi, httpHandler, parseAsn, limiter } from '../notifier/server.mjs';
+import { watchStatus, describeStatusEvent, statusSubject, MONITOR } from '../notifier/status.mjs';
 
 let passed = 0;
 const test = async (name, fn) => { await fn(); passed++; console.log('ok  ', name); };
@@ -315,6 +316,89 @@ await test('API: the request for places of valley is kept, only as an explicit t
   await api.subscribe({ kind: 'email', target: 'b@example.com', asn: 'AS1', leaks: true }, '1.1.1.3');   // a pending request can change its mind (not within the hour: ignored)
   const w = await api.subscribe({ kind: 'webhook', target: 'https://hooks.example.org/x', asn: 'AS2', leaks: true }, '1.1.1.4');
   assert.equal(w.body.leaks, true);
+});
+
+// ---- the alerts on the state of the service ----
+const T0 = 1_000_000;
+const hist = (rows) => ({
+  interval: 900,
+  checks: [{ id: 'validator', name: 'Validator', expected: 'every 10 minutes' }, { id: 'leaks', name: 'Leaks', expected: 'every day' }],
+  samples: rows.map((r, i) => [T0 + 900 * i, r]),
+});
+const run = (doc, saved, now = doc.samples[doc.samples.length - 1][0] + 60) => watchStatus(doc, saved, now);
+
+await test('status alerts: the first run only takes note', () => {
+  const r = run(hist(['od', 'od', 'ol']), null);
+  assert.deepEqual(r.events, []);
+  assert.deepEqual(r.saved.committed, { validator: 'o', leaks: 'l', monitor: 'o' });
+});
+
+await test('status alerts: a change counts after two samples in a row, once', () => {
+  let r = run(hist(['oo']), null);
+  r = run(hist(['oo', 'lo']), r.saved);                       // seen once: not yet
+  assert.deepEqual(r.events, []);
+  r = run(hist(['oo', 'lo', 'lo']), r.saved);                 // seen twice: announced
+  assert.equal(r.events.length, 1);
+  assert.deepEqual([r.events[0].id, r.events[0].from, r.events[0].to, r.events[0].at], ['validator', 'o', 'l', T0 + 1800]);
+  r = run(hist(['oo', 'lo', 'lo', 'lo']), r.saved);           // still late: nothing more
+  assert.deepEqual(r.events, []);
+});
+
+await test('status alerts: a single bad sample is not announced, and the way back is', () => {
+  let r = run(hist(['oo']), null);
+  r = run(hist(['oo', 'do', 'oo', 'oo']), r.saved);
+  assert.deepEqual(r.events, []);
+  r = run(hist(['oo', 'do', 'oo', 'oo', 'dd', 'dd']), r.saved);
+  assert.deepEqual(r.events.map((e) => [e.id, e.to]), [['validator', 'd'], ['leaks', 'd']]);
+  r = run(hist(['oo', 'do', 'oo', 'oo', 'dd', 'dd', 'od', 'od']), r.saved);
+  assert.deepEqual(r.events.map((e) => [e.id, e.from, e.to]), [['validator', 'd', 'o']]);
+  assert.equal(r.events[0].since, T0 + 3600 + 900);           // down since the moment it was announced
+});
+
+await test('status alerts: the same samples are not read twice, a part that is not checked is ignored', () => {
+  let r = run(hist(['oo']), null);
+  r = run(hist(['oo', 'l-', 'l-']), r.saved);
+  assert.deepEqual(r.events.map((e) => e.id), ['validator']);
+  r = run(hist(['oo', 'l-', 'l-']), r.saved);
+  assert.deepEqual(r.events, []);
+  assert.equal(r.saved.committed.leaks, 'o');
+});
+
+await test('status alerts: a monitor that stopped writing is told, twice in a row like the rest', () => {
+  const doc = hist(['oo', 'oo']);
+  let r = run(doc, null);
+  r = watchStatus(doc, r.saved, T0 + 900 + 3 * 900 + 10);      // 45 minutes and some without a sample: first sight
+  assert.deepEqual(r.events, []);
+  r = watchStatus(doc, r.saved, T0 + 900 + 3 * 900 + 610);
+  assert.deepEqual(r.events.map((e) => [e.id, e.to]), [[MONITOR.id, 'd']]);
+  assert.match(describeStatusEvent(r.events[0]), /not being watched/);
+  r = watchStatus(hist(['oo', 'oo', 'oo']), r.saved, T0 + 1800 + 60);
+  assert.deepEqual(r.events, []);                              // one good reading is not enough yet
+  r = watchStatus(hist(['oo', 'oo', 'oo']), r.saved, T0 + 1800 + 660);
+  assert.deepEqual(r.events.map((e) => [e.id, e.to]), [[MONITOR.id, 'o']]);
+});
+
+await test('status alerts: words and subject', () => {
+  const down = { id: 'leaks', name: 'Leaks', expected: 'every day', from: 'o', to: 'd', at: 1_700_000_000, since: null };
+  assert.match(describeStatusEvent(down), /^Leaks: now down \(was OK\) since 2023-11-14 22:13:20 UTC\. It should be updated every day\.$/);
+  const back = { ...down, from: 'd', to: 'o', since: 1_700_000_000 - 4500 };
+  assert.match(describeStatusEvent(back), /^Leaks: back to OK after 75 minutes \(/);
+  assert.equal(statusSubject([down]), 'ASPA Explorer status: Leaks down');
+  assert.equal(statusSubject([back]), 'ASPA Explorer: Leaks is back to OK');
+  assert.equal(statusSubject([down, { ...down, id: 'api', name: 'API', to: 'l' }]), 'ASPA Explorer status: Leaks down');
+});
+
+await test('API: a subscription to the status alerts, not to an AS', async () => {
+  const { store, api, mails } = setup();
+  const r = await api.subscribe({ kind: 'email', target: 'ops@example.com', topic: 'status', leaks: true }, '3.3.3.3');
+  assert.equal(r.status, 202);
+  assert.equal(mails[0].asn, 'STATUS');
+  const row = store.find('email', 'ops@example.com', 'STATUS');
+  assert.equal(row.leaks, 0);
+  assert.equal((await api.subscribe({ kind: 'email', target: 'ops@example.com', asn: 'STATUS' }, '3.3.3.4')).status, 400);   // "STATUS" is not an AS number
+  const w = await api.subscribe({ kind: 'webhook', target: 'https://hooks.example.org/s', topic: 'status' }, '3.3.3.5');
+  assert.equal(w.status, 201);
+  assert.equal(w.body.asn, 'STATUS');
 });
 
 console.log(`${passed} tests passed`);

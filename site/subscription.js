@@ -28,13 +28,14 @@
       const body = await r.json();
       if (!r.ok) throw new Error(body.error || `HTTP ${r.status}`);
       button.remove();
-      const what = body.asn ? ` for ${body.asn}` : '';
+      const what = body.asn === 'STATUS' ? ' of the status' : body.asn ? ` for ${body.asn}` : '';
       status.textContent = action === 'confirm' ? `Done: you will be told when something changes${what}.` : `Done: no more notifications${what}.`;
       if (body.asn) {
         then.hidden = false;
         const a = document.createElement('a');
-        a.href = `/as/${body.asn}`;
-        a.textContent = `Go to the page of ${body.asn}`;
+        const status = body.asn === 'STATUS';
+        a.href = status ? '/status.html' : `/as/${body.asn}`;
+        a.textContent = status ? 'Go to the status page' : `Go to the page of ${body.asn}`;
         then.replaceChildren(a);
       }
     } catch (err) {

@@ -12,6 +12,7 @@
 //   NOTIFY_SITE      https://aspa.ping6.it
 //   ASPA_DATA        http://127.0.0.1:8080/data/aspas.json
 //   LEAKS_BY_AS      http://127.0.0.1:8080/api/v1/leaks-by-as.json   places of valley of each AS (built once a day)
+//   STATUS_HISTORY   http://127.0.0.1:8080/api/v1/status-history.json   the states of the parts of the service (every 15 minutes)
 //   NOTIFY_PORT      8090 (127.0.0.1)
 //   NOTIFY_POLL      600 seconds between polls
 import http from 'node:http';
@@ -21,7 +22,8 @@ import { openStore } from './store.mjs';
 import { stabilise, audience, describeEvent, stateOf, newPlaces, describePlace } from './changes.mjs';
 import { compose, serialize, sendmail } from './mail.mjs';
 import { post } from './webhook.mjs';
-import { makeApi, httpHandler } from './server.mjs';
+import { watchStatus, describeStatusEvent, statusSubject } from './status.mjs';
+import { makeApi, httpHandler, STATUS } from './server.mjs';
 
 const env = (k, d) => process.env[k] || d;
 const SITE = env('NOTIFY_SITE', 'https://aspa.ping6.it');
@@ -30,6 +32,7 @@ const FROM = env('NOTIFY_FROM', 'notifications@aspa.ping6.it');
 const REPLY_TO = env('NOTIFY_REPLY_TO', 'antonio.prado@dei.unipd.it');
 const DATA = env('ASPA_DATA', 'http://127.0.0.1:8080/data/aspas.json');
 const LEAKS = env('LEAKS_BY_AS', 'http://127.0.0.1:8080/api/v1/leaks-by-as.json');
+const STATUS_FILE = env('STATUS_HISTORY', 'http://127.0.0.1:8080/api/v1/status-history.json');
 const POLL = Number(env('NOTIFY_POLL', '600')) * 1000;
 const MAX_FAILS = 5;
 const log = (m) => console.log(`${new Date().toISOString()} ${m}`);
@@ -48,6 +51,21 @@ const mailTo = (to, subject, text, unsubscribeUrl) =>
   sendmail(serialize(compose({ from: FROM, to, subject, text, unsubscribeUrl, replyTo: REPLY_TO, domain: DOMAIN }), dkim), FROM, to);
 
 async function sendConfirmation({ to, asn, token, site, leaks }) {
+  if (asn === STATUS) {
+    await mailTo(to, 'Confirm: status alerts of ASPA Explorer', [
+      'Somebody (probably you) asked ASPA Explorer to send a message to this address',
+      'whenever a part of the service (the validator, the daily jobs, the API) becomes late or down, and when it is back to OK.',
+      '',
+      'To start receiving these messages, open this link:',
+      `${site}/subscription.html#confirm=${token}`,
+      '',
+      'If it was not you, ignore this message: nothing is sent unless you confirm,',
+      'and the request is deleted after two days.',
+      '',
+      'ASPA Explorer, University of Padova - https://aspa.ping6.it/',
+    ].join('\n'));
+    return;
+  }
   await mailTo(to, `Confirm: ASPA changes for ${asn}`, [
     `Somebody (probably you) asked ASPA Explorer to send a message to this address`,
     `whenever the ASPA of ${asn}, or a mention of ${asn} as a provider in other ASPAs, changes${leaks ? ', and when a new place of valley (a possible route leak) involves it' : ''}.`,
@@ -150,6 +168,41 @@ async function pollLeaks() {
   }
 }
 
+// The states of the parts of the service (status-history.json, a sample every 15 minutes): the subscriptions to the topic
+// "status" get one message for all the parts that changed state since the previous poll. Nothing happens until a part changes.
+async function pollStatus() {
+  const r = await fetch(STATUS_FILE, { headers: { Accept: 'application/json', 'User-Agent': 'aspa-explorer-notifier' } });
+  if (!r.ok) throw new Error(`status: HTTP ${r.status}`);
+  const out = watchStatus(await r.json(), store.getState('status'), Math.floor(Date.now() / 1000));
+  store.setState('status', out.saved);
+  if (!out.events.length) return;
+  log(`${out.events.length} change(s) of state of the service`);
+  const text = out.events.map(describeStatusEvent);
+  for (const sub of store.allActive().filter((s) => s.asn === STATUS)) {
+    const unsub = api.unsubscribeUrl(sub.id);
+    try {
+      if (sub.kind === 'email') {
+        await mailTo(sub.target, statusSubject(out.events), [
+          ...text, '',
+          `Status: ${SITE}/status.html`, '',
+          'You receive this because you subscribed to the status alerts of ASPA Explorer. To stop:',
+          api.unsubscribePage(sub.id), '',
+          'A change is announced when two checks in a row (15 minutes apart) show it. If the server itself is down, no message can be sent.',
+        ].join('\n'), unsub);
+      } else {
+        const res = await post(sub.target, { type: 'aspa.status', text: text.join(' '), time: new Date().toISOString(), changes: out.events.map((e) => ({ part: e.id, name: e.name, from: e.from, to: e.to, at: new Date(e.at * 1000).toISOString() })), page: `${SITE}/status.html`, unsubscribe: unsub }, { secret: sub.secret });
+        if (!(res.status >= 200 && res.status < 300)) throw new Error(`HTTP ${res.status}`);
+      }
+      store.sent(sub.id, Math.floor(Date.now() / 1000));
+    } catch (err) {
+      store.failed(sub.id);
+      const now = store.get(sub.id);
+      log(`delivery to subscription ${sub.id} (${sub.kind}) failed: ${err.message}`);
+      if (now && now.fails >= MAX_FAILS) { store.disable(sub.id); log(`subscription ${sub.id} disabled after ${MAX_FAILS} failures`); }
+    }
+  }
+}
+
 // what /api/v1/subscriptions/health says: when the data was last read, and whether the last reads worked
 const pulse = { lastOk: null, lastTry: null, failures: 0 };
 const health = () => ({
@@ -178,6 +231,7 @@ async function poll() {
     store.setState('pending', out.pending);
     if (out.events.length) { log(`${out.events.length} change(s) confirmed`); await notify(out.events); }
     try { await pollLeaks(); } catch (err) { log(`leaks not read: ${err.message}`); }
+    try { await pollStatus(); } catch (err) { log(`status not read: ${err.message}`); }
     const purged = store.purge(Math.floor(Date.now() / 1000) - 2 * 86400);
     if (purged) log(`${purged} unconfirmed request(s) deleted`);
   } catch (err) { pulse.failures++; log(`poll failed: ${err.message}`); } finally { busy = false; }

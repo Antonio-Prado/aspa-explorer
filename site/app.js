@@ -673,9 +673,10 @@ function graphBlock(as) {
       const listed = new Set([...(own ? own.providers : []), ...(byProvider.get(as) || [])]);
       const extra = observed.filter((o) => !listed.has(o.asn)).length;
       const part = data.sample ? ` (a sample: its routes are too many to read, so only those of ${data.sample.used} of its ${data.sample.total} prefixes)` : '';
-      status.textContent = ` ${fmt.format(routes.length)} routes read${part}; ` + (extra
+      status.textContent = `${fmt.format(routes.length)} routes read${part}; ` + (extra
         ? `the ${extra > 6 ? 'six most seen of the ' + extra : extra} neighbours that the ASPAs do not list ${extra === 1 ? 'is' : 'are'} drawn on the right.`
         : 'every neighbour seen in the routes is already in the graph, so there is nothing to add.');
+      btn.hidden = true;                                     // done: the graph has them, the button would do nothing more
     } catch (err) { status.textContent = ` Could not read the routes (${err.message}).`; }
     btn.disabled = false;
   });

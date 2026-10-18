@@ -1,5 +1,5 @@
 // The HTTP side of the notifier, behind nginx on the loopback interface:
-//   POST /api/v1/subscriptions               {kind: "email"|"webhook", target, asn, leaks?: true}
+//   POST /api/v1/subscriptions               {kind: "email"|"webhook", target, asn, leaks?: true}  or  {kind, target, topic: "status"}
 //   POST /api/v1/subscriptions/confirm       {token}
 //   POST /api/v1/subscriptions/unsubscribe   {token}   (also ?token= with a form body, for List-Unsubscribe-Post)
 // Everything the handlers need from outside is passed in, so the tests can fake it.
@@ -9,6 +9,7 @@ import { EMAIL_RE } from './mail.mjs';
 import { parseWebhookUrl } from './webhook.mjs';
 
 const MAX_AS = 4294967295;
+export const STATUS = 'STATUS';
 const HOUR = 3600;
 
 export const parseAsn = (v) => {
@@ -46,11 +47,13 @@ export function makeApi(deps) {
   async function subscribe(body, ip) {
     if (!body || typeof body !== 'object') return bad('send a JSON object');
     if (body.website) return reply(202, { status: 'pending' });                       // honeypot field: bots fill it
-    const asn = parseAsn(body.asn);
-    if (!asn) return bad('asn must be an AS number such as AS3333 (1 to 4294967295)');
+    // topic "status": the state of the parts of the service, kept as a subscription for the made-up AS "STATUS"
+    const status = body.topic === 'status';
+    const asn = status ? STATUS : parseAsn(body.asn);
+    if (!asn) return bad('asn must be an AS number such as AS3333 (1 to 4294967295), or topic "status"');
     if (!perIp(ip) ) return bad('too many requests from this address, try again later', 429);
     const kind = body.kind;
-    const leaks = body.leaks === true ? 1 : 0;                                         // opt-in: also the places of valley that involve the AS
+    const leaks = body.leaks === true && !status ? 1 : 0;                                         // opt-in: also the places of valley that involve the AS
     if (kind !== 'email' && kind !== 'webhook') return bad('kind must be "email" or "webhook"');
     const t = now();
     if (store.countAsn(asn) >= MAX_PER_ASN) return bad('this AS has reached the limit of subscriptions', 429);

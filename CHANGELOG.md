@@ -5,10 +5,14 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [1.33.0] - 2026-10-18
 
 ### Added
-- The software is archived on Zenodo, DOI [10.5281/zenodo.23450622](https://doi.org/10.5281/zenodo.23450622) (the latest version; 1.32.1 is 10.5281/zenodo.23452070). Badge in the README, `doi` in `CITATION.cff`.
+- **Alerts on the state of the service.** The status page has a form to subscribe an e-mail address or a webhook to the state of the parts of the service: a message when a part becomes late or down, and when it is back to OK. A change is announced when two samples of the status history, 15 minutes apart, show it, and the parts that changed together come in one message. The monitor is a part as well: when no sample has been recorded for 45 minutes, subscribers are told that nothing is being watched. The API takes `"topic": "status"` instead of an AS, a webhook gets `aspa.status` (`notifier/status.mjs`, tests in `scripts/test-notify.mjs`).
+- The software is archived on Zenodo, DOI [10.5281/zenodo.23450622](https://doi.org/10.5281/zenodo.23450622) (the latest version; 1.32.1 is 10.5281/zenodo.23452070). Badge in the README, `doi` in `CITATION.cff`, and a line *Cite as* under the title of every page (`site/footer.js`) and next to the datasets on the API page.
+
+### Fixed
+- In the neighbourhood graph the link *Add the neighbours that the routes show* is gone once the neighbours are drawn; it stays when the routes could not be read, to try again.
 
 ## [1.32.1] - 2026-10-18
 

@@ -499,6 +499,7 @@ td.muted { color: var(--muted); }
 /* a shorter page: the home fits a laptop screen without scrolling */
 .masthead { padding-top: 1.5rem; padding-bottom: 0.9rem; }
 .masthead .lede { max-width: 64rem; }
+.masthead .cite { margin: 0.35rem 0 0.6rem; font-size: 0.85rem; color: var(--muted); }
 .tools { margin-bottom: 1rem; }
 .tile { padding: 0.75rem 1rem; }
 .foot { padding-top: 1rem; padding-bottom: 1.25rem; }

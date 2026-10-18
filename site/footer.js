@@ -150,4 +150,11 @@
       refresh();
     })
     .catch(() => { /* endpoint not available */ });
+
+  // How to cite, under the title of every page: the DOI of the software on Zenodo (the one of the concept, that always leads to the latest version).
+  const top = document.querySelector('header.masthead .top');
+  if (top) {
+    const it = document.documentElement.lang === 'it';
+    top.after(el('p', { class: 'cite' }, it ? 'Come citare: ' : 'Cite as: ', link('https://doi.org/10.5281/zenodo.23450622', 'doi:10.5281/zenodo.23450622')));
+  }
 })();

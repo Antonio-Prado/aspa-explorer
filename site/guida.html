@@ -8,15 +8,15 @@
 <meta name="color-scheme" content="light dark">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <link rel="alternate" hreflang="en" href="/guide.html">
-<link rel="stylesheet" href="/style.css?v=1.32.1">
-<script src="/status-checks.js?v=1.32.1" defer></script>
-<script src="/footer.js?v=1.32.1" defer></script>
+<link rel="stylesheet" href="/style.css?v=1.33.0">
+<script src="/status-checks.js?v=1.33.0" defer></script>
+<script src="/footer.js?v=1.33.0" defer></script>
 </head>
 <body>
 <a class="skip" href="#main">Vai al contenuto principale</a>
 <header class="wrap masthead">
   <div class="top">
-    <p class="back"><a class="brandlink" href="/" title="Torna a ASPA Explorer"><img class="brand" src="/img/logo-mark.svg?v=1.32.1" alt="" width="40" height="40"><span>ASPA Explorer</span></a></p>
+    <p class="back"><a class="brandlink" href="/" title="Torna a ASPA Explorer"><img class="brand" src="/img/logo-mark.svg?v=1.33.0" alt="" width="40" height="40"><span>ASPA Explorer</span></a></p>
     <nav class="topnav" aria-label="Main"><a href="/">Home</a><a href="/statistics.html">Statistics</a><a href="/examples.html">Examples</a><a href="/api.html">API</a><a href="/guide.html" aria-current="page">Guide</a><a href="/status.html">Status</a></nav>
   </div>
   <h1>Guida</h1>
@@ -231,6 +231,7 @@
     <h2 id="notify">Notifiche via e-mail e webhook</h2>
     <p>Sotto ogni risultato, <em>Get notified by e-mail or webhook</em> iscrive a un AS. Si riceve un messaggio quando la sua ASPA compare, cambia o scompare, e quando un'altra ASPA lo aggiunge o lo toglie come provider (gli stessi eventi del suo <a href="#share">feed</a>). Il validatore viene controllato ogni dieci minuti, e una modifica viene annunciata solo quando due controlli consecutivi la mostrano, in modo che un repository irraggiungibile per un attimo non causi un falso allarme.</p>
     <p>Una casella sotto il modulo chiede, come extra, i <strong>luoghi di valley</strong> che riguardano l'AS: una volta al giorno, quando ne compare uno nuovo (l'AS dentro una valley, o la sua ASPA che sembra non elencare un provider), ricevi un messaggio per ciascuno. I luoghi che esistono quando ti iscrivi non vengono annunciati, solo i nuovi. La casella si sceglie all'iscrizione; per cambiarla, annulla e iscriviti di nuovo. Un webhook li riceve come <code>aspa.leak</code> (vedi la <a href="/api.html#subscriptions">pagina API</a>).</p>
+    <p>La <a href="/status.html#alerts-title">pagina Status</a> ha la stessa iscrizione per lo <strong>stato del servizio</strong>: un messaggio quando una parte (il validatore, l'API, i job giornalieri) diventa in ritardo o non funziona, e quando torna OK. Come per le ASPA, un cambiamento è annunciato quando due controlli di fila, a 15 minuti l'uno dall'altro, lo mostrano, e le parti cambiate nello stesso controllo arrivano in un solo messaggio. Anche il monitor è una parte: se per tre quarti d'ora non è stato registrato nessun controllo, ti viene detto che nulla è sorvegliato. Un webhook li riceve come <code>aspa.status</code>. Se il server stesso è spento non si può inviare nulla, quindi non sostituisce un monitor tuo.</p>
     <h3>E-mail</h3>
     <p>Digita il tuo indirizzo. Ti arriva un messaggio con un link; non viene inviato nulla finché non apri il link e premi il pulsante. Ogni notifica ha un link per disiscriversi e un'intestazione <code>List-Unsubscribe</code> che i programmi di posta mostrano come pulsante di cancellazione. I messaggi arrivano da <code>notifications@aspa.ping6.it</code>, sono firmati con DKIM e sono in testo semplice. Se finiscono nella cartella dello spam, segnalali come non spam.</p>
     <h3>Webhook</h3>
