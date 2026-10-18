@@ -34,7 +34,7 @@ test('verdicts, in the order of the lines, with the reasons', () => {
 test('the upstream check names the hop that is not attested', () => {
   const r = checkMany(aspas, '1299 3356 680', 'up', AspaVerify);
   assert.equal(r.rows[0].result, 'Invalid');
-  assert.equal(r.rows[0].note, 'AS680 does not list AS3356'.replace('AS3356', 'AS3356'));
+  assert.equal(r.rows[0].note, 'AS680 does not list AS3356');
 });
 
 test('lines that are not paths are counted as errors and do not stop the others', () => {

@@ -37,6 +37,18 @@ export const FILES = (site) => [
 const sha256 = (buf) => createHash('sha256').update(buf).digest('hex');
 
 // The manifest of a snapshot. files: [{ name, about, data: Buffer }]
+export const MAX_FILE_BYTES = 400 * 1024 * 1024;
+
+// A downloaded file is kept in the archive only if it is what its name says: JSON that parses, a CSV with a header and a row, not empty and not
+// larger than a snapshot can be. A half-sent file or an error page would otherwise go into a dataset that people cite.
+export function checkFile(name, data) {
+  if (!Buffer.isBuffer(data) || !data.length) throw new Error(`${name}: the file is empty`);
+  if (data.length > MAX_FILE_BYTES) throw new Error(`${name}: the file is larger than ${MAX_FILE_BYTES / 1048576} MB`);
+  if (name.endsWith('.json')) { try { JSON.parse(data.toString('utf8')); } catch { throw new Error(`${name}: the file is not valid JSON`); } }
+  else if (name.endsWith('.csv') && data.toString('utf8').split('\n').filter(Boolean).length < 2) throw new Error(`${name}: the CSV has no data row`);
+  return data;
+}
+
 export function manifestOf(files, date, version) {
   return {
     name: 'ASPA Explorer data',
@@ -81,7 +93,7 @@ async function main() {
     return Buffer.from(await r.arrayBuffer());
   };
   const files = [];
-  for (const [name, url, about] of FILES(site)) files.push({ name, about, data: await get(url) });
+  for (const [name, url, about] of FILES(site)) files.push({ name, about, data: checkFile(name, await get(url)) });
   let version = 'unknown';
   try { version = JSON.parse(await get(`${site}/version.json`)).version; } catch { /* the version is only a note */ }
   const manifest = manifestOf(files, date, version);

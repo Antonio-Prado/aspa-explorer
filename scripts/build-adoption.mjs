@@ -152,15 +152,20 @@ async function fresh(path, maxAgeMs) {
   try { return Date.now() - (await stat(path)).mtimeMs < maxAgeMs; } catch { return false; }
 }
 
+const MAX_DOWNLOAD = 600 * 1024 * 1024;     // the biggest file is the CAIDA relationships, a few tens of MB
+
 async function download(url, path) {
+  if (new URL(url).protocol !== 'https:') throw new Error(`${url}: only https addresses are fetched`);
   let r;
   for (let attempt = 1; ; attempt++) {
     try { r = await fetch(url, { headers: { 'User-Agent': UA }, signal: AbortSignal.timeout(120000) }); break; }
     catch (err) { if (attempt === 3) throw new Error(`${url}: ${(err.cause && err.cause.code) || err.message}`); }
   }
   if (!r.ok) throw new Error(`${url}: HTTP ${r.status}`);
+  const body = Buffer.from(await r.arrayBuffer());
+  if (!body.length || body.length > MAX_DOWNLOAD) throw new Error(`${url}: the answer is empty or larger than ${MAX_DOWNLOAD / 1048576} MB`);
   const tmp = `${path}.tmp`;
-  await writeFile(tmp, Buffer.from(await r.arrayBuffer()));
+  await writeFile(tmp, body);
   await rename(tmp, path);
 }
 
