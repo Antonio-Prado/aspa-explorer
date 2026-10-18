@@ -638,3 +638,13 @@ dialog.peek h2 { margin: 0 0 0.6rem; font-size: 1.2rem; }
 .recent-note { margin: 0.4rem 0; }
 .recent-note.changed, .recent-changed { color: var(--warn-ink); font-weight: 600; }
 #recent-list { margin: 0.4rem 0; padding-left: 1.1rem; }
+/* the list of recent checks sits in the corner of the tools card, in the row of the tabs: it takes no height of its own (the home page fits a screen),
+   and its list opens over the page. On a narrow screen there is no room next to the tabs: it goes under them. */
+.tools { position: relative; }
+.recent { position: absolute; top: 0.55rem; right: 1rem; margin: 0; z-index: 4; }
+.recent summary { cursor: pointer; color: var(--accent); font-size: 0.875rem; }
+.recent[open] .recent-body { position: absolute; right: 0; top: 1.7rem; width: min(36rem, calc(100vw - 2rem)); box-sizing: border-box; background: var(--surface); border: 1px solid var(--grid); border-radius: 10px; padding: 0.6rem 1rem 0.2rem; box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25); }
+@media (max-width: 700px) {
+  .recent { position: static; padding: 0.5rem 1rem 0; }
+  .recent[open] .recent-body { position: static; width: auto; border: 0; box-shadow: none; padding: 0.3rem 0 0; }
+}

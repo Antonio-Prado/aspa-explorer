@@ -109,6 +109,11 @@ for (const [name, path] of PAGES) {
           await page.evaluate(() => { location.hash = '#AS12779'; });
           await page.waitForTimeout(400);
           if (!(await page.locator('.recent-note').count())) extra.push('recent: no note about the earlier look');
+          // the list must take no height: the home page is made to fit a screen
+          if (vname === 'desktop') {
+            const [without, withList] = await page.evaluate(() => { const r = document.getElementById('recent'); r.hidden = true; const a = document.documentElement.scrollHeight; r.hidden = false; return [a, document.documentElement.scrollHeight]; });
+            if (Math.abs(withList - without) > 1) extra.push(`recent: the list adds ${withList - without}px to the height of the page`);
+          }
           if (await page.locator('#recent').isHidden()) extra.push('recent: the list is hidden');
           else if (await page.locator('#recent-list li').count() < 2) extra.push('recent: fewer than 2 entries');
         }

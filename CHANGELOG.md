@@ -5,6 +5,11 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.39.1] - 2026-10-18
+
+### Fixed
+- The list *Recent checks* made the home page taller than a screen (it was a row of its own under the tools). It now sits in the corner of the tools card, in the row of the tabs, and opens over the page, so it takes no height; on a narrow screen, where there is no room next to the tabs, it goes under them. The accessibility test checks that the list adds no height.
+
 ## [1.39.0] - 2026-10-18
 
 ### Added
