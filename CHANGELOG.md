@@ -5,10 +5,10 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [1.37.0] - 2026-10-18
+## [1.37.1] - 2026-10-18
 
 ### Added
-- **Tromboning, IPv4 and IPv6 on the same probes**: a box in the tromboning panel runs the traceroute over IPv6 and then over IPv4 on the very same Globalping probes (the second measurement reuses the places of the first), and shows the median round trip of each family and their difference, the probes that are faster over each, those that answer on one family only, and the networks crossed over each (`pairProbes` and `comparePairs` in `site/traceroute.js`). The result can be shared like the others.
+- **Tromboning, IPv4 and IPv6 on the same probes**: a box in the tromboning panel runs the traceroute over IPv6 and then over IPv4 on the very same Globalping probes (the second measurement reuses the places of the first), and shows the median round trip of each family and their difference, the probes that are faster over each, those that answer on one family only, and the networks crossed over each (`pairProbes` and `comparePairs` in `site/traceroute.js`). The result can be shared like the others. A probe whose traceroute stops before the AS that is aimed at (the last router that answers is not in it) is not compared, because its round trip is the one of a router on the way: found trying it on AS137, where many IPv6 traceroutes stopped early and looked like "IPv6 faster". (1.37.0 was on the site for a few minutes without this and has no tag.)
 
 ## [1.36.0] - 2026-10-18
 

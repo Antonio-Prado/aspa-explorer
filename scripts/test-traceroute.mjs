@@ -104,7 +104,7 @@ const sum = (asn, city, network, net, path) => ({ probe: { asn, city, network },
 test('probes seen over IPv4 and IPv6 are paired, with the difference and the winner', () => {
   const s4 = [sum(100, 'Rome', 'A', 20, [100, 200, 9]), sum(101, 'Milan', 'B', 30, [101, 200, 9]), sum(102, 'Turin', 'C', 40, [102, 9]), sum(104, 'Bari', 'E', 10, [104, 9])];
   const s6 = [sum(101, 'Milan', 'B', 25, [101, 200, 9]), sum(100, 'Rome', 'A', 20.4, [100, 300, 9]), sum(102, 'Turin', 'C', null, []), sum(103, 'Pisa', 'D', 15, [103, 9])];
-  const rows = pairProbes(s4, s6);
+  const rows = pairProbes(s4, s6, 9);
   assert.deepEqual(rows.map((r) => [r.probe.city, r.winner]), [['Milan', 'v6'], ['Rome', 'tie'], ['Turin', 'v4 only'], ['Pisa', 'v6 only'], ['Bari', 'v4 only']]);
   assert.equal(rows[0].delta, -5);
   assert.equal(rows[0].sameNetworks, true);
@@ -121,9 +121,20 @@ test('probes seen over IPv4 and IPv6 are paired, with the difference and the win
 });
 
 test('two probes of the same network and city are told apart by their order', () => {
-  const rows = pairProbes([sum(1, 'X', 'N', 10, []), sum(1, 'X', 'N', 50, [])], [sum(1, 'X', 'N', 12, []), sum(1, 'X', 'N', 40, [])]);
+  const rows = pairProbes([sum(1, 'X', 'N', 10, []), sum(1, 'X', 'N', 50, [])], [sum(1, 'X', 'N', 12, []), sum(1, 'X', 'N', 40, [])]);   // no origin given: every answer counts
   assert.deepEqual(rows.map((r) => r.delta), [2, -10]);
   assert.equal(comparePairs([]).median4, null);
+});
+
+test('a traceroute that stops before the origin is not compared', () => {
+  const rows = pairProbes([sum(1, 'X', 'N', 30, [1, 200, 9])], [sum(1, 'X', 'N', 0.4, [1, 200])], 9);
+  assert.equal(rows[0].winner, 'v4 only');
+  assert.equal(rows[0].delta, null);
+  assert.equal(rows[0].n6, null);
+  assert.equal(rows[0].sameNetworks, null);
+  const c = comparePairs(rows);
+  assert.equal(c.both, 0);
+  assert.equal(c.median4, null);
 });
 
 console.log(`${passed} tests passed`);
