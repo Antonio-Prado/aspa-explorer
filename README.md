@@ -10,6 +10,7 @@
 <p align="center">
   <a href="https://gitlab.dei.unipd.it/Antonio-Prado/aspa-explorer/-/releases" target="_blank" rel="noopener"><img alt="latest release" src="https://gitlab.dei.unipd.it/Antonio-Prado/aspa-explorer/-/badges/release.svg"></a>
   <a href="https://doi.org/10.5281/zenodo.23450622" target="_blank" rel="noopener"><img alt="DOI" src="https://zenodo.org/badge/DOI/10.5281/zenodo.23450622.svg"></a>
+  <a href="https://aspa.ping6.it/as/AS137" target="_blank" rel="noopener"><img alt="ASPA of AS137, from ASPA Explorer" src="https://aspa.ping6.it/badge/AS137.svg"></a>
 </p>
 
 <p align="center">
