@@ -36,6 +36,16 @@ test('transit, route servers, peers and customers are told apart by the section,
   assert.deepEqual(r.candidate, []);
 });
 
+test('a section called customers does not make a customer of what comes after it without a new header (the object of a large ISP)', () => {
+  const r = roles(attrs('remarks: Upstreams', 'import: from AS1299 accept ANY', 'export: to AS1299 announce AS5:AS-CUSTOMERS',
+    'remarks: Customers', 'import: from AS64500 accept AS64500', 'export: to AS64500 announce ANY',
+    'remarks: AMS-IX Amsterdam', 'import: from AS3223 accept AS-VOXILITY-SET', 'export: to AS3223 announce AS5:AS-CUSTOMERS',
+    'remarks: 41327:100 localpref below normal customer route (backup)', 'import: from AS174 accept AS174:AS-COGENT', 'export: to AS174 announce AS5:AS-CUSTOMERS'));
+  assert.deepEqual(r.customer, [64500]);
+  assert.deepEqual(r.peer, [174, 3223]);          // the peering lines after "Customers" are peers: they announce a set, not ANY
+  assert.deepEqual(r.transit, [1299]);
+});
+
 test('import-via and export-via name an exchange-point AS', () => {
   const r = roles(attrs('remarks: Upstreams', 'import: from AS1299 accept ANY', 'export: to AS1299 announce AS41327:AS-CUSTOMERS',
     'remarks: Private Network Interconnect', 'import: from AS6461 accept AS-MFNX', 'export: to AS6461 announce AS41327:AS-CUSTOMERS',

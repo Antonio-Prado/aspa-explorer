@@ -5,6 +5,11 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.43.1] - 2026-10-18
+
+### Fixed
+- In the routing registry box, an AS that came after a section called *Customers* in a large object (Voxility in the object of Fiber Telecom) was read as a customer, because the sections after it do not always say that they have begun. A customer is now one that the AS announces ANY to, not one that is in a section with that name; and a header of a section is at most four words, so that the long remarks that document communities no longer open a section.
+
 ## [1.43.0] - 2026-10-18
 
 ### Added

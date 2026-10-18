@@ -5,7 +5,7 @@
 //
 // An aut-num says its routing policy in import and export lines, in a free order, with remarks to tell the sections. What this reads is cautious:
 //   * a neighbour that the AS accepts ANY from, in a part of the object that is called transit, upstream or provider, is a transit provider;
-//   * a neighbour that the AS announces ANY to, or that is in a part called customers, is a customer;
+//   * a neighbour that the AS announces ANY to (and does not accept ANY from) is a customer;
 //   * import-via and export-via name the AS that stands between the AS and other ASes: in practice the route server of an exchange point. An AS that
 //     appears only so is an intermediary (list `ixp`); one that has ordinary import and export lines too keeps the role that they give it, and is also in `via`;
 //   * the others (a set of prefixes in both directions: peering, private interconnects, exchange points) are peers.
@@ -27,7 +27,8 @@
       if (name === 'remarks') {
         const text = String(value).replace(/^[\s=\-#*]+|[\s=\-#*]+$/g, '');
         // a header is short and says only what the section is; "-- WARIAN --" is the name of a neighbour, not a section
-        if (text && text.length <= 60) for (const [kind, re] of SECTION) if (re.test(text) && !/^\s*[A-Za-z0-9 ]+ - /.test(text)) { context = kind; sections++; break; }
+        // a header is short, at most four words: the long remarks that document the communities say "customer" and "upstream" without opening a section
+        if (text && text.length <= 60 && text.split(/\s+/).length <= 4) for (const [kind, re] of SECTION) if (re.test(text)) { context = kind; sections++; break; }
         continue;
       }
       if (!POLICY.includes(name)) continue;
@@ -66,7 +67,7 @@
       const ctx = [...e.in, ...e.out].map((r) => r.context).find(Boolean) || null;
       const anyIn = e.in.some((r) => isAny(r.filter)), anyOut = e.out.some((r) => isAny(r.filter));
       if (ctx === 'transit' && anyIn) out.transit.push(n);
-      else if (ctx === 'customer' || (anyOut && !anyIn)) out.customer.push(n);
+      else if (anyOut && !anyIn) out.customer.push(n);      // a section called customers is not enough: the sections after it may not say that they are over
       else if (anyIn && !anyOut && ctx === null) out.candidate.push(n);       // "accept ANY" with no section to say what it is
       else out.peer.push(n);
     }
