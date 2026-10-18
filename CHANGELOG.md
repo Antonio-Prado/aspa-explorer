@@ -5,6 +5,15 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.40.0] - 2026-10-18
+
+### Added
+- A link to the privacy information of the University of Padova (<https://www.unipd.it/en/privacy>) in the footer of every page, next to the form to be notified and the alerts of the status page, in the guide and in the confirmation mails.
+- The logs of the web server (`access.log` and `error.log`, which hold the address of each visitor) are rotated every day, compressed and kept 365 days (`deploy/freebsd/newsyslog-nginx.conf`); before, they were never rotated.
+
+### Changed
+- The guide said that the visitor's address is not stored; the service itself only counts it in memory, but the web server writes it in its access log. The sections *What is kept* and *Sharing a result* now say so, with the 365 days.
+
 ## [1.39.5] - 2026-10-18
 
 ### Fixed

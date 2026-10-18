@@ -41,6 +41,7 @@ const INVALID_FILE = env('INVALID_LAST', 'http://127.0.0.1:8080/api/v1/invalid-l
 const SITE_DIR = env('NOTIFY_SITE_DIR', '/usr/local/www/aspa');
 const POLL = Number(env('NOTIFY_POLL', '600')) * 1000;
 const MAX_FAILS = 5;
+const PRIVACY = 'https://www.unipd.it/en/privacy';
 const log = (m) => console.log(`${new Date().toISOString()} ${m}`);
 
 const store = openStore(env('NOTIFY_DB', '/var/db/aspa-notify/notify.db'));
@@ -68,7 +69,9 @@ async function sendConfirmation({ to, asn, token, site, leaks, invalid }) {
       'If it was not you, ignore this message: nothing is sent unless you confirm,',
       'and the request is deleted after two days.',
       '',
-      'ASPA Explorer, University of Padova - https://aspa.ping6.it/',
+      `Privacy information: ${PRIVACY}`,
+    '',
+    'ASPA Explorer, University of Padova - https://aspa.ping6.it/',
     ].join('\n'));
     return;
   }
@@ -81,6 +84,8 @@ async function sendConfirmation({ to, asn, token, site, leaks, invalid }) {
     '',
     'If it was not you, ignore this message: nothing is sent unless you confirm,',
     'and the request is deleted after two days.',
+    '',
+    `Privacy information: ${PRIVACY}`,
     '',
     'ASPA Explorer, University of Padova - https://aspa.ping6.it/',
   ].join('\n'));

@@ -1463,7 +1463,7 @@ function notifyForm(as) {
   });
   return el('details', { class: 'embed' },
     el('summary', { text: 'Get notified by e-mail or webhook' }),
-    el('p', { class: 'hint', text: `A message when the ASPA of ${as} changes, or when another ASPA adds or drops ${as} as a provider; if you tick the first box, also when a new place of valley (a possible route leak) involves it; the second one tells you when the routes that the RIPE RIS collectors see show many invalid announcements with this AS as the origin. An e-mail address has to be confirmed through a link; a webhook has to repeat a challenge. Nothing else is kept or used.` }),
+    el('p', { class: 'hint' }, `A message when the ASPA of ${as} changes, or when another ASPA adds or drops ${as} as a provider; if you tick the first box, also when a new place of valley (a possible route leak) involves it; the second one tells you when the routes that the RIPE RIS collectors see show many invalid announcements with this AS as the origin. An e-mail address has to be confirmed through a link; a webhook has to repeat a challenge. Nothing else is kept or used. `, el('a', { href: 'https://www.unipd.it/en/privacy', target: '_blank', rel: 'noopener' }, 'Privacy information', el('span', { class: 'sr-only', text: ' (opens in a new tab)' })), '.'),
     form, msg,
     el('p', { class: 'hint' }, 'How it works, what is kept and how to stop: ', el('a', { href: '/guide.html#notify', text: 'the guide' }), '.'));
 }
