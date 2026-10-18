@@ -2,7 +2,7 @@
 import assert from 'node:assert/strict';
 import { Readable } from 'node:stream';
 import { readRib, readAsPath } from './mrt.mjs';
-import { Leaks, aspaMap, relations, byAs, addHistory, dumpUrl, pickLatestRib, rvListing, isRis, COLLECTORS } from './build-leaks.mjs';
+import { Leaks, aspaMap, relations, byAs, addHistory, withRetry, dumpUrl, pickLatestRib, rvListing, isRis, COLLECTORS } from './build-leaks.mjs';
 
 let passed = 0;
 const test = async (name, fn) => { await fn(); passed++; console.log('ok  ', name); };
@@ -162,6 +162,16 @@ await test('each collector, and the same places seen by RIS, by RouteViews or by
   assert.deepEqual(r.comparison.strong.both, 1);                                          // four feeders see the place of AS21
   assert.equal(r.comparison.strong.rv, 0);                                                // one feeder only: not strong
   assert.deepEqual(r.comparison.feeders, { ris: 4, rv: 3, both: 1 });                     // peers 1,2,3,6 at RIS, 1,4,5 at RouteViews: 1 is in both
+});
+
+await test('a download that is cut is tried again, up to the limit, and the last error is thrown', async () => {
+  let calls = 0; const said = [];
+  assert.equal(await withRetry(async () => { if (++calls < 3) throw new Error('terminated'); return 'ok'; }, 4, 1, (m) => said.push(m)), 'ok');
+  assert.equal(calls, 3);
+  assert.equal(said.length, 2);
+  calls = 0;
+  await assert.rejects(withRetry(async () => { calls++; throw new Error('HTTP 503'); }, 3, 1, () => {}), /HTTP 503/);
+  assert.equal(calls, 3);
 });
 
 console.log(`${passed} tests passed`);

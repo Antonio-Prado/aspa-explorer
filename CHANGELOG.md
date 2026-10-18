@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.30.2] - 2026-10-18
+
+### Fixed
+- The route leaks job tries a download again (four attempts, with growing pauses) when the archive cuts it. A single cut ("terminated") ended the whole run, so the daily file was not written and, in the rebuild of past days, the old file stayed (that is why some days of the history had 18 collectors and others 30).
+
 ## [1.30.1] - 2026-10-18
 
 ### Added

@@ -235,11 +235,25 @@ async function fresh(path, maxAgeMs) {
   try { return Date.now() - (await stat(path)).mtimeMs < maxAgeMs; } catch { return false; }
 }
 
+// Runs fn again, after a pause that grows with the attempt, when it fails: the archives of RouteViews and RIS now and
+// then cut a long download ("terminated") and one cut must not lose the run of the day. The last error is thrown.
+export async function withRetry(fn, tries = 4, pauseMs = 5000, log = (m) => console.error(m)) {
+  for (let i = 1; ; i++) {
+    try { return await fn(); } catch (err) {
+      if (i >= tries) throw err;
+      log(`attempt ${i} failed (${err.message}), trying again`);
+      await new Promise((r) => setTimeout(r, pauseMs * i));
+    }
+  }
+}
+
 async function download(url, path) {
-  const r = await fetch(url, { headers: { 'User-Agent': UA }, signal: AbortSignal.timeout(300000) });
-  if (!r.ok) throw new Error(`${url}: HTTP ${r.status}`);
   const tmp = `${path}.tmp`;
-  await pipeline(Readable.fromWeb(r.body), createWriteStream(tmp));
+  await withRetry(async () => {
+    const r = await fetch(url, { headers: { 'User-Agent': UA }, signal: AbortSignal.timeout(300000) });
+    if (!r.ok) throw new Error(`${url}: HTTP ${r.status}`);
+    await pipeline(Readable.fromWeb(r.body), createWriteStream(tmp));
+  });
   await rename(tmp, path);
 }
 
@@ -282,7 +296,7 @@ async function main() {
   for (const c of collectors) {
     const ext = isRis(c) ? 'gz' : 'bz2';
     const file = join(cache, dayIso ? `dump-${c}-${dayFlag}.${ext}` : `dump-${c}.${ext}`);
-    if (dayIso || !(await fresh(file, 4 * 3600e3))) await download(dayIso ? dumpUrl(c, dayFlag) : await latestDumpUrl(c), file);
+    if (dayIso || !(await fresh(file, 4 * 3600e3))) await download(dayIso ? dumpUrl(c, dayFlag) : await withRetry(() => latestDumpUrl(c)), file);
     const t0 = Date.now();
     const stats = await readRib(openDump(file), (peerAs, path, n) => leaks.add(peerAs, c, Array.from(path.subarray(0, n))));
     used.push({ collector: c, routes: stats.entries, built: new Date((await stat(file)).mtimeMs).toISOString().replace(/\.\d+Z$/, 'Z') });
