@@ -23,7 +23,7 @@ const FIX = join(here, 'fixtures', 'a11y');
 const TYPES = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.svg': 'image/svg+xml', '.json': 'application/json', '.png': 'image/png', '.jpg': 'image/jpeg', '.pdf': 'application/pdf' };
 const FIXTURE_OF = (p) => {
   if (p === '/data/aspas.json' || p === '/data/status.json') return p.slice(1);
-  if (/^\/api\/v1\/(adoption|leaks|validators|meta|leaks-history|status-history|trends)\.json$/.test(p)) return p.slice(1);
+  if (/^\/api\/v1\/(adoption|leaks|validators|meta|leaks-history|status-history|trends|resources|invalid)\.json$/.test(p)) return p.slice(1);
   if (/^\/api\/v1\/as\/\d+$/.test(p)) return 'api/v1/as.json';
   if (p === '/api/v1/subscriptions/health') return 'api/v1/health.json';
   if (p === '/datasets/index.json') return 'datasets/index.json';
@@ -85,7 +85,12 @@ for (const [name, path] of PAGES) {
         const result = await page.evaluate(() => axe.run(document, { runOnly: ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'best-practice'] }));
         const over = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
         const notes = result.violations.map((v) => `${v.id} (${v.nodes.length}): ${v.nodes[0].target.join(' ')} -- ${v.help}`);
-        if (over > 1) notes.push(`scrolls sideways by ${over}px`);
+        if (over > 1) {
+          // name the elements that stick out (not those inside a scrollable table), to find what to fix
+          const wide = await page.evaluate(() => [...document.body.querySelectorAll('*')].filter((e) => e.getBoundingClientRect().right > window.innerWidth + 1 && !e.closest('.table-wrap, svg, pre'))
+            .slice(0, 4).map((e) => `${e.tagName.toLowerCase()}${e.id ? '#' + e.id : ''}${e.className && typeof e.className === 'string' ? '.' + e.className.trim().split(/\s+/).join('.') : ''}`));
+          notes.push(`scrolls sideways by ${over}px${wide.length ? ` (${wide.join(', ')})` : ''}`);
+        }
         checked++;
         if (notes.length) { failures.push(label); console.log(`FAIL ${label}`); for (const n of notes) console.log(`     ${n}`); } else console.log(`ok   ${label}`);
       } catch (err) { failures.push(label); console.log(`FAIL ${label}: ${err.message}`); }

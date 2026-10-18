@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.32.0] - 2026-10-18
+
+### Fixed
+- **The count of valid routes was too high.** The leaks job counted as valid every route that had no hop attested as *not a provider*, including the routes with no ASPA at all along the path, which the procedure calls unknown (from three ASes up). The verdict of every route is now the one of the procedure (`classify` in `scripts/build-leaks.mjs`, tested against `verify()` on random paths), so the share of valid routes is much lower and the unknown one much higher than the numbers published before (for example 61% valid and 38% unknown on 17 October 2026 were in reality about 9% valid). The places of valley, the leaks and the gaps are not affected. The history of the leaks has been rebuilt.
+
+### Added
+- *From allocation to ASPA* on the statistics page, from `/api/v1/resources.json` (`scripts/build-resources.mjs`, daily): the AS numbers allocated, advertised and with an ASPA by RIR, region and economy, with reserved and available numbers, and the figures per million Internet users (World Bank open data); *By age of the AS number* (by year of allocation, 16-bit and 32-bit); *ASPAs that name AS numbers that should not be there* (customers and providers that are not allocated, reserved, private or documentation).
+- *Valid routes by address space and by length of the path* and *IPv6 and IPv4 side by side*, from the new `families` of `/api/v1/leaks.json`: routes and address span (IPv6 in /48s) by verdict, by number of ASes in the path, origin ASes and average path length, also weighted by address space; the history file has the valid share of the address space of each family.
+- *Invalid announcements, as they happen*: `scripts/watch-invalid.mjs` listens to the RIPE RIS Live stream for about nine minutes in every ten, checks every announcement and keeps 14 days of counts; `/api/v1/invalid.json` has the share of invalid announcements by hour, the profile and the origins and prefixes with the most.
+- `scripts/mrt.mjs` passes the prefix length and the family to the callback; the snapshots of the data have `resources.json` and `invalid.json`.
+- The manual `a11y` job of the GitLab pipeline can run the accessibility test on the runner now that a Chromium is installed there.
+
 ## [1.31.0] - 2026-10-18
 
 ### Added

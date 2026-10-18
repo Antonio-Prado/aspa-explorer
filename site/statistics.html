@@ -7,20 +7,24 @@
 <meta name="description" content="Statistics of the ASPAs: how many over time, by RIR, providers per ASPA, the most-named providers, and who has published one, by size of the network, RIR and country.">
 <meta name="color-scheme" content="light dark">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
-<link rel="stylesheet" href="/style.css?v=1.31.0">
-<script src="/stats.js?v=1.31.0" defer></script>
-<script src="/adoption.js?v=1.31.0" defer></script>
-<script src="/trends.js?v=1.31.0" defer></script>
-<script src="/leaks.js?v=1.31.0" defer></script>
-<script src="/validators.js?v=1.31.0" defer></script>
-<script src="/status-checks.js?v=1.31.0" defer></script>
-<script src="/footer.js?v=1.31.0" defer></script>
+<link rel="stylesheet" href="/style.css?v=1.32.0">
+<script src="/stats.js?v=1.32.0" defer></script>
+<script src="/adoption.js?v=1.32.0" defer></script>
+<script src="/trends.js?v=1.32.0" defer></script>
+<script src="/ui.js?v=1.32.0" defer></script>
+<script src="/resources.js?v=1.32.0" defer></script>
+<script src="/coverage.js?v=1.32.0" defer></script>
+<script src="/invalid.js?v=1.32.0" defer></script>
+<script src="/leaks.js?v=1.32.0" defer></script>
+<script src="/validators.js?v=1.32.0" defer></script>
+<script src="/status-checks.js?v=1.32.0" defer></script>
+<script src="/footer.js?v=1.32.0" defer></script>
 </head>
 <body>
 <a class="skip" href="#main">Skip to main content</a>
 <header class="wrap masthead">
   <div class="top">
-    <p class="back"><a class="brandlink" href="/" title="Back to ASPA Explorer"><img class="brand" src="/img/logo-mark.svg?v=1.31.0" alt="" width="40" height="40"><span>ASPA Explorer</span></a></p>
+    <p class="back"><a class="brandlink" href="/" title="Back to ASPA Explorer"><img class="brand" src="/img/logo-mark.svg?v=1.32.0" alt="" width="40" height="40"><span>ASPA Explorer</span></a></p>
     <nav class="topnav" aria-label="Main"><a href="/">Home</a><a href="/statistics.html" aria-current="page">Statistics</a><a href="/examples.html">Examples</a><a href="/api.html">API</a><a href="/guide.html">Guide</a><a href="/status.html">Status</a></nav>
   </div>
   <h1>Statistics</h1>
@@ -144,6 +148,54 @@
     <button type="button" class="more" id="cc-more" hidden>Show more</button>
   </section>
 
+  <section aria-labelledby="res-title">
+    <h2 id="res-title">From allocation to ASPA</h2>
+    <p class="hint">For each registry and region: the AS numbers that are allocated, how many of those are advertised in BGP, and how many have an ASPA.</p>
+    <section class="card table-wrap" tabindex="0" aria-label="AS numbers by RIR: allocated, advertised and with an ASPA">
+      <table class="checks live">
+        <caption class="sr-only">AS numbers by RIR: allocated, advertised in BGP, the share advertised, with an ASPA and the share of the advertised ones, reserved and available</caption>
+        <thead><tr><th scope="col">RIR</th><th scope="col" class="num">Allocated</th><th scope="col" class="num">Advertised</th><th scope="col" class="num">Advertised %</th><th scope="col" class="num">With an ASPA</th><th scope="col" class="num">ASPA % of advertised</th><th scope="col" class="num">Reserved</th><th scope="col" class="num">Available</th></tr></thead>
+        <tbody id="res-rir"></tbody>
+      </table>
+    </section>
+    <section class="card table-wrap" tabindex="0" aria-label="AS numbers by region">
+      <table class="checks live">
+        <caption class="sr-only">AS numbers by region of the World Bank: allocated, advertised, with an ASPA, Internet users and ASPAs per million users</caption>
+        <thead><tr><th scope="col">Region</th><th scope="col" class="num">Allocated</th><th scope="col" class="num">Advertised</th><th scope="col" class="num">With an ASPA</th><th scope="col" class="num">ASPA % of advertised</th><th scope="col" class="num">Internet users (millions)</th><th scope="col" class="num">ASPAs per million users</th></tr></thead>
+        <tbody id="res-region"></tbody>
+      </table>
+    </section>
+    <h3 class="subhead">By economy</h3>
+    <p class="opts">
+      <label>Sort by <select id="eco-sort"><option value="allocated">AS numbers allocated</option><option value="aspa">with an ASPA</option><option value="aspa_per_million_users">ASPAs per million users</option><option value="advertised_per_million_users">advertised per million users</option></select></label>
+      <label>Economies with at least <select id="eco-min"><option value="1">1 advertised</option><option value="10" selected>10 advertised</option><option value="50">50 advertised</option><option value="200">200 advertised</option></select></label>
+    </p>
+    <section class="card table-wrap" tabindex="0" aria-label="AS numbers by economy">
+      <table class="checks live">
+        <caption class="sr-only">AS numbers by economy: allocated, advertised, with an ASPA, Internet users, and the figures per million users</caption>
+        <thead><tr><th scope="col">Economy</th><th scope="col">Region</th><th scope="col" class="num">Allocated</th><th scope="col" class="num">Advertised</th><th scope="col" class="num">With an ASPA</th><th scope="col" class="num">ASPA % of advertised</th><th scope="col" class="num">Users (M)</th><th scope="col" class="num">ASPAs per M users</th><th scope="col" class="num">Advertised per M users</th></tr></thead>
+        <tbody id="eco-rows"></tbody>
+      </table>
+    </section>
+    <button type="button" class="more" id="eco-more" hidden>Show more</button>
+    <p class="hint" id="res-note"><span class="busy">Loading</span></p>
+  </section>
+
+  <section class="card pad" aria-labelledby="age-title">
+    <h2 id="age-title" class="subhead">By age of the AS number</h2>
+    <p class="hint">The share of the advertised AS numbers that have an ASPA, by the year they were allocated.</p>
+    <div id="age-years"></div>
+    <h3 class="subhead">By width of the number</h3>
+    <div id="age-width"></div>
+    <p class="hint" id="age-note"></p>
+  </section>
+
+  <section aria-labelledby="bogus-title">
+    <h2 id="bogus-title">ASPAs that name AS numbers that should not be there</h2>
+    <p class="hint">A customer or a provider in an ASPA that no registry has allocated, or that is private, reserved or for documentation, is a mistake or a test left in the RPKI.</p>
+    <div id="bogus-body"></div>
+  </section>
+
   <section aria-labelledby="leaks-title">
     <h2 id="leaks-title">Route leaks today</h2>
     <p class="hint" id="leaks-sub"><span class="busy">Loading</span></p>
@@ -187,6 +239,61 @@
     <div class="barchart" id="cmp-chart"></div>
     <p class="hint" id="cmp-note"></p>
     <p class="hint" id="leaks-note"></p>
+  </section>
+
+  <section aria-labelledby="cov-title">
+    <h2 id="cov-title">Valid routes by address space and by length of the path</h2>
+    <p class="hint" id="cov-sub"><span class="busy">Loading</span></p>
+    <section class="card table-wrap" tabindex="0" aria-label="Verdicts of the routes and of the address space">
+      <table class="checks live">
+        <caption class="sr-only">Verdicts of the routes of the collectors and of the address space they cover, for IPv4 and IPv6</caption>
+        <thead><tr><th scope="col">Family</th><th scope="col" class="num">Routes</th><th scope="col" class="num">Valid</th><th scope="col" class="num">Unknown</th><th scope="col" class="num">Invalid</th><th scope="col" class="num">Space valid</th><th scope="col" class="num">Space unknown</th><th scope="col" class="num">Space invalid</th></tr></thead>
+        <tbody id="cov-shares"></tbody>
+      </table>
+    </section>
+    <h3 class="subhead">IPv4, by number of ASes in the path</h3>
+    <section class="card table-wrap" tabindex="0" aria-label="IPv4 routes by length of the AS path">
+      <table class="checks live">
+        <caption class="sr-only">IPv4 routes by number of ASes in the path: routes, a bar with the three verdicts, their shares and the share of the address space that is valid</caption>
+        <thead><tr><th scope="col">ASes</th><th scope="col" class="num">Routes</th><th scope="col">Verdicts</th><th scope="col" class="num">Valid</th><th scope="col" class="num">Unknown</th><th scope="col" class="num">Invalid</th><th scope="col" class="num">Space valid</th></tr></thead>
+        <tbody id="cov-rows-v4"></tbody>
+      </table>
+    </section>
+    <h3 class="subhead">IPv6, by number of ASes in the path</h3>
+    <section class="card table-wrap" tabindex="0" aria-label="IPv6 routes by length of the AS path">
+      <table class="checks live">
+        <caption class="sr-only">IPv6 routes by number of ASes in the path: routes, a bar with the three verdicts, their shares and the share of the address space that is valid</caption>
+        <thead><tr><th scope="col">ASes</th><th scope="col" class="num">Routes</th><th scope="col">Verdicts</th><th scope="col" class="num">Valid</th><th scope="col" class="num">Unknown</th><th scope="col" class="num">Invalid</th><th scope="col" class="num">Space valid</th></tr></thead>
+        <tbody id="cov-rows-v6"></tbody>
+      </table>
+    </section>
+  </section>
+
+  <section aria-labelledby="fam-title">
+    <h2 id="fam-title">IPv6 and IPv4 side by side</h2>
+    <p class="hint" id="fam-sub"><span class="busy">Loading</span></p>
+    <section class="card table-wrap" tabindex="0" aria-label="IPv6 and IPv4 compared">
+      <table class="checks live">
+        <caption class="sr-only">The routes of the collectors for IPv6 and IPv4, and the ratio of the two</caption>
+        <thead><tr><th scope="col">Metric</th><th scope="col" class="num">IPv6</th><th scope="col" class="num">IPv4</th><th scope="col" class="num">IPv6 / IPv4</th></tr></thead>
+        <tbody id="fam-rows"></tbody>
+      </table>
+    </section>
+  </section>
+
+  <section aria-labelledby="inv-title">
+    <h2 id="inv-title">Invalid announcements, as they happen</h2>
+    <p class="hint" id="inv-sub"><span class="busy">Loading</span></p>
+    <div class="tiles" id="inv-tiles"></div>
+    <div class="card pad"><h3 class="subhead">Share of invalid announcements, by hour</h3><div class="linechart" id="inv-chart"></div></div>
+    <h3 class="subhead">Origins with the most invalid announcements</h3>
+    <section class="card table-wrap" tabindex="0" aria-label="Origins with the most invalid announcements"><table class="checks live"><caption class="sr-only">The 20 origin ASes with the most invalid announcements in the last 14 days</caption><thead><tr><th scope="col">Origin</th><th scope="col" class="num">Invalid</th><th scope="col" class="num">Announcements</th><th scope="col" class="num">Share</th><th scope="col" class="num">Prefixes</th></tr></thead><tbody id="inv-origins"></tbody></table></section>
+    <h3 class="subhead">Origins with the highest share of invalid announcements</h3>
+    <section class="card table-wrap" tabindex="0" aria-label="Origins with the highest share of invalid announcements"><table class="checks live"><caption class="sr-only">The 20 origin ASes with the highest share of invalid announcements, among those with at least 100 announcements</caption><thead><tr><th scope="col">Origin</th><th scope="col" class="num">Share</th><th scope="col" class="num">Invalid</th><th scope="col" class="num">Announcements</th><th scope="col" class="num">Prefixes</th></tr></thead><tbody id="inv-share"></tbody></table></section>
+    <h3 class="subhead">Prefixes with the most invalid announcements</h3>
+    <section class="card table-wrap" tabindex="0" aria-label="Prefixes with the most invalid announcements"><table class="checks live"><caption class="sr-only">The 20 prefixes with the most invalid announcements in the last 14 days</caption><thead><tr><th scope="col">Prefix</th><th scope="col">Origin</th><th scope="col" class="num">Invalid</th></tr></thead><tbody id="inv-prefixes"></tbody></table></section>
+    <p class="hint" id="inv-note"></p>
+    <p class="hint">The report as JSON: <a href="/api/v1/invalid.json">/api/v1/invalid.json</a>.</p>
   </section>
 
   <section aria-labelledby="val-title">

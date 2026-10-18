@@ -2,7 +2,8 @@
 import assert from 'node:assert/strict';
 import { Readable } from 'node:stream';
 import { readRib, readAsPath } from './mrt.mjs';
-import { Leaks, aspaMap, relations, byAs, addHistory, withRetry, dumpUrl, pickLatestRib, rvListing, isRis, COLLECTORS } from './build-leaks.mjs';
+import { createRequire as cr } from 'node:module';
+import { Leaks, classify, spanOf, aspaMap, relations, byAs, addHistory, withRetry, dumpUrl, pickLatestRib, rvListing, isRis, COLLECTORS } from './build-leaks.mjs';
 
 let passed = 0;
 const test = async (name, fn) => { await fn(); passed++; console.log('ok  ', name); };
@@ -172,6 +173,54 @@ await test('a download that is cut is tried again, up to the limit, and the last
   calls = 0;
   await assert.rejects(withRetry(async () => { calls++; throw new Error('HTTP 503'); }, 3, 1, () => {}), /HTTP 503/);
   assert.equal(calls, 3);
+});
+
+const verifyOf = cr(import.meta.url)('../site/verify.js').verify;
+
+await test('classify gives the verdict of verify() for any path, with or without ASPAs', () => {
+  let seed = 12345;
+  const rnd = (n) => { seed = (seed * 1103515245 + 12345) & 0x7fffffff; return seed % n; };
+  for (let round = 0; round < 300; round++) {
+    const aspas = new Map();
+    for (let a = 1; a <= 8; a++) if (rnd(3)) aspas.set(a, new Set(Array.from({ length: rnd(4) }, () => 1 + rnd(8)).concat(rnd(6) === 0 ? [0] : [])));
+    const len = 1 + rnd(7);
+    const p = [];
+    while (p.length < len) { const a = 1 + rnd(8); if (p[p.length - 1] !== a) p.push(a); }
+    const str = new Map([...aspas].map(([c, s]) => [`AS${c}`, new Set([...s].map((x) => `AS${x}`))]));
+    const want = { Valid: 0, Unknown: 1, Invalid: 2 }[verifyOf(str, p.map((a) => `AS${a}`), 'down').result];
+    assert.equal(classify(aspas, p), want, JSON.stringify({ p, aspas: [...aspas].map(([c, s]) => [c, [...s]]) }));
+  }
+});
+
+await test('a path with no ASPA at all is unknown, and only a path whose hops are all attested is valid', () => {
+  const none = new Map();
+  assert.equal(classify(none, [1, 2, 3]), 1);
+  assert.equal(classify(none, [1, 2]), 0);                    // two ASes: the collector side is only the feeder
+  assert.equal(classify(new Map([[1, new Set([2])], [2, new Set([3])]]), [1, 2, 3]), 0);
+  assert.equal(classify(new Map([[1, new Set([2])], [2, new Set([9])], [4, new Set([5])]]), [1, 2, 3, 4]), 2);   // a valley between 2 and 3
+});
+
+await test('the routes are counted by verdict, family and length of the path, with the address span', () => {
+  const l = new Leaks(new Map([[1, new Set([2])], [2, new Set([9])], [4, new Set([5])]]));
+  l.add(10, 'rrc00', [2, 1], 24, false);                      // valid, a /24: 256 addresses
+  l.add(10, 'rrc00', [9, 8, 7], 22, false);                   // unknown (no ASPA for 7, 8, 9), a /22: 1024 addresses
+  l.add(11, 'rrc00', [4, 3, 2, 1], 48, true);                 // invalid: a valley between 2 and 3, an IPv6 /48
+  const r = l.result();
+  assert.equal(r.total.valid, 1); assert.equal(r.total.unknown, 1); assert.equal(r.total.invalid, 1);
+  assert.deepEqual([r.families.v4.valid, r.families.v4.unknown, r.families.v4.invalid], [1, 1, 0]);
+  assert.deepEqual([r.families.v6.valid, r.families.v6.unknown, r.families.v6.invalid], [0, 0, 1]);
+  assert.deepEqual(r.families.v4.span, { valid: 256, unknown: 1024, invalid: 0 });
+  assert.equal(r.families.v6.span.invalid, 1);
+  assert.equal(r.families.v4.avg_path, 2.5);
+  assert.equal(r.families.v4.by_length[1].routes, 1);         // one path of two ASes
+  assert.equal(r.families.v4.by_length[2].unknown, 1);        // and one of three
+  assert.equal(r.families.v4.origins, 2);
+  l.add(10, 'rrc00', [], 24, false);                           // nothing left after the exchange points are dropped: counted, no failure
+  assert.equal(l.result().families.v4.by_length[0].routes, 1);
+  l.add(10, 'rrc00', [2, 1], 0, false);                        // a default route: counted as a route, its 2^32 addresses are not
+  const r2 = l.result().families.v4;
+  assert.equal(r2.short_prefixes, 1); assert.equal(r2.span.valid, 512);   // the /24 twice: the path of the second one is empty
+  assert.equal(spanOf(24, false), 256); assert.equal(spanOf(32, true), 65536); assert.equal(spanOf(48, true), 1);
 });
 
 console.log(`${passed} tests passed`);

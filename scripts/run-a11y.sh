@@ -18,4 +18,5 @@ mkdir -p "$work/scripts"
 cp "$root/scripts/test-a11y.mjs" "$work/scripts/"
 cp -R "$root/scripts/fixtures" "$work/scripts/fixtures"
 ln -s "$root/site" "$work/site"
-cd "$work" && CHROME="$chrome" node scripts/test-a11y.mjs "$@"
+# PLAYWRIGHT_BROWSERS_PATH: on a platform that Playwright has no browser for (FreeBSD) it refuses to start without a folder for them
+cd "$work" && PLAYWRIGHT_BROWSERS_PATH="$work/browsers" CHROME="$chrome" node scripts/test-a11y.mjs "$@"

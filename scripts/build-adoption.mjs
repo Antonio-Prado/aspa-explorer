@@ -164,7 +164,7 @@ async function download(url, path) {
   await rename(tmp, path);
 }
 
-async function cached(url, path, maxAgeMs) {
+export async function cached(url, path, maxAgeMs) {
   if (!(await fresh(path, maxAgeMs))) {
     try { await download(url, path); } catch (err) { if (!(await stat(path).catch(() => null))) throw err; console.error(`${err.message}; using the older copy`); }
   }

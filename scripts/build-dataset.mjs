@@ -26,6 +26,8 @@ export const FILES = (site) => [
   ['events.json', `${GITLAB}/events.json/raw?ref=history`, 'every change of an ASPA since 12 October 2023: [date, customer, providers or null]'],
   ['visibility.json', `${GITLAB}/visibility.json/raw?ref=history`, 'the ASes with an ASPA that the RIPE RIS collectors do not see, with the day'],
   ['adoption.json', `${site}/api/v1/adoption.json`, 'networks seen in BGP with an ASPA: by RIR, country and size, the largest transit networks'],
+  ['resources.json', `${site}/api/v1/resources.json`, 'AS numbers allocated, advertised and with an ASPA, by RIR, region, economy, year and width; ASPAs that name numbers that are not allocated'],
+  ['invalid.json', `${site}/api/v1/invalid.json`, 'the invalid announcements of the last 14 days as the RIS Live stream gives them: by hour, origin and prefix'],
   ['trends.json', `${site}/api/v1/trends.json`, 'networks with an ASPA, month by month, for each RIR and country'],
   ['leaks.json', `${site}/api/v1/leaks.json`, 'places of valley in the routes of the 30 collectors of RIPE RIS and RouteViews, today'],
   ['leaks-history.json', `${site}/api/v1/leaks-history.json`, 'one row a day of the totals of the leaks'],

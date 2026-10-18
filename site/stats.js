@@ -67,7 +67,7 @@ function barChart(container, rows, opts) {
     const share = total ? ` · ${(100 * r.value / total).toFixed(1)}% of ${opts.totalLabel}` : '';
     const row = el(r.href ? 'a' : 'div', {
       class: 'bar-row', href: r.href, tabindex: r.href ? undefined : '0', role: r.href ? undefined : 'img',
-      'aria-label': `${r.label}: ${fmt.format(r.value)}`,
+      'aria-label': r.href ? undefined : `${r.label}: ${fmt.format(r.value)}`,        // a link is named by its visible text (label and number)
     },
       el('span', { class: 'lbl' + (opts.mono ? ' mono' : ''), text: r.label }),
       el('span', { class: 'plot' }, fill, el('span', { class: 'val', text: fmt.format(r.value) })));

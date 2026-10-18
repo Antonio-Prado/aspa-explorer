@@ -20,10 +20,12 @@ js:
 	node --check scripts/build-status.mjs
 	node --check scripts/build-trends.mjs
 	node --check scripts/build-dataset.mjs
+	node --check scripts/build-resources.mjs
+	node --check scripts/watch-invalid.mjs
 	sh -n scripts/run-a11y.sh
 	node --check scripts/test-a11y.mjs
 	node --check scripts/record-fixtures.mjs
-	for f in site/adoption.js site/leaks.js site/validators.js site/stats.js site/download.js site/status.js site/status-history.js site/trends.js site/datasets.js site/examples.js site/subscription.js; do node --check $$f; done
+	for f in site/adoption.js site/leaks.js site/validators.js site/stats.js site/download.js site/status.js site/status-history.js site/ui.js site/resources.js site/coverage.js site/invalid.js site/trends.js site/datasets.js site/examples.js site/subscription.js; do node --check $$f; done
 	for f in notifier/*.mjs; do node --check $$f; done
 
 html:
@@ -38,7 +40,7 @@ version:
 
 # Static analysis of the browser code: no innerHTML, eval and similar sinks.
 lint-security:
-	npx --yes eslint@9 --no-config-lookup -c eslint.config.mjs site/app.js site/footer.js site/verify.js site/evidence.js site/whatif.js site/traceroute.js site/graph.js site/live.js site/status-checks.js site/adoption.js site/leaks.js site/validators.js site/stats.js site/download.js site/status.js site/status-history.js site/examples.js site/subscription.js
+	npx --yes eslint@9 --no-config-lookup -c eslint.config.mjs site/app.js site/footer.js site/verify.js site/evidence.js site/whatif.js site/traceroute.js site/graph.js site/live.js site/status-checks.js site/adoption.js site/leaks.js site/validators.js site/stats.js site/download.js site/status.js site/status-history.js site/trends.js site/datasets.js site/ui.js site/resources.js site/coverage.js site/invalid.js site/examples.js site/subscription.js
 
 # Secret scan of the whole git history (needs gitleaks: https://github.com/gitleaks/gitleaks).
 secrets:
@@ -55,6 +57,8 @@ test:
 	node scripts/test-whatif.mjs
 	node scripts/test-trends.mjs
 	node scripts/test-dataset.mjs
+	node scripts/test-resources.mjs
+	node scripts/test-invalid.mjs
 	node scripts/test-graph.mjs
 	node scripts/test-compare.mjs
 	node scripts/test-live.mjs

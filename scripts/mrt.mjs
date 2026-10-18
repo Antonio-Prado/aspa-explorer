@@ -51,8 +51,8 @@ export function readPeers(buf, pos, end) {
   return peers;
 }
 
-// Read a (gunzipped) MRT byte stream. onEntry(peerAs, path, length) is called for every route whose path is a plain
-// AS_SEQUENCE; `path` is a buffer that is reused, so copy what you keep. Resolves with the counts.
+// Read a (gunzipped) MRT byte stream. onEntry(peerAs, path, length, prefixLength, isV6) is called for every route whose path is a
+// plain AS_SEQUENCE; `path` is a buffer that is reused, so copy what you keep. Resolves with the counts.
 export async function readRib(stream, onEntry) {
   const path = new Uint32Array(MAX_PATH);
   let carry = null, peers = [];
@@ -66,6 +66,7 @@ export async function readRib(stream, onEntry) {
     if (subtype !== RIB_IPV4_UNICAST && subtype !== RIB_IPV6_UNICAST && !addPath) { if (![3, 5, 9, 11].includes(subtype)) stats.other++; return; }   // (the multicast tables are of no use here)
     const head = addPath ? 12 : 8;                    // peer, time, [path identifier,] attribute length
     pos += 4;                                         // sequence number
+    const v6 = subtype === RIB_IPV6_UNICAST || subtype === RIB_IPV6_UNICAST_ADDPATH;
     const plen = buf[pos]; pos += 1 + Math.ceil(plen / 8);
     const count = buf.readUInt16BE(pos); pos += 2;
     for (let i = 0; i < count && pos + head <= end; i++) {
@@ -75,7 +76,7 @@ export async function readRib(stream, onEntry) {
       pos += head + alen;
       if (n < 1) { stats.skipped++; continue; }
       stats.entries++;
-      onEntry(peers[peer] ? peers[peer].as : 0, path, n);
+      onEntry(peers[peer] ? peers[peer].as : 0, path, n, plen, v6);
     }
   };
   for await (let chunk of stream) {

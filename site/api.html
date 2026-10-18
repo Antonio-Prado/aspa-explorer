@@ -7,17 +7,17 @@
 <meta name="description" content="A small public API: the ASPA, its history and its quality for any AS, a badge and an Atom feed per AS. Open data, no key.">
 <meta name="color-scheme" content="light dark">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
-<link rel="stylesheet" href="/style.css?v=1.31.0">
-<script src="/download.js?v=1.31.0" defer></script>
-<script src="/datasets.js?v=1.31.0" defer></script>
-<script src="/status-checks.js?v=1.31.0" defer></script>
-<script src="/footer.js?v=1.31.0" defer></script>
+<link rel="stylesheet" href="/style.css?v=1.32.0">
+<script src="/download.js?v=1.32.0" defer></script>
+<script src="/datasets.js?v=1.32.0" defer></script>
+<script src="/status-checks.js?v=1.32.0" defer></script>
+<script src="/footer.js?v=1.32.0" defer></script>
 </head>
 <body>
 <a class="skip" href="#main">Skip to main content</a>
 <header class="wrap masthead">
   <div class="top">
-    <p class="back"><a class="brandlink" href="/" title="Back to ASPA Explorer"><img class="brand" src="/img/logo-mark.svg?v=1.31.0" alt="" width="40" height="40"><span>ASPA Explorer</span></a></p>
+    <p class="back"><a class="brandlink" href="/" title="Back to ASPA Explorer"><img class="brand" src="/img/logo-mark.svg?v=1.32.0" alt="" width="40" height="40"><span>ASPA Explorer</span></a></p>
     <nav class="topnav" aria-label="Main"><a href="/">Home</a><a href="/statistics.html">Statistics</a><a href="/examples.html">Examples</a><a href="/api.html" aria-current="page">API</a><a href="/guide.html">Guide</a><a href="/status.html">Status</a></nav>
   </div>
   <h1>API</h1>
@@ -123,6 +123,8 @@ X-ASPA-Signature: sha256=…      HMAC-SHA256(secret, timestamp + "." + body), h
     <ul>
       <li><a href="/data/aspas.json">/data/aspas.json</a>: all valid ASPAs, as Routinator's <code>jsonext</code> (route origins and router keys left out), with every detail of the signed objects.</li>
       <li><a href="/api/v1/meta.json">/api/v1/meta.json</a>: when the per-AS files were built and how many there are.</li>
+      <li><a href="/api/v1/resources.json">/api/v1/resources.json</a>: AS numbers allocated, advertised and with an ASPA by RIR, region, economy, year of allocation and width, per million Internet users, and the ASPAs that name numbers that are not allocated. Built once a day.</li>
+      <li><a href="/api/v1/invalid.json">/api/v1/invalid.json</a>: the invalid announcements of the last 14 days as the collectors receive them (RIS Live): by hour, with the origins and prefixes that have most. Updated every ten minutes.</li>
       <li><a href="/api/v1/trends.json">/api/v1/trends.json</a>: the number of networks with an ASPA month by month, for all of them and for each RIR and country. Built once a day.</li>
       <li><a href="/api/v1/adoption.json">/api/v1/adoption.json</a>: the adoption numbers: networks seen in BGP and how many have an ASPA, by RIR, country and size, and the 100 largest networks. Built once a day; the sources are named in the file.</li>
       <li>The daily history, the events and the BGP visibility are plain files on the <code>history</code> branch of the <a href="https://gitlab.dei.unipd.it/Antonio-Prado/aspa-explorer/-/tree/history" target="_blank" rel="noopener">public project<span class="sr-only"> (opens in a new tab)</span></a>.</li>

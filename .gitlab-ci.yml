@@ -43,10 +43,12 @@ js-syntax:
     - node --check scripts/build-status.mjs
     - node --check scripts/build-trends.mjs
     - node --check scripts/build-dataset.mjs
+    - node --check scripts/build-resources.mjs
+    - node --check scripts/watch-invalid.mjs
     - sh -n scripts/run-a11y.sh
     - node --check scripts/test-a11y.mjs
     - node --check scripts/record-fixtures.mjs
-    - for f in site/adoption.js site/leaks.js site/validators.js site/stats.js site/download.js site/status.js site/status-history.js site/trends.js site/datasets.js site/examples.js site/subscription.js; do node --check "$f"; done
+    - for f in site/adoption.js site/leaks.js site/validators.js site/stats.js site/download.js site/status.js site/status-history.js site/ui.js site/resources.js site/coverage.js site/invalid.js site/trends.js site/datasets.js site/examples.js site/subscription.js; do node --check "$f"; done
     - for f in notifier/*.mjs; do node --check "$f"; done
 
 unit-tests:
@@ -63,6 +65,8 @@ unit-tests:
     - node scripts/test-whatif.mjs
     - node scripts/test-trends.mjs
     - node scripts/test-dataset.mjs
+    - node scripts/test-resources.mjs
+    - node scripts/test-invalid.mjs
     - node scripts/test-graph.mjs
     - node scripts/test-compare.mjs
     - node scripts/test-live.mjs
@@ -104,7 +108,7 @@ js-security-lint:
   stage: security
   image: node:22-alpine
   script:
-    - npx --yes eslint@9 --no-config-lookup -c eslint.config.mjs site/app.js site/footer.js site/verify.js site/history.js site/quality.js site/evidence.js site/whatif.js site/traceroute.js site/graph.js site/live.js site/status-checks.js site/adoption.js site/leaks.js site/validators.js site/stats.js site/download.js site/status.js site/status-history.js site/examples.js site/subscription.js
+    - npx --yes eslint@9 --no-config-lookup -c eslint.config.mjs site/app.js site/footer.js site/verify.js site/history.js site/quality.js site/evidence.js site/whatif.js site/traceroute.js site/graph.js site/live.js site/status-checks.js site/adoption.js site/leaks.js site/validators.js site/stats.js site/download.js site/status.js site/status-history.js site/trends.js site/datasets.js site/ui.js site/resources.js site/coverage.js site/invalid.js site/examples.js site/subscription.js
 
 secret-detection:
   extends: .regular
@@ -120,17 +124,13 @@ secret-detection:
 # Scheduled jobs. Pipeline schedules set the SCHEDULE variable; a pipeline started by
 # hand (web or API) with the same variable runs the same job.
 
-# Accessibility and layout of every page in a real browser (axe-core, light and dark, desktop and 320 px). On every push
-# it already runs on GitHub (.github/workflows/accessibility.yml, on the public copy). Here it is a manual job, for the
-# runner of the host once a Chromium is installed there (FreeBSD has no Playwright browser: pkg install chromium); without
-# one it ends with status 3, a warning, and says so.
+# Accessibility and layout of every page in a real browser (axe-core, light and dark, desktop and 320 px), on the runner of the
+# host, where a Chromium is installed (FreeBSD has no Playwright browser: pkg install chromium). It also runs on GitHub on every
+# push (.github/workflows/accessibility.yml, on the public copy). Without a Chromium it ends with status 3, a warning, and says so.
 a11y:
+  extends: .regular
   stage: lint
   tags: [aspa]
-  rules:
-    - if: $CI_PIPELINE_SOURCE != "schedule" && $SCHEDULE == null
-      when: manual
-      allow_failure: true
   allow_failure:
     exit_codes: 3
   script:

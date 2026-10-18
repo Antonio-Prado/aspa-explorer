@@ -102,6 +102,38 @@ export function aspaMap(aspas) {
   return m;
 }
 
+// The verdict of the downstream procedure for a path (origin first, no prepending): 0 valid, 1 unknown, 2 invalid. The same
+// as verify(aspas, path, 'down').result, without building the lists of the hops, for the millions of routes of a day.
+export function classify(aspas, p) {
+  const N = p.length;
+  if (N <= 1) return 0;
+  const sets = new Array(N);
+  for (let i = 0; i < N; i++) sets[i] = aspas.get(p[i]);
+  let maxUp = N, minUp = N;
+  for (let i = 1; i <= N - 1; i++) {                               // hop(A(i), A(i+1)): the ASPA of p[i-1] lists p[i]?
+    const s = sets[i - 1];
+    if (s && s.has(p[i])) continue;
+    if (minUp === N) minUp = i;
+    if (s) { maxUp = i; break; }
+  }
+  let maxDown = N, minDown = N;
+  for (let j = N; j >= 2; j--) {                                   // hop(A(j), A(j-1)): the ASPA of p[j-1] lists p[j-2]?
+    const s = sets[j - 1];
+    if (s && s.has(p[j - 2])) continue;
+    if (minDown === N) minDown = N - j + 1;
+    if (s) { maxDown = N - j + 1; break; }
+  }
+  if (maxUp + maxDown < N) return 2;
+  return minUp + minDown < N ? 1 : 0;
+}
+
+// The address space a route covers: addresses for IPv4 (/32 equivalents), /48s for IPv6.
+export const spanOf = (plen, v6) => Math.pow(2, (v6 ? 48 : 32) - plen);
+// The shortest prefixes that count for the address space: nothing is announced below a /8 in IPv4 or a /16 in IPv6 but default routes and tests.
+export const MIN_V4 = 8, MIN_V6 = 16;
+const VERDICT = ['valid', 'unknown', 'invalid'];
+const HOP_BUCKETS = 9;                                             // paths of 1 to 8 ASes, and 9 or more
+
 export class Leaks {
   constructor(aspas, ixp = new Set(), relOf = () => 'unknown') {
     this.aspas = aspas; this.ixp = ixp; this.relOf = relOf;
@@ -110,10 +142,13 @@ export class Leaks {
     this.feederSet = new Set();                                       // the networks that feed the collectors, whichever collector
     this.byCollector = new Map();                                     // collector -> {routes, invalid, feeders}
     this.lastCollector = null; this.cur = null;
+    // by address family: the routes by verdict, the address span by verdict, the origins, the length of the paths; and by length of path
+    const fam = () => ({ routes: [0, 0, 0], span: [0, 0, 0], origins: new Set(), lenSum: 0, lenSpan: 0, spanSum: 0, n: 0, short: 0, byLen: Array.from({ length: HOP_BUCKETS }, () => ({ routes: [0, 0, 0], span: [0, 0, 0] })) });
+    this.fam = { v4: fam(), v6: fam() };
   }
 
   // path: AS numbers, collector side first; feeder: the AS of the peer; collector: its name
-  add(feeder, collector, rawPath) {
+  add(feeder, collector, rawPath, plen, v6) {
     const p = [];
     for (let i = rawPath.length - 1; i >= 0; i--) {                 // origin first, prepending and IXP ASes dropped
       const a = rawPath[i];
@@ -128,18 +163,18 @@ export class Leaks {
       this.byCollector.set(collector, this.cur);
     }
     this.cur.routes++; this.cur.feeders.add(feeder);
-    if (p.length < 2) { this.total.valid++; return; }
-    // cheap filter: a valley needs a hop that an ASPA attests as not a provider
-    let suspect = false;
-    for (let i = 1; i < p.length && !suspect; i++) {
-      const x = this.aspas.get(p[i - 1]), y = this.aspas.get(p[i]);
-      if ((x && !x.has(p[i])) || (y && !y.has(p[i - 1]))) suspect = true;
+    const k = classify(this.aspas, p);
+    this.total[VERDICT[k]]++;
+    if (plen !== undefined) {
+      const f = this.fam[v6 ? 'v6' : 'v4'], b = f.byLen[Math.min(Math.max(p.length, 1), HOP_BUCKETS) - 1];
+      f.routes[k]++; f.origins.add(p[0]); f.lenSum += p.length; f.n++; b.routes[k]++;
+      if (plen >= (v6 ? MIN_V6 : MIN_V4)) {               // a default route or another prefix that short would weigh more than the rest of the table together
+        const span = spanOf(plen, v6);
+        f.span[k] += span; f.lenSpan += p.length * span; f.spanSum += span; b.span[k] += span;
+      } else f.short++;
     }
-    if (!suspect) { this.total.valid++; return; }
+    if (k !== 2) return;
     const v = verify(this.aspas, p, 'down');
-    if (v.result === 'Valid') { this.total.valid++; return; }
-    if (v.result === 'Unknown') { this.total.unknown++; return; }
-    this.total.invalid++;
     this.cur.invalid++;
     const from = v.path[v.maxUp - 1], to = v.path[v.N - v.maxDown];
     const between = v.path.slice(v.maxUp, v.N - v.maxDown);
@@ -189,7 +224,14 @@ export class Leaks {
       }
     }
     cmp.feeders = { ris: risFeeders.size, rv: rvFeeders.size, both: [...risFeeders].filter((f) => rvFeeders.has(f)).length };
+    const famDoc = (f, unit) => ({
+      unit, routes: f.n, short_prefixes: f.short, valid: f.routes[0], unknown: f.routes[1], invalid: f.routes[2], origins: f.origins.size,
+      span: { valid: Math.round(f.span[0]), unknown: Math.round(f.span[1]), invalid: Math.round(f.span[2]) },
+      avg_path: f.n ? Math.round((f.lenSum / f.n) * 1000) / 1000 : 0, avg_path_weighted: f.spanSum ? Math.round((f.lenSpan / f.spanSum) * 1000) / 1000 : 0,
+      by_length: f.byLen.map((b, i) => ({ length: i + 1, routes: b.routes.reduce((x, y) => x + y, 0), valid: b.routes[0], unknown: b.routes[1], invalid: b.routes[2], span_valid: Math.round(b.span[0]), span_unknown: Math.round(b.span[1]), span_invalid: Math.round(b.span[2]) })),
+    });
     return {
+      families: { v4: famDoc(this.fam.v4, 'addresses'), v6: famDoc(this.fam.v6, '/48s') },
       per_collector: per, comparison: cmp,
       total: { ...this.total, feeders: this.feederSet.size }, places: list.length,
       kinds: { gap: list.filter((g) => g.kind === 'gap').length, leak: list.filter((g) => g.kind === 'leak').length, unclear: list.filter((g) => g.kind === 'unclear').length },
@@ -228,6 +270,10 @@ export function byAs(list, minFeeders = MIN_FEEDERS, perAs = PER_AS) {
 export function addHistory(rows, date, doc) {
   const t = doc.total;
   const row = { date, routes: t.routes, invalid: t.invalid, unknown: t.unknown, feeders: t.feeders, places: doc.places, leak: doc.kinds.leak, gap: doc.kinds.gap, unclear: doc.kinds.unclear };
+  if (doc.families) {                                  // the share of the address space whose routes are valid, by family
+    const share = (f) => { const t = f.span.valid + f.span.unknown + f.span.invalid; return t ? Math.round((f.span.valid / t) * 10000) / 100 : 0; };
+    row.v4_valid_span = share(doc.families.v4); row.v6_valid_span = share(doc.families.v6);
+  }
   return rows.filter((r) => r.date !== date).concat(row).sort((a, b) => (a.date < b.date ? -1 : 1));
 }
 
@@ -298,7 +344,7 @@ async function main() {
     const file = join(cache, dayIso ? `dump-${c}-${dayFlag}.${ext}` : `dump-${c}.${ext}`);
     if (dayIso || !(await fresh(file, 4 * 3600e3))) await download(dayIso ? dumpUrl(c, dayFlag) : await withRetry(() => latestDumpUrl(c)), file);
     const t0 = Date.now();
-    const stats = await readRib(openDump(file), (peerAs, path, n) => leaks.add(peerAs, c, Array.from(path.subarray(0, n))));
+    const stats = await readRib(openDump(file), (peerAs, path, n, plen, v6) => leaks.add(peerAs, c, Array.from(path.subarray(0, n)), plen, v6));
     used.push({ collector: c, routes: stats.entries, built: new Date((await stat(file)).mtimeMs).toISOString().replace(/\.\d+Z$/, 'Z') });
     console.error(`${c}: ${stats.entries} routes in ${Math.round((Date.now() - t0) / 1000)} s`);
     if (dayIso) await unlink(file);                  // a day of the past is read once
