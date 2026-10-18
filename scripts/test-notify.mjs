@@ -9,6 +9,7 @@ import { sign, verify, relaxBody } from '../notifier/dkim.mjs';
 import { compose, serialize, sendmail, EMAIL_RE } from '../notifier/mail.mjs';
 import { openStore } from '../notifier/store.mjs';
 import { makeApi, httpHandler, parseAsn, limiter } from '../notifier/server.mjs';
+import { dueInvalid, describeInvalid, COOLDOWN } from '../notifier/invalid.mjs';
 import { checkReport, shell, headTags, newId, ID_RE, LIMITS } from '../notifier/reports.mjs';
 import { watchStatus, describeStatusEvent, statusSubject, MONITOR } from '../notifier/status.mjs';
 
@@ -494,6 +495,45 @@ await test('HTTP: POST /api/v1/reports, GET as JSON and as a page', async () => 
   assert.equal((await fetch(`${base}/api/v1/reports/ffffffffffff`)).status, 404);
   assert.equal((await post(goodReport(), { Origin: 'https://evil.example' })).status, 403);
   server.close();
+});
+
+// ---- alerts on invalid announcements ----
+const lastDoc = () => ({ generated: '2026-10-18T12:00:00Z', from: '2026-10-18T11:51:00Z', to: '2026-10-18T12:00:00Z', min: 5, origins: { AS100: { invalid: 30, announcements: 300, prefixes: [{ prefix: '192.0.2.0/24', invalid: 20 }, { prefix: '198.51.100.0/24', invalid: 10 }] }, AS200: { invalid: 6, announcements: 10, prefixes: [] } } });
+const isub = (id, asn, min) => ({ id, asn, invalid_min: min });
+
+await test('invalid alerts: sent when the threshold is reached, once for six hours, and only to those who asked', () => {
+  const subs = [isub(1, 'AS100', 10), isub(2, 'AS100', 50), isub(3, 'AS200', 5), isub(4, 'AS200', 0), isub(5, 'AS300', 5)];
+  let r = dueInvalid(lastDoc(), subs, {}, 10000);
+  assert.deepEqual(r.events.map((e) => e.sub.id), [1, 3]);               // 2: 30 < 50, 4: no threshold, 5: not in the file
+  assert.deepEqual(r.alerts, { 1: 10000, 3: 10000 });
+  r = dueInvalid(lastDoc(), subs, r.alerts, 10000 + 600);
+  assert.deepEqual(r.events, []);                                        // the next run, still there: not again
+  r = dueInvalid(lastDoc(), subs, r.alerts, 10000 + COOLDOWN);
+  assert.deepEqual(r.events.map((e) => e.sub.id), [1, 3]);               // six hours later, again
+  assert.deepEqual(dueInvalid(lastDoc(), subs, { 9: 1 }, 10 * COOLDOWN).alerts, { 1: 10 * COOLDOWN, 3: 10 * COOLDOWN });   // old marks are forgotten
+  assert.deepEqual(dueInvalid({}, subs, {}, 1).events, []);
+  assert.deepEqual(dueInvalid(null, subs, {}, 1).events, []);
+});
+
+await test('invalid alerts: the words', () => {
+  const [e] = dueInvalid(lastDoc(), [isub(1, 'AS100', 10)], {}, 1).events;
+  const t = describeInvalid(e);
+  assert.match(t, /^AS100 was the origin of 30 announcements that the ASPAs prove invalid \(10% of its 300\)/);
+  assert.match(t, /192\.0\.2\.0\/24 \(20\), 198\.51\.100\.0\/24 \(10\)/);
+  assert.match(describeInvalid({ asn: 'AS1', invalid: 5, announcements: 0, prefixes: [], from: 'a', to: 'b' }), /^AS1 was the origin of 5 announcements that the ASPAs prove invalid, seen/);
+});
+
+await test('API: the threshold is kept only as a whole number in range, for an AS', async () => {
+  const { store, api, mails } = setup();
+  await api.subscribe({ kind: 'email', target: 'a@example.com', asn: 'AS1', invalid: 50 }, '4.4.4.1');
+  assert.equal(mails[0].invalid, 50);
+  assert.equal(store.find('email', 'a@example.com', 'AS1').invalid_min, 50);
+  for (const bad of [4, 100001, 7.5, '10', true]) assert.equal((await api.subscribe({ kind: 'email', target: 'b@example.com', asn: 'AS1', invalid: bad }, '4.4.4.2')).status, 400, String(bad));
+  assert.equal((await api.subscribe({ kind: 'email', target: 'c@example.com', topic: 'status', invalid: 10 }, '4.4.4.3')).status, 400);
+  await api.subscribe({ kind: 'email', target: 'd@example.com', asn: 'AS1' }, '4.4.4.4');
+  assert.equal(store.find('email', 'd@example.com', 'AS1').invalid_min, 0);
+  const w = await api.subscribe({ kind: 'webhook', target: 'https://hooks.example.org/i', asn: 'AS2', invalid: 5 }, '4.4.4.5');
+  assert.equal(w.body.invalid, 5);
 });
 
 console.log(`${passed} tests passed`);

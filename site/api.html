@@ -23,17 +23,17 @@
 <meta name="twitter:card" content="summary_large_image">
 <meta name="color-scheme" content="light dark">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
-<link rel="stylesheet" href="/style.css?v=1.37.2">
-<script src="/download.js?v=1.37.2" defer></script>
-<script src="/datasets.js?v=1.37.2" defer></script>
-<script src="/status-checks.js?v=1.37.2" defer></script>
-<script src="/footer.js?v=1.37.2" defer></script>
+<link rel="stylesheet" href="/style.css?v=1.38.0">
+<script src="/download.js?v=1.38.0" defer></script>
+<script src="/datasets.js?v=1.38.0" defer></script>
+<script src="/status-checks.js?v=1.38.0" defer></script>
+<script src="/footer.js?v=1.38.0" defer></script>
 </head>
 <body>
 <a class="skip" href="#main">Skip to main content</a>
 <header class="wrap masthead">
   <div class="top">
-    <p class="back"><a class="brandlink" href="/" title="Back to ASPA Explorer"><img class="brand" src="/img/logo-mark.svg?v=1.37.2" alt="" width="40" height="40"><span>ASPA Explorer</span></a></p>
+    <p class="back"><a class="brandlink" href="/" title="Back to ASPA Explorer"><img class="brand" src="/img/logo-mark.svg?v=1.38.0" alt="" width="40" height="40"><span>ASPA Explorer</span></a></p>
     <nav class="topnav" aria-label="Main"><a href="/">Home</a><a href="/statistics.html">Statistics</a><a href="/examples.html">Examples</a><a href="/api.html" aria-current="page">API</a><a href="/guide.html">Guide</a><a href="/status.html">Status</a></nav>
   </div>
   <h1>API</h1>
@@ -105,6 +105,7 @@ X-ASPA-Signature: sha256=…      HMAC-SHA256(secret, timestamp + "." + body), h
  "page": "https://aspa.ping6.it/as/AS3333",
  "unsubscribe": "https://aspa.ping6.it/api/v1/subscriptions/unsubscribe?token=…"}</code></pre>
     <p>Add <code>"leaks": true</code> to the body to receive, once a day, the new places of valley that involve the AS as well (only <code>true</code> counts; it cannot be changed later, subscribe again). Such a delivery has <code>"type": "aspa.leak"</code>, the same signature and a <code>place</code> object: <code>{"role": "valley" | "gap", "kind": "leak" | "gap", "from": "AS…", "to": "AS…", "between": ["AS…"], "feeders": 5, "routes": 10}</code>. The data comes from <a href="/api/v1/leaks-by-as.json">/api/v1/leaks-by-as.json</a> (the places seen by at least three feeders, for each AS), the totals of each day from <a href="/api/v1/leaks-history.json">/api/v1/leaks-history.json</a> and the file of an earlier day (the last 60) from <code>/api/v1/leaks-by-as/YYYYMMDD.json</code>.</p>
+    <p>Add <code>"invalid": N</code> (a whole number from 5 to 100000) to be told when the AS is the origin of at least N announcements that the ASPAs prove invalid in a ten-minute run of the watcher, at most once every six hours. Such a delivery has <code>"type": "aspa.invalid"</code>, the same signature and an <code>invalid</code> object: <code>{"announcements": 300, "invalid": 30, "prefixes": [{"prefix": "192.0.2.0/24", "invalid": 20}], "from": "2026-10-18T11:51:00Z", "to": "2026-10-18T12:00:00Z"}</code>. What the last run saw, for the origins with at least five invalid announcements, is in <a href="/api/v1/invalid-last.json">/api/v1/invalid-last.json</a>.</p>
     <p>Instead of <code>"asn"</code>, <code>"topic": "status"</code> subscribes to the state of the parts of the service (the checks of the <a href="/status.html">status page</a>), with the same confirmation. A part that changes state, confirmed by two checks 15 minutes apart, is delivered as <code>"type": "aspa.status"</code> with the same signature: <code>{"type": "aspa.status", "text": "…", "time": "…", "changes": [{"part": "leaks", "name": "…", "from": "o", "to": "d", "at": "2026-10-18T12:00:00.000Z"}], "page": "https://aspa.ping6.it/status.html", "unsubscribe": "…"}</code>; the states are <code>o</code> (OK), <code>l</code> (late) and <code>d</code> (down). The part <code>monitor</code> is down when no check has been recorded for 45 minutes. The history behind it is <a href="/api/v1/status-history.json">/api/v1/status-history.json</a>.</p>
     <p><code>relation</code> is <code>own</code> for a change of the ASPA of the AS and <code>provider</code> when another ASPA adds or drops it; <code>kind</code> is <code>new</code>, <code>changed</code> or <code>removed</code>. Check the signature and reject a timestamp more than a few minutes old. Deliveries are not retried; five failures in a row switch the webhook off. To stop, send a <code>POST</code> to the <code>unsubscribe</code> address.</p>
     <p>Webhook addresses must be <code>https</code> with a public host name; the service refuses names that resolve to private or local addresses, does not follow redirects and waits five seconds at most.</p>

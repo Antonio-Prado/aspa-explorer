@@ -1,6 +1,6 @@
 // Unit tests for scripts/watch-invalid.mjs (no dependencies, no network). Run with: node scripts/test-invalid.mjs
 import assert from 'node:assert/strict';
-import { announcementsOf, blankDay, count, buildReport, dayOf } from './watch-invalid.mjs';
+import { announcementsOf, blankDay, count, buildReport, dayOf, buildLast } from './watch-invalid.mjs';
 
 let passed = 0;
 const test = (name, fn) => { fn(); passed++; console.log('ok  ', name); };
@@ -56,6 +56,19 @@ test('the report sums the days and ranks the origins and the prefixes', () => {
 test('no days gives an empty report', () => {
   const r = buildReport([]);
   assert.equal(r.profile.announcements, 0); assert.equal(r.profile.invalid_share, 0); assert.equal(r.from, null);
+});
+
+test('what one run saw: only the origins with enough invalid announcements, the busiest first, with their busiest prefixes', () => {
+  const run = { origins: new Map([[100, [50, 12]], [200, [10, 4]], [300, [900, 30]], [400, [5, 5]]]), prefixes: new Map([['192.0.2.0/24|100', 7], ['198.51.100.0/24|100', 5], ['203.0.113.0/24|300', 30], ['10.0.0.0/8|200', 4]]) };
+  const t = Date.UTC(2026, 9, 18, 12, 0, 0);
+  const d = buildLast(run, t - 540000, t, t);
+  assert.deepEqual(Object.keys(d.origins), ['AS300', 'AS100', 'AS400']);     // 200 has only 4 invalid; 5 is enough
+  assert.deepEqual(d.origins.AS100, { invalid: 12, announcements: 50, prefixes: [{ prefix: '192.0.2.0/24', invalid: 7 }, { prefix: '198.51.100.0/24', invalid: 5 }] });
+  assert.equal(d.origins.AS400.prefixes.length, 0);
+  assert.equal(d.from, '2026-10-18T11:51:00Z');
+  assert.equal(d.to, '2026-10-18T12:00:00Z');
+  assert.equal(d.min, 5);
+  assert.deepEqual(Object.keys(buildLast(run, t, t, t, 5, 1).origins), ['AS300']);   // only the busiest `top`
 });
 
 console.log(`${passed} tests passed`);

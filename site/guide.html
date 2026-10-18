@@ -26,15 +26,15 @@
 <meta name="color-scheme" content="light dark">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <link rel="alternate" hreflang="it" href="/guida.html">
-<link rel="stylesheet" href="/style.css?v=1.37.2">
-<script src="/status-checks.js?v=1.37.2" defer></script>
-<script src="/footer.js?v=1.37.2" defer></script>
+<link rel="stylesheet" href="/style.css?v=1.38.0">
+<script src="/status-checks.js?v=1.38.0" defer></script>
+<script src="/footer.js?v=1.38.0" defer></script>
 </head>
 <body>
 <a class="skip" href="#main">Skip to main content</a>
 <header class="wrap masthead">
   <div class="top">
-    <p class="back"><a class="brandlink" href="/" title="Back to ASPA Explorer"><img class="brand" src="/img/logo-mark.svg?v=1.37.2" alt="" width="40" height="40"><span>ASPA Explorer</span></a></p>
+    <p class="back"><a class="brandlink" href="/" title="Back to ASPA Explorer"><img class="brand" src="/img/logo-mark.svg?v=1.38.0" alt="" width="40" height="40"><span>ASPA Explorer</span></a></p>
     <nav class="topnav" aria-label="Main"><a href="/">Home</a><a href="/statistics.html">Statistics</a><a href="/examples.html">Examples</a><a href="/api.html">API</a><a href="/guide.html" aria-current="page">Guide</a><a href="/status.html">Status</a></nav>
   </div>
   <h1>Guide</h1>
@@ -88,6 +88,8 @@
     <p>Long lists are cut after a few dozen chips; use <em>+N more</em> to expand them. Click any chip to jump to that AS.</p>
     <p>Under the history and the quality, <em>Neighbourhood</em> draws the AS as a graph: its providers above it, with an arrow from the AS to each, the ASes whose ASPA lists it as a provider below it, and two ASes that list each other as a single red box. The button <em>Add the neighbours that the routes show</em> reads the routes of the AS (as the routes box does) and draws on the right the six most seen neighbours that its ASPA does not list, in orange with a dashed outline when the routes make them look like providers. Every box is a link that looks that AS up. The graph is a picture of what the lookup already says in words.</p>
     <p>An <code>AS0 · no providers</code> chip is not a link. It is the way an AS declares that it has no upstream providers at all, as networks at the top of the hierarchy do.</p>
+
+    <p><strong>Recent checks.</strong> When you come back to an AS that you looked up before, a line at the top says what changed since then (providers added or dropped, an ASPA that appeared or went away, ASPAs that started or stopped naming it), and the list <em>Recent checks</em> under the tools shows the last twenty ASes and paths that you checked, each with what is different now. The list is kept in the local storage of your browser and nowhere else: nothing is sent to the site or to anybody, nobody else sees it, and <em>Clear the list</em> deletes it. If your browser refuses local storage, the list is simply not there.</p>
   </section>
 
   <section aria-labelledby="overview">
@@ -254,6 +256,7 @@
     <h2 id="notify">Notifications by e-mail and webhook</h2>
     <p>Under each result, <em>Get notified by e-mail or webhook</em> subscribes you to one AS. You receive a message when its own ASPA appears, changes or disappears, and when another ASPA adds or drops it as a provider (the same events as its <a href="#share">feed</a>). The validator is checked every ten minutes, and a change is announced only when two checks in a row show it, so that a repository that is unreachable for a moment does not cause a false alarm.</p>
     <p>A box under the form asks, as an extra, for the <strong>places of valley</strong> that involve the AS: once a day, when a new one appears (the AS inside a valley, or its ASPA that seems to miss a provider), you get one message each. The places that exist when you subscribe are not announced, only the new ones. The box is chosen when you subscribe; to change it, stop and subscribe again. A webhook receives these as <code>aspa.leak</code> (see the <a href="/api.html#subscriptions">API page</a>).</p>
+    <p>A second extra, <em>Also tell me when AS… is the origin of N invalid announcements in ten minutes</em>, watches the routes as they happen: every ten minutes the server listens to the stream of RIPE RIS Live, from all its collectors, for about nine minutes, checks each announcement with the ASPAs (the same downstream procedure as the rest of the site) and counts, for each origin AS, the ones that are invalid. When the AS of your subscription reaches the threshold you chose (5, 10, 50, 100, 500 or 1000), you get one message with the count, its share and the prefixes with most, and then no other for six hours, however long it lasts. The first message can come ten minutes after the start of the problem, never sooner. A webhook receives it as <code>aspa.invalid</code>. Like the places of valley, it is a lead: an invalid announcement is a valley in the path, which is a leak, a forged path, or an ASPA that misses a provider.</p>
     <p>The <a href="/status.html#alerts-title">Status page</a> has the same subscription for the <strong>state of the service</strong>: a message when a part (the validator, the API, the daily jobs) becomes late or down, and when it is back to OK. As for the ASPAs, a change is announced when two checks in a row, 15 minutes apart, show it, and the parts that changed in the same check come in one message. The monitor is a part as well: if no check has been recorded for three quarters of an hour, you are told that nothing is being watched. A webhook receives these as <code>aspa.status</code>. If the server itself is down no message can be sent, so this is not a replacement for a monitor of your own.</p>
     <h3>E-mail</h3>
     <p>Type your address. A message with a link comes to it; nothing is sent until you open the link and press the button. Every notification has a link to stop, and a <code>List-Unsubscribe</code> header that mail programs show as an unsubscribe button. The messages come from <code>notifications@aspa.ping6.it</code>, are signed with DKIM and are plain text. If they land in the spam folder, mark them as not spam.</p>
@@ -276,6 +279,8 @@
     <p>An AS-path check has its own address too, such as <code>https://aspa.ping6.it/#path=3356+680&amp;from=up</code> (<code>from=up</code> for a route received from a customer or a peer, <code>from=down</code> for one received from a provider).</p>
     <p>Each lookup has its own address: <code>https://aspa.ping6.it/#AS680</code> opens the page already showing AS680, so you can bookmark or share a result. The same works for any AS number.</p>
     <p>Everything can be used from the keyboard: the lookup field, the tabs (with the arrow keys, <kbd>Home</kbd> and <kbd>End</kbd>), chips, chart bars and the buttons are all reachable with <kbd>Tab</kbd>, and the tooltips follow the focus. The page follows your system's light or dark setting and adapts to narrow screens.</p>
+
+    <p><strong>A quick look at any AS.</strong> A click on the name of an AS, in a table, a list of providers or a path, opens a small window with what the site knows about it: whether it publishes an ASPA and with which providers, how many ASPAs name it as a provider, whether the route collectors see it, the findings on its ASPA and its last change, with a link to its page. The names in the window open the next one. Escape closes it; a click with Ctrl, Cmd or Shift goes straight to the page of the AS, as before. The window asks this site for one small file (<code>/api/v1/as/&lt;number&gt;</code>) and nothing else.</p>
   </section>
 
   <section aria-labelledby="data">

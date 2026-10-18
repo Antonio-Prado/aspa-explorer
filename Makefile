@@ -9,6 +9,8 @@ js:
 	node --check site/evidence.js
 	node --check site/whatif.js
 	node --check site/bulk.js
+	node --check site/recent.js
+	node --check site/peek.js
 	node --check site/traceroute.js
 	node --check site/graph.js
 	node --check site/live.js
@@ -41,7 +43,7 @@ version:
 
 # Static analysis of the browser code: no innerHTML, eval and similar sinks.
 lint-security:
-	npx --yes eslint@9 --no-config-lookup -c eslint.config.mjs site/app.js site/footer.js site/verify.js site/evidence.js site/whatif.js site/traceroute.js site/graph.js site/live.js site/status-checks.js site/adoption.js site/leaks.js site/validators.js site/stats.js site/download.js site/status.js site/status-history.js site/trends.js site/datasets.js site/ui.js site/resources.js site/coverage.js site/invalid.js site/examples.js site/subscription.js site/bulk.js site/share.js site/report.js
+	npx --yes eslint@9 --no-config-lookup -c eslint.config.mjs site/app.js site/footer.js site/verify.js site/evidence.js site/whatif.js site/traceroute.js site/graph.js site/live.js site/status-checks.js site/adoption.js site/leaks.js site/validators.js site/stats.js site/download.js site/status.js site/status-history.js site/trends.js site/datasets.js site/ui.js site/resources.js site/coverage.js site/invalid.js site/examples.js site/subscription.js site/bulk.js site/share.js site/report.js site/recent.js site/peek.js
 
 # Secret scan of the whole git history (needs gitleaks: https://github.com/gitleaks/gitleaks).
 secrets:
@@ -57,6 +59,8 @@ test:
 	node scripts/test-status-history.mjs
 	node scripts/test-whatif.mjs
 	node scripts/test-bulk.mjs
+	node scripts/test-recent.mjs
+	node scripts/test-peek.mjs
 	node scripts/test-trends.mjs
 	node scripts/test-dataset.mjs
 	node scripts/test-resources.mjs

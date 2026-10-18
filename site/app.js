@@ -346,6 +346,16 @@ function pathReport(text, direction) {
 
 function renderPathCheck(text, direction) {
   const nodes = pathCheckNodes(text, direction);
+  if (typeof AspaRecent !== 'undefined' && !AspaVerify.parsePath(text).error && aspas.length) {
+    const parsed = AspaVerify.parsePath(text);
+    const id = parsed.path.slice().reverse().map((a) => a.slice(2)).join(' ');
+    const result = AspaVerify.verify(aspaSets, parsed.path, direction).result;
+    const list = AspaRecent.store.load();
+    const before = AspaRecent.find(list, { kind: 'path', id, direction });
+    AspaRecent.store.save(AspaRecent.record(list, { kind: 'path', id, direction, t: Date.now(), result }));
+    renderRecent();
+    if (before) { const d = AspaRecent.diffPath(before, result); nodes.unshift(el('p', { class: `hint recent-note${d.changed ? ' changed' : ''}` }, `You checked this path ${AspaRecent.ago(before.t)}: ${d.text}.`)); }
+  }
   if (!AspaVerify.parsePath(text).error && aspas.length) nodes.push(AspaShare.button(() => pathReport(text, direction)));
   $('pathresult').replaceChildren(...nodes);
 }
@@ -605,44 +615,77 @@ async function measurePair(t4, t6, country, status, origin) {
   const sum = (m) => m.results.map((x) => AspaTraceroute.summarise(x, (ip) => ipAsnCache.get(ip) || null));
   const s4 = sum(m4), s6 = sum(m6);
   const rows = AspaTraceroute.pairProbes(s4, s6, origin);
-  return { rows, cmp: AspaTraceroute.comparePairs(rows), a4: AspaTraceroute.aggregate(s4), a6: AspaTraceroute.aggregate(s6) };
+  return { rows, cmp: AspaTraceroute.comparePairs(rows) };
 }
 
+// The result of the comparison. What comes first is the one thing that this panel is for: is there a trombone, over IPv4 and over IPv6. Each family
+// is read like a single measurement, on the probes that got into the AS (a traceroute that stops on a router on the way says nothing about the target);
+// the comparison of the two families, and who answered and who did not, come after, as what goes with it.
 function pairBlock(res, t4, t6, home, origin, atRegistered) {
-  const { rows, cmp, a4, a6 } = res;
+  const { rows, cmp } = res;
   const ms = (v) => (v === null || v === undefined ? '–' : v < 1 ? '<1 ms' : `${v < 10 ? v.toFixed(1) : Math.round(v)} ms`);
   const signed = (v) => (v === null ? '–' : `${v > 0 ? '+' : v < 0 ? '−' : ''}${Math.abs(v) < 10 ? Math.abs(v).toFixed(1) : Math.round(Math.abs(v))} ms`);
   const as = 'AS' + origin;
-  const read = { ok: 'normal', long: 'longer than it should be', trombone: 'a trombone' };
-  let headline;
-  const stopped = (key) => rows.filter((r) => r[key] && r[key === 'v4' ? 'n4' : 'n6'] === null && r[key].net !== null).length;
-  if (!cmp.both) headline = stopped('v6') && !stopped('v4') ? `The traceroutes over IPv6 stop before ${as}: ${t6.address} probably does not answer` : stopped('v4') && !stopped('v6') ? `The traceroutes over IPv4 stop before ${as}: ${t4.address} probably does not answer` : 'No probe answered on both families, so there is nothing to compare';
-  else if (Math.abs(cmp.medianDelta) < 1) headline = `IPv6 and IPv4 take the same time (median ${ms(cmp.median6)} and ${ms(cmp.median4)})`;
-  else headline = `IPv6 is ${ms(Math.abs(cmp.medianDelta))} ${cmp.medianDelta > 0 ? 'slower' : 'faster'} than IPv4 (median ${ms(cmp.median6)} and ${ms(cmp.median4)})`;
+  const band = (n) => (n >= AspaTraceroute.TROMBONE_MS ? 'trombone' : n > AspaTraceroute.LONG_DELAY_MS ? 'long' : 'ok');
+  const side = (key) => AspaTraceroute.aggregate(rows.filter((r) => r[key] !== null).map((r) => ({ net: r[key], verdict: band(r[key]) })));
+  const a4 = side('n4'), a6 = side('n6');
+  const stopped = (key, n) => rows.filter((r) => r[key] && r[n] === null && r[key].net !== null).length;
+  const word = { ok: 'no trombone', long: 'longer than it should be', trombone: 'trombone' };
+  let headline, kind;
+  if (!atRegistered && (a4 || a6)) {
+    headline = `From ${home}: median ${a4 ? ms(a4.median) : 'no answer'} over IPv4, ${a6 ? ms(a6.median) : 'no answer'} over IPv6`;
+    kind = 'none';
+  } else if (!a4 && !a6) {
+    headline = stopped('v6', 'n6') && !stopped('v4', 'n4') ? `Nothing to read: the traceroutes over IPv6 stop before ${as}` : stopped('v4', 'n4') && !stopped('v6', 'n6') ? `Nothing to read: the traceroutes over IPv4 stop before ${as}` : 'Nothing to read: no probe got into the AS';
+    kind = 'none';
+  } else {
+    const rank = { ok: 0, long: 1, trombone: 2 };
+    const v4 = a4 && a4.verdict, v6 = a6 && a6.verdict;
+    const worst = [v4, v6].filter(Boolean).sort((x, y) => rank[y] - rank[x])[0];
+    const fams = [v4 === worst && 'IPv4', v6 === worst && 'IPv6'].filter(Boolean);
+    kind = worst;
+    if (v4 && v6 && v4 === v6) headline = worst === 'ok' ? 'No trombone seen, over IPv4 or IPv6' : `${worst === 'trombone' ? 'Trombone' : 'Longer than it should be'}, over IPv4 and IPv6`;
+    else if (v4 && v6 && worst !== 'ok' && (v4 === 'ok' || v6 === 'ok')) headline = `${worst === 'trombone' ? 'Trombone' : 'Longer than it should be'} over ${fams[0]} only`;
+    else if (v4 && v6) headline = `IPv4: ${word[v4]}. IPv6: ${word[v6]}`;
+    else headline = `Over ${v4 ? 'IPv4' : 'IPv6'}: ${word[worst]}; the other family could not be read`;
+  }
+  const family = (name, a, key) => {
+    if (!a) return `${name}: no probe got into ${as}${stopped(key === 'n4' ? 'v4' : 'v6', key) ? ` (${stopped(key === 'n4' ? 'v4' : 'v6', key)} traceroutes stop earlier)` : ''}.`;
+    const c = a.counts, parts = [];
+    if (c.ok) parts.push(`${c.ok} normal`);
+    if (c.long) parts.push(`${c.long} longer than it should be`);
+    if (c.trombone) parts.push(`${c.trombone} ${c.trombone === 1 ? 'a trombone' : 'trombones'}`);
+    return `${name}: median round trip ${ms(a.median)} (from ${ms(a.min)} to ${ms(a.max)}) on ${a.n} probes: ${parts.join(', ')}.`;
+  };
   const c = cmp.counts;
-  const lines = [`${cmp.both} of ${cmp.probes} probes in ${home} answered over both families. IPv4 is faster on ${c.v4}, IPv6 on ${c.v6}, ${c.tie} are even${c['v4 only'] || c['v6 only'] ? `; ${c['v4 only']} answered only over IPv4 and ${c['v6 only']} only over IPv6` : ''}. The networks on the way differ on ${cmp.differentNetworks} of the ${cmp.both}. A probe whose traceroute stops before ${as} (the last router that answers is not in it) is not compared: its round trip is the one of a router on the way.`];
-  if (atRegistered && a4 && a6) lines.push(`Tromboning reading, as for one family: IPv4 ${read[a4.verdict]}, IPv6 ${read[a6.verdict]}.`);
-  const notes = [`IPv4 aims at ${t4.address} (in ${t4.prefix}) and IPv6 at ${t6.address} (in ${t6.prefix}), both of ${as}: two addresses of the same AS, not the same host. The probes are the same, and the delays are counted from the first public address, as in the single measurement. A difference of a few milliseconds is within what the probes and the queues add.`];
-  const kind = !cmp.both ? 'none' : cmp.medianDelta > 20 ? 'long' : 'ok';
-  const box = el('div', { class: `result r-${kind}`, role: 'group', 'aria-label': 'Result of the comparison' },
-    el('p', { class: 'headline', text: headline }), ...lines.map((x) => el('p', { text: x })), ...notes.map((x) => el('p', { class: 'hint', text: x })));
+  const lines = [family('IPv4', a4, 'n4'), family('IPv6', a6, 'n6')];
+  if (!atRegistered) lines.push(`The bands of the reading (up to 50 ms normal, 100 ms or more a trombone) are for two points of one country: the probes are in ${home}, not where ${as} is registered, so these are the delays of a trip from there.`);
+  const compare = !cmp.both ? 'No probe got into the AS over both families, so the two cannot be compared probe by probe.'
+    : `IPv4 against IPv6, on the ${cmp.both} probes that got in over both: ${Math.abs(cmp.medianDelta) < 1 ? 'about the same time (the typical difference is under 1 ms)' : `IPv6 is ${ms(Math.abs(cmp.medianDelta))} ${cmp.medianDelta > 0 ? 'slower' : 'faster'}`}; IPv4 is faster on ${c.v4}, IPv6 on ${c.v6}, ${c.tie} are even. The networks on the way differ on ${cmp.differentNetworks} of the ${cmp.both}.`;
+  const answered = `${cmp.probes} probes in ${home}${c['v4 only'] || c['v6 only'] ? `; ${c['v4 only']} answered only over IPv4 and ${c['v6 only']} only over IPv6` : ''}. A probe whose traceroute stops before ${as} (the last router that answers is not in it) is not read: its round trip is the one of a router on the way.`;
+  const notes = [`IPv4 aims at ${t4.address} (in ${t4.prefix}) and IPv6 at ${t6.address} (in ${t6.prefix}), both of ${as}: two addresses of the same AS, not the same host. The probes are the same, and the delays are counted from the first public address. A difference of a few milliseconds is within what the probes and the queues add; the country of the probes is where ${as} is registered only when it says so above.`];
+  const box = el('div', { class: `result r-${kind}`, role: 'group', 'aria-label': 'Result of the measurement over IPv4 and IPv6' },
+    el('p', { class: 'headline', text: headline }), ...lines.map((x) => el('p', { text: x })),
+    el('p', { class: 'hint', text: compare }), el('p', { class: 'hint', text: answered }), ...notes.map((x) => el('p', { class: 'hint', text: x })));
   const nets = (x) => (x && x.path.length ? x.path.map((a) => `AS${a}`).join(' → ') : '–');
   const winner = { v4: 'IPv4', v6: 'IPv6', tie: 'even', 'v4 only': 'IPv4 only', 'v6 only': 'IPv6 only', none: 'no answer' };
+  // a round trip with its reading when it is not a normal one, so that a trombone stands out in the row
+  const cell = (r, key, n) => (r[n] === null ? (r[key] && r[key].net !== null ? 'stops early' : '–') : atRegistered && band(r[n]) !== 'ok' ? `${ms(r[n])} · ${word[band(r[n])]}` : ms(r[n]));
   const body = rows.map((r) => el('tr', {},
     el('th', { scope: 'row', class: 'probe', text: `${r.probe.city || 'A probe'}${r.probe.network ? ` · ${r.probe.network}` : ''}` }),
-    el('td', { class: 'mono pathcell', text: nets(r.v4) }), el('td', { class: 'num', text: r.v4 && r.n4 === null && r.v4.net !== null ? 'stops early' : ms(r.n4) }),
-    el('td', { class: 'mono pathcell', text: nets(r.v6) }), el('td', { class: 'num', text: r.v6 && r.n6 === null && r.v6.net !== null ? 'stops early' : ms(r.n6) }),
+    el('td', { class: 'mono pathcell', text: nets(r.v4) }), el('td', { class: 'num', text: cell(r, 'v4', 'n4') }),
+    el('td', { class: 'mono pathcell', text: nets(r.v6) }), el('td', { class: 'num', text: cell(r, 'v6', 'n6') }),
     el('td', { class: 'num', text: signed(r.delta) }), el('td', { text: winner[r.winner] }),
     el('td', { text: r.sameNetworks === null ? '–' : r.sameNetworks ? 'same' : 'different' })));
-  const table = el('section', { class: 'table-wrap card', tabindex: '0', 'aria-label': 'The probes of the comparison of IPv4 and IPv6' }, el('table', { class: 'checks live nb' },
-    el('caption', { class: 'sr-only', text: 'Each probe, with the networks on the way and the net round trip over IPv4 and over IPv6, the difference and the faster family' }),
+  const table = el('section', { class: 'table-wrap card', tabindex: '0', 'aria-label': 'The probes of the measurement over IPv4 and IPv6' }, el('table', { class: 'checks live nb' },
+    el('caption', { class: 'sr-only', text: 'Each probe, with the networks on the way and the net round trip over IPv4 and over IPv6, with its reading when it is not normal, the difference and the faster family' }),
     el('thead', {}, el('tr', {}, ['Probe', 'IPv4 networks', 'IPv4 net round trip', 'IPv6 networks', 'IPv6 net round trip', 'IPv6 − IPv4', 'Faster', 'Networks'].map((t, i) => el('th', { scope: 'col', class: i === 2 || i === 4 || i === 5 ? 'num' : undefined, text: t })))),
     el('tbody', {}, ...body)));
   const report = () => ({
-    kind: 'tromboning', title: `${as} from ${home}: IPv6 against IPv4`, source: `/#${as}`,
-    sections: [{ heading: 'Summary', text: `${headline}. ${lines.join(' ')} ${notes[0]}` },
+    kind: 'tromboning', title: `${as} from ${home}: ${headline}`, source: `/#${as}`,
+    sections: [{ heading: 'Tromboning', text: `${headline}. ${lines.join(' ')}` }, { heading: 'IPv4 against IPv6', text: `${compare} ${answered} ${notes[0]}` },
       { heading: 'Probes', table: { columns: ['Probe', 'IPv4 networks', 'IPv4 ms', 'IPv6 networks', 'IPv6 ms', 'IPv6 − IPv4', 'Faster', 'Networks'],
-        rows: rows.slice(0, 100).map((r) => [`${r.probe.city || 'A probe'}${r.probe.network ? ` · ${r.probe.network}` : ''}`, nets(r.v4), (r.v4 && r.n4 === null && r.v4.net !== null ? 'stops early' : ms(r.n4)), nets(r.v6), (r.v6 && r.n6 === null && r.v6.net !== null ? 'stops early' : ms(r.n6)), signed(r.delta), winner[r.winner], r.sameNetworks === null ? '–' : r.sameNetworks ? 'same' : 'different']) } }],
+        rows: rows.slice(0, 100).map((r) => [`${r.probe.city || 'A probe'}${r.probe.network ? ` · ${r.probe.network}` : ''}`, nets(r.v4), cell(r, 'v4', 'n4'), nets(r.v6), cell(r, 'v6', 'n6'), signed(r.delta), winner[r.winner], r.sameNetworks === null ? '–' : r.sameNetworks ? 'same' : 'different']) } }],
   });
   return el('div', {}, box, table, AspaShare.button(report));
 }
@@ -1268,6 +1311,41 @@ function compareBlock(as) {
 
 function graphHolder(as) { return el('div', { class: 'res-hist' }, el('h4', { text: 'Neighbourhood' }), graphBlock(as)); }
 
+/* ---------- the checks of this browser, and what changed since ---------- */
+// For an AS that was looked up before in this browser: what changed since then; then the entry is made again with what is there now.
+function recentNote(as, providers, named) {
+  if (typeof AspaRecent === 'undefined') return null;
+  const list = AspaRecent.store.load();
+  const before = AspaRecent.find(list, { kind: 'as', id: as });
+  const now = { providers: providers.filter((p) => p !== 'AS0'), named };
+  AspaRecent.store.save(AspaRecent.record(list, { kind: 'as', id: as, t: Date.now(), providers: now.providers, named }));
+  renderRecent();
+  if (!before) return null;
+  const d = AspaRecent.diffAs(before, now);
+  return el('p', { class: `hint recent-note${d.changed ? ' changed' : ''}` }, `You looked at ${as} ${AspaRecent.ago(before.t)}: `, d.text, '.');
+}
+
+// The list under the tools: the AS and the paths checked lately, each with what is different now. It is only in this browser.
+function renderRecent() {
+  const box = $('recent');
+  if (!box || typeof AspaRecent === 'undefined') return;
+  const list = AspaRecent.store.load();
+  box.hidden = !list.length || !aspas.length;
+  if (box.hidden) return;
+  const items = list.map((e) => {
+    if (e.kind === 'as') {
+      const d = AspaRecent.diffAs(e, { providers: (byCustomer.get(e.id) ? byCustomer.get(e.id).providers : []).filter((p) => p !== 'AS0'), named: (byProvider.get(e.id) || []).length });
+      return el('li', {}, el('a', { class: 'aslink', href: `#${e.id}`, text: e.id }), ` · ${AspaRecent.ago(e.t)} · `, el('span', { class: d.changed ? 'recent-changed' : 'muted', text: d.changed ? `since then: ${d.text}` : 'nothing has changed' }));
+    }
+    const parsed = AspaVerify.parsePath(e.id);
+    const now = parsed.error ? null : AspaVerify.verify(aspaSets, parsed.path, e.direction).result;
+    const d = now ? AspaRecent.diffPath(e, now) : { changed: false, text: '' };
+    return el('li', {}, el('a', { href: `#${new URLSearchParams({ path: e.id, from: e.direction })}`, text: `path ${e.id}` }), ` (${e.direction === 'down' ? 'from a provider' : 'from a customer or a peer'}) · ${AspaRecent.ago(e.t)} · `, el('span', { class: d.changed ? 'recent-changed' : 'muted', text: d.changed ? `since then: ${d.text}` : (now ? `still ${now}` : '') }));
+  });
+  $('recent-list').replaceChildren(...items);
+  $('recent-count').textContent = `(${list.length})`;
+}
+
 function renderLookup(as) {
   const out = $('result');
   if (!as) { out.replaceChildren(); lookupAs = null; return; }
@@ -1307,7 +1385,8 @@ function renderLookup(as) {
     right.append(el('p', { text: `No ASPA names ${as} as a provider.` }));
   }
 
-  out.replaceChildren(head, el('div', { class: 'res-grid' }, left, right), el('div', { class: 'res-hist', id: 'as-history' }), el('div', { class: 'res-hist' }, el('h4', { text: 'Compare' }), compareBlock(as)), el('div', { class: 'res-hist', id: 'as-quality' }), graphHolder(as), shareBlock(as));
+  const seen = recentNote(as, own ? own.providers : [], customers.length);
+  out.replaceChildren(head, ...(seen ? [seen] : []), el('div', { class: 'res-grid' }, left, right), el('div', { class: 'res-hist', id: 'as-history' }), el('div', { class: 'res-hist' }, el('h4', { text: 'Compare' }), compareBlock(as)), el('div', { class: 'res-hist', id: 'as-quality' }), graphHolder(as), shareBlock(as));
   document.title = `${as} · ASPA Explorer`;
   const canon = document.querySelector('link[rel="canonical"]');
   if (canon) canon.setAttribute('href', `${location.origin}/as/${as}`);
@@ -1345,7 +1424,13 @@ function notifyForm(as) {
   });
   const leaks = el('input', { type: 'checkbox', id: 'nf-leaks' });
   const leaksLabel = el('label', { class: 'chk', for: 'nf-leaks' }, leaks, ` Also tell me, once a day, about new places of valley (possible route leaks) that involve ${as}`);
-  const form = el('form', { class: 'notify', autocomplete: 'off' }, kind, target, trap, btn, leaksLabel);
+  // an alert when the AS is the origin of that many invalid announcements in ten minutes (the stream of RIPE RIS Live, watched by the server)
+  const inv = el('input', { type: 'checkbox', id: 'nf-invalid' });
+  const invAt = el('select', { id: 'nf-invalid-at', 'aria-label': 'Threshold of invalid announcements in ten minutes' }, ...[5, 10, 50, 100, 500, 1000].map((n) => el('option', { value: String(n), text: `${n} or more` })));
+  invAt.value = '10';
+  const invLabel = el('label', { class: 'chk', for: 'nf-invalid' }, inv, ` Also tell me when ${as} is the origin of `);
+  const invRow = el('p', { class: 'chk-row' }, invLabel, invAt, ' invalid announcements in ten minutes (at most once every six hours)');
+  const form = el('form', { class: 'notify', autocomplete: 'off' }, kind, target, trap, btn, leaksLabel, invRow);
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
     btn.disabled = true;
@@ -1353,7 +1438,7 @@ function notifyForm(as) {
     try {
       const r = await fetch('/api/v1/subscriptions', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ kind: kind.value, target: target.value.trim(), asn: as, leaks: leaks.checked, website: trap.value }),
+        body: JSON.stringify({ kind: kind.value, target: target.value.trim(), asn: as, leaks: leaks.checked, ...(inv.checked ? { invalid: Number(invAt.value) } : {}), website: trap.value }),
       });
       const body = await r.json().catch(() => ({}));
       if (!r.ok) throw new Error(body.error || `HTTP ${r.status}`);
@@ -1369,7 +1454,7 @@ function notifyForm(as) {
   });
   return el('details', { class: 'embed' },
     el('summary', { text: 'Get notified by e-mail or webhook' }),
-    el('p', { class: 'hint', text: `A message when the ASPA of ${as} changes, or when another ASPA adds or drops ${as} as a provider; if you tick the box, also when a new place of valley (a possible route leak) involves it. An e-mail address has to be confirmed through a link; a webhook has to repeat a challenge. Nothing else is kept or used.` }),
+    el('p', { class: 'hint', text: `A message when the ASPA of ${as} changes, or when another ASPA adds or drops ${as} as a provider; if you tick the first box, also when a new place of valley (a possible route leak) involves it; the second one tells you when the routes that the RIPE RIS collectors see show many invalid announcements with this AS as the origin. An e-mail address has to be confirmed through a link; a webhook has to repeat a challenge. Nothing else is kept or used.` }),
     form, msg,
     el('p', { class: 'hint' }, 'How it works, what is kept and how to stop: ', el('a', { href: '/guide.html#notify', text: 'the guide' }), '.'));
 }
@@ -1506,6 +1591,7 @@ async function load() {
     await loadVisibility();
     computeQuality();
     renderQuality();
+    renderRecent();
     lookupFromHash();
   } catch (err) {
     $('meta').textContent = '';
@@ -1517,6 +1603,8 @@ async function load() {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
+  const clearRecent = $('recent-clear');
+  if (clearRecent) clearRecent.addEventListener('click', () => { AspaRecent.store.clear(); renderRecent(); });
   $('lookup').addEventListener('submit', (e) => {
     e.preventDefault();
     const as = normalizeAsn($('asn').value);

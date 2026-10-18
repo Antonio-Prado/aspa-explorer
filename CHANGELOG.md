@@ -5,6 +5,16 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.38.0] - 2026-10-18
+
+### Changed
+- The result of the comparison of IPv4 and IPv6 starts with the reading of the tromboning, for each family ("No trombone seen, over IPv4 or IPv6", "Trombone over IPv6 only"…), read on the probes that got into the AS; the comparison of the two families and who answered come after, as what goes with it, and a probe's round trip says when it is a trombone.
+
+### Added
+- **Alerts on invalid announcements, with a threshold**: a subscription to an AS can ask to be told when the AS is the origin of 5, 10, 50, 100, 500 or 1000 announcements that the ASPAs prove invalid in a ten-minute run of the live watcher, at most once every six hours (`notifier/invalid.mjs`; `scripts/watch-invalid.mjs` writes `invalid-last.json`, served as `/api/v1/invalid-last.json`; a column `invalid_min` in the subscriptions; `aspa.invalid` for webhooks).
+- **Recent checks**: the page remembers, in the local storage of the browser only, the last twenty ASes and paths that were checked, says what changed when one is checked again (providers added or dropped, a verdict that moved) and lists them under the tools with what is different now; the list can be cleared (`site/recent.js`).
+- **A quick look at any AS**: a click on the name of an AS opens a small window with its ASPA, the ASPAs that name it, whether it is seen in BGP, the findings on its ASPA and its last change; Ctrl, Cmd or Shift still go to its page (`site/peek.js`, a native `<dialog>`, on the home page and the statistics).
+
 ## [1.37.2] - 2026-10-18
 
 ### Added

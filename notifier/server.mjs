@@ -1,5 +1,5 @@
 // The HTTP side of the notifier, behind nginx on the loopback interface:
-//   POST /api/v1/subscriptions               {kind: "email"|"webhook", target, asn, leaks?: true}  or  {kind, target, topic: "status"}
+//   POST /api/v1/subscriptions               {kind: "email"|"webhook", target, asn, leaks?: true, invalid?: 5..100000}  or  {kind, target, topic: "status"}
 //   POST /api/v1/subscriptions/confirm       {token}
 //   POST /api/v1/subscriptions/unsubscribe   {token}   (also ?token= with a form body, for List-Unsubscribe-Post)
 // Everything the handlers need from outside is passed in, so the tests can fake it.
@@ -7,6 +7,7 @@ import { randomBytes } from 'node:crypto';
 import { makeToken, readToken } from './tokens.mjs';
 import { EMAIL_RE } from './mail.mjs';
 import { parseWebhookUrl } from './webhook.mjs';
+import { MIN_THRESHOLD, MAX_THRESHOLD } from './invalid.mjs';
 import { checkReport, newId, shell, ID_RE, TTL_DAYS } from './reports.mjs';
 
 const MAX_AS = 4294967295;
@@ -55,6 +56,12 @@ export function makeApi(deps) {
     if (!perIp(ip) ) return bad('too many requests from this address, try again later', 429);
     const kind = body.kind;
     const leaks = body.leaks === true && !status ? 1 : 0;                                         // opt-in: also the places of valley that involve the AS
+    // opt-in: also an alert when the AS is the origin of at least this many invalid announcements in ten minutes
+    let invalid = 0;
+    if (body.invalid !== undefined && body.invalid !== null && body.invalid !== false) {
+      if (status || !Number.isInteger(body.invalid) || body.invalid < MIN_THRESHOLD || body.invalid > MAX_THRESHOLD) return bad(`invalid must be a whole number from ${MIN_THRESHOLD} to ${MAX_THRESHOLD}, and needs an AS`);
+      invalid = body.invalid;
+    }
     if (kind !== 'email' && kind !== 'webhook') return bad('kind must be "email" or "webhook"');
     const t = now();
     if (store.countAsn(asn) >= MAX_PER_ASN) return bad('this AS has reached the limit of subscriptions', 429);
@@ -68,9 +75,9 @@ export function makeApi(deps) {
       if (row && t - row.attempted < HOUR) return accepted;                             // one confirmation per hour per subscription
       if (!row && store.countTarget('email', target) >= MAX_PER_TARGET) return accepted;
       if (!global('mail')) return bad('the service is busy, try again later', 503);
-      if (row) { store.attempt(row.id, t); store.setLeaks(row.id, leaks); } else row = { id: store.insert('email', target, asn, null, t, leaks), attempted: t };
+      if (row) { store.attempt(row.id, t); store.setLeaks(row.id, leaks); store.setInvalid(row.id, invalid); } else row = { id: store.insert('email', target, asn, null, t, leaks, invalid), attempted: t };
       row = store.get(row.id);
-      try { await sendConfirmation({ to: target, asn, token: confirmToken(row), site, leaks: !!leaks }); } catch (err) { deps.log && deps.log(`confirmation not sent: ${err.message}`); store.remove(row.id); return bad('the confirmation message could not be sent', 502); }
+      try { await sendConfirmation({ to: target, asn, token: confirmToken(row), site, leaks: !!leaks, invalid }); } catch (err) { deps.log && deps.log(`confirmation not sent: ${err.message}`); store.remove(row.id); return bad('the confirmation message could not be sent', 502); }
       return accepted;
     }
 
@@ -83,8 +90,8 @@ export function makeApi(deps) {
     if (!row && store.countTarget('webhook', target) >= MAX_PER_TARGET) return bad('too many subscriptions for this webhook', 429);
     if (!global('webhook')) return bad('the service is busy, try again later', 503);
     const secret = 'whsec_' + randomBytes(24).toString('hex');
-    const id = row ? row.id : store.insert('webhook', target, asn, secret, t, leaks);
-    if (row) { store.attempt(id, t, secret); store.setLeaks(id, leaks); }
+    const id = row ? row.id : store.insert('webhook', target, asn, secret, t, leaks, invalid);
+    if (row) { store.attempt(id, t, secret); store.setLeaks(id, leaks); store.setInvalid(id, invalid); }
     const challenge = randomBytes(16).toString('hex');
     try {
       const r = await verifyWebhook(target, { type: 'verification', challenge, asn, unsubscribe: unsubscribeUrl(id) }, secret);
@@ -94,7 +101,7 @@ export function makeApi(deps) {
       return bad(`verification failed: ${err.message}`, 400);
     }
     store.activate(id, t);
-    return reply(201, { status: 'active', asn, leaks: !!leaks, secret, unsubscribe: unsubscribeUrl(id), message: 'Subscribed. The secret is shown only now: use it to check the X-ASPA-Signature header of each delivery.' });
+    return reply(201, { status: 'active', asn, leaks: !!leaks, invalid, secret, unsubscribe: unsubscribeUrl(id), message: 'Subscribed. The secret is shown only now: use it to check the X-ASPA-Signature header of each delivery.' });
   }
 
   function confirm(body) {

@@ -13,7 +13,7 @@ if [ -z "$changelog" ] || [ "$changelog" != "$shown" ]; then
   exit 1
 fi
 for page in index guide guida api subscription statistics status examples embed report; do
-  for asset in style.css app.js evidence.js whatif.js traceroute.js graph.js live.js validators.js status-checks.js footer.js subscription.js adoption.js leaks.js stats.js status.js status-history.js trends.js datasets.js ui.js resources.js coverage.js invalid.js examples.js download.js bulk.js share.js report.js; do
+  for asset in style.css app.js evidence.js whatif.js traceroute.js graph.js live.js validators.js status-checks.js footer.js subscription.js adoption.js leaks.js stats.js status.js status-history.js trends.js datasets.js ui.js resources.js coverage.js invalid.js examples.js download.js bulk.js share.js report.js recent.js peek.js; do
     if ! grep -q "$asset?v=$shown\"" "$root/site/$page.html" && grep -q "\"/$asset" "$root/site/$page.html"; then
       echo "site/$page.html: $asset is not requested with ?v=$shown" >&2
       exit 1

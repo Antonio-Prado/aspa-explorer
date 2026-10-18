@@ -56,7 +56,7 @@ const PAGES = [
   ['home', '/'], ['as', '/#AS12779'], ['path', '/#path=3356+12779&from=up'], ['changes', '/#changes'], ['quality', '/#quality'],
   ['statistics', '/statistics.html'], ['guide', '/guide.html'], ['guida', '/guida.html'], ['api', '/api.html'],
   ['examples', '/examples.html'], ['embed', '/embed.html?country=IT'], ['status', '/status.html'], ['subscription', '/subscription.html#confirm=abc'],
-  ['bulk', '/#path=3356+12779&from=up'], ['report', '/r/0123456789ab'],
+  ['bulk', '/#path=3356+12779&from=up'], ['peek', '/#AS12779'], ['recent', '/#AS12779'], ['report', '/r/0123456789ab'],
 ];
 const VIEWPORTS = [['desktop', { width: 1280, height: 800 }], ['narrow', { width: 320, height: 640 }]];
 const SCHEMES = ['light', 'dark'];
@@ -94,6 +94,23 @@ for (const [name, path] of PAGES) {
           const rows = await page.locator('#bulkresult tbody tr').count();
           if (rows !== 4) extra.push(`bulk: ${rows} rows, expected 4`);
           if (!(await page.locator('#bulkresult .share-result button').count())) extra.push('bulk: no button to share');
+        }
+        if (name === 'peek') {
+          // the quick look: a click on the name of an AS opens a window with rows, and it can be closed
+          await page.locator('a.chip').first().click();
+          await page.waitForTimeout(500);
+          const rows = await page.locator('dialog.peek[open] .peek-row').count();
+          if (rows < 2) extra.push(`peek: ${rows} rows in the window, expected at least 2`);
+        }
+        if (name === 'recent') {
+          // the checks of this browser: look at another AS and come back; the note and the list must be there
+          await page.evaluate(() => { location.hash = '#AS680'; });
+          await page.waitForTimeout(400);
+          await page.evaluate(() => { location.hash = '#AS12779'; });
+          await page.waitForTimeout(400);
+          if (!(await page.locator('.recent-note').count())) extra.push('recent: no note about the earlier look');
+          if (await page.locator('#recent').isHidden()) extra.push('recent: the list is hidden');
+          else if (await page.locator('#recent-list li').count() < 2) extra.push('recent: fewer than 2 entries');
         }
         if (name === 'report') {
           const rows = await page.locator('#rp-body tbody tr').count();

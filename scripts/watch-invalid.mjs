@@ -5,7 +5,7 @@
 //
 //   node scripts/watch-invalid.mjs OUT_DIR [SECONDS]
 //
-// OUT_DIR gets invalid-days/YYYYMMDD.json (one file for each day, kept 14 days) and invalid.json (the report).
+// OUT_DIR gets invalid-days/YYYYMMDD.json (one file for each day, kept 14 days), invalid.json (the report) and invalid-last.json (what this run saw, by origin).
 // Environment: ASPA_DATA (Routinator's jsonext, default http://127.0.0.1:8080/data/aspas.json), WATCH_HOSTS (the collectors of RIS
 // Live to listen to, comma separated; default all of them: it costs about a tenth of a core), WATCH_ADOPTION (the file with the IXP ASes,
 // default adoption.json in OUT_DIR).
@@ -19,6 +19,8 @@ if (net.setDefaultAutoSelectFamilyAttemptTimeout) net.setDefaultAutoSelectFamily
 const UA = 'aspa-explorer';
 const RIS_LIVE = `wss://ris-live.ripe.net/v1/ws/?client=${UA}`;
 export const KEEP_DAYS = 14;
+export const LAST_MIN = 5;          // an origin is in invalid-last.json when it had at least this many invalid announcements in the run
+export const LAST_TOP = 300;
 const VERDICT = ['valid', 'unknown', 'invalid'];
 
 // The announcements of one RIS Live message: [{prefix, path (origin first, no prepending, no IXP ASes), peer}]; paths with an AS_SET
@@ -51,6 +53,22 @@ export function count(day, ms, origin, prefix, verdict) {
     const k = `${prefix}|${origin}`;
     day.prefixes[k] = (day.prefixes[k] || 0) + 1;
   }
+}
+
+// What one run saw, by origin: the file that the notifier reads (invalid-last.json) to tell the subscribers who asked for a threshold.
+// run: {origins: Map origin -> [announcements, invalid], prefixes: Map 'prefix|origin' -> invalid}; only the origins with at least `min` invalid
+// announcements are listed, the busiest `top`, each with its busiest prefixes.
+export function buildLast(run, from, to, now = Date.now(), min = LAST_MIN, top = LAST_TOP) {
+  const byOrigin = new Map();
+  for (const [k, n] of run.prefixes) {
+    const at = k.lastIndexOf('|'), origin = k.slice(at + 1);
+    if (!byOrigin.has(origin)) byOrigin.set(origin, []);
+    byOrigin.get(origin).push({ prefix: k.slice(0, at), invalid: n });
+  }
+  const origins = {};
+  const list = [...run.origins].filter(([, [, inv]]) => inv >= min).sort((a, b) => b[1][1] - a[1][1]).slice(0, top);
+  for (const [as, [ann, inv]] of list) origins[`AS${as}`] = { invalid: inv, announcements: ann, prefixes: (byOrigin.get(String(as)) || []).sort((x, y) => y.invalid - x.invalid).slice(0, 5) };
+  return { generated: new Date(now).toISOString().replace(/\.\d+Z$/, 'Z'), from: new Date(from).toISOString().replace(/\.\d+Z$/, 'Z'), to: new Date(to).toISOString().replace(/\.\d+Z$/, 'Z'), min, origins };
 }
 
 // The report of the days (oldest first): the hours, the profile and the busiest origins and prefixes.
@@ -116,6 +134,7 @@ async function main() {
   const started = Date.now();
   let today = await dayAt(started);
 
+  const run = { origins: new Map(), prefixes: new Map() };       // this run only, for invalid-last.json
   const onMessage = (m) => {
     const now = Date.now();
     const d = days.get(dayOf(now)) || today;
@@ -130,6 +149,10 @@ async function main() {
       const k = classify(aspas, a.path);
       sec.ann++; if (k === 2) sec.inv++;
       count(d, now, a.path[0], a.prefix, k);
+      const o = run.origins.get(a.path[0]) || [0, 0];
+      o[0]++; if (k === 2) o[1]++;
+      run.origins.set(a.path[0], o);
+      if (k === 2) { const pk = `${a.prefix}|${a.path[0]}`; run.prefixes.set(pk, (run.prefixes.get(pk) || 0) + 1); }
     }
   };
 
@@ -155,6 +178,7 @@ async function main() {
   for (const f of names.slice(-KEEP_DAYS)) keep.push(JSON.parse(await readFile(join(dir, f), 'utf8')));
   const report = buildReport(keep);
   await writeJson(join(out, 'invalid.json'), report);
+  await writeJson(join(out, 'invalid-last.json'), buildLast(run, started, Date.now()));
   console.log(`${report.generated}: ${report.profile.announcements} announcements in ${report.profile.seconds} s over ${keep.length} days, ${report.profile.invalid} invalid (${report.profile.invalid_share}%)`);
 }
 
