@@ -615,7 +615,8 @@ function pairBlock(res, t4, t6, home, origin, atRegistered) {
   const as = 'AS' + origin;
   const read = { ok: 'normal', long: 'longer than it should be', trombone: 'a trombone' };
   let headline;
-  if (!cmp.both) headline = 'No probe answered on both families, so there is nothing to compare';
+  const stopped = (key) => rows.filter((r) => r[key] && r[key === 'v4' ? 'n4' : 'n6'] === null && r[key].net !== null).length;
+  if (!cmp.both) headline = stopped('v6') && !stopped('v4') ? `The traceroutes over IPv6 stop before ${as}: ${t6.address} probably does not answer` : stopped('v4') && !stopped('v6') ? `The traceroutes over IPv4 stop before ${as}: ${t4.address} probably does not answer` : 'No probe answered on both families, so there is nothing to compare';
   else if (Math.abs(cmp.medianDelta) < 1) headline = `IPv6 and IPv4 take the same time (median ${ms(cmp.median6)} and ${ms(cmp.median4)})`;
   else headline = `IPv6 is ${ms(Math.abs(cmp.medianDelta))} ${cmp.medianDelta > 0 ? 'slower' : 'faster'} than IPv4 (median ${ms(cmp.median6)} and ${ms(cmp.median4)})`;
   const c = cmp.counts;
@@ -661,6 +662,13 @@ function measureBlock(origin, tr, routes) {
   // both families on the same probes: possible when the origin has a prefix of each in the routes
   const both = el('input', { type: 'checkbox', id: `pair-${origin}` });
   if (!(t4 && t6)) both.disabled = true;
+  // the addresses to aim at, which can be changed: the first host of a prefix often does not answer, and then a traceroute stops before the AS
+  const addr4 = el('input', { type: 'text', id: `addr4-${origin}`, class: 'copy-field', spellcheck: 'false', value: t4 ? t4.address : '', 'aria-label': 'IPv4 address to aim at' });
+  const addr6 = el('input', { type: 'text', id: `addr6-${origin}`, class: 'copy-field', spellcheck: 'false', value: t6 ? t6.address : '', 'aria-label': 'IPv6 address to aim at' });
+  const addrBox = el('div', { class: 'pair-addresses', hidden: '' },
+    el('p', { class: 'hint', text: `Addresses to aim at, in the prefixes that ${as} announces. If a traceroute stops before ${as}, the address does not answer: put one that does (a name server or a web server of the AS, for instance).` }),
+    el('p', { class: 'field' }, el('label', { for: addr4.id, class: 'inline', text: 'IPv4 ' }), addr4, ' ', el('label', { for: addr6.id, class: 'inline', text: 'IPv6 ' }), addr6));
+  both.addEventListener('change', () => { addrBox.hidden = !both.checked; });
   const bothLabel = el('label', { class: 'chk', for: both.id }, both, ` Compare IPv4 and IPv6 on the same probes${t4 && t6 ? '' : ` (${as} has no ${t4 ? 'IPv6' : 'IPv4'} prefix in the routes)`}`);
   btn.addEventListener('click', async () => {
     const country = select.value, home = countryName(country);
@@ -668,9 +676,19 @@ function measureBlock(origin, tr, routes) {
     status.replaceChildren(el('span', { class: 'busy', text: 'Starting the probes' }));
     try {
       if (both.checked) {
-        const res = await measurePair(t4, t6, country, (t) => status.replaceChildren(el('span', { class: 'busy', text: t })), origin);
+        // the addresses typed must be inside the prefixes of the AS, so that the two measurements are about the AS and nothing else
+        const mine = AspaTraceroute.prefixesOf(routes, origin);
+        const pick = (input, base, name) => {
+          const v = input.value.trim();
+          if (v === base.address) return base;
+          const prefix = mine.find((p) => AspaTraceroute.contains(p, v));
+          if (!prefix || AspaTraceroute.isPrivate(v)) throw new Error(`${v || 'the ' + name + ' address'} is not inside a prefix that ${as} announces`);
+          return { prefix, address: v };
+        };
+        const u4 = pick(addr4, t4, 'IPv4'), u6 = pick(addr6, t6, 'IPv6');
+        const res = await measurePair(u4, u6, country, (t) => status.replaceChildren(el('span', { class: 'busy', text: t })), origin);
         status.textContent = `IPv4 and IPv6 towards ${as}, from ${res.rows.length} probe${res.rows.length === 1 ? '' : 's'} in ${home}.`;
-        out.replaceChildren(pairBlock(res, t4, t6, home, origin, country === registered));
+        out.replaceChildren(pairBlock(res, u4, u6, home, origin, country === registered));
         btn.disabled = false; select.disabled = false; both.disabled = !(t4 && t6);
         return;
       }
@@ -692,7 +710,7 @@ function measureBlock(origin, tr, routes) {
   });
   return el('div', { class: 'measure' },
     el('p', { class: 'field' }, el('label', { for: select.id, class: 'inline', text: 'Probes in ' }), select, ' ', btn),
-    el('p', {}, bothLabel),
+    el('p', {}, bothLabel), addrBox,
     el('p', { class: 'hint', text: `It runs a traceroute towards ${target.address} (in ${target.prefix}) from up to ${PROBES} probes in the country that you choose, through Globalping (globalping.io), and asks RIPEstat which network each hop belongs to. They both see your address and what is asked, and the test uses ${PROBES} of the 250 measurements an hour that Globalping allows to an address (${2 * PROBES} when it compares IPv4 and IPv6).` }),
     status, out);
 }

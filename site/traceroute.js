@@ -45,6 +45,37 @@
     return prefix ? { prefix, address: hostIn(prefix) } : null;
   }
 
+  // An address as a family and a number (BigInt), or null: dotted IPv4, IPv6 with or without ::
+  function parseIp(text) {
+    const t = String(text).trim().toLowerCase();
+    if (/^\d{1,3}(\.\d{1,3}){3}$/.test(t)) {
+      const parts = t.split('.').map(Number);
+      return parts.some((x) => x > 255) ? null : { family: 4, bits: 32, n: BigInt(toNum(t)) };
+    }
+    if (!/^[0-9a-f:]+$/.test(t) || !t.includes(':') || (t.match(/::/g) || []).length > 1 || t.includes(':::')) return null;
+    const [head, tail] = t.includes('::') ? t.split('::') : [t, null];
+    const h = head ? head.split(':') : [], tl = tail ? tail.split(':') : [];
+    const groups = tail === null ? h : [...h, ...Array(8 - h.length - tl.length).fill('0'), ...tl];
+    if (groups.length !== 8 || tail !== null && h.length + tl.length > 7 || groups.some((g) => !/^[0-9a-f]{1,4}$/.test(g))) return null;
+    return { family: 6, bits: 128, n: groups.reduce((n, g) => (n << 16n) + BigInt(parseInt(g, 16)), 0n) };
+  }
+
+  // Does the prefix ("193.0.0.0/21") contain the address?
+  function contains(prefix, address) {
+    const m = /^([0-9a-f.:]+)\/(\d{1,3})$/i.exec(String(prefix).trim());
+    const net = m && parseIp(m[1]), ip = parseIp(address);
+    if (!net || !ip || net.family !== ip.family || Number(m[2]) > net.bits) return false;
+    const shift = BigInt(net.bits - Number(m[2]));
+    return net.n >> shift === ip.n >> shift;
+  }
+
+  // The prefixes that an origin announces in the routes (every length, lower case): where an address may be aimed at for it.
+  function prefixesOf(routes, origin) {
+    const out = new Set();
+    for (const rt of routes) if (Array.isArray(rt.path) && rt.path[rt.path.length - 1] === origin && rt.target_prefix) out.add(String(rt.target_prefix).toLowerCase());
+    return [...out];
+  }
+
   // Addresses that no registry maps to an AS: private, shared, link-local, loopback.
   function isPrivate(ip) {
     if (!ip) return true;
@@ -142,7 +173,7 @@
     };
   }
 
-  const api = { hostIn, targetOf, isPrivate, summarise, aggregate, pairProbes, comparePairs, LONG_DELAY_MS, TROMBONE_MS, JUMP_MS };
+  const api = { hostIn, targetOf, parseIp, contains, prefixesOf, isPrivate, summarise, aggregate, pairProbes, comparePairs, LONG_DELAY_MS, TROMBONE_MS, JUMP_MS };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.AspaTraceroute = api;
 })(typeof self !== 'undefined' ? self : this);

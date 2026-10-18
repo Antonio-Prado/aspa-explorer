@@ -2,7 +2,7 @@
 import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
 
-const { hostIn, targetOf, isPrivate, summarise, aggregate, pairProbes, comparePairs } = createRequire(import.meta.url)('../site/traceroute.js');
+const { hostIn, targetOf, parseIp, contains, prefixesOf, isPrivate, summarise, aggregate, pairProbes, comparePairs } = createRequire(import.meta.url)('../site/traceroute.js');
 let passed = 0;
 const test = (name, fn) => { fn(); passed++; console.log('ok  ', name); };
 
@@ -135,6 +135,23 @@ test('a traceroute that stops before the origin is not compared', () => {
   const c = comparePairs(rows);
   assert.equal(c.both, 0);
   assert.equal(c.median4, null);
+});
+
+test('addresses and prefixes: an address is inside a prefix or it is not', () => {
+  assert.equal(parseIp('193.0.0.1').family, 4);
+  assert.equal(parseIp('2001:760::53').family, 6);
+  assert.equal(parseIp('::1').n, 1n);
+  assert.equal(parseIp('2001:db8:0:0:0:0:0:1').n, parseIp('2001:db8::1').n);
+  for (const bad of ['', 'x', '1.2.3', '256.1.1.1', '1::2::3', '1:2:3:4:5:6:7:8:9', ':::', '2001:db8::g', 'fe80::1%eth0']) assert.equal(parseIp(bad), null, bad);
+  assert.equal(contains('193.0.0.0/21', '193.0.7.255'), true);
+  assert.equal(contains('193.0.0.0/21', '193.0.8.0'), false);
+  assert.equal(contains('193.0.0.0/21', '2001:760::1'), false);
+  assert.equal(contains('2001:760::/32', '2001:760::53'), true);
+  assert.equal(contains('2001:760::/32', '2001:761::1'), false);
+  assert.equal(contains('2001:760::/32', '193.0.0.1'), false);
+  assert.equal(contains('10.0.0.0/33', '10.0.0.1'), false);
+  assert.equal(contains('0.0.0.0/0', '8.8.8.8'), true);
+  assert.deepEqual(prefixesOf([{ path: [1, 9], target_prefix: '193.0.0.0/21' }, { path: [1, 8], target_prefix: '8.0.0.0/8' }, { path: [2, 9], target_prefix: '2001:DB8::/32' }], 9).sort(), ['193.0.0.0/21', '2001:db8::/32']);
 });
 
 console.log(`${passed} tests passed`);
