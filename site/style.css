@@ -648,3 +648,6 @@ dialog.peek h2 { margin: 0 0 0.6rem; font-size: 1.2rem; }
   .recent { position: static; padding: 0.5rem 1rem 0; }
   .recent[open] .recent-body { position: static; width: auto; border: 0; box-shadow: none; padding: 0.3rem 0 0; }
 }
+
+/* the name of a probe in the tables of the tromboning: it wraps between words, never inside one */
+.checks th.probe { min-width: 9rem; overflow-wrap: normal; word-break: normal; }

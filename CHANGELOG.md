@@ -5,6 +5,11 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.39.2] - 2026-10-18
+
+### Fixed
+- In the tables of the tromboning the column of the probes was so narrow that a name broke inside its words ("Amsterd am · DELUXH OST"); it now keeps at least nine characters' width and wraps between words only.
+
 ## [1.39.1] - 2026-10-18
 
 ### Fixed
