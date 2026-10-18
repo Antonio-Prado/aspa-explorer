@@ -113,6 +113,12 @@
     <td colspan="2" align="center"><img src="assets/screenshots/tromboning-dark.jpg" width="60%" alt="Tromboning of AS41327: a table with the median of the round trips of twelve probes in Italy, and a row for each probe with the networks on the way and the reading"></td>
   </tr>
   <tr>
+    <td colspan="2" align="center"><img src="assets/screenshots/tromboning-pair-dark.jpg" width="70%" alt="Tromboning of AS25152 over IPv4 and IPv6 on the same probes: the reading first (no trombone seen), then the median of each family, the comparison of the two and a row for each probe"></td>
+  </tr>
+  <tr>
+    <td colspan="2" align="center"><sub>Tromboning, IPv4 and IPv6 on the same probes: the reading of each family first, the comparison after</sub></td>
+  </tr>
+  <tr>
     <td colspan="2" align="center"><sub>Tromboning, measured: twelve probes in the country, the median first</sub></td>
   </tr>
 </table>

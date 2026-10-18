@@ -5,7 +5,15 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [1.39.3] - 2026-10-18
+## [1.39.4] - 2026-10-18
+
+### Fixed
+- In the form to be notified, the line of the threshold of invalid announcements ("Also tell me when ASn is the origin of [10 or more] invalid announcements…") broke into three lines; it is one row now, that wraps between its parts only when it must.
+
+## [1.39.3] - 2026-10-18 (no tag: it went out with 1.39.4)
+
+### Fixed
+- The badge address in the README got a `?v=2`: Cloudflare, in front of the site, keeps the badges for a day for the browsers (a `max-age` of 86400, whatever the server says), so a badge that changed stayed old. The setting is in the Cloudflare dashboard (*Browser Cache TTL*: respect the existing headers).
 
 ### Added
 - In *Routes seen in BGP*, the three tiles of the ROA check (*Valid*, *Not found*, *Invalid*) open the list of their prefixes when the check is over, with the origin and the number of routes of each (and the reason, for the invalid ones): so that "Not found, 1" says which prefix it is. The invalid ones are still listed at once when there are any.

@@ -658,3 +658,8 @@ button.tile:hover { filter: brightness(0.97); }
 button.tile:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 button.tile[aria-expanded="true"] { box-shadow: inset 0 0 0 2px currentColor; }
 .tile .more { margin-top: 0.35rem; font-size: 0.8rem; text-decoration: underline; }
+
+/* the line of the notification form with a menu in the middle of a sentence: one row that wraps between its parts */
+.notify .chk-row { grid-column: 1 / -1; display: flex; flex-wrap: wrap; align-items: center; gap: 0.35rem 0.5rem; margin: 0; }
+.notify .chk-row label.chk { display: inline-flex; align-items: center; gap: 0.4rem; margin: 0; }
+.notify .chk-row select { width: auto; }
