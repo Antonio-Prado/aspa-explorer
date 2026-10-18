@@ -25,7 +25,7 @@
     }
     const unique = [...new Set(nums)].sort((a, b) => a - b);
     if (unique.length < nums.length) out.push({ level: 'note', text: 'Some providers were listed twice; the duplicates are dropped.' });
-    if (unique.includes(0) && unique.length > 1) out.push({ level: 'error', text: 'AS0 means “no provider”: use it alone, or list the real providers without it.' });
+    if (unique.includes(0) && unique.length > 1) out.push({ level: 'error', text: 'AS0 means “no transit provider”: use it alone, or list the real providers without it.' });
     if (unique.includes(own)) out.push({ level: 'error', text: `AS${own} cannot be its own provider.` });
     const bad = unique.filter((n) => n !== 0 && reserved(n) && !documentation(n));
     if (bad.length) out.push({ level: 'error', text: `${bad.map((n) => 'AS' + n).join(', ')} ${bad.length === 1 ? 'is private or reserved and never appears' : 'are private or reserved and never appear'} in the global routing system.` });
@@ -47,7 +47,7 @@
     const own = asNum($('b-as').value);
     if (own === null || own === 0) { res.replaceChildren(el('p', { class: 'error', text: 'Enter your AS number, such as AS64501.' })); return; }
     const tokens = $('b-prov').value.split(/[\s,;]+/).filter(Boolean);
-    if (!tokens.length) { res.replaceChildren(el('p', { class: 'error', text: 'Enter the providers, or AS0 if you have none.' })); return; }
+    if (!tokens.length) { res.replaceChildren(el('p', { class: 'error', text: 'Enter the providers, or AS0 if you have no transit provider.' })); return; }
     const { unique, out } = review(own, tokens);
     const errors = out.filter((o) => o.level === 'error').length;
     const kids = [];

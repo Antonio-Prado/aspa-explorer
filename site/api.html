@@ -23,17 +23,17 @@
 <meta name="twitter:card" content="summary_large_image">
 <meta name="color-scheme" content="light dark">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
-<link rel="stylesheet" href="/style.css?v=1.38.2">
-<script src="/download.js?v=1.38.2" defer></script>
-<script src="/datasets.js?v=1.38.2" defer></script>
-<script src="/status-checks.js?v=1.38.2" defer></script>
-<script src="/footer.js?v=1.38.2" defer></script>
+<link rel="stylesheet" href="/style.css?v=1.38.3">
+<script src="/download.js?v=1.38.3" defer></script>
+<script src="/datasets.js?v=1.38.3" defer></script>
+<script src="/status-checks.js?v=1.38.3" defer></script>
+<script src="/footer.js?v=1.38.3" defer></script>
 </head>
 <body>
 <a class="skip" href="#main">Skip to main content</a>
 <header class="wrap masthead">
   <div class="top">
-    <p class="back"><a class="brandlink" href="/" title="Back to ASPA Explorer"><img class="brand" src="/img/logo-mark.svg?v=1.38.2" alt="" width="40" height="40"><span>ASPA Explorer</span></a></p>
+    <p class="back"><a class="brandlink" href="/" title="Back to ASPA Explorer"><img class="brand" src="/img/logo-mark.svg?v=1.38.3" alt="" width="40" height="40"><span>ASPA Explorer</span></a></p>
     <nav class="topnav" aria-label="Main"><a href="/">Home</a><a href="/statistics.html">Statistics</a><a href="/examples.html">Examples</a><a href="/api.html" aria-current="page">API</a><a href="/guide.html">Guide</a><a href="/status.html">Status</a></nav>
   </div>
   <h1>API</h1>
@@ -64,7 +64,7 @@
         <tr><td><code>asn</code>, <code>number</code></td><td>The AS, as <code>AS8283</code> and as 8283.</td></tr>
         <tr><td><code>generated</code></td><td>When the file was built (UTC), at most a few minutes ago.</td></tr>
         <tr><td><code>aspa.published</code></td><td>Whether a valid ASPA of this AS exists now.</td></tr>
-        <tr><td><code>aspa.providers</code></td><td>The providers it authorizes, by number; <code>["AS0"]</code> means it declares no provider.</td></tr>
+        <tr><td><code>aspa.providers</code></td><td>The providers it authorizes, by number; <code>["AS0"]</code> means it declares no transit provider.</td></tr>
         <tr><td><code>aspa.no_providers</code></td><td><code>true</code> for an ASPA made of AS0 alone.</td></tr>
         <tr><td><code>aspa.sources</code></td><td>The signed objects: trust anchor, validity, rsync address.</td></tr>
         <tr><td><code>provider_of</code></td><td>The ASes whose ASPA names this AS as a provider.</td></tr>
@@ -80,7 +80,7 @@
 
   <section aria-labelledby="badge">
     <h2 id="badge">Badge</h2>
-    <p><code>GET https://aspa.ping6.it/badge/AS8283.svg</code> is a small image that says how many providers the AS has authorized (<em>ASPA AS8283: 5 providers</em>; the label says which AS it is about), or <em>not configured yet</em> (the AS has published no ASPA: the badge is there for any AS number), <em>no providers (AS0)</em>, or <em>published, with errors</em> when the quality checks find an error. Link it to the page of the AS:</p>
+    <p><code>GET https://aspa.ping6.it/badge/AS8283.svg</code> is a small image that says how many providers the AS has authorized (<em>ASPA AS8283: 5 providers</em>; the label says which AS it is about), or <em>not configured yet</em> (the AS has published no ASPA: the badge is there for any AS number), <em>no transit providers (AS0)</em>, or <em>published, with errors</em> when the quality checks find an error. Link it to the page of the AS:</p>
     <pre tabindex="0"><code>[![ASPA of AS8283](https://aspa.ping6.it/badge/AS8283.svg)](https://aspa.ping6.it/as/AS8283)</code></pre>
     <p>The same snippet, in Markdown and HTML, is under <em>Add the badge to your site</em> when you look up an AS. Browsers and proxies may keep a badge for ten minutes.</p>
   </section>

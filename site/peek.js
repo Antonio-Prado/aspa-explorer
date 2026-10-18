@@ -14,7 +14,7 @@
     const lines = [];
     const a = d.aspa || {};
     if (!a.published) lines.push({ label: 'ASPA', text: 'Publishes no ASPA: its routes can only come out unknown.' });
-    else if (a.no_providers) lines.push({ label: 'ASPA', text: 'Publishes an ASPA that says it has no providers (AS0).' });
+    else if (a.no_providers) lines.push({ label: 'ASPA', text: 'Publishes an ASPA that says it has no transit providers (AS0).' });
     else lines.push({ label: 'ASPA', text: `Publishes an ASPA with ${plural(a.providers.length, 'provider', 'providers')}:`, chips: a.providers.slice(0, 12), more: Math.max(0, a.providers.length - 12) });
     const p = d.provider_of || [];
     lines.push({ label: 'Named as a provider', text: p.length ? `by ${plural(p.length, 'ASPA', 'ASPAs')}${p.length > 12 ? ', for instance:' : ':'}` : 'by no ASPA.', chips: p.slice(0, 12), more: Math.max(0, p.length - 12) });

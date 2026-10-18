@@ -82,13 +82,13 @@ export function badge(label, value, color) {
     `<text x="${lw / 2}" y="14">${esc(label)}</text><text x="${lw + vw / 2}" y="14">${esc(value)}</text></g></svg>\n`;
 }
 
-// Green: an ASPA with providers; blue: AS0 (no upstream); orange: it has an error-level finding; grey: none.
+// Green: an ASPA with providers; blue: AS0 (no transit providers); orange: it has an error-level finding; grey: none.
 // The label says which AS it is about: ASPA AS137.
 export function badgeFor(doc) {
   const label = `ASPA ${doc.asn}`;
   if (!doc.aspa.published) return badge(label, 'not configured yet', '#9f9f9f');
   if (doc.quality.some((f) => f.severity === 'error')) return badge(label, 'published, with errors', '#e05d44');
-  if (doc.aspa.no_providers) return badge(label, 'no providers (AS0)', '#007ec6');
+  if (doc.aspa.no_providers) return badge(label, 'no transit providers (AS0)', '#007ec6');
   const n = doc.aspa.providers.length;
   return badge(label, `${n} provider${n === 1 ? '' : 's'}`, '#2e8b57');
 }

@@ -5,7 +5,7 @@
 //
 // Conventions
 //  - An ASPA lookup is a Map from a customer ("AS680") to the Set of its providers
-//    ("AS1299", ...). "AS0" in a set means "no providers".
+//    ("AS1299", ...). "AS0" in a set means "no transit providers" (an AS0 ASPA, in the wording of the IETF drafts).
 //  - A path is an array of "AS<number>" ordered from the origin to the neighbour the
 //    route was received from: A(1) is the origin and A(N) the neighbour, as in the
 //    draft. BGP shows paths the other way round (neighbour first); parsePath() takes

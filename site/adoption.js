@@ -77,7 +77,7 @@
       el('td', { text: t.cc ? country(t.cc) : '' }),
       el('td', { class: 'num', text: fmt.format(t.cone) }),
       el('td', {}, t.aspa
-        ? el('span', { class: 'badge v-valid', text: t.providers === 0 ? 'yes, AS0 (no providers)' : `yes, ${t.providers} provider${t.providers === 1 ? '' : 's'}` })
+        ? el('span', { class: 'badge v-valid', text: t.providers === 0 ? 'yes, AS0 (no transit providers)' : `yes, ${t.providers} provider${t.providers === 1 ? '' : 's'}` })
         : el('span', { class: 'badge v-unknown', text: 'none' })));
     const ranked = top.map((t, i) => ({ ...t, rank: i + 1 }));
     const drawTop = paged(topRow, $('top-rows'), $('top-more'), 25);

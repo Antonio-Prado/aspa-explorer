@@ -23,16 +23,16 @@
 <meta name="twitter:card" content="summary_large_image">
 <meta name="color-scheme" content="light dark">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
-<link rel="stylesheet" href="/style.css?v=1.38.2">
-<script src="/examples.js?v=1.38.2" defer></script>
-<script src="/status-checks.js?v=1.38.2" defer></script>
-<script src="/footer.js?v=1.38.2" defer></script>
+<link rel="stylesheet" href="/style.css?v=1.38.3">
+<script src="/examples.js?v=1.38.3" defer></script>
+<script src="/status-checks.js?v=1.38.3" defer></script>
+<script src="/footer.js?v=1.38.3" defer></script>
 </head>
 <body>
 <a class="skip" href="#main">Skip to main content</a>
 <header class="wrap masthead">
   <div class="top">
-    <p class="back"><a class="brandlink" href="/" title="Back to ASPA Explorer"><img class="brand" src="/img/logo-mark.svg?v=1.38.2" alt="" width="40" height="40"><span>ASPA Explorer</span></a></p>
+    <p class="back"><a class="brandlink" href="/" title="Back to ASPA Explorer"><img class="brand" src="/img/logo-mark.svg?v=1.38.3" alt="" width="40" height="40"><span>ASPA Explorer</span></a></p>
     <nav class="topnav" aria-label="Main"><a href="/">Home</a><a href="/statistics.html">Statistics</a><a href="/examples.html" aria-current="page">Examples</a><a href="/api.html">API</a><a href="/guide.html">Guide</a><a href="/status.html">Status</a></nav>
   </div>
   <h1>Writing your ASPA</h1>
@@ -57,7 +57,7 @@
       <li><strong>List every provider you have, the backup ones too.</strong> A route that reaches the world through an unlisted provider is judged invalid by those who check.</li>
       <li><strong>List providers only.</strong> Not your peers, not your customers, not an IXP or its route server. The ASPA says who sits above you, nothing else.</li>
       <li><strong>One ASPA per AS number.</strong> When you add or drop a provider, change it. Add the new provider to the ASPA <em>before</em> you start sending routes through it.</li>
-      <li><strong>A network with no provider at all</strong> publishes <code>AS0</code> alone. Never <code>AS0</code> together with other providers.</li>
+      <li><strong>A network that buys transit from nobody</strong> publishes <code>AS0</code> alone (an <em>AS0 ASPA</em>: it has no transit providers; it can still have peers). Never <code>AS0</code> together with other providers.</li>
       <li>The examples use AS numbers reserved for documentation (AS64496 to AS64511); replace them with yours.</li>
     </ul>
   </section>
@@ -90,7 +90,7 @@ providers AS0</code></pre>
     <p>AS64501 also peers with others at an exchange point, through the route server AS64600 and bilaterally with AS64530. None of them is a provider, so none appears. Its ASPA stays as in the case with the backup provider.</p>
     <pre tabindex="0"><code>customer AS64501
 providers AS64510, AS64511, AS64512      (not AS64600, not AS64530)</code></pre>
-    <p>An exchange point's route server does not put its own AS number in the paths it passes on, so it is not part of the question. If the AS of the route server has no provider at all, <code>AS0</code> describes it correctly.</p>
+    <p>An exchange point's route server does not put its own AS number in the paths it passes on, so it is not part of the question. If the AS of the route server has no transit provider, <code>AS0</code> describes it correctly.</p>
   </section>
 
   <section aria-labelledby="mistakes">
@@ -101,7 +101,7 @@ providers AS64510, AS64511, AS64512      (not AS64600, not AS64530)</code></pre>
       <dt>Forgetting a provider</dt>
       <dd>The routes that your customers or you announce through it become invalid for the networks that check. The routes seen in BGP, in the check on the home page, show the neighbours next to your AS and whether your ASPA lists them.</dd>
       <dt>AS0 together with real providers</dt>
-      <dd>It contradicts itself: AS0 means no provider. Use AS0 alone or the real providers alone.</dd>
+      <dd>It contradicts itself: AS0 means no transit provider. Use AS0 alone or the real providers alone.</dd>
       <dt>Your own number, or a private or reserved one</dt>
       <dd>An AS cannot be its own provider, and private numbers (64512 to 65534, 4200000000 and up) and documentation numbers never appear in the global routing system.</dd>
       <dt>A typo in a provider's number</dt>
@@ -117,7 +117,7 @@ providers AS64510, AS64511, AS64512      (not AS64600, not AS64530)</code></pre>
     <form id="builder" autocomplete="off" class="builder">
       <label for="b-as">Your AS number</label>
       <input id="b-as" type="text" inputmode="text" spellcheck="false" placeholder="e.g. AS64501">
-      <label for="b-prov">Providers (separated by spaces or commas; AS0 for none)</label>
+      <label for="b-prov">Providers (separated by spaces or commas; AS0 for no transit provider)</label>
       <input id="b-prov" type="text" inputmode="text" spellcheck="false" placeholder="e.g. AS64510 AS64511 AS64512">
       <p><button type="submit">Check</button></p>
     </form>

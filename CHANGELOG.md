@@ -5,6 +5,11 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.38.3] - 2026-10-18
+
+### Changed
+- What *AS0* means is said as the IETF drafts say it: the customer declares that it has **no transit providers** (an *AS0 ASPA*; draft-ietf-sidrops-aspa-verification, section 4, and draft-ietf-sidrops-aspa-profile, sections 1 and 3.3, which allows AS0 only as the single element of the list), not that it has no providers or no peers at all. The guides (English and Italian), the examples page, the chips, the tiles and the statistics, the badge (*no transit providers (AS0)*) and the messages of the tools now use that wording, and the guides cite the two drafts. The behaviour is the same.
+
 ## [1.38.2] - 2026-10-18
 
 ### Changed

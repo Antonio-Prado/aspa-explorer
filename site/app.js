@@ -53,7 +53,7 @@ function fmtDate(iso) {
 const fmtDay = (iso) => (iso ? iso.slice(0, 10) : '?');
 
 function asChip(as) {
-  if (as === 'AS0') return el('span', { class: 'chip zero', text: 'AS0 · no providers' });
+  if (as === 'AS0') return el('span', { class: 'chip zero', text: 'AS0 · no transit providers' });
   return el('a', { class: 'chip', href: '#' + as, text: as });
 }
 
@@ -98,7 +98,7 @@ function renderOverview(status) {
     tile('ASPAs', fmt.format(aspas.length), 'with a valid ASPA'),
     tile('Provider ASes', fmt.format(providerCount), 'named as a provider'),
     tile('Median providers', String(median), `largest set: ${fmt.format(sizes[sizes.length - 1] || 0)}`),
-    tile('No-provider ASPAs', fmt.format(zero), 'customer declares AS0'),
+    tile('AS0 ASPAs', fmt.format(zero), 'no transit providers'),
   );
 
   const done = status && status.lastUpdateDone;
@@ -193,7 +193,7 @@ const fmtDayShort = (iso) => fmtDayLong(iso);
 function changeText(e) {
   if (e.kind === 'removed') return 'ASPA removed';
   const list = (ps, sign) => ps.slice(0, 6).map((p) => sign + p).join(' ') + (ps.length > 6 ? ` … (${ps.length})` : '');
-  if (e.kind === 'new') return `new ASPA: ${e.providers.length === 1 && e.providers[0] === 'AS0' ? 'no providers (AS0)' : list(e.providers, '')}`;
+  if (e.kind === 'new') return `new ASPA: ${e.providers.length === 1 && e.providers[0] === 'AS0' ? 'no transit providers (AS0)' : list(e.providers, '')}`;
   return `providers ${[list(e.added, '+'), list(e.dropped, '−')].filter(Boolean).join(' ')}`;
 }
 
@@ -1029,7 +1029,7 @@ function suggestPanel(origin, ev, listed) {
   const names = (l) => l.join(', ');
   const kids = [el('h3', { class: 'subhead', text: `A starting point for the ASPA of ${as}` })];
   if (!s.list.length && !s.check.length) {
-    kids.push(el('p', { class: 'hint', text: s.zero ? `${as} declares that it has no provider (AS0) and the routes show none with strong evidence: nothing to propose.` : `The routes do not give strong evidence of a provider of ${as}: nothing to propose.` }));
+    kids.push(el('p', { class: 'hint', text: s.zero ? `${as} declares that it has no transit provider (AS0) and the routes show none with strong evidence: nothing to propose.` : `The routes do not give strong evidence of a provider of ${as}: nothing to propose.` }));
     return el('div', {}, ...kids);
   }
   const bits = [];
@@ -1037,7 +1037,7 @@ function suggestPanel(origin, ev, listed) {
   if (s.add.length) bits.push(`Seen as ${s.add.length === 1 ? 'a provider' : 'providers'} but not in its ASPA: ${names(s.add)}. Add ${s.add.length === 1 ? 'it' : 'them'} if ${s.add.length === 1 ? 'it is' : 'they are'} really your upstream.`);
   if (s.keepUnseen.length) bits.push(`In its ASPA but not seen: ${names(s.keepUnseen)}. Keep ${s.keepUnseen.length === 1 ? 'it' : 'them'} for a backup provider or one the collectors do not see.`);
   if (s.check.length) bits.push(`Weak evidence, to check by hand before adding: ${names(s.check)}.`);
-  if (s.zero) bits.push(`${as} declares AS0 (no provider) today: an ASPA with AS0 and other providers is not valid, so replace it rather than extend it.`);
+  if (s.zero) bits.push(`${as} declares AS0 (no transit provider) today: an ASPA with AS0 and other providers is not valid, so replace it rather than extend it.`);
   kids.push(...bits.map((x) => el('p', { class: 'hint', text: x })));
   if (s.list.length) kids.push(copyField(`Providers of ${as}`, s.list.join(' ')),
     el('p', { class: 'hint' }, 'It is a proposal from what the collectors see, not a verdict. Check it with ', el('a', { href: '/examples.html#check', text: 'the checker' }), ' and publish it as ', el('a', { href: '/examples.html#publish', text: 'the examples page' }), ' explains.'));
@@ -1077,7 +1077,7 @@ function whatIfPanel(origin, rows, initial) {
   run();
   return el('div', {},
     el('h3', { class: 'subhead', text: `What if the ASPA of ${as} listed...` }),
-    el('p', { class: 'hint', id: 'whatif-hint', text: 'The routes above, checked again as if the ASPA of this AS had the providers below (AS0 alone: no provider). Every other ASPA stays as published. A route through a provider that is left out becomes Invalid for the networks that check ASPAs, so this is the test to run before you publish.' }),
+    el('p', { class: 'hint', id: 'whatif-hint', text: 'The routes above, checked again as if the ASPA of this AS had the providers below (AS0 alone: no transit provider). Every other ASPA stays as published. A route through a provider that is left out becomes Invalid for the networks that check ASPAs, so this is the test to run before you publish.' }),
     form, out);
 }
 
@@ -1364,7 +1364,7 @@ function renderLookup(as) {
     const isZero = own.providers.length === 1 && own.providers[0] === 'AS0';
     left.append(el('p', {
       text: isZero
-        ? `${as} declares that it has no upstream providers (AS0), as transit-free networks do.`
+        ? `${as} declares that it has no transit providers (AS0), as networks at the top of the hierarchy do. It can still have peers.`
         : `${as} authorizes ${own.providers.length} provider${own.providers.length === 1 ? '' : 's'}:`,
     }));
     if (!isZero) left.append(chipList(own.providers, 40));

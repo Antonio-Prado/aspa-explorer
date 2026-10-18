@@ -38,7 +38,7 @@ test('what the window says: an ASPA with providers, named by others, a change, f
 
 test('what the window says: AS0, singular forms', () => {
   const l = summary({ aspa: { published: true, providers: ['AS0'], no_providers: true }, provider_of: ['AS5'], seen_in_bgp: false, quality: [], history: [{ date: '2026-01-01', kind: 'removed' }] });
-  assert.match(l[0].text, /no providers \(AS0\)/);
+  assert.match(l[0].text, /no transit providers \(AS0\)/);
   assert.equal(l[1].text, 'by 1 ASPA:');
   assert.match(l[2].text, /^No:/);
   assert.equal(l.find((x) => x.label === 'Quality').text, 'No finding on its ASPA.');

@@ -6,7 +6,7 @@
   const Verify = typeof module !== 'undefined' && module.exports ? require('./verify.js') : root.AspaVerify;
 
   // "AS1299 3356, 174" -> { providers: ['AS174', 'AS1299', 'AS3356'] } (sorted, no duplicates), or { error }.
-  // "0" or "AS0" alone is the ASPA that declares no provider; AS0 next to others is refused (the profile forbids it).
+  // "0" or "AS0" alone is the ASPA that declares no transit provider; AS0 next to others is refused (the profile forbids it).
   function parseProviders(text) {
     const tokens = String(text).trim().split(/[\s,]+/).filter(Boolean);
     const out = new Set();
@@ -15,7 +15,7 @@
       if (!m || Number(m[1]) > 4294967295) return { error: `"${t}" is not an AS number. Use numbers such as 1299 or AS1299, separated by spaces.` };
       out.add(Number(m[1]));
     }
-    if (out.has(0) && out.size > 1) return { error: 'AS0 means "no provider" and cannot be listed next to other providers.' };
+    if (out.has(0) && out.size > 1) return { error: 'AS0 means "no transit provider" and cannot be listed next to other providers.' };
     return { providers: [...out].sort((a, b) => a - b).map((n) => 'AS' + n) };
   }
 

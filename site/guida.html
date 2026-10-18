@@ -26,15 +26,15 @@
 <meta name="color-scheme" content="light dark">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <link rel="alternate" hreflang="en" href="/guide.html">
-<link rel="stylesheet" href="/style.css?v=1.38.2">
-<script src="/status-checks.js?v=1.38.2" defer></script>
-<script src="/footer.js?v=1.38.2" defer></script>
+<link rel="stylesheet" href="/style.css?v=1.38.3">
+<script src="/status-checks.js?v=1.38.3" defer></script>
+<script src="/footer.js?v=1.38.3" defer></script>
 </head>
 <body>
 <a class="skip" href="#main">Vai al contenuto principale</a>
 <header class="wrap masthead">
   <div class="top">
-    <p class="back"><a class="brandlink" href="/" title="Torna a ASPA Explorer"><img class="brand" src="/img/logo-mark.svg?v=1.38.2" alt="" width="40" height="40"><span>ASPA Explorer</span></a></p>
+    <p class="back"><a class="brandlink" href="/" title="Torna a ASPA Explorer"><img class="brand" src="/img/logo-mark.svg?v=1.38.3" alt="" width="40" height="40"><span>ASPA Explorer</span></a></p>
     <nav class="topnav" aria-label="Main"><a href="/">Home</a><a href="/statistics.html">Statistics</a><a href="/examples.html">Examples</a><a href="/api.html">API</a><a href="/guide.html" aria-current="page">Guide</a><a href="/status.html">Status</a></nav>
   </div>
   <h1>Guida</h1>
@@ -87,7 +87,7 @@
     </dl>
     <p>Gli elenchi lunghi sono troncati dopo qualche decina di chip; <em>+N more</em> li espande. Un clic su un chip porta a quell'AS.</p>
     <p>Sotto la storia e la qualità, <em>Neighbourhood</em> disegna l'AS come grafo: sopra i suoi provider, con una freccia dall'AS a ciascuno; sotto gli AS la cui ASPA lo elenca come provider; due AS che si elencano a vicenda sono un unico riquadro rosso. Il pulsante <em>Add the neighbours that the routes show</em> legge le rotte dell'AS (come fa il riquadro delle rotte) e disegna a destra i sei vicini più visti che la sua ASPA non elenca, in arancione con il bordo tratteggiato quando le rotte li fanno sembrare provider. Ogni riquadro è un link che cerca quell'AS. Il grafo è un'immagine di ciò che la ricerca già dice a parole.</p>
-    <p>Un chip <code>AS0 · no providers</code> non è un link. È il modo in cui un AS dichiara di non avere alcun provider upstream, come fanno le reti al vertice della gerarchia.</p>
+    <p>Un chip <code>AS0 · no transit providers</code> non è un link. È il modo in cui un AS dichiara di non avere provider di transito, come fanno le reti al vertice della gerarchia. Nelle bozze IETF è un <em>AS0 ASPA</em>: <q>a statement by the registering AS that it has no transit providers</q>, cioè una dichiarazione di non avere provider di transito (<a href="https://datatracker.ietf.org/doc/draft-ietf-sidrops-aspa-verification/" target="_blank" rel="noopener">draft-ietf-sidrops-aspa-verification<span class="sr-only"> (si apre in una nuova scheda)</span></a>, sezione 4), che il <a href="https://datatracker.ietf.org/doc/draft-ietf-sidrops-aspa-profile/" target="_blank" rel="noopener">profilo dell'ASPA<span class="sr-only"> (si apre in una nuova scheda)</span></a> consente solo come unico elemento della lista (sezione 3.3). Non dice che l'AS non abbia peer: dice che non compra transito da nessuno.</p>
 
     <p><strong>Controlli recenti.</strong> Quando torni su un AS che avevi già cercato, una riga in alto dice cosa è cambiato da allora (provider aggiunti o tolti, un'ASPA comparsa o sparita, ASPA che hanno iniziato o smesso di nominarlo), e l'elenco <em>Recent checks</em> sotto gli strumenti mostra gli ultimi venti AS e percorsi controllati, ciascuno con ciò che è diverso adesso. L'elenco è nel local storage del tuo browser e in nessun altro posto: non viene inviato al sito né a nessuno, nessun altro lo vede, e <em>Clear the list</em> lo cancella. Se il browser rifiuta il local storage, l'elenco semplicemente non c'è.</p>
   </section>
@@ -102,8 +102,8 @@
       <dd>AS distinti che compaiono come provider in almeno un'ASPA. <code>AS0</code> non è contato.</dd>
       <dt>Median providers</dt>
       <dd>Il valore centrale del numero di provider per ASPA, con sotto la dimensione dell'insieme di provider più grande.</dd>
-      <dt>No-provider ASPAs</dt>
-      <dd>ASPA il cui unico provider è <code>AS0</code>.</dd>
+      <dt>AS0 ASPAs</dt>
+      <dd>ASPA il cui unico provider è <code>AS0</code>: il customer dichiara di non avere provider di transito.</dd>
       <dt>Coverage</dt>
       <dd>La quota delle reti viste in BGP che hanno un'ASPA, ricavata dai numeri giornalieri sull'adozione.</dd>
     </dl>
@@ -177,7 +177,7 @@
     <p>La sezione <em>ASPA quality</em> esegue dei controlli su ogni ASPA elencata nella pagina e mostra quante ASPA hanno un <strong>error</strong> (qualcosa che non può essere giusto), un <strong>warning</strong> (molto probabilmente da correggere) o una <strong>note</strong> (da guardare). Ogni gruppo si apre nell'elenco delle ASPA, con una breve spiegazione del perché conta. I controlli sono:</p>
     <dl>
       <dt>AS0 insieme ad altri provider (error)</dt>
-      <dd><code>AS0</code> significa <em>nessun provider</em>; elencato accanto a provider reali, l'ASPA si contraddice.</dd>
+      <dd><code>AS0</code> significa <em>nessun provider di transito</em>; elencato accanto a provider reali, l'ASPA si contraddice e il profilo lo vieta.</dd>
       <dt>Un AS elencato come proprio provider, oppure un numero di AS provider privato o riservato (error)</dt>
       <dd>Una voce così non ha significato: nessun percorso reale passa da un numero di AS privato, di documentazione o riservato.</dd>
       <dt>Due AS che si elencano a vicenda come provider (warning)</dt>

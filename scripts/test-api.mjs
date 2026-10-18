@@ -51,7 +51,7 @@ test('every AS with something to say gets files, sorted by number', () => {
 
 test('badges', () => {
   assert.match(badgeFor(describe('AS10', ctx)), /2 providers/);
-  assert.match(badgeFor(describe('AS40', ctx)), /no providers \(AS0\)/);
+  assert.match(badgeFor(describe('AS40', ctx)), /no transit providers \(AS0\)/);
   assert.match(badgeFor(describe('AS50', ctx)), /with errors/);
   assert.match(badgeFor(describe('AS30', ctx)), />not configured yet</);
   assert.match(badgeFor(describe('AS30', ctx)), />ASPA AS30</);       // the badge says which AS it is about
