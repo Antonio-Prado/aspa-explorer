@@ -3,6 +3,7 @@
 // The checks of the status page, and the dot next to "Status" in the menu of every page. Each check
 // says how old a piece of data is, judged against how often it should change. The dot is green when all
 // the checks are green, red when all are red and orange in between (a late check counts as not green).
+// scripts/build-status.mjs runs the same checks on the server every 15 minutes and keeps their states (the chart of the status page).
 (function (root) {
   const HISTORY = 'https://gitlab.dei.unipd.it/api/v4/projects/5246/repository/files/history.json/raw?ref=history';
   const VISIBILITY = 'https://gitlab.dei.unipd.it/api/v4/projects/5246/repository/files/visibility.json/raw?ref=history';
@@ -26,7 +27,50 @@
     return 'warn';
   }
 
-  const api = { byAge, byDay, dotState, MIN, HOUR, DAY };
+  const makeChecks = (get) => [
+    { id: 'validator', name: 'Validator (Routinator)', expected: 'every 10 minutes', run: async (now) => {
+      const s = await get('/data/status.json');
+      const t = Date.parse(s.lastUpdateDone);
+      return { state: byAge(now - t, 30 * MIN, 2 * HOUR), at: t, extra: String(s.version || '').replace('/', ' ') };
+    } },
+    { id: 'api', name: 'Per-AS API, badges and feeds', expected: 'every 15 minutes', run: async (now) => {
+      const m = await get('/api/v1/meta.json');
+      const t = Date.parse(m.generated);
+      return { state: byAge(now - t, 45 * MIN, 3 * HOUR), at: t, extra: `${m.aspas.toLocaleString('en-US')} ASPAs, ${m.ases.toLocaleString('en-US')} ASes` };
+    } },
+    { id: 'history', name: 'Daily history and changes', expected: 'once a day, about 06:30 UTC', run: async (now) => {
+      const h = await get(HISTORY);
+      const last = h[h.length - 1];
+      return { state: byDay(last.date, now), at: Date.parse(last.date), day: true, extra: `${last.aspas.toLocaleString('en-US')} ASPAs on that day` };
+    } },
+    { id: 'visibility', name: 'BGP visibility (quality checks)', expected: 'once a day', run: async (now) => {
+      const v = await get(VISIBILITY);
+      return { state: byDay(v.date, now), at: Date.parse(v.date), day: true, extra: `${v.seen.toLocaleString('en-US')} ASes seen` };
+    } },
+    { id: 'adoption', name: 'Adoption numbers', expected: 'once a day', run: async (now) => {
+      const a = await get('/api/v1/adoption.json');
+      const t = Date.parse(a.generated);
+      return { state: byAge(now - t, 36 * HOUR, 3 * DAY), at: t, extra: `${a.pct}% of the networks seen have an ASPA` };
+    } },
+    { id: 'leaks', name: 'Route leaks (table dumps)', expected: 'once a day', run: async (now) => {
+      const l = await get('/api/v1/leaks.json');
+      const t = Date.parse(l.generated);
+      return { state: byAge(now - t, 36 * HOUR, 3 * DAY), at: t, extra: `${l.places.toLocaleString('en-US')} places of valley in ${Math.round(l.total.routes / 1e6)} million routes` };
+    } },
+    { id: 'validators', name: 'Validators compared', expected: 'every hour', run: async (now) => {
+      const v = await get('/api/v1/validators.json');
+      const t = Date.parse(v.generated);
+      const reached = v.sources.filter((s) => !s.error).length;
+      return { state: reached < v.sources.length ? 'late' : byAge(now - t, 3 * HOUR, 12 * HOUR), at: t, extra: `${reached} of ${v.sources.length} validators read, ${v.differences_total} difference${v.differences_total === 1 ? '' : 's'}` };
+    } },
+    { id: 'notifications', name: 'Notifications', expected: 'checks the validator every 10 minutes', run: async (now) => {
+      const h = await get('/api/v1/subscriptions/health');
+      const t = h.last_poll ? Date.parse(h.last_poll) : 0;
+      return { state: h.ok ? 'ok' : (t && now - t < 2 * HOUR ? 'late' : 'down'), at: t || null, extra: h.failures_in_a_row ? `${h.failures_in_a_row} failed read${h.failures_in_a_row === 1 ? '' : 's'} in a row` : '' };
+    } },
+  ];
+
+  const api = { byAge, byDay, dotState, makeChecks, MIN, HOUR, DAY };
   if (typeof module !== 'undefined' && module.exports) { module.exports = api; return; }
 
   const get = async (url) => {
@@ -34,48 +78,7 @@
     if (!r.ok) throw new Error(`HTTP ${r.status}`);
     return r.json();
   };
-  const checks = [
-    { name: 'Validator (Routinator)', expected: 'every 10 minutes', run: async (now) => {
-      const s = await get('/data/status.json');
-      const t = Date.parse(s.lastUpdateDone);
-      return { state: byAge(now - t, 30 * MIN, 2 * HOUR), at: t, extra: String(s.version || '').replace('/', ' ') };
-    } },
-    { name: 'Per-AS API, badges and feeds', expected: 'every 15 minutes', run: async (now) => {
-      const m = await get('/api/v1/meta.json');
-      const t = Date.parse(m.generated);
-      return { state: byAge(now - t, 45 * MIN, 3 * HOUR), at: t, extra: `${m.aspas.toLocaleString('en-US')} ASPAs, ${m.ases.toLocaleString('en-US')} ASes` };
-    } },
-    { name: 'Daily history and changes', expected: 'once a day, about 06:30 UTC', run: async (now) => {
-      const h = await get(HISTORY);
-      const last = h[h.length - 1];
-      return { state: byDay(last.date, now), at: Date.parse(last.date), day: true, extra: `${last.aspas.toLocaleString('en-US')} ASPAs on that day` };
-    } },
-    { name: 'BGP visibility (quality checks)', expected: 'once a day', run: async (now) => {
-      const v = await get(VISIBILITY);
-      return { state: byDay(v.date, now), at: Date.parse(v.date), day: true, extra: `${v.seen.toLocaleString('en-US')} ASes seen` };
-    } },
-    { name: 'Adoption numbers', expected: 'once a day', run: async (now) => {
-      const a = await get('/api/v1/adoption.json');
-      const t = Date.parse(a.generated);
-      return { state: byAge(now - t, 36 * HOUR, 3 * DAY), at: t, extra: `${a.pct}% of the networks seen have an ASPA` };
-    } },
-    { name: 'Route leaks (table dumps)', expected: 'once a day', run: async (now) => {
-      const l = await get('/api/v1/leaks.json');
-      const t = Date.parse(l.generated);
-      return { state: byAge(now - t, 36 * HOUR, 3 * DAY), at: t, extra: `${l.places.toLocaleString('en-US')} places of valley in ${Math.round(l.total.routes / 1e6)} million routes` };
-    } },
-    { name: 'Validators compared', expected: 'every hour', run: async (now) => {
-      const v = await get('/api/v1/validators.json');
-      const t = Date.parse(v.generated);
-      const reached = v.sources.filter((s) => !s.error).length;
-      return { state: reached < v.sources.length ? 'late' : byAge(now - t, 3 * HOUR, 12 * HOUR), at: t, extra: `${reached} of ${v.sources.length} validators read, ${v.differences_total} difference${v.differences_total === 1 ? '' : 's'}` };
-    } },
-    { name: 'Notifications', expected: 'checks the validator every 10 minutes', run: async (now) => {
-      const h = await get('/api/v1/subscriptions/health');
-      const t = h.last_poll ? Date.parse(h.last_poll) : 0;
-      return { state: h.ok ? 'ok' : (t && now - t < 2 * HOUR ? 'late' : 'down'), at: t || null, extra: h.failures_in_a_row ? `${h.failures_in_a_row} failed read${h.failures_in_a_row === 1 ? '' : 's'} in a row` : '' };
-    } },
-  ];
+  const checks = makeChecks(get);
 
   async function runAll(now = Date.now()) {
     return Promise.all(checks.map(async (c) => {

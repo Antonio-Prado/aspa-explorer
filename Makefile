@@ -16,9 +16,10 @@ js:
 	node --check scripts/mrt.mjs
 	node --check scripts/build-leaks.mjs
 	node --check scripts/build-validators.mjs
+	node --check scripts/build-status.mjs
 	node --check scripts/test-a11y.mjs
 	node --check scripts/record-fixtures.mjs
-	for f in site/adoption.js site/leaks.js site/validators.js site/stats.js site/download.js site/status.js site/examples.js site/subscription.js; do node --check $$f; done
+	for f in site/adoption.js site/leaks.js site/validators.js site/stats.js site/download.js site/status.js site/status-history.js site/examples.js site/subscription.js; do node --check $$f; done
 	for f in notifier/*.mjs; do node --check $$f; done
 
 html:
@@ -33,7 +34,7 @@ version:
 
 # Static analysis of the browser code: no innerHTML, eval and similar sinks.
 lint-security:
-	npx --yes eslint@9 --no-config-lookup -c eslint.config.mjs site/app.js site/footer.js site/verify.js site/evidence.js site/traceroute.js site/graph.js site/live.js site/status-checks.js site/adoption.js site/leaks.js site/validators.js site/stats.js site/download.js site/status.js site/examples.js site/subscription.js
+	npx --yes eslint@9 --no-config-lookup -c eslint.config.mjs site/app.js site/footer.js site/verify.js site/evidence.js site/traceroute.js site/graph.js site/live.js site/status-checks.js site/adoption.js site/leaks.js site/validators.js site/stats.js site/download.js site/status.js site/status-history.js site/examples.js site/subscription.js
 
 # Secret scan of the whole git history (needs gitleaks: https://github.com/gitleaks/gitleaks).
 secrets:
@@ -46,6 +47,7 @@ test:
 	node scripts/test-adoption.mjs
 	node scripts/test-leaks.mjs
 	node scripts/test-validators.mjs
+	node scripts/test-status-history.mjs
 	node scripts/test-graph.mjs
 	node scripts/test-compare.mjs
 	node scripts/test-live.mjs

@@ -7,16 +7,17 @@
 <meta name="description" content="Is the data fresh? When the validator, the daily history, the API files, the adoption numbers and the notifications were last updated.">
 <meta name="color-scheme" content="light dark">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
-<link rel="stylesheet" href="/style.css?v=1.29.1">
-<script src="/status-checks.js?v=1.29.1" defer></script>
-<script src="/status.js?v=1.29.1" defer></script>
-<script src="/footer.js?v=1.29.1" defer></script>
+<link rel="stylesheet" href="/style.css?v=1.30.0">
+<script src="/status-checks.js?v=1.30.0" defer></script>
+<script src="/status.js?v=1.30.0" defer></script>
+<script src="/status-history.js?v=1.30.0" defer></script>
+<script src="/footer.js?v=1.30.0" defer></script>
 </head>
 <body>
 <a class="skip" href="#main">Skip to main content</a>
 <header class="wrap masthead">
   <div class="top">
-    <p class="back"><a class="brandlink" href="/" title="Back to ASPA Explorer"><img class="brand" src="/img/logo-mark.svg?v=1.29.1" alt="" width="40" height="40"><span>ASPA Explorer</span></a></p>
+    <p class="back"><a class="brandlink" href="/" title="Back to ASPA Explorer"><img class="brand" src="/img/logo-mark.svg?v=1.30.0" alt="" width="40" height="40"><span>ASPA Explorer</span></a></p>
     <nav class="topnav" aria-label="Main"><a href="/">Home</a><a href="/statistics.html">Statistics</a><a href="/examples.html">Examples</a><a href="/api.html">API</a><a href="/guide.html">Guide</a><a href="/status.html" aria-current="page">Status</a></nav>
   </div>
   <h1>Status</h1>
@@ -33,6 +34,29 @@
     </table>
   </section>
   <p class="hint" id="checked"></p>
+  <section class="card pad" aria-labelledby="over-time">
+    <h2 id="over-time">Over time</h2>
+    <p class="hint" id="upsub">Reading the history</p>
+    <div class="histctl" role="group" aria-label="Period shown">
+      <button type="button" data-range="24h" aria-pressed="false">24 hours</button>
+      <button type="button" data-range="7d" aria-pressed="true">7 days</button>
+      <button type="button" data-range="30d" aria-pressed="false">30 days</button>
+      <button type="button" data-range="90d" aria-pressed="false">90 days</button>
+    </div>
+    <div id="upchart" class="up-chart"></div>
+    <p class="up-legend" aria-hidden="true"><span><i class="up-o"></i>OK</span><span><i class="up-l"></i>Late</span><span><i class="up-d"></i>Down</span><span><i class="up-n"></i>No sample</span></p>
+    <p class="hint" id="uphover" aria-live="polite"></p>
+    <h3 class="up-h">Last problems</h3>
+    <ul class="timeline" id="upproblems"></ul>
+    <p class="hint" id="upmore"></p>
+    <div class="table-wrap" tabindex="0" aria-label="Share of the time each part was OK">
+      <table class="checks">
+        <caption class="sr-only">Share of the checks that found each part OK, and the stretches that were late or down</caption>
+        <thead><tr><th scope="col">Part</th><th scope="col">OK</th><th scope="col">Late stretches</th><th scope="col">Down stretches</th></tr></thead>
+        <tbody id="uptable"></tbody>
+      </table>
+    </div>
+  </section>
   <p class="hint">A part is <em>late</em> when it is older than expected and <em>down</em> when it is much older or does not answer. This page reads the same files as the rest of the site; it cannot see the server itself. Problems: <a href="mailto:antonio.prado@dei.unipd.it">antonio.prado@dei.unipd.it</a>.</p>
 </main>
 

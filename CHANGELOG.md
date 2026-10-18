@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.30.0] - 2026-10-18
+
+### Added
+- The status page has an *Over time* chart: one strip for each part of the service with its state in the last 24 hours, 7, 30 or 90 days (the worst state in each stretch; grey where nothing was recorded), the share of the checks that found it OK, the last problems and a table with the same figures. It reads from the keyboard (left and right arrows) as well as with the mouse.
+- `scripts/build-status.mjs` runs the checks of the status page on the server every 15 minutes and keeps 90 days of results in `/api/v1/status-history.json` (a sample is the time and one letter for each check: `o`, `l`, `d`). The checks are now built by `makeChecks` in `site/status-checks.js`, with an `id` each, so the page and the job use the same code.
+- `scripts/test-status-history.mjs` (the recorder and the helpers of the chart); `nginx` location for the new file.
+
 ## [1.29.1] - 2026-10-17
 
 ### Changed

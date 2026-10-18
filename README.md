@@ -142,7 +142,7 @@ The validator is a [Routinator](https://github.com/NLnetLabs/routinator) instanc
 - **A starting point for an ASPA:** from the evidence about the neighbours of an origin, the providers to list, the ones already declared and the weak leads, with a list ready to copy.
 - **Validators compared:** the ASPAs of this site's Routinator and of two rpki-client validators (the project's console and Cloudflare's), side by side every hour (`scripts/build-validators.mjs`), with the ASPAs on which they differ, also as `/api/v1/validators.json`.
 - **Quality:** checks on every ASPA (AS0 mixed with other providers, a private or reserved provider, two ASes listing each other, providers no collector sees in BGP, expiring objects, very large provider sets) with counts and lists, a *Quality* block in the lookup and a *check now* link on the ASes that list each other.
-- **Status:** a page and a dot in the menu that say how fresh each piece of data is (validator, API files, daily history, BGP visibility, adoption numbers, notifications).
+- **Status:** a page and a dot in the menu that say how fresh each piece of data is (validator, API files, daily history, BGP visibility, adoption numbers, notifications), and a chart of the state of each part over the last 24 hours to 90 days (`scripts/build-status.mjs` runs the checks every 15 minutes; the file is `/api/v1/status-history.json`).
 - **Download:** the whole list of ASPAs as CSV or JSON, for one RIR or all.
 
 **Open data**

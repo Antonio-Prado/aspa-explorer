@@ -21,7 +21,7 @@ const FIX = join(here, 'fixtures', 'a11y');
 const TYPES = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.svg': 'image/svg+xml', '.json': 'application/json', '.png': 'image/png', '.jpg': 'image/jpeg', '.pdf': 'application/pdf' };
 const FIXTURE_OF = (p) => {
   if (p === '/data/aspas.json' || p === '/data/status.json') return p.slice(1);
-  if (/^\/api\/v1\/(adoption|leaks|validators|meta|leaks-history)\.json$/.test(p)) return p.slice(1);
+  if (/^\/api\/v1\/(adoption|leaks|validators|meta|leaks-history|status-history)\.json$/.test(p)) return p.slice(1);
   if (/^\/api\/v1\/as\/\d+$/.test(p)) return 'api/v1/as.json';
   if (p === '/api/v1/subscriptions/health') return 'api/v1/health.json';
   return null;

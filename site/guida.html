@@ -8,15 +8,15 @@
 <meta name="color-scheme" content="light dark">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <link rel="alternate" hreflang="en" href="/guide.html">
-<link rel="stylesheet" href="/style.css?v=1.29.1">
-<script src="/status-checks.js?v=1.29.1" defer></script>
-<script src="/footer.js?v=1.29.1" defer></script>
+<link rel="stylesheet" href="/style.css?v=1.30.0">
+<script src="/status-checks.js?v=1.30.0" defer></script>
+<script src="/footer.js?v=1.30.0" defer></script>
 </head>
 <body>
 <a class="skip" href="#main">Vai al contenuto principale</a>
 <header class="wrap masthead">
   <div class="top">
-    <p class="back"><a class="brandlink" href="/" title="Torna a ASPA Explorer"><img class="brand" src="/img/logo-mark.svg?v=1.29.1" alt="" width="40" height="40"><span>ASPA Explorer</span></a></p>
+    <p class="back"><a class="brandlink" href="/" title="Torna a ASPA Explorer"><img class="brand" src="/img/logo-mark.svg?v=1.30.0" alt="" width="40" height="40"><span>ASPA Explorer</span></a></p>
     <nav class="topnav" aria-label="Main"><a href="/">Home</a><a href="/statistics.html">Statistics</a><a href="/examples.html">Examples</a><a href="/api.html">API</a><a href="/guide.html" aria-current="page">Guide</a><a href="/status.html">Status</a></nav>
   </div>
   <h1>Guida</h1>
@@ -202,6 +202,7 @@
   <section aria-labelledby="status">
     <h2 id="status">Stato del servizio</h2>
     <p>La <a href="/status.html">pagina di stato</a> (l'ultima voce del menu in alto) mostra quando ciascuna parte è stata aggiornata l'ultima volta: il validatore, i file per AS dell'API, la storia giornaliera, il file di visibilità BGP usato dai controlli di qualità, i numeri sull'adozione, i route leak e il servizio di notifica. Una parte è <em>late</em> quando è più vecchia del previsto e <em>down</em> quando è molto più vecchia o non risponde. La pagina controlla dal browser, quindi mostra ciò che otterresti tu, e si aggiorna ogni minuto. Gli stessi controlli danno il <strong>pallino accanto a <em>Status</em> nel menu</strong> di ogni pagina: verde quando tutti i controlli sono verdi, rosso quando sono tutti rossi, arancione negli altri casi (un controllo late non conta come verde). Il risultato è conservato per un minuto, quindi passando da una pagina all'altra i controlli non si ripetono.</p>
+    <p>Sotto la tabella, <strong>Over time</strong> mostra lo stato di ogni parte nelle ultime 24 ore, 7, 30 o 90 giorni, con una striscia per parte: un lavoro sul server esegue gli stessi controlli ogni 15 minuti e ne conserva il risultato, e ogni cella di una striscia mostra lo stato peggiore del suo intervallo (verde OK, arancione late, rosso down, grigio nessun campione, per esempio mentre il lavoro non girava). Accanto a ogni striscia c'è la quota di controlli in cui la parte era OK; passando il mouse su una striscia, o mettendola a fuoco e usando le frecce sinistra e destra, si legge una cella. Più sotto ci sono gli ultimi problemi con inizio e durata e una tabella con gli stessi numeri. La storia è anche un file, <code>/api/v1/status-history.json</code>: l'elenco dei controlli e, per ogni momento, una lettera per controllo (<code>o</code> OK, <code>l</code> late, <code>d</code> down).</p>
   </section>
 
   <section aria-labelledby="share">

@@ -31,6 +31,11 @@ await save('data/status.json', Object.fromEntries(Object.entries(status).filter(
 for (const f of ['adoption', 'leaks', 'validators', 'meta', 'leaks-history']) {
   try { await save(`api/v1/${f}.json`, await get(`${SITE}/api/v1/${f}.json`)); } catch (err) { console.error(`skipped ${f}: ${err.message}`); }
 }
+try {
+  const sh = await get(`${SITE}/api/v1/status-history.json`);
+  const from = sh.samples.length ? sh.samples[sh.samples.length - 1][0] - 7 * 86400 : 0;
+  await save('api/v1/status-history.json', { ...sh, samples: sh.samples.filter(([t]) => t >= from) });
+} catch (err) { console.error(`skipped status-history: ${err.message}`); }
 try { await save('api/v1/as.json', await get(`${SITE}/api/v1/as/${FOCUS.slice(2)}`)); } catch (err) { console.error(`skipped as: ${err.message}`); }
 
 const file = (name) => get(`${GITLAB}/${name}.json/raw?ref=history`);
