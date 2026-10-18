@@ -1,18 +1,19 @@
 # The accessibility check (scripts/test-a11y.mjs: Chromium and axe-core, every page at desktop width and at 320 px, in both
-# themes) on each push to the main branch. It runs on GitHub only (GitLab ignores the file): the runner of the GitLab project is a
+# themes) on each push to the main branch and on each pull request. It runs on GitHub only (GitLab ignores the file): the runner of the GitLab project is a
 # FreeBSD shell executor, where Playwright does not run. The copy on GitHub is pushed from GitLab (scripts/mirror-github.sh).
 name: Accessibility
 
 on:
   push:
     branches: [main]
+  pull_request:
   workflow_dispatch:
 
 permissions:
   contents: read
 
 concurrency:
-  group: accessibility
+  group: accessibility-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:

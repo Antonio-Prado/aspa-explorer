@@ -9,7 +9,7 @@ The place for everybody is the copy of the project on GitHub, <https://github.co
 ## Sending a pull request
 
 1. Fork the repository on GitHub and make your change on a branch; keep it small and about one thing.
-2. Run `make check` (see below). A change to a page must pass `make a11y` too, and a change that shows in the page is better with a line in `CHANGELOG.md` under `[Unreleased]`.
+2. Run `make check` (see below). A change to a page must pass `make a11y` too, and a change that shows in the page is better with a line in `CHANGELOG.md` under `[Unreleased]`. Both checks also run on your pull request on GitHub (the workflows *Checks* and *Accessibility*); a red one is worth a look before you ask for a review.
 3. Open the pull request and say what it changes and why, how you tried it, and, for a change that people see, what it looks like. The template asks for exactly this.
 
 **What happens next.** Development happens in a private repository of the Department of Information Engineering (group `internet_routing_sec`): that is where the checks run and where the site is deployed from. The GitHub copy is made from it, and its `main` is rewritten at every push, so a pull request cannot be merged on GitHub itself. A maintainer reads it there, discusses it with you in the pull request, applies it to the private repository keeping you as the author of the commit, and closes the pull request with a link to the commit that contains it. It will appear in the GitHub copy with the next push. Expect a reply within a few working days; a pull request that is not answered is not refused, write to the address above.
@@ -28,42 +28,16 @@ To preview the page with real data, serve `site/` behind nginx with the configur
 
 The ASPA path verification (`site/verify.js`) is a pure module with unit tests (`make test`, `scripts/test-verify.mjs`); the tests include the worked examples of the paper that the procedure is based on. Change the procedure only together with its tests. The other readings of the data are pure modules too, each with its tests: the quality checks (`site/quality.js`), who is the provider of an origin (`site/evidence.js`), traceroutes of the tromboning (`site/traceroute.js`), the checks of the status page (`site/status-checks.js`), the builders of the per-AS API and of the adoption numbers (`scripts/build-api.mjs`, `scripts/build-adoption.mjs`) and the notifier (`notifier/`, `scripts/test-notify.mjs`).
 
-The pipeline also runs two security checks: `make lint-security` (ESLint rules that forbid `innerHTML`, `eval` and similar sinks in `site/*.js`) and `make secrets` (a [gitleaks](https://github.com/gitleaks/gitleaks) scan of the whole git history).
-
-## Repositories and publication
-
-- The internal project (`internet_routing_sec/aspa-explorer`) holds the development, the CI, the pipeline schedules, the wiki and the releases.
-- A push mirror copies `main` and the tags to the public project (`Antonio-Prado/aspa-explorer`) on every push; work-in-progress branches are not mirrored.
-- Releases and the wiki are not covered by the mirror. The job `publish-release` (every `v*` tag, which is a protected tag) creates the release in both projects, and `mirror-wiki` (daily schedule, `SCHEDULE=wiki`) copies the wiki. Both use `MIRROR_TOKEN`, a project access token of the public project (scopes `api` and `write_repository`, role Maintainer) stored as a masked and protected CI variable. It expires after one year, together with the token used inside the mirror's URL: renew both.
-
-## Services on the host
-
-Besides the static page, the host that serves it runs three things that the CI does not deploy: the builder of the per-AS API, badges and feeds (`scripts/build-api.mjs`, every 15 minutes), the builder of the adoption numbers and of the AS registry (`scripts/build-adoption.mjs`, once a day) and the notifier service (`notifier/`, started by `deploy/freebsd/aspa_notify`). They run as unprivileged users from `cron` and `rc`; the wiki page *Deployment* describes how to set them up. After changing a file that they use (`build-api.mjs`, `build-adoption.mjs`, `site/history.js`, `site/quality.js`, `notifier/*`) copy it to the host and, for the notifier, restart the service.
-
-When a page asset changes (script, style), change its `?v=` as well: the CDN in front of the site keeps assets by address, so the same address keeps serving the old file.
-
-## Scheduled jobs
-
-Three jobs run only from pipeline schedules (variable `SCHEDULE`), on the runner of the host that serves the page; the third, `mirror-wiki` (daily, `SCHEDULE=wiki`), is described above:
-
-- `host-package-audit` (weekly, `SCHEDULE=audit`): `pkg audit` on the host, including the FreeBSD base system. The job fails, and GitLab sends the usual pipeline-failure email, when an installed package has a known vulnerability for which the repository already offers a fix; vulnerabilities without a fix yet only produce a warning. A daily root cron job refreshes the vulnerability database (`deploy/freebsd/`).
-- `aspa-snapshot` (daily, `SCHEDULE=snapshot`): logs the number of ASPAs, provider ASes and the split per RIR as a run of the project's model experiment, so *Analyze > Model experiments* charts the adoption of ASPA over time (`scripts/log-snapshot.mjs`).
-
-The snapshot job needs the CI variable `MLFLOW_TOKEN` (a project access token with the `api` scope, role Developer; masked and protected), because the model experiments API does not accept the CI job token. The token expires after one year.
-
-Each job can be started by hand from *Build > Pipelines > Run pipeline* by setting the variable `SCHEDULE` to `audit`, `snapshot` or `wiki`.
+The checks of the project also include two security checks: `make lint-security` (ESLint rules that forbid `innerHTML`, `eval` and similar sinks in `site/*.js`) and `make secrets` (a [gitleaks](https://github.com/gitleaks/gitleaks) scan of the whole git history).
 
 ## Guidelines
 
 - Insert data into the DOM with `textContent` / DOM APIs only, never `innerHTML`, since all data comes from a remote service.
 - Keep the page usable without a build step, in both light and dark mode, and on narrow screens.
 - Everything is in English: the pages, the guide and the documents. There is no translation to keep in step.
-- After a change to a page, run `make a11y` (or look at the result of the *Accessibility* workflow on the GitHub copy): every page must pass axe-core at desktop width and at 320 px, in both themes, and not scroll sideways. The data it uses are the small files of `scripts/fixtures/a11y`, recorded with `scripts/record-fixtures.mjs`.
+- After a change to a page, run `make a11y` (or look at the result of the *Accessibility* workflow on your pull request): every page must pass axe-core at desktop width and at 320 px, in both themes, and not scroll sideways. The data it uses are the small files of `scripts/fixtures/a11y`, recorded with `scripts/record-fixtures.mjs`.
 - Update [CHANGELOG.md](CHANGELOG.md) under *Unreleased* for any user-visible change.
 
-## Merge requests
+## Maintainers
 
-1. Create a branch from `main`.
-2. Keep changes focused; one topic per merge request.
-3. Make sure the CI pipeline passes.
-4. Fill in the merge request template.
+How the copies of the repository, the services on the host and the scheduled jobs work, and how a pull request is applied, is in [MAINTAINING.md](MAINTAINING.md).

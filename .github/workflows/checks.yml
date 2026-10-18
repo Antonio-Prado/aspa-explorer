@@ -1,0 +1,29 @@
+# `make check` (JavaScript syntax, HTML validation, the nginx configuration, the version, the security lint of the browser code and the unit
+# tests) on each push to the main branch and on each pull request. On the GitLab project the pipeline runs the same checks; this is for the
+# people who send a pull request to the copy on GitHub.
+name: Checks
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: checks-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  checks:
+    if: github.repository_owner == 'Antonio-Prado'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: sudo apt-get update && sudo apt-get install -y nginx openssl
+      - run: make check
