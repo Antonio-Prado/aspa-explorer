@@ -1372,6 +1372,69 @@ function renderRecent() {
   $('recent-count').textContent = `(${list.length})`;
 }
 
+/* ---------- the routing registry (IRR) next to the ASPA ---------- */
+// The aut-num of the AS, from the RIPE database and the mirrors that it serves (the registries of the other RIRs and RADB): asked only when the
+// button is pressed, from the browser, with the number of the AS. Not every object has a policy: the ones in ARIN, for instance, have only the name.
+const IRR_SOURCES = ['RIPE', 'ARIN-GRS', 'APNIC-GRS', 'AFRINIC-GRS', 'LACNIC-GRS', 'JPIRR-GRS', 'RADB-GRS'].map((s) => `source=${s}`).join('&');
+async function fetchIrr(n) {
+  const r = await fetch(`https://rest.db.ripe.net/search.json?query-string=AS${n}&type-filter=aut-num&flags=no-referenced&${IRR_SOURCES}`, { headers: { Accept: 'application/json' } });
+  if (r.status === 404) return null;
+  if (!r.ok) throw new Error(`HTTP ${r.status}`);
+  const objs = ((await r.json()).objects || {}).object || [];
+  if (!objs.length) return null;
+  const o = objs.find((x) => x.source.id === 'ripe') || objs[0];
+  const attrs = o.attributes.attribute.map((a) => ({ name: a.name, value: a.value }));
+  return { source: o.source.id.toUpperCase(), attrs, modified: (attrs.find((a) => a.name === 'last-modified') || {}).value };
+}
+
+function irrBlock(as) {
+  const n = asNum(as), own = byCustomer.get(as);
+  const out = el('div', { 'aria-live': 'polite' });
+  const status = el('span', { class: 'hint' });
+  const btn = el('button', { type: 'button', class: 'linkish', text: 'Compare its IRR object with the ASPA' });
+  const chips = (list) => (list.length ? chipList(list.map((x) => 'AS' + x), 40) : el('span', { class: 'muted', text: 'none' }));
+  const line = (label, list, note) => el('div', { class: 'irr-line' }, el('strong', { text: label }), ' ', chips(list), note ? el('p', { class: 'hint', text: note }) : null);
+  const render = (o) => {
+    const roles = AspaIrr.roles(o.attrs);
+    const aspa = own ? own.providers.map((p) => Number(p.slice(2))) : [];
+    const kids = [el('p', { class: 'hint' }, `The aut-num of ${as} in ${o.source}${o.modified ? `, last changed ${o.modified.slice(0, 10)}` : ''}: ${fmt.format(roles.rules)} import and export lines.`)];
+    if (!roles.rules) {
+      kids.push(el('p', { text: `The object says nothing about the neighbours of ${as}: it has no import or export lines (the registries of some RIRs keep only the name).` }));
+      out.replaceChildren(...kids); return;
+    }
+    const c = AspaIrr.compare(aspa, roles);
+    kids.push(line('Transit providers, as the object says', roles.transit));
+    if (roles.ixp.length) kids.push(line('Intermediaries (import-via), in practice route servers of exchange points', roles.ixp));
+    kids.push(el('p', { class: 'hint', text: `${fmt.format(roles.customer.length)} customers and ${fmt.format(roles.peer.length)} peers are declared as well${roles.candidate.length ? `, and ${roles.candidate.length} neighbour${roles.candidate.length === 1 ? ' is' : 's are'} accepted from ANY without saying what ${roles.candidate.length === 1 ? 'it is' : 'they are'}` : ''}.` }));
+    if (!c.comparable) {
+      kids.push(el('p', { text: 'The object has no part called transit, upstream or provider with a neighbour accepted from ANY, so it cannot be compared with the ASPA.' }));
+      if (roles.candidate.length) kids.push(line('Accepted from ANY, not said what they are', roles.candidate));
+    } else {
+      if (!own) kids.push(el('p', { text: `${as} publishes no ASPA. The transit providers above are the ones that it would list.` }));
+      else {
+        if (c.onlyIrr.length) kids.push(line('In the IRR as transit, not in the ASPA', c.onlyIrr, 'The ASPA may miss a provider: routes that reach the collectors through it come out as valleys.'));
+        if (c.onlyAspa.length) kids.push(line('In the ASPA, not said to be transit in the IRR', c.onlyAspa, [c.onlyAspaIsPeerOrIxp.length && `${c.onlyAspaIsPeerOrIxp.map((x) => 'AS' + x).join(', ')} ${c.onlyAspaIsPeerOrIxp.length === 1 ? 'is' : 'are'} peers or exchange points in the object.`, c.onlyAspaIsCustomer.length && `${c.onlyAspaIsCustomer.map((x) => 'AS' + x).join(', ')} ${c.onlyAspaIsCustomer.length === 1 ? 'is' : 'are'} customers in the object.`, 'Either the object is not up to date or the ASPA lists more than it should.'].filter(Boolean).join(' ')));
+        if (c.both.length) kids.push(line('In both', c.both));
+        if (!c.onlyIrr.length && !c.onlyAspa.length) kids.push(el('p', { class: 'verdict v-valid' }, el('strong', { text: 'Consistent' }), ' The transit providers of the IRR object and the providers of the ASPA are the same.'));
+      }
+    }
+    kids.push(el('p', { class: 'hint', text: 'An IRR object says what its owner declared, when they last edited it; it is not a contract and it can be out of date. Where the object, CAIDA and the ASPA do not agree, ask the owner which one is right.' }));
+    out.replaceChildren(...kids);
+  };
+  btn.addEventListener('click', async () => {
+    btn.disabled = true; status.replaceChildren(el('span', { class: 'busy', text: ' Asking the RIPE database' }));
+    try {
+      const o = await fetchIrr(n);
+      status.textContent = '';
+      if (!o) out.replaceChildren(el('p', { text: `No aut-num object of ${as} was found in the RIPE database or in the registries that it mirrors.` })); else render(o);
+    } catch (err) { status.textContent = ` Could not read the registry (${err.message}).`; btn.disabled = false; return; }
+    btn.hidden = true;
+  });
+  return el('div', { class: 'res-hist', id: 'as-irr' }, el('h4', { text: 'Routing registry (IRR)' }),
+    el('p', { class: 'hint', text: `What the aut-num of ${as} declares about its providers, next to its ASPA. Pressing the button asks the RIPE database (rest.db.ripe.net), from your browser, for the object of this AS number; nothing is asked before.` }),
+    el('p', {}, btn, status), out);
+}
+
 function renderLookup(as) {
   const out = $('result');
   if (!as) { out.replaceChildren(); lookupAs = null; return; }
@@ -1412,7 +1475,7 @@ function renderLookup(as) {
   }
 
   const seen = recentNote(as, own ? own.providers : [], customers.length);
-  out.replaceChildren(head, ...(seen ? [seen] : []), el('div', { class: 'res-grid' }, left, right), el('div', { class: 'res-hist', id: 'as-history' }), el('div', { class: 'res-hist' }, el('h4', { text: 'Compare' }), compareBlock(as)), el('div', { class: 'res-hist', id: 'as-quality' }), graphHolder(as), shareBlock(as));
+  out.replaceChildren(head, ...(seen ? [seen] : []), el('div', { class: 'res-grid' }, left, right), el('div', { class: 'res-hist', id: 'as-history' }), el('div', { class: 'res-hist' }, el('h4', { text: 'Compare' }), compareBlock(as)), el('div', { class: 'res-hist', id: 'as-quality' }), irrBlock(as), graphHolder(as), shareBlock(as));
   document.title = `${as} · ASPA Explorer`;
   const canon = document.querySelector('link[rel="canonical"]');
   if (canon) canon.setAttribute('href', `${location.origin}/as/${as}`);

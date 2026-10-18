@@ -1,0 +1,100 @@
+{
+ "objects": {
+  "object": [
+   {
+    "type": "aut-num",
+    "source": {
+     "id": "ripe"
+    },
+    "attributes": {
+     "attribute": [
+      {
+       "name": "aut-num",
+       "value": "AS12779"
+      },
+      {
+       "name": "as-name",
+       "value": "ITALIANET"
+      },
+      {
+       "name": "remarks",
+       "value": "============ Upstreams ============"
+      },
+      {
+       "name": "import",
+       "value": "from AS174 accept ANY"
+      },
+      {
+       "name": "export",
+       "value": "to AS174 announce AS12779:AS-CUSTOMERS"
+      },
+      {
+       "name": "import",
+       "value": "from AS2914 accept ANY"
+      },
+      {
+       "name": "export",
+       "value": "to AS2914 announce AS12779:AS-CUSTOMERS"
+      },
+      {
+       "name": "import",
+       "value": "from AS3257 accept ANY"
+      },
+      {
+       "name": "export",
+       "value": "to AS3257 announce AS12779:AS-CUSTOMERS"
+      },
+      {
+       "name": "import",
+       "value": "from AS6762 accept ANY"
+      },
+      {
+       "name": "export",
+       "value": "to AS6762 announce AS12779:AS-CUSTOMERS"
+      },
+      {
+       "name": "remarks",
+       "value": "============ Peering ============"
+      },
+      {
+       "name": "import",
+       "value": "from AS3223 accept AS-VOXILITY-SET"
+      },
+      {
+       "name": "export",
+       "value": "to AS3223 announce AS12779:AS-CUSTOMERS"
+      },
+      {
+       "name": "import-via",
+       "value": "AS57463 from AS-ANY accept ANY"
+      },
+      {
+       "name": "export-via",
+       "value": "AS57463 to AS-ANY announce AS12779:AS-CUSTOMERS"
+      },
+      {
+       "name": "remarks",
+       "value": "============ Customers ============"
+      },
+      {
+       "name": "import",
+       "value": "from AS64500 accept AS64500"
+      },
+      {
+       "name": "export",
+       "value": "to AS64500 announce ANY"
+      },
+      {
+       "name": "last-modified",
+       "value": "2026-10-09T14:54:06Z"
+      },
+      {
+       "name": "source",
+       "value": "RIPE"
+      }
+     ]
+    }
+   }
+  ]
+ }
+}

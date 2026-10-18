@@ -5,6 +5,11 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.42.0] - 2026-10-18
+
+### Added
+- **The routing registry (IRR) next to the ASPA**: on the page of an AS, a button reads the `aut-num` object from the RIPE database (and the mirrors of the other registries that it serves) and compares what its owner declared with the ASPA: the neighbours that the object calls transit providers (accepted from ANY, in a part called transit, upstream or provider) against the providers of the ASPA, with the customers, the peers and the intermediaries (`import-via`, in practice route servers of exchange points) told apart. It shows what the IRR has and the ASPA misses, and the other way round, says when an object has no policy (ARIN keeps only the name) and never guesses without the sections of the remarks (`site/irr.js`; asked from the browser only when the button is pressed; `rest.db.ripe.net` added to the content security policy).
+
 ## [1.41.0] - 2026-10-18
 
 ### Added

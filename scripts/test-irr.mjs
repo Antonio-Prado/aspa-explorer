@@ -1,0 +1,99 @@
+// Unit tests for site/irr.js (no dependencies). Run with: node scripts/test-irr.mjs
+import assert from 'node:assert/strict';
+import { createRequire } from 'node:module';
+
+const { rules, roles, compare, say } = createRequire(import.meta.url)('../site/irr.js');
+let passed = 0;
+const test = (name, fn) => { fn(); passed++; console.log('ok  ', name); };
+const attrs = (...lines) => lines.map((l) => { const i = l.indexOf(': '); return { name: l.slice(0, i), value: l.slice(i + 2) }; });
+
+// as the aut-num of a small ISP: sections in remarks, transits that are accepted from ANY, route servers also accepted from ANY, customers
+const CONNESI = attrs(
+  'remarks: ======================= TRANSITS =========================',
+  'remarks: -- WARIAN --', 'mp-import: from AS56911 accept ANY', 'mp-export: to AS56911 announce AS15605:AS-CONNESI',
+  'remarks: -- Zayo --', 'mp-import: from AS6461 accept ANY', 'mp-export: to AS6461 announce AS15605:AS-CONNESI',
+  'remarks: -- Seeweb --', 'mp-import: from AS12637 accept ANY', 'mp-export: to AS12637 announce ANY',
+  'remarks: ======================= IXP ==============================',
+  'remarks: -- NaMeX Rome IXP --', 'remarks: -- Route Servers --', 'mp-import: from AS196959 accept ANY', 'mp-export: to AS196959 announce AS15605:AS-CONNESI',
+  'remarks: -- Aruba --', 'mp-import: from AS31034 accept AS-ARUBAIT', 'mp-export: to AS31034 announce AS15605:AS-CONNESI',
+  'remarks: ======================= CUSTOMERS ==============================',
+  'mp-import: from AS39739 accept AS39739', 'mp-export: to AS39739 announce ANY',
+);
+
+test('the rules of an object: imports and exports with the section they are in', () => {
+  const rs = rules(CONNESI);
+  assert.equal(rs.length, 12);
+  assert.deepEqual(rs.slice(0, 2).map((r) => [r.dir, r.as, r.filter, r.context]), [['import', 56911, 'ANY', 'transit'], ['export', 56911, 'AS15605:AS-CONNESI', 'transit']]);
+  assert.equal(rs.find((r) => r.as === 196959).context, 'peer');
+  assert.equal(rs.find((r) => r.as === 39739).context, 'customer');
+});
+
+test('transit, route servers, peers and customers are told apart by the section, not by "accept ANY" alone', () => {
+  const r = roles(CONNESI);
+  assert.deepEqual(r.transit, [6461, 12637, 56911]);
+  assert.deepEqual(r.peer, [31034, 196959]);          // the route server is accepted from ANY too, and is not a provider
+  assert.deepEqual(r.customer, [39739]);
+  assert.deepEqual(r.candidate, []);
+});
+
+test('import-via and export-via name an exchange-point AS', () => {
+  const r = roles(attrs('remarks: Upstreams', 'import: from AS1299 accept ANY', 'export: to AS1299 announce AS41327:AS-CUSTOMERS',
+    'remarks: Private Network Interconnect', 'import: from AS6461 accept AS-MFNX', 'export: to AS6461 announce AS41327:AS-CUSTOMERS',
+    'remarks: NETIX Sofia', 'import-via: AS57463 from AS-ANY accept ANY', 'export-via: AS57463 to AS-ANY announce AS41327:AS-CUSTOMERS',
+    'import-via: afi ipv6.unicast AS44530 from AS44530:AS-MEMBERS accept AS-HOPUS'));
+  assert.deepEqual(r.transit, [1299]);
+  assert.deepEqual(r.peer, [6461]);
+  assert.deepEqual(r.ixp, [44530, 57463]);
+  assert.deepEqual(r.via, [44530, 57463]);
+});
+
+test('an AS with ordinary lines and a via line keeps its role and is also an intermediary', () => {
+  const r = roles(attrs('remarks: Upstreams', 'import: from AS100 accept ANY', 'export: to AS100 announce AS5:AS-X',
+    'remarks: Exchange points', 'import-via: AS100 from AS-ANY accept ANY', 'import-via: AS200 from AS-ANY accept ANY'));
+  assert.deepEqual(r.transit, [100]);        // the ordinary session is not lost
+  assert.deepEqual(r.via, [100, 200]);
+  assert.deepEqual(r.ixp, [200]);            // only the one that appears only so is an intermediary
+  assert.equal(say(r, 200), 'an intermediary AS (in practice the route server of an exchange point)');
+  assert.equal(say(r, 100), 'a transit provider');
+  assert.deepEqual(compare([200], r).onlyAspaIsVia, [200]);
+});
+
+test('without sections, "accept ANY" is only a candidate', () => {
+  const r = roles(attrs('import: from AS100 accept ANY', 'export: to AS100 announce AS5:AS-X', 'import: from AS200 accept AS200', 'export: to AS200 announce AS5:AS-X',
+    'import: from AS300 accept AS300', 'export: to AS300 announce ANY'));
+  assert.deepEqual(r.candidate, [100]);
+  assert.deepEqual(r.peer, [200]);
+  assert.deepEqual(r.customer, [300]);
+  assert.deepEqual(r.transit, []);
+  assert.equal(compare([100], r).comparable, false);
+});
+
+test('the IRR against the ASPA: what is in both, what is only in one', () => {
+  const c = compare([3356, 6762, 12637, 41327, 56911], roles(CONNESI));
+  assert.deepEqual(c.both, [6762 === 6762 ? 12637 : 0, 56911].sort((a, b) => a - b).filter((n) => [12637, 56911].includes(n)));
+  assert.deepEqual(c.onlyIrr, [6461]);                // Zayo: declared transit, missing from the ASPA
+  assert.deepEqual(c.onlyAspa, [3356, 6762, 41327]);  // the ASPA has these, the object does not say transit for them
+  assert.equal(c.comparable, true);
+  // AS0 is not a provider
+  assert.deepEqual(compare([0], roles(CONNESI)).onlyAspa, []);
+  // a provider of the ASPA that the object calls a peer or an exchange point is said apart
+  const p = compare([31034, 196959], roles(CONNESI));
+  assert.deepEqual(p.onlyAspaIsPeerOrIxp, [31034, 196959]);
+});
+
+test('what the object says about one neighbour', () => {
+  const r = roles(CONNESI);
+  assert.equal(say(r, 6461), 'a transit provider');
+  assert.equal(say(r, 39739), 'a customer');
+  assert.equal(say(r, 196959), 'a peer');
+  assert.equal(say(r, 1), null);
+});
+
+test('an object with no policy at all (as in the registries that keep only the name) is empty, not wrong', () => {
+  const r = roles(attrs('as-name: ZAYO', 'descr: Zayo', 'source: ARIN'));
+  assert.equal(r.rules, 0);
+  assert.equal(compare([1299], r).comparable, false);
+  assert.deepEqual(rules([]), Object.assign([], { sections: 0 }));
+});
+
+console.log(`${passed} tests passed`);

@@ -56,7 +56,7 @@ const PAGES = [
   ['home', '/'], ['as', '/#AS12779'], ['path', '/#path=3356+12779&from=up'], ['changes', '/#changes'], ['quality', '/#quality'],
   ['statistics', '/statistics.html'], ['guide', '/guide.html'], ['api', '/api.html'],
   ['examples', '/examples.html'], ['embed', '/embed.html?country=IT'], ['status', '/status.html'], ['subscription', '/subscription.html#confirm=abc'],
-  ['bulk', '/#path=3356+12779&from=up'], ['peek', '/#AS12779'], ['ixp', '/#path=12779+1200+24796&from=up'], ['recent', '/#AS12779'], ['report', '/r/0123456789ab'],
+  ['bulk', '/#path=3356+12779&from=up'], ['peek', '/#AS12779'], ['irr', '/#AS12779'], ['ixp', '/#path=12779+1200+24796&from=up'], ['recent', '/#AS12779'], ['report', '/r/0123456789ab'],
 ];
 const VIEWPORTS = [['desktop', { width: 1280, height: 800 }], ['narrow', { width: 320, height: 640 }]];
 const SCHEMES = ['light', 'dark'];
@@ -72,7 +72,10 @@ for (const [name, path] of PAGES) {
       const ctx = await browser.newContext({ viewport, colorScheme: scheme, serviceWorkers: 'block' });
       const page = await ctx.newPage();
       await page.route((url) => url.origin !== base, async (route) => {
-        const fx = GITLAB_FIXTURE(route.request().url());
+        const u = route.request().url();
+        const irr = /^https:\/\/rest\.db\.ripe\.net\/search\.json\?query-string=AS(\d+)&/.exec(u);
+        if (irr) { try { return route.fulfill({ status: 200, contentType: 'application/json', body: await readFile(join(FIX, 'irr', `AS${irr[1]}.json`)) }); } catch { return route.fulfill({ status: 404, contentType: 'application/json', body: '{}' }); } }
+        const fx = GITLAB_FIXTURE(u);
         if (fx) return route.fulfill({ status: 200, contentType: 'application/json', body: await readFile(join(FIX, fx)) });
         return route.abort();
       });
@@ -100,6 +103,16 @@ for (const [name, path] of PAGES) {
           const note = await page.locator('.ixp-note').count();
           if (note !== 1) extra.push(`ixp: ${note} notes about the exchange point, expected 1`);
           else if (!(await page.locator('.ixp-note a[href*="rfc7947"]').count())) extra.push('ixp: the note does not link RFC 7947');
+        }
+        if (name === 'irr') {
+          // the IRR object against the ASPA: press the button, expect what the fixture says (AS6762 is transit in the object and not in the ASPA)
+          await page.locator('#as-irr button').click();
+          await page.waitForTimeout(500);
+          const missing = await page.locator('#as-irr .irr-line', { hasText: 'not in the ASPA' }).first().innerText().catch(() => '');
+          if (!/AS6762/.test(missing)) extra.push(`irr: the transit missing from the ASPA is not shown (got: ${missing.slice(0, 80)})`);
+          const only = await page.locator('#as-irr .irr-line', { hasText: 'not said to be transit' }).first().innerText().catch(() => '');
+          if (!/AS3223/.test(only) || !/AS200020/.test(only)) extra.push('irr: the providers of the ASPA that the object does not call transit are not shown');
+          if (!(await page.locator('#as-irr .irr-line', { hasText: 'Intermediaries' }).count())) extra.push('irr: the intermediary AS (import-via) is not shown');
         }
         if (name === 'peek') {
           // the quick look: a click on the name of an AS opens a window with rows, and it can be closed
