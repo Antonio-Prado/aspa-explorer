@@ -121,7 +121,8 @@
     const shown = list.slice(0, 12);
     $('upproblems').replaceChildren(...(shown.length ? shown.map((p) => el('li', {}, el('span', { class: 'badge ' + (p.state === 'd' ? 'v-invalid' : 'v-unknown'), text: NAME[p.state] }), ` ${p.name}: ${at(p.from)}, about ${duration(p.to - p.from)}`)) : [el('li', { text: `No problem in the ${r.label}.` })]));
     $('upmore').textContent = list.length > shown.length ? `${list.length - shown.length} older stretches are not listed.` : '';
-    $('upsub').textContent = `${doc.samples.length ? `${doc.samples.length.toLocaleString('en-US')} checks since ${at(doc.samples[0][0])}` : 'No check recorded yet'}; one is made every ${Math.round(doc.interval / 60)} minutes. A cell shows the worst state in its stretch of time.`;
+    const as = doc.assumed ? ` Samples from ${at(doc.assumed.from)} to ${at(doc.assumed.to)} were not measured: all the parts are taken as OK in that period.` : '';
+    $('upsub').textContent = `${doc.samples.length ? `${doc.samples.length.toLocaleString('en-US')} checks since ${at(doc.samples[0][0])}` : 'No check recorded yet'}; one is made every ${Math.round(doc.interval / 60)} minutes. A cell shows the worst state in its stretch of time.${as}`;
     for (const b of document.querySelectorAll('[data-range]')) b.setAttribute('aria-pressed', String(b.dataset.range === range));
   }
 

@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.30.1] - 2026-10-18
+
+### Added
+- The status history can mark a period as assumed (`assumed` in `/api/v1/status-history.json`): the chart says that the states in it were not measured but taken as OK. It is used for 16-18 October 2026, before the job existed.
+
 ## [1.30.0] - 2026-10-18
 
 ### Added

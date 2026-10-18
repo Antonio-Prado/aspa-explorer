@@ -6,7 +6,8 @@
 //
 // A sample is [seconds since the epoch, one letter per check]: o = OK, l = late, d = down, - = not checked
 // (the list of checks in the file says which letter is which part). A moment without a sample (the job did not
-// run) is a gap in the chart, not a green cell.
+// run) is a gap in the chart, not a green cell. `assumed` ({from, to}, seconds) marks samples that were not measured
+// but taken as OK (the history before the job existed); the page says so.
 import { readFile, writeFile, rename } from 'node:fs/promises';
 import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
@@ -31,7 +32,8 @@ export function addSample(doc, t, letters, checks, now = t) {
   const old = doc && Array.isArray(doc.samples) && Array.isArray(doc.checks) ? remap(doc, checks) : [];
   const from = now - KEEP_DAYS * 86400;
   const samples = old.filter(([x]) => x >= from && Math.abs(x - t) >= 60).concat([[t, letters]]).sort((a, b) => a[0] - b[0]);
-  return { generated: new Date(now * 1000).toISOString(), interval: INTERVAL, checks: checks.map(({ id, name, expected }) => ({ id, name, expected })), samples };
+  const assumed = doc && doc.assumed ? { assumed: doc.assumed } : {};
+  return { generated: new Date(now * 1000).toISOString(), interval: INTERVAL, ...assumed, checks: checks.map(({ id, name, expected }) => ({ id, name, expected })), samples };
 }
 
 async function main() {

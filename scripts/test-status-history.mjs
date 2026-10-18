@@ -20,6 +20,12 @@ test('a sample is added in order, and the one of the same minute is replaced', (
   assert.equal(d.samples[1][1], 'od');
 });
 
+test('the mark of assumed samples is kept', () => {
+  const d = addSample({ checks, samples: [[T0, 'oo']], assumed: { from: T0 - 900, to: T0 } }, T0 + 900, 'oo', checks);
+  assert.deepEqual(d.assumed, { from: T0 - 900, to: T0 });
+  assert.equal(addSample(null, T0, 'oo', checks).assumed, undefined);
+});
+
 test('samples older than the limit are dropped', () => {
   let d = addSample(null, T0, 'oo', checks);
   d = addSample(d, T0 + KEEP_DAYS * 86400 + 900, 'oo', checks, T0 + KEEP_DAYS * 86400 + 900);
