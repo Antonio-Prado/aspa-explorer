@@ -1,6 +1,6 @@
-# `make check` (JavaScript syntax, HTML validation, the nginx configuration, the version, the security lint of the browser code and the unit
-# tests) on each push to the main branch and on each pull request. On the GitLab project the pipeline runs the same checks; this is for the
-# people who send a pull request to the copy on GitHub.
+# The checks of `make check` (JavaScript syntax, HTML validation, the version, the security lint of the browser code and the unit tests) on each
+# push to the main branch and on each pull request. The check of the nginx configuration is left out: the nginx of the runner is too old for
+# the configuration of the site (`http2 on;`), and the pipeline of the GitLab project runs it. This is for the people who send a pull request.
 name: Checks
 
 on:
@@ -25,5 +25,4 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-      - run: sudo apt-get update && sudo apt-get install -y nginx openssl
-      - run: make check
+      - run: make js html version lint-security test
