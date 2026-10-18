@@ -14,6 +14,8 @@ The place for everybody is the copy of the project on GitHub, <https://github.co
 
 **What happens next.** Development happens in a private repository of the Department of Information Engineering (group `internet_routing_sec`): that is where the checks run and where the site is deployed from. The GitHub copy is made from it, and its `main` is rewritten at every push, so a pull request cannot be merged on GitHub itself. A maintainer reads it there, discusses it with you in the pull request, applies it to the private repository keeping you as the author of the commit, and closes the pull request with a link to the commit that contains it. It will appear in the GitHub copy with the next push. Expect a reply within a few working days; a pull request that is not answered is not refused, write to the address above.
 
+**Your data.** A commit carries the name and the e-mail address that you set in git, and the history of the project is public: use an address that you are happy to see there. On GitHub, issues and pull requests are handled under the privacy statement of GitHub; the privacy information for the site is that of the University of Padova, <https://www.unipd.it/en/privacy>.
+
 ## Development
 
 The site is plain HTML, CSS and JavaScript with no build step and no external dependencies. Keep it that way: no frameworks, no CDN assets, no inline scripts (the Content-Security-Policy forbids them).

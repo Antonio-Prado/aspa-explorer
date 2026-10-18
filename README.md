@@ -22,7 +22,8 @@
   <a href="https://aspa.ping6.it/status.html" target="_blank" rel="noopener">Status</a> ·
   <a href="https://gitlab.dei.unipd.it/Antonio-Prado/aspa-explorer/-/wikis/home#" target="_blank" rel="noopener">Wiki</a> ·
   <a href="CHANGELOG.md" target="_blank" rel="noopener">Changelog</a> ·
-  <a href="CONTRIBUTING.md" target="_blank" rel="noopener">Contributing</a>
+  <a href="CONTRIBUTING.md" target="_blank" rel="noopener">Contributing</a> ·
+  <a href="https://www.unipd.it/en/privacy" target="_blank" rel="noopener">Privacy</a>
 </p>
 
 <p align="center"><sub>This is the public copy of the project's development repository, kept in step with it. <strong>To contribute, use <a href="https://github.com/Antonio-Prado/aspa-explorer" target="_blank" rel="noopener">GitHub</a>: open an issue, or fork and send a pull request</strong> (how it works: <a href="CONTRIBUTING.md" target="_blank" rel="noopener">CONTRIBUTING.md</a>). You can also write to <a href="mailto:antonio.prado@dei.unipd.it">antonio.prado@dei.unipd.it</a>.</sub></p>
