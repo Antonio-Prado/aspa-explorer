@@ -4,13 +4,15 @@
 //
 // The site is served from site/ with the data files of scripts/fixtures/a11y (see scripts/record-fixtures.mjs);
 // anything else outside the site is blocked, so the result does not depend on the network.
-//   npm install --no-save playwright axe-core && node scripts/test-a11y.mjs [page name...]
+//   npm install --no-save playwright-core axe-core && CHROME=/path/to/chrome node scripts/test-a11y.mjs [page name...]
+// CHROME is a Chromium or Chrome that is already installed (on FreeBSD, where Playwright has no browser of its own: pkg install chromium);
+// without it Playwright uses the one that `npx playwright-core install chromium` downloads.
 import http from 'node:http';
 import { readFile } from 'node:fs/promises';
 import { dirname, join, extname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createRequire } from 'node:module';
-import { chromium } from 'playwright';
+import { chromium } from 'playwright-core';
 
 const require = createRequire(import.meta.url);
 const axeSource = require('axe-core').source;
@@ -21,9 +23,10 @@ const FIX = join(here, 'fixtures', 'a11y');
 const TYPES = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.svg': 'image/svg+xml', '.json': 'application/json', '.png': 'image/png', '.jpg': 'image/jpeg', '.pdf': 'application/pdf' };
 const FIXTURE_OF = (p) => {
   if (p === '/data/aspas.json' || p === '/data/status.json') return p.slice(1);
-  if (/^\/api\/v1\/(adoption|leaks|validators|meta|leaks-history|status-history)\.json$/.test(p)) return p.slice(1);
+  if (/^\/api\/v1\/(adoption|leaks|validators|meta|leaks-history|status-history|trends)\.json$/.test(p)) return p.slice(1);
   if (/^\/api\/v1\/as\/\d+$/.test(p)) return 'api/v1/as.json';
   if (p === '/api/v1/subscriptions/health') return 'api/v1/health.json';
+  if (p === '/datasets/index.json') return 'datasets/index.json';
   return null;
 };
 const GITLAB_FIXTURE = (url) => {
@@ -50,13 +53,13 @@ const base = `http://127.0.0.1:${server.address().port}`;
 const PAGES = [
   ['home', '/'], ['as', '/#AS12779'], ['path', '/#path=3356+12779&from=up'], ['changes', '/#changes'], ['quality', '/#quality'],
   ['statistics', '/statistics.html'], ['guide', '/guide.html'], ['guida', '/guida.html'], ['api', '/api.html'],
-  ['examples', '/examples.html'], ['status', '/status.html'], ['subscription', '/subscription.html#confirm=abc'],
+  ['examples', '/examples.html'], ['embed', '/embed.html?country=IT'], ['status', '/status.html'], ['subscription', '/subscription.html#confirm=abc'],
 ];
 const VIEWPORTS = [['desktop', { width: 1280, height: 800 }], ['narrow', { width: 320, height: 640 }]];
 const SCHEMES = ['light', 'dark'];
 const only = process.argv.slice(2);
 
-const browser = await chromium.launch({ args: ['--no-sandbox'] });
+const browser = await chromium.launch({ args: ['--no-sandbox'], ...(process.env.CHROME ? { executablePath: process.env.CHROME } : {}) });
 const failures = [];
 let checked = 0;
 for (const [name, path] of PAGES) {

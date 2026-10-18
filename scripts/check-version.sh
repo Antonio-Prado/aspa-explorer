@@ -12,8 +12,8 @@ if [ -z "$changelog" ] || [ "$changelog" != "$shown" ]; then
   echo "version mismatch: CHANGELOG.md says '$changelog', site/version.json says '$shown'" >&2
   exit 1
 fi
-for page in index guide guida api subscription statistics status examples; do
-  for asset in style.css app.js evidence.js traceroute.js graph.js live.js validators.js status-checks.js footer.js subscription.js adoption.js leaks.js stats.js status.js status-history.js examples.js download.js; do
+for page in index guide guida api subscription statistics status examples embed; do
+  for asset in style.css app.js evidence.js whatif.js traceroute.js graph.js live.js validators.js status-checks.js footer.js subscription.js adoption.js leaks.js stats.js status.js status-history.js trends.js datasets.js examples.js download.js; do
     if ! grep -q "$asset?v=$shown\"" "$root/site/$page.html" && grep -q "\"/$asset" "$root/site/$page.html"; then
       echo "site/$page.html: $asset is not requested with ?v=$shown" >&2
       exit 1

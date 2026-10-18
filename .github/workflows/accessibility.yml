@@ -24,6 +24,6 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-      - run: npm install --no-save --no-audit --no-fund playwright@1.49.1 axe-core@4.10.2
-      - run: npx playwright install --with-deps chromium
+      - run: npm install --no-save --no-audit --no-fund playwright-core@1.49.1 axe-core@4.10.2
+      - run: npx playwright-core install --with-deps chromium
       - run: node scripts/test-a11y.mjs

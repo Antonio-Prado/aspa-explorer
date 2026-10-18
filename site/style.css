@@ -21,7 +21,7 @@
   --ok-bg: #e3f4ea; --ok-ink: #0d5c32;
   --warn-bg: #fff1d6; --warn-ink: #6b4200;
   --bad-bg: #fde4e4; --bad-ink: #8f1a1a;
-  --s1: #2a78d6; --s2: #eb6834; --s3: #1baf7a; --s4: #eda100;
+  --s1: #2a78d6; --s2: #eb6834; --s3: #1baf7a; --s4: #eda100; --s5: #7a5ad0;
   --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
 }
 @media (prefers-color-scheme: dark) {
@@ -48,7 +48,7 @@
     --ok-bg: #11301f; --ok-ink: #8be0ad;
     --warn-bg: #3a2a07; --warn-ink: #f4cb7a;
     --bad-bg: #3d1414; --bad-ink: #ffa3a3;
-    --s1: #3987e5; --s2: #d95926; --s3: #199e70; --s4: #c98500;
+    --s1: #3987e5; --s2: #d95926; --s3: #199e70; --s4: #c98500; --s5: #9d86ea;
   }
 }
 :root[data-theme="dark"] {
@@ -74,7 +74,7 @@
   --ok-bg: #11301f; --ok-ink: #8be0ad;
   --warn-bg: #3a2a07; --warn-ink: #f4cb7a;
   --bad-bg: #3d1414; --bad-ink: #ffa3a3;
-  --s1: #3987e5; --s2: #d95926; --s3: #199e70; --s4: #c98500;
+  --s1: #3987e5; --s2: #d95926; --s3: #199e70; --s4: #c98500; --s5: #9d86ea;
 }
 
 * { box-sizing: border-box; }
@@ -218,6 +218,7 @@ figcaption .s { display: block; color: var(--muted); font-size: 0.8125rem; }
 .s2 { fill: var(--s2); background: var(--s2); }
 .s3 { fill: var(--s3); background: var(--s3); }
 .s4 { fill: var(--s4); background: var(--s4); }
+.s5 { fill: var(--s5); background: var(--s5); }
 .histctl { display: flex; flex-wrap: wrap; gap: 0.5rem 1.25rem; align-items: center; margin: 0.6rem 0 0.75rem; font-size: 0.875rem; }
 .histctl label { display: inline-flex; align-items: center; gap: 0.4rem; color: var(--ink-2); }
 .histctl select { font: inherit; padding: 0.3rem 0.5rem; }
@@ -225,6 +226,9 @@ figcaption .s { display: block; color: var(--muted); font-size: 0.8125rem; }
 .linechart .line { fill: none; stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
 .linechart .line.s1 { stroke: var(--s1); }
 .linechart .line.s2 { stroke: var(--s2); }
+.linechart .line.s3 { stroke: var(--s3); }
+.linechart .line.s4 { stroke: var(--s4); }
+.linechart .line.s5 { stroke: var(--s5); }
 .linechart .fillarea { stroke: none; opacity: 0.14; }
 .export { margin-top: 0.25rem; }
 .changes { padding: 0.5rem 1.1rem; }
@@ -595,3 +599,8 @@ table.live td.nowrap { white-space: nowrap; }
 .histctl [data-range]:hover { background: var(--chip-hover); }
 .histctl [data-range][aria-pressed="true"] { background: var(--btn); color: var(--btn-ink); border-color: var(--btn); }
 .up-h { font-size: 1rem; margin: 1.25rem 0 0.4rem; }
+
+/* the chart that other sites embed (embed.html) */
+body.embed { margin: 0; padding: 0.5rem; background: var(--page); }
+body.embed main { max-width: none; margin: 0; }
+.embed-title { margin: 0 0 0.5rem; font-size: 1.1rem; }

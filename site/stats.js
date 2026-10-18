@@ -95,7 +95,7 @@ function columnChart(container, bins) {
 /* ---------- adoption over time ---------- */
 // One chart, several metrics. "By RIR" is stacked areas (bottom to top, the categorical slots in
 // fixed order); the others are a single line. The period and a logarithmic scale are options.
-const HIST_RIRS = ['ripe', 'arin', 'apnic', 'lacnic'];
+const HIST_RIRS = ['ripe', 'arin', 'apnic', 'lacnic', 'afrinic'];
 const HIST_SRC = { ripe: 'RIPE NCC RPKI archive', aspa: 'this validator' };
 const HIST_METRICS = {
   rir: { label: 'ASPAs, by RIR', unit: 'ASPAs', stacked: true, value: (r) => r.aspas },
@@ -208,6 +208,10 @@ function drawHistory() {
       const up = rows.map((r, k) => `${x(r.date).toFixed(1)},${y(acc[k]).toFixed(1)}`);
       const down = rows.map((r, k) => `${x(r.date).toFixed(1)},${y(lower[k]).toFixed(1)}`).reverse();
       g.append(svg('polygon', { points: up.concat(down).join(' '), class: `area s${i + 1}` }));
+      // a RIR with no ASPA has no area to show: its line runs along the zero of the axis
+      if (rows.every((r) => !r['aspas_' + rir])) {
+        g.append(svg('polyline', { points: rows.map((r) => `${x(r.date).toFixed(1)},${y(0).toFixed(1)}`).join(' '), class: `line s${i + 1}` }));
+      }
     });
   } else {
     const pts = rows.map((r, k) => `${x(r.date).toFixed(1)},${y(vals[k]).toFixed(1)}`);
@@ -233,7 +237,7 @@ function drawHistory() {
     cross.setAttribute('visibility', 'visible');
     const t = tip();
     const extra = mt.stacked
-      ? HIST_RIRS.filter((q) => r['aspas_' + q]).map((q) => el('span', { class: 'trow' }, `${rirName(q)} ${fmt.format(r['aspas_' + q])}`))
+      ? HIST_RIRS.map((q) => el('span', { class: 'trow' }, `${rirName(q)} ${fmt.format(r['aspas_' + q] || 0)}`))
       : mt.pct ? [el('span', { class: 'trow' }, `${fmt.format(r.aspa_in_bgp)} of ${fmt.format(r.bgp_ases)} ASes`)] : [];
     t.replaceChildren(el('strong', { text: `${fmtMetric(mt, vals[k])} ${mt.pct ? '' : mt.unit}`.trim() }),
       el('span', { text: `${fmtDayLong(r.date)} · ${HIST_SRC[r.src] || r.src || ''}` }), ...extra);
@@ -278,7 +282,7 @@ function describeHistory() {
     : [el('li', {}, el('span', { class: 'sw s1', 'aria-hidden': 'true' }), el('span', { class: 'lg', text: mt.label }),
       el('span', { class: 'lv', text: `${fmtMetric(mt, mt.value(last))}${mt.pct ? '' : ''}` }))]));
   $('history-note').textContent = `${fmtDayLong(first.date)} to ${fmtDayLong(last.date)}. ` +
-    (mt.stacked ? 'AFRINIC has published none so far. ' : '') + (mt.note ? mt.note + ' ' : '') +
+    (mt.stacked && !lastRow.aspas_afrinic ? 'AFRINIC has published none so far: its line runs along zero. ' : '') + (mt.note ? mt.note + ' ' : '') +
     'Days before 16 October 2026 come from the RIPE NCC RPKI archive; since then, from this site\'s validator.';
 }
 

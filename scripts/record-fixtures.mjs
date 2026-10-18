@@ -28,7 +28,7 @@ await save('data/aspas.json', { metadata: data.metadata, aspas: [...involved, ..
 const status = await get(`${SITE}/data/status.json`);
 await save('data/status.json', Object.fromEntries(Object.entries(status).filter(([, v]) => typeof v !== 'object' || v === null)));
 
-for (const f of ['adoption', 'leaks', 'validators', 'meta', 'leaks-history']) {
+for (const f of ['adoption', 'leaks', 'validators', 'meta', 'leaks-history', 'trends']) {
   try { await save(`api/v1/${f}.json`, await get(`${SITE}/api/v1/${f}.json`)); } catch (err) { console.error(`skipped ${f}: ${err.message}`); }
 }
 try {

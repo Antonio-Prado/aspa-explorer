@@ -8,15 +8,15 @@
 <meta name="color-scheme" content="light dark">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <link rel="alternate" hreflang="en" href="/guide.html">
-<link rel="stylesheet" href="/style.css?v=1.30.2">
-<script src="/status-checks.js?v=1.30.2" defer></script>
-<script src="/footer.js?v=1.30.2" defer></script>
+<link rel="stylesheet" href="/style.css?v=1.31.0">
+<script src="/status-checks.js?v=1.31.0" defer></script>
+<script src="/footer.js?v=1.31.0" defer></script>
 </head>
 <body>
 <a class="skip" href="#main">Vai al contenuto principale</a>
 <header class="wrap masthead">
   <div class="top">
-    <p class="back"><a class="brandlink" href="/" title="Torna a ASPA Explorer"><img class="brand" src="/img/logo-mark.svg?v=1.30.2" alt="" width="40" height="40"><span>ASPA Explorer</span></a></p>
+    <p class="back"><a class="brandlink" href="/" title="Torna a ASPA Explorer"><img class="brand" src="/img/logo-mark.svg?v=1.31.0" alt="" width="40" height="40"><span>ASPA Explorer</span></a></p>
     <nav class="topnav" aria-label="Main"><a href="/">Home</a><a href="/statistics.html">Statistics</a><a href="/examples.html">Examples</a><a href="/api.html">API</a><a href="/guide.html" aria-current="page">Guide</a><a href="/status.html">Status</a></nav>
   </div>
   <h1>Guida</h1>
@@ -138,6 +138,8 @@
     <p><strong>Da dove vengono i ritardi.</strong> Nella letteratura non c'è una soglia unica. Lo <a href="https://imasd.lacnic.net/reportes/interconexion/lacnic-estudio_trafico_%20pais_lac-en.pdf" target="_blank" rel="noopener">studio di connettività LACNIC 2022<span class="sr-only"> (si apre in una nuova scheda)</span></a> (Formoso e Cicileo, 2023) trova che le andate e ritorno che restano dentro un paese sono per lo più sotto i 50 ms, usa 20 ms per distinguere due indirizzi vicini e nota che in Brasile e Argentina le misure che escono dal paese sono tipicamente sopra i 100 ms. <a href="https://arxiv.org/pdf/1606.05047" target="_blank" rel="noopener">Shah, Fontugne e Papadopoulos<span class="sr-only"> (si apre in una nuova scheda)</span></a> confermano con i traceroute le deviazioni viste in BGP, tramite i paesi degli hop e un aumento del ritardo di dieci volte o più tra due hop (<a href="https://labs.ripe.net/author/anant_shah/using-ripe-atlas-to-validate-international-routing-detours" target="_blank" rel="noopener">riassunto su RIPE Labs<span class="sr-only"> (si apre in una nuova scheda)</span></a>); le deviazioni tra paesi vicini, come Italia e Francia, il ritardo non le vedeva. <a href="https://arxiv.org/pdf/1605.07685" target="_blank" rel="noopener">Edmundson e altri<span class="sr-only"> (si apre in una nuova scheda)</span></a> hanno misurato con traceroute e geolocalizzazione le deviazioni dei percorsi attraverso paesi di sorveglianza. Le fasce usate qui (fino a 50 ms, fino a 100 ms, da 100 ms in su) seguono quelle cifre; sono una lettura, non uno standard.</p>
     <p>Per un AS, sotto i percorsi, <strong>Watch the updates live</strong> collega il browser a <a href="https://ris-live.ripe.net/manual/" target="_blank" rel="noopener">RIPE RIS Live<span class="sr-only"> (si apre in una nuova scheda)</span></a>, che distribuisce gli aggiornamenti BGP ricevuti dai route collector man mano che arrivano (non il dump delle tabelle degli altri risultati, che può avere otto ore), e verifica ogni annuncio con le ASPA: ora, feeder, prefisso, percorso e verdetto, gli ultimi quindici, con i totali. Scegli gli aggiornamenti <em>announced by</em> l'AS (pochi, per una rete piccola) o <em>going through</em> (molti, per una rete di transito). Si ferma dopo cinque minuti o 300 annunci, oppure quando premi <em>Stop</em>. Un route leak è qualcosa che avviene in un aggiornamento: qui si vedrebbe mentre accade.</p>
     <p><strong>Privacy.</strong> A differenza della verifica dell'AS path, questo riquadro invia ciò che digiti, il prefisso o il numero di AS, a <a href="https://stat.ripe.net/" target="_blank" rel="noopener">RIPEstat<span class="sr-only"> (si apre in una nuova scheda)</span></a> dal browser, e da lì riceve le rotte; il server della pagina non lo vede. Il monitoraggio live si collega dal browser a RIPE (RIS Live), che vede il tuo indirizzo come qualsiasi sito visitato; nulla passa da questo sito. I controlli delle ROA, invece, sono richiesti a questo sito (che interroga il validatore), una richiesta per ogni prefisso e origine; non vengono inviati a nessun altro.</p>
+    <h3 id="what-if">E se l'ASPA elencasse altri provider?</h3>
+    <p>Per un AS, sotto la proposta dell'ASPA, <em>What if the ASPA of ASn listed&hellip;</em> ripete il controllo delle rotte come se l'ASPA di quell'AS avesse i provider che scrivi (la proposta è già nel campo; <code>AS0</code> da solo significa nessun provider). Tutte le altre ASPA restano come sono pubblicate. Mostra le rotte valide, sconosciute e non valide prima e dopo, e i percorsi il cui verdetto cambia, a partire da quelli con più rotte. Una rotta che passa da un provider che lasci fuori diventa Invalid per le reti che controllano le ASPA: è la prova da fare prima di pubblicare. Controlla le rotte che i collector vedono adesso, dalla stessa vista della tabella; non conosce le rotte che esistono solo per clienti o peer che i collector non vedono.</p>
   </section>
 
   <section aria-labelledby="changes">
@@ -171,6 +173,9 @@
   <section aria-labelledby="statistics">
     <h2 id="statistics">Statistiche</h2>
     <p>La <a href="/statistics.html">pagina delle statistiche</a> contiene i numeri che stanno dietro alle ASPA. Prima i grafici delle ASPA che questo validatore considera valide: <strong>ASPAs over time</strong> (giornaliero da ottobre 2023; impilato per RIR, oppure il totale, gli AS provider, i provider mediani per ASPA, le ASPA senza provider o la coverage, su qualsiasi periodo, con scala logaritmica e download dei dati giornalieri in CSV o JSON), <strong>ASPAs by RIR</strong>, <strong>providers per ASPA</strong> e i <strong>most-named providers</strong>, ciascuno dei quali apre la sua ricerca.</p>
+    <h3 id="trends">Reti con un'ASPA nel tempo</h3>
+    <p>Un grafico nella pagina delle statistiche che mostra quante reti hanno un'ASPA, mese per mese dalla prima, per tutte, per ogni RIR o per un paese (dove è stato registrato il numero AS; l'ASPA di una rete che non si vede in BGP conta come sconosciuta). I numeri sono ricostruiti dagli eventi della storia e ricalcolati una volta al giorno (<a href="/api/v1/trends.json">/api/v1/trends.json</a>). Sotto il grafico c'è l'HTML per mostrarlo in un'altra pagina: <code>/embed.html?country=IT</code> o <code>/embed.html?rir=ripe</code> in un iframe. Il grafico <em>ASPAs over time</em> ha una linea per ogni RIR, AFRINIC compreso, che corre lungo lo zero finché non pubblica la prima ASPA.</p>
+
     <h3 id="adoption">Adozione</h3>
     <p>Poi chi ha un'ASPA e chi no. La base è l'insieme delle reti (AS) che i collector RIPE RIS vedono in BGP; la <em>coverage</em> è la quota di esse con un'ASPA valida. È mostrata:</p>
     <ul>

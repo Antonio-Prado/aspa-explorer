@@ -30,6 +30,7 @@ js-syntax:
     - node --check site/history.js
     - node --check site/quality.js
     - node --check site/evidence.js
+    - node --check site/whatif.js
     - node --check site/traceroute.js
     - node --check site/graph.js
     - node --check site/live.js
@@ -40,9 +41,12 @@ js-syntax:
     - node --check scripts/build-leaks.mjs
     - node --check scripts/build-validators.mjs
     - node --check scripts/build-status.mjs
+    - node --check scripts/build-trends.mjs
+    - node --check scripts/build-dataset.mjs
+    - sh -n scripts/run-a11y.sh
     - node --check scripts/test-a11y.mjs
     - node --check scripts/record-fixtures.mjs
-    - for f in site/adoption.js site/leaks.js site/validators.js site/stats.js site/download.js site/status.js site/status-history.js site/examples.js site/subscription.js; do node --check "$f"; done
+    - for f in site/adoption.js site/leaks.js site/validators.js site/stats.js site/download.js site/status.js site/status-history.js site/trends.js site/datasets.js site/examples.js site/subscription.js; do node --check "$f"; done
     - for f in notifier/*.mjs; do node --check "$f"; done
 
 unit-tests:
@@ -56,6 +60,9 @@ unit-tests:
     - node scripts/test-leaks.mjs
     - node scripts/test-validators.mjs
     - node scripts/test-status-history.mjs
+    - node scripts/test-whatif.mjs
+    - node scripts/test-trends.mjs
+    - node scripts/test-dataset.mjs
     - node scripts/test-graph.mjs
     - node scripts/test-compare.mjs
     - node scripts/test-live.mjs
@@ -69,7 +76,7 @@ html-validate:
   stage: lint
   image: node:22-alpine
   script:
-    - npx --yes html-validate@9 site/index.html site/guide.html site/guida.html site/api.html site/subscription.html site/statistics.html site/status.html site/examples.html
+    - npx --yes html-validate@9 site/index.html site/guide.html site/guida.html site/api.html site/subscription.html site/statistics.html site/status.html site/examples.html site/embed.html
 
 nginx-config:
   extends: .regular
@@ -97,7 +104,7 @@ js-security-lint:
   stage: security
   image: node:22-alpine
   script:
-    - npx --yes eslint@9 --no-config-lookup -c eslint.config.mjs site/app.js site/footer.js site/verify.js site/history.js site/quality.js site/evidence.js site/traceroute.js site/graph.js site/live.js site/status-checks.js site/adoption.js site/leaks.js site/validators.js site/stats.js site/download.js site/status.js site/status-history.js site/examples.js site/subscription.js
+    - npx --yes eslint@9 --no-config-lookup -c eslint.config.mjs site/app.js site/footer.js site/verify.js site/history.js site/quality.js site/evidence.js site/whatif.js site/traceroute.js site/graph.js site/live.js site/status-checks.js site/adoption.js site/leaks.js site/validators.js site/stats.js site/download.js site/status.js site/status-history.js site/examples.js site/subscription.js
 
 secret-detection:
   extends: .regular
@@ -112,6 +119,22 @@ secret-detection:
 
 # Scheduled jobs. Pipeline schedules set the SCHEDULE variable; a pipeline started by
 # hand (web or API) with the same variable runs the same job.
+
+# Accessibility and layout of every page in a real browser (axe-core, light and dark, desktop and 320 px). On every push
+# it already runs on GitHub (.github/workflows/accessibility.yml, on the public copy). Here it is a manual job, for the
+# runner of the host once a Chromium is installed there (FreeBSD has no Playwright browser: pkg install chromium); without
+# one it ends with status 3, a warning, and says so.
+a11y:
+  stage: lint
+  tags: [aspa]
+  rules:
+    - if: $CI_PIPELINE_SOURCE != "schedule" && $SCHEDULE == null
+      when: manual
+      allow_failure: true
+  allow_failure:
+    exit_codes: 3
+  script:
+    - sh scripts/run-a11y.sh
 
 # Weekly: known vulnerabilities in the packages of the host that runs the runner (nginx,
 # Node.js, the runner itself, the base system). Needs the runner of that host.

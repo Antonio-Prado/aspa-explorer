@@ -836,6 +836,43 @@ function suggestPanel(origin, ev, listed) {
   return el('div', {}, ...kids);
 }
 
+// "What if": the routes of the origin with another list of providers in its ASPA (site/whatif.js).
+function whatIfPanel(origin, rows, initial) {
+  const as = 'AS' + origin;
+  const input = el('input', { type: 'text', id: 'whatif-input', class: 'copy-field', value: initial.join(' '), spellcheck: 'false', 'aria-describedby': 'whatif-hint' });
+  const out = el('div', { 'aria-live': 'polite' });
+  const run = () => {
+    const parsed = AspaWhatIf.parseProviders(input.value);
+    if (parsed.error) { out.replaceChildren(el('p', { class: 'error', text: parsed.error })); return; }
+    const r = AspaWhatIf.compare(aspaSets, rows.map((x) => ({ path: x.v.path, routes: x.routes })), as, parsed.providers);
+    const tile = (k) => el('div', { class: 'tile card v-' + k.toLowerCase() },
+      el('div', { class: 'label', text: k }),
+      el('div', { class: 'value', text: r.before[k] === r.after[k] ? fmt.format(r.after[k]) : `${fmt.format(r.before[k])} → ${fmt.format(r.after[k])}` }),
+      el('div', { class: 'note', text: r.before[k] === r.after[k] ? 'no change' : `${r.after[k] > r.before[k] ? '+' : '−'}${fmt.format(Math.abs(r.after[k] - r.before[k]))} routes` }));
+    const kids = [el('div', { class: 'tiles live-tiles' }, tile('Valid'), tile('Unknown'), tile('Invalid'))];
+    if (!r.changed.length) kids.push(el('p', { class: 'hint', text: 'No route changes its verdict with this list.' }));
+    else {
+      kids.push(el('section', { class: 'table-wrap card', tabindex: '0', 'aria-label': 'Paths whose verdict would change' }, el('table', { class: 'checks live' },
+        el('caption', { class: 'sr-only', text: `Paths of the routes of ${as} whose verdict changes with the proposed ASPA, most routes first` }),
+        el('thead', {}, el('tr', {}, el('th', { scope: 'col', text: 'Now' }), el('th', { scope: 'col', text: 'With the list' }), el('th', { scope: 'col', text: 'AS path, as a router shows it' }), el('th', { scope: 'col', class: 'num', text: 'Routes' }))),
+        el('tbody', {}, ...r.changed.slice(0, 10).map((c) => el('tr', {},
+          el('td', {}, el('span', { class: 'badge v-' + c.from.toLowerCase(), text: c.from })),
+          el('td', {}, el('span', { class: 'badge v-' + c.to.toLowerCase(), text: c.to })),
+          el('td', { class: 'mono pathcell' }, ...pathLinks(compressBgp([...c.path].reverse().map(asNum)))),
+          el('td', { class: 'num', text: fmt.format(c.routes) })))))));
+      if (r.changed.length > 10) kids.push(el('p', { class: 'hint', text: `${fmt.format(r.changed.length - 10)} more paths change; the ones above carry the most routes.` }));
+    }
+    out.replaceChildren(...kids);
+  };
+  const form = el('form', { class: 'copy-row' }, el('label', { class: 'copy-label', for: 'whatif-input', text: `Providers of ${as}` }), input, el('button', { type: 'submit', text: 'Check' }));
+  form.addEventListener('submit', (e) => { e.preventDefault(); run(); });
+  run();
+  return el('div', {},
+    el('h3', { class: 'subhead', text: `What if the ASPA of ${as} listed...` }),
+    el('p', { class: 'hint', id: 'whatif-hint', text: 'The routes above, checked again as if the ASPA of this AS had the providers below (AS0 alone: no provider). Every other ASPA stays as published. A route through a provider that is left out becomes Invalid for the networks that check ASPAs, so this is the test to run before you publish.' }),
+    form, out);
+}
+
 /* ---------- origin validation of the prefixes (ROAs) ---------- */
 const ROV_MAX = 200;       // prefix + origin pairs checked per request
 const ROV_PARALLEL = 6;
@@ -992,6 +1029,11 @@ async function renderLiveRoutes(text) {
     const panel = neighbourPanel(origin, rows, ev);
     if (panel) { kids.push(panel); usedEvidence = usedEvidence || Boolean(ev); }
     if (panel && ev && q.kind === 'as') { const own = byCustomer.get('AS' + origin); kids.push(suggestPanel(origin, ev, own ? new Set(own.providers) : null)); }
+    if (q.kind === 'as' && origin === asNum(q.label)) {
+      const own = byCustomer.get('AS' + origin);
+      const start = ev ? AspaEvidence.suggest(own ? [...own.providers] : null, ev).list : (own ? own.providers.filter((x) => x !== 'AS0') : []);
+      kids.push(whatIfPanel(origin, rows, start));
+    }
     if (lookupAs) { const reg = lookupAs(origin), tp = trombonePanel(origin, reg && reg.cc, routes); if (tp) kids.push(tp); }
   }
   if (q.kind === 'as') kids.push(livePanel(asNum(q.label)));

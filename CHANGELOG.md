@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.31.0] - 2026-10-18
+
+### Added
+- *What if the ASPA of ASn listed...* in the check of the routes of an AS: the routes checked again with another list of providers for that AS (the proposal by default, or the ones typed; AS0 alone for none), with the routes valid, unknown and invalid before and after and the paths whose verdict changes (`site/whatif.js`, `scripts/test-whatif.mjs`).
+- Networks with an ASPA over time, by RIR and country: a chart on the statistics page, `/api/v1/trends.json` (built once a day by `scripts/build-trends.mjs`) and a page to embed the chart in another site (`/embed.html?country=IT`, `?rir=ripe`), with the iframe code to copy.
+- Dated snapshots for research: `scripts/build-dataset.mjs` makes once a month a `.tar.gz` with the ASPAs, history, events, adoption, trends, leaks and validators, a `MANIFEST.json` (size and SHA-256) and a README, listed in `/datasets/index.json` and on the API page; `.zenodo.json` for a DOI.
+- The *ASPAs over time* chart, its legend, tooltip and table now have AFRINIC, at zero, with its line along the axis.
+
+### Changed
+- The leaks job of the day and the rebuild of past days (also in 1.30.2) are all complete: the days of the history have the 30 collectors.
+
 ## [1.30.2] - 2026-10-18
 
 ### Fixed

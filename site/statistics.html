@@ -7,19 +7,20 @@
 <meta name="description" content="Statistics of the ASPAs: how many over time, by RIR, providers per ASPA, the most-named providers, and who has published one, by size of the network, RIR and country.">
 <meta name="color-scheme" content="light dark">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
-<link rel="stylesheet" href="/style.css?v=1.30.2">
-<script src="/stats.js?v=1.30.2" defer></script>
-<script src="/adoption.js?v=1.30.2" defer></script>
-<script src="/leaks.js?v=1.30.2" defer></script>
-<script src="/validators.js?v=1.30.2" defer></script>
-<script src="/status-checks.js?v=1.30.2" defer></script>
-<script src="/footer.js?v=1.30.2" defer></script>
+<link rel="stylesheet" href="/style.css?v=1.31.0">
+<script src="/stats.js?v=1.31.0" defer></script>
+<script src="/adoption.js?v=1.31.0" defer></script>
+<script src="/trends.js?v=1.31.0" defer></script>
+<script src="/leaks.js?v=1.31.0" defer></script>
+<script src="/validators.js?v=1.31.0" defer></script>
+<script src="/status-checks.js?v=1.31.0" defer></script>
+<script src="/footer.js?v=1.31.0" defer></script>
 </head>
 <body>
 <a class="skip" href="#main">Skip to main content</a>
 <header class="wrap masthead">
   <div class="top">
-    <p class="back"><a class="brandlink" href="/" title="Back to ASPA Explorer"><img class="brand" src="/img/logo-mark.svg?v=1.30.2" alt="" width="40" height="40"><span>ASPA Explorer</span></a></p>
+    <p class="back"><a class="brandlink" href="/" title="Back to ASPA Explorer"><img class="brand" src="/img/logo-mark.svg?v=1.31.0" alt="" width="40" height="40"><span>ASPA Explorer</span></a></p>
     <nav class="topnav" aria-label="Main"><a href="/">Home</a><a href="/statistics.html" aria-current="page">Statistics</a><a href="/examples.html">Examples</a><a href="/api.html">API</a><a href="/guide.html">Guide</a><a href="/status.html">Status</a></nav>
   </div>
   <h1>Statistics</h1>
@@ -65,7 +66,7 @@
       <section class="table-wrap" tabindex="0" aria-label="ASPAs at the end of each month">
         <table>
           <caption class="sr-only">ASPAs on the last day of each month: in total, per RIR, provider ASes, and the share of the ASes seen in BGP that have an ASPA</caption>
-          <thead><tr><th scope="col">Day</th><th scope="col">Total</th><th scope="col">RIPE NCC</th><th scope="col">ARIN</th><th scope="col">APNIC</th><th scope="col">LACNIC</th><th scope="col">Provider ASes</th><th scope="col">Coverage</th></tr></thead>
+          <thead><tr><th scope="col">Day</th><th scope="col">Total</th><th scope="col">RIPE NCC</th><th scope="col">ARIN</th><th scope="col">APNIC</th><th scope="col">LACNIC</th><th scope="col">AFRINIC</th><th scope="col">Provider ASes</th><th scope="col">Coverage</th></tr></thead>
           <tbody id="history-rows"></tbody>
         </table>
       </section>
@@ -111,6 +112,19 @@
       </table>
     </section>
     <button type="button" class="more" id="top-more" hidden>Show more</button>
+  </section>
+
+  <section aria-labelledby="tr-title">
+    <h2 id="tr-title">Networks with an ASPA over time</h2>
+    <p class="hint">How many networks have an ASPA, month by month since the first ASPA, for all of them, for a RIR or for a country (where the AS number was registered; an ASPA of a network that is not seen in BGP counts as unknown).</p>
+    <p class="opts"><label>Show <select id="tr-group"></select></label></p>
+    <div class="card pad">
+      <div class="linechart" id="tr-chart" tabindex="0"></div>
+      <p class="hint" id="tr-sub"><span class="busy">Loading</span></p>
+    </div>
+    <p class="hint">To show this chart on another page, paste this HTML there.</p>
+    <div class="copy-row"><label class="copy-label" for="tr-code">Embed</label><input type="text" id="tr-code" class="copy-field" readonly spellcheck="false"><button type="button" class="linkish" id="tr-copy" aria-label="Copy the HTML to embed the chart">Copy</button></div>
+    <p class="hint">The numbers as JSON: <a href="/api/v1/trends.json">/api/v1/trends.json</a>.</p>
   </section>
 
   <section aria-labelledby="cc-title">
