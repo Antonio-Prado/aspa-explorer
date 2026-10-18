@@ -1,0 +1,22 @@
+name: Suggestion
+description: An idea to make ASPA Explorer more useful
+title: "[Idea]: "
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: need
+    attributes:
+      label: What you would like to do
+      description: The problem or the question, before the solution.
+    validations:
+      required: true
+  - type: textarea
+    id: idea
+    attributes:
+      label: How you imagine it
+      description: A sentence or a sketch is enough.
+  - type: textarea
+    id: other
+    attributes:
+      label: Where it comes from
+      description: A paper, a tool or a page that does something similar, if there is one.

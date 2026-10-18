@@ -4,7 +4,15 @@ Thanks for your interest in ASPA Explorer.
 
 ## Reporting problems and ideas
 
-Development happens in a private repository of the Department of Information Engineering (group `internet_routing_sec`); the public repository is a read-only mirror of it, with issues and merge requests switched off. Send problems and ideas by email to antonio.prado@dei.unipd.it. For anything security-related, follow [SECURITY.md](SECURITY.md) (the contact is also in [`/.well-known/security.txt`](https://aspa.ping6.it/.well-known/security.txt)). Everyone taking part is expected to follow the [Code of Conduct](CODE_OF_CONDUCT.md).
+The place for everybody is the copy of the project on GitHub, <https://github.com/Antonio-Prado/aspa-explorer>: open an **issue** for a problem or an idea (there are two forms, one for a bug and one for a suggestion), or send a **pull request**. You can also write to antonio.prado@dei.unipd.it. For anything security-related do not open an issue: follow [SECURITY.md](SECURITY.md) (the contact is also in [`/.well-known/security.txt`](https://aspa.ping6.it/.well-known/security.txt)). Everyone taking part is expected to follow the [Code of Conduct](CODE_OF_CONDUCT.md).
+
+## Sending a pull request
+
+1. Fork the repository on GitHub and make your change on a branch; keep it small and about one thing.
+2. Run `make check` (see below). A change to a page must pass `make a11y` too, and a change that shows in the page is better with a line in `CHANGELOG.md` under `[Unreleased]`.
+3. Open the pull request and say what it changes and why, how you tried it, and, for a change that people see, what it looks like. The template asks for exactly this.
+
+**What happens next.** Development happens in a private repository of the Department of Information Engineering (group `internet_routing_sec`): that is where the checks run and where the site is deployed from. The GitHub copy is made from it, and its `main` is rewritten at every push, so a pull request cannot be merged on GitHub itself. A maintainer reads it there, discusses it with you in the pull request, applies it to the private repository keeping you as the author of the commit, and closes the pull request with a link to the commit that contains it. It will appear in the GitHub copy with the next push. Expect a reply within a few working days; a pull request that is not answered is not refused, write to the address above.
 
 ## Development
 
@@ -49,7 +57,7 @@ Each job can be started by hand from *Build > Pipelines > Run pipeline* by setti
 
 - Insert data into the DOM with `textContent` / DOM APIs only, never `innerHTML`, since all data comes from a remote service.
 - Keep the page usable without a build step, in both light and dark mode, and on narrow screens.
-- `site/guida.html` is the Italian translation of `site/guide.html`: when you change the guide, change both (same ids and structure).
+- Everything is in English: the pages, the guide and the documents. There is no translation to keep in step.
 - After a change to a page, run `make a11y` (or look at the result of the *Accessibility* workflow on the GitHub copy): every page must pass axe-core at desktop width and at 320 px, in both themes, and not scroll sideways. The data it uses are the small files of `scripts/fixtures/a11y`, recorded with `scripts/record-fixtures.mjs`.
 - Update [CHANGELOG.md](CHANGELOG.md) under *Unreleased* for any user-visible change.
 

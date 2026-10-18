@@ -50,7 +50,7 @@
   const releaseItem = item(true, releaseLink);
   const commitItem = item(true, commitLink);
   const ipItem = item(true, 'Your IP: ', ipLink);
-  const items = [releaseItem, commitItem, item(false, link('/guide.html#accessibility', 'Accessibility')), ipItem];
+  const items = [releaseItem, commitItem, item(false, link('https://github.com/Antonio-Prado/aspa-explorer', 'Contribute on GitHub')), item(false, link('/guide.html#accessibility', 'Accessibility')), ipItem];
   // A space between the items gives the browser a place to break the line on narrow screens
   const build = el('p', { class: 'build' });
   items.forEach((it, i) => { if (i) build.append(' '); build.append(it); });
@@ -154,7 +154,6 @@
   // How to cite, under the title of every page: the DOI of the software on Zenodo (the one of the concept, that always leads to the latest version).
   const top = document.querySelector('header.masthead .top');
   if (top) {
-    const it = document.documentElement.lang === 'it';
-    top.after(el('p', { class: 'cite' }, it ? 'Come citare: ' : 'Cite as: ', link('https://doi.org/10.5281/zenodo.23450622', 'doi:10.5281/zenodo.23450622')));
+    top.after(el('p', { class: 'cite' }, 'Cite as: ', link('https://doi.org/10.5281/zenodo.23450622', 'doi:10.5281/zenodo.23450622')));
   }
 })();

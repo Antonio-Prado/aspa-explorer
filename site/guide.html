@@ -7,8 +7,6 @@
 <meta name="description" content="How to read and use the ASPA Explorer interface: lookup, path and route checks, statistics, notifications, the API and where the data comes from.">
 <meta name="author" content="Antonio Prado">
 <link rel="canonical" href="https://aspa.ping6.it/guide.html">
-<link rel="alternate" hreflang="en" href="https://aspa.ping6.it/guide.html">
-<link rel="alternate" hreflang="it" href="https://aspa.ping6.it/guida.html">
 <meta name="theme-color" content="#2a78d6">
 <link rel="manifest" href="/manifest.webmanifest">
 <link rel="apple-touch-icon" href="/img/apple-touch-icon.png">
@@ -25,21 +23,19 @@
 <meta name="twitter:card" content="summary_large_image">
 <meta name="color-scheme" content="light dark">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
-<link rel="alternate" hreflang="it" href="/guida.html">
-<link rel="stylesheet" href="/style.css?v=1.38.3">
-<script src="/status-checks.js?v=1.38.3" defer></script>
-<script src="/footer.js?v=1.38.3" defer></script>
+<link rel="stylesheet" href="/style.css?v=1.39.0">
+<script src="/status-checks.js?v=1.39.0" defer></script>
+<script src="/footer.js?v=1.39.0" defer></script>
 </head>
 <body>
 <a class="skip" href="#main">Skip to main content</a>
 <header class="wrap masthead">
   <div class="top">
-    <p class="back"><a class="brandlink" href="/" title="Back to ASPA Explorer"><img class="brand" src="/img/logo-mark.svg?v=1.38.3" alt="" width="40" height="40"><span>ASPA Explorer</span></a></p>
+    <p class="back"><a class="brandlink" href="/" title="Back to ASPA Explorer"><img class="brand" src="/img/logo-mark.svg?v=1.39.0" alt="" width="40" height="40"><span>ASPA Explorer</span></a></p>
     <nav class="topnav" aria-label="Main"><a href="/">Home</a><a href="/statistics.html">Statistics</a><a href="/examples.html">Examples</a><a href="/api.html">API</a><a href="/guide.html" aria-current="page">Guide</a><a href="/status.html">Status</a></nav>
   </div>
   <h1>Guide</h1>
   <p class="lede">How the ASPA Explorer interface works, what each number means and where the data comes from.</p>
-  <p><a href="/guida.html" hreflang="it" lang="it">Questa guida in italiano</a></p>
 </header>
 
 <main class="wrap prose" id="main" tabindex="-1">
@@ -339,6 +335,8 @@
     <h2 id="about">About this page</h2>
     <p>ASPA Explorer is a static page with no external dependencies and no cookies, with a small service behind it. Your lookups and path checks happen in your browser and are not sent anywhere; the routes box sends what you type to RIPEstat and asks this site, which asks the validator, about the ROAs, as said above; and a subscription to notifications keeps an address, as described in its section. Apart from that, the only thing this site learns about you is what any web server learns from a request; the footer shows the address your request came from, as the server sees it, and links it to RIPEstat; nothing is sent to RIPEstat unless you follow the link. The footer links to the project on the DEI GitLab and shows the release you are using and the commit it was built from.</p>
     <p>The source code, the changelog and instructions to report a problem are in the project repository.</p>
+
+    <p><strong>Contributing.</strong> The code is on <a href="https://github.com/Antonio-Prado/aspa-explorer" target="_blank" rel="noopener">GitHub<span class="sr-only"> (opens in a new tab)</span></a>: open an issue to report a problem or suggest something, or fork it and send a pull request. The GitHub copy is made from the private repository where the project is developed, so a pull request is read there and applied by hand, keeping you as the author; <a href="https://github.com/Antonio-Prado/aspa-explorer/blob/main/CONTRIBUTING.md" target="_blank" rel="noopener">CONTRIBUTING.md<span class="sr-only"> (opens in a new tab)</span></a> says how. For a security problem write instead to the address in <a href="https://github.com/Antonio-Prado/aspa-explorer/blob/main/SECURITY.md" target="_blank" rel="noopener">SECURITY.md<span class="sr-only"> (opens in a new tab)</span></a>.</p>
   </section>
 
   <section aria-labelledby="credits">

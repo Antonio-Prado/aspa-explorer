@@ -5,6 +5,14 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.39.0] - 2026-10-18
+
+### Added
+- **Contributing on GitHub**: a *Contribute on GitHub* link in the footer of every page, a paragraph in the guide, a rewritten README note and a section *Sending a pull request* in `CONTRIBUTING.md` that says how it works (the GitHub copy is made from the private repository, so a pull request is read there, applied by hand keeping the author, and closed with a link to the commit), forms for a bug and for a suggestion, a template for pull requests, and a file that points security problems to `SECURITY.md`.
+
+### Removed
+- The Italian guide (`/guida.html`) and every other translation: the site, the guide and the documents are in English only. The old address of the Italian guide redirects to the guide.
+
 ## [1.38.3] - 2026-10-18
 
 ### Changed

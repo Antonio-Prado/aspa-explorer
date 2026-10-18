@@ -54,7 +54,7 @@ const base = `http://127.0.0.1:${server.address().port}`;
 
 const PAGES = [
   ['home', '/'], ['as', '/#AS12779'], ['path', '/#path=3356+12779&from=up'], ['changes', '/#changes'], ['quality', '/#quality'],
-  ['statistics', '/statistics.html'], ['guide', '/guide.html'], ['guida', '/guida.html'], ['api', '/api.html'],
+  ['statistics', '/statistics.html'], ['guide', '/guide.html'], ['api', '/api.html'],
   ['examples', '/examples.html'], ['embed', '/embed.html?country=IT'], ['status', '/status.html'], ['subscription', '/subscription.html#confirm=abc'],
   ['bulk', '/#path=3356+12779&from=up'], ['peek', '/#AS12779'], ['recent', '/#AS12779'], ['report', '/r/0123456789ab'],
 ];
