@@ -111,16 +111,38 @@
     <td align="center"><sub>Verdicts by address space and by length of the path</sub></td>
   </tr>
   <tr>
-    <td colspan="2" align="center"><img src="assets/screenshots/tromboning-dark.jpg" width="60%" alt="Tromboning of AS41327: a table with the median of the round trips of twelve probes in Italy, and a row for each probe with the networks on the way and the reading"></td>
+    <td width="50%"><img src="assets/screenshots/irr-dark.jpg" alt="The routing registry (IRR) of AS41327: the transit providers its aut-num declares, the intermediaries, and a table that puts the IRR object, CAIDA and the ASPA side by side with a reading for each neighbour"></td>
+    <td width="50%"><img src="assets/screenshots/bulk-dark.jpg" alt="Check many paths at once: one path per line, with the verdict and the reason for each and the totals"></td>
   </tr>
   <tr>
-    <td colspan="2" align="center"><img src="assets/screenshots/tromboning-pair-dark.jpg" width="70%" alt="Tromboning of AS25152 over IPv4 and IPv6 on the same probes: the reading first (no trombone seen), then the median of each family, the comparison of the two and a row for each probe"></td>
+    <td align="center"><sub>The IRR object, CAIDA and the ASPA side by side</sub></td>
+    <td align="center"><sub>Many paths at once, with CSV and JSON download</sub></td>
+  </tr>
+  <tr>
+    <td width="50%"><img src="assets/screenshots/report-dark.jpg" alt="A shared result: the summary, the table of paths and the note that the result is frozen and not signed"></td>
+    <td width="50%"><img src="assets/screenshots/peek-light.jpg" alt="The quick look at AS3356: no ASPA, named as a provider by 196 ASPAs, seen in BGP"></td>
+  </tr>
+  <tr>
+    <td align="center"><sub>A shared result, at a link of its own</sub></td>
+    <td align="center"><sub>A quick look at any AS, from any table or path</sub></td>
+  </tr>
+  <tr>
+    <td colspan="2" align="center"><img src="assets/screenshots/status-months-light.jpg" width="70%" alt="Availability by month of each part of the service, and the form to be alerted when a part becomes late or down"></td>
+  </tr>
+  <tr>
+    <td colspan="2" align="center"><sub>Availability by month and the alerts on the status page</sub></td>
+  </tr>
+  <tr>
+    <td colspan="2" align="center"><img src="assets/screenshots/tromboning-dark.jpg" width="60%" alt="Tromboning of AS41327: the reading first (no trombone seen), then a row for each of twelve probes in Italy with the networks on the way and the round trip"></td>
+  </tr>
+  <tr>
+    <td colspan="2" align="center"><sub>Tromboning, measured: twelve probes in the country, the reading first</sub></td>
+  </tr>
+  <tr>
+    <td colspan="2" align="center"><img src="assets/screenshots/tromboning-pair-dark.jpg" width="70%" alt="Tromboning of AS41327 over IPv4 and IPv6 on the same probes: the reading of each family first (no trombone seen), the comparison of the two and a row for each probe"></td>
   </tr>
   <tr>
     <td colspan="2" align="center"><sub>Tromboning, IPv4 and IPv6 on the same probes: the reading of each family first, the comparison after</sub></td>
-  </tr>
-  <tr>
-    <td colspan="2" align="center"><sub>Tromboning, measured: twelve probes in the country, the median first</sub></td>
   </tr>
 </table>
 
