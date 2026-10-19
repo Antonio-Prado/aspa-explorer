@@ -5,7 +5,7 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [1.43.9] - 2026-10-19
+## [1.43.10] - 2026-10-19
 
 ### Added
 - Routes seen in BGP: the age of the snapshot. The line above the verdicts says how long ago RIPEstat read the routes ("as of 19 Oct 2026, 09:59 UTC (3 h 39 min ago)"), and a notice appears when the snapshot is more than an hour old: a route announced or withdrawn since then is not in it. The snapshot can be hours old, and a default route that the owner had already withdrawn was still shown.
