@@ -436,6 +436,9 @@ function runBulk() {
 // learned from their own providers, which the upstream procedure would wrongly call leaks.
 const LIVE_API = 'https://stat.ripe.net/data/bgp-state/data.json?resource=';
 const LIVE_MAX_BYTES = 12 * 1024 * 1024;
+const LG_API = 'https://stat.ripe.net/data/looking-glass/data.json?resource=';
+const LG_MAX = 24;       // prefixes read from the looking glass at one press: one request each
+const STALE_MS = 60 * 60 * 1000; // a snapshot older than this gets a notice
 const GRAPH_ROW = 9; // as many nodes as a row of the graph draws (MAX_ROW in graph.js)
 const PREFIX_RE = /^(?:\d{1,3}(?:\.\d{1,3}){3}\/\d{1,2}|[0-9a-f:]+:[0-9a-f:]*\/\d{1,3})$/i;
 
@@ -489,6 +492,62 @@ async function fetchRoutesSampled(resource) {
     }
   }));
   return { bgp_state: routes, timestamp: stamp, sample: { used: pick.length, total: all.length } };
+}
+
+// The routes of the snapshot against what the RIPE RIS looking glass holds right now, prefix by prefix. The snapshot of
+// RIPEstat (bgp-state) can be hours old; the looking glass answers for one prefix at a time, so the shortest prefixes
+// are read (LG_MAX of them), four at once, and only on a press of the button.
+function lookingGlassPanel(q, routes) {
+  const snapshot = AspaLive.snapshotOrigins(routes);
+  const len = (pf) => Number(pf.split('/')[1]);
+  const all = [...snapshot.keys()].sort((a, b) => len(a) - len(b) || (a < b ? -1 : 1));
+  const used = all.slice(0, LG_MAX);
+  const out = el('div', { 'aria-live': 'polite' });
+  const button = el('button', { type: 'button', text: `Compare with the looking glass (${fmt.format(used.length)} prefix${used.length === 1 ? '' : 'es'})` });
+  const names = (m) => [...m].map(([o, n]) => `AS${o} (${fmt.format(n)})`).join(', ') || 'none';
+  const list = (origins) => origins.map((o) => `AS${o}`).join(', ');
+  button.addEventListener('click', async () => {
+    button.disabled = true;
+    const now = new Map();
+    let failed = 0, when = '';
+    const queue = [...used];
+    out.replaceChildren(el('p', { class: 'hint' }, el('span', { class: 'busy', text: 'Reading the looking glass' })));
+    await Promise.all(Array.from({ length: 4 }, async () => {
+      for (let pf = queue.shift(); pf; pf = queue.shift()) {
+        try {
+          const d = await getJson(LG_API + encodeURIComponent(pf));
+          if (d.status !== 'ok') throw new Error('RIPEstat returned an error');
+          now.set(pf, AspaLive.lookingGlassOrigins(d.data, pf));
+          when = when || d.data.latest_time || d.data.query_time || '';
+        } catch { failed++; }
+      }
+    }));
+    button.disabled = false;
+    if (!now.size) { out.replaceChildren(el('p', { class: 'error', text: 'The looking glass could not be read. Try again in a moment.' })); return; }
+    const rows = AspaLive.compare(snapshot, now);
+    const changed = rows.filter((r) => r.changed);
+    const stamp = when ? ` as of ${fmtDate(when.endsWith('Z') ? when : when + 'Z')}` : '';
+    const lines = [el('p', { class: changed.length ? 'src lgdiff' : 'src', text: changed.length
+      ? `${fmt.format(changed.length)} of ${fmt.format(rows.length)} prefixes differ from the snapshot in the looking glass${stamp}.`
+      : `All ${fmt.format(rows.length)} prefixes are announced by the same origins in the looking glass${stamp} as in the snapshot.` })];
+    if (changed.length) {
+      lines.push(el('section', { class: 'table-wrap card', tabindex: '0', 'aria-label': 'Prefixes that differ between the snapshot and the looking glass' }, el('table', { class: 'checks live lg' },
+        el('caption', { class: 'sr-only', text: 'Prefixes whose origins in the looking glass differ from the snapshot' }),
+        el('thead', {}, el('tr', {}, el('th', { scope: 'col', text: 'Prefix' }), el('th', { scope: 'col', text: 'Snapshot (routes)' }), el('th', { scope: 'col', text: 'Looking glass (peers)' }), el('th', { scope: 'col', text: 'Change' }))),
+        el('tbody', {}, ...changed.map((r) => el('tr', {},
+          el('td', { class: 'mono', text: r.prefix }),
+          el('td', { class: 'mono pathcell', text: names(r.before) }),
+          el('td', { class: 'mono pathcell', text: names(r.after) }),
+          el('td', { text: [r.gone.length && `no longer announced by ${list(r.gone)}`, r.added.length && `now also by ${list(r.added)}`].filter(Boolean).join('; ') })))))));
+    }
+    const notes = [];
+    if (failed) notes.push(`${fmt.format(failed)} prefix${failed === 1 ? '' : 'es'} could not be read.`);
+    if (all.length > used.length) notes.push(`Only the ${fmt.format(used.length)} shortest of ${fmt.format(all.length)} prefixes were compared. Check a single prefix to see the others.`);
+    notes.push('The looking glass lists what the peers of the collectors hold now; a prefix that is gone from it may still be announced where the collectors do not see it.');
+    lines.push(el('p', { class: 'hint', text: notes.join(' ') }));
+    out.replaceChildren(...lines);
+  });
+  return el('div', { class: 'lgpanel' }, el('p', { class: 'hint', text: 'The snapshot above is what RIPEstat last read from the collectors. The looking glass of the RIPE RIS holds the present state of the same routes.' }), button, out);
 }
 
 // For a single address: the prefix that the routes belong to, the most specific one that is announced.
@@ -1212,10 +1271,14 @@ async function renderLiveRoutes(text) {
     el('div', { class: 'value', text: fmt.format(routesOf(count(k))) }),
     el('div', { class: 'note', text: `route${routesOf(count(k)) === 1 ? '' : 's'} · ${fmt.format(count(k).length)} distinct path${count(k).length === 1 ? '' : 's'}` })));
   const ts = data.timestamp ? ` as of ${fmtDate(data.timestamp.endsWith('Z') ? data.timestamp : data.timestamp + 'Z')}` : '';
+  const stampMs = data.timestamp ? Date.parse(data.timestamp.endsWith('Z') ? data.timestamp : data.timestamp + 'Z') : NaN;
+  const age = Number.isNaN(stampMs) ? null : Date.now() - stampMs;
   const kids = [
     ...(data.sample ? [el('p', { class: 'hint', text: `${q.label} originates ${fmt.format(data.sample.total)} prefixes, too many to read at once: the view is limited to the routes of ${fmt.format(data.sample.used)} of them, the shortest ones. Check a single prefix to see the others.` })] : []),
     ...(q.host ? [hostNote(q.host, routes)] : []),
-    el('p', { class: 'src', text: `${fmt.format(routes.length)} routes${q.kind === 'as' ? ` originated by ${q.label}` : ` for ${q.label}`}, seen by the RIPE RIS collectors${ts}, ${fmt.format(rows.length)} distinct AS path${rows.length === 1 ? '' : 's'}${skipped ? `; ${fmt.format(skipped)} with an AS_SET left out` : ''}.` }),
+    el('p', { class: 'src', text: `${fmt.format(routes.length)} routes${q.kind === 'as' ? ` originated by ${q.label}` : ` for ${q.label}`}, seen by the RIPE RIS collectors${ts}${age === null ? '' : ` (${AspaLive.ageText(age)} ago)`}, ${fmt.format(rows.length)} distinct AS path${rows.length === 1 ? '' : 's'}${skipped ? `; ${fmt.format(skipped)} with an AS_SET left out` : ''}.` }),
+    ...(age !== null && age > STALE_MS ? [el('p', { class: 'stale', text: `These routes are a snapshot ${AspaLive.ageText(age)} old. A route announced or withdrawn since then is not in them, nor in the verdicts below.` })] : []),
+    lookingGlassPanel(q, routes),
     ...(pairs.length ? [el('h3', { class: 'subhead', text: 'Origin validation (ROAs)' }), rovPanel(pairs)] : []),
     el('h3', { class: 'subhead', text: 'AS paths (ASPA)' }),
     el('div', { class: 'tiles live-tiles' }, ...tiles),

@@ -21,7 +21,61 @@
     return out;
   }
 
-  const api = { subscription, parseUpdate, URL };
+  // How old a moment is, in words: "12 min", "3 h 39 min", "2 days".
+  function ageText(ms) {
+    const m = Math.max(0, Math.round(ms / 60000));
+    if (m < 1) return 'less than a minute';
+    if (m < 60) return `${m} min`;
+    const h = Math.floor(m / 60);
+    return h >= 48 ? `${Math.floor(h / 24)} days` : `${h} h ${m % 60} min`;
+  }
+
+  // The origins of the routes of a RIPEstat "bgp-state" answer, by prefix: Map prefix -> Map origin -> routes.
+  // Paths that end in an AS_SET (a nested array) have no single origin and are left out.
+  function snapshotOrigins(routes) {
+    const out = new Map();
+    for (const r of routes) {
+      const origin = Array.isArray(r.path) ? r.path[r.path.length - 1] : null;
+      if (!Number.isInteger(origin)) continue;
+      const prefix = String(r.target_prefix).toLowerCase();
+      if (!out.has(prefix)) out.set(prefix, new Map());
+      const o = out.get(prefix);
+      o.set(origin, (o.get(origin) || 0) + 1);
+    }
+    return out;
+  }
+
+  // The origins in a RIPEstat "looking-glass" answer for one prefix: Map origin -> peers that hold a route
+  // with it right now. Only the routes of that very prefix count.
+  function lookingGlassOrigins(data, prefix) {
+    const out = new Map();
+    for (const rrc of (data && data.rrcs) || []) {
+      for (const p of rrc.peers || []) {
+        const origin = Number(p.asn_origin);
+        if (!Number.isInteger(origin) || String(p.prefix).toLowerCase() !== prefix.toLowerCase()) continue;
+        out.set(origin, (out.get(origin) || 0) + 1);
+      }
+    }
+    return out;
+  }
+
+  // The snapshot against the looking glass, prefix by prefix. `snapshot` is the Map of snapshotOrigins; `now` maps
+  // a prefix to the Map of lookingGlassOrigins (a prefix that could not be read is left out of it). A row says
+  // which origins of the snapshot are no longer announced (gone), which are new (added) and which stayed (kept).
+  function compare(snapshot, now) {
+    const rows = [];
+    for (const [prefix, before] of snapshot) {
+      const after = now.get(prefix);
+      if (!after) continue;
+      const gone = [...before.keys()].filter((o) => !after.has(o));
+      const added = [...after.keys()].filter((o) => !before.has(o));
+      const kept = [...before.keys()].filter((o) => after.has(o));
+      rows.push({ prefix, before, after, gone, added, kept, changed: gone.length > 0 || added.length > 0 });
+    }
+    return rows;
+  }
+
+  const api = { subscription, parseUpdate, URL, ageText, snapshotOrigins, lookingGlassOrigins, compare };
   if (typeof module !== 'undefined' && module.exports) { module.exports = api; return; }
 
   // handlers: {announcement(a), status(text, state)}; returns {stop()}

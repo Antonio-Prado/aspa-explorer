@@ -391,6 +391,12 @@ main:focus { outline: none; }
 .badge.v-unknown { background: var(--warn-bg); color: var(--warn-ink); }
 .badge.v-invalid { background: var(--bad-bg); color: var(--bad-ink); }
 table.live .pathcell { overflow-wrap: anywhere; font-size: 0.8125rem; }
+.stale { margin: 0.6rem 0 0; padding: 0.5rem 0.8rem; border-radius: 8px; border: 1px solid var(--warn-ink); background: var(--warn-bg); color: var(--warn-ink); font-size: 0.875rem; }
+.lgpanel { margin: 0.75rem 0; }
+.lgpanel button { margin-top: 0.4rem; }
+.lgpanel .table-wrap { margin-top: 0.5rem; }
+.lgpanel .lgdiff { font-weight: 600; margin-top: 0.75rem; }
+table.lg td { vertical-align: top; }
 table.live th.num, table.live td.num { text-align: right; font-variant-numeric: tabular-nums; }
 @media (max-width: 760px) {
   .live-tiles { grid-template-columns: 1fr; }

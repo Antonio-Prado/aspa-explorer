@@ -2,7 +2,7 @@
 import { createRequire } from 'node:module';
 import assert from 'node:assert/strict';
 
-const { subscription, parseUpdate } = createRequire(import.meta.url)('../site/live.js');
+const { subscription, parseUpdate, ageText, snapshotOrigins, lookingGlassOrigins, compare } = createRequire(import.meta.url)('../site/live.js');
 
 let passed = 0;
 const test = (name, fn) => { fn(); passed++; console.log('ok  ', name); };
@@ -23,6 +23,43 @@ test('a path with an AS_SET, an update without announcements and garbage give no
   assert.deepEqual(parseUpdate({ path: [1, 2], withdrawals: ['10.0.0.0/8'] }), []);
   assert.deepEqual(parseUpdate(null), []);
   assert.deepEqual(parseUpdate({ path: [], announcements: [{ prefixes: ['10.0.0.0/8'] }] }), []);
+});
+
+test('the age of a snapshot in words', () => {
+  assert.equal(ageText(20000), 'less than a minute');
+  assert.equal(ageText(12 * 60000), '12 min');
+  assert.equal(ageText((3 * 60 + 39) * 60000), '3 h 39 min');
+  assert.equal(ageText(60 * 3600000), '2 days');
+  assert.equal(ageText(-5), 'less than a minute');
+});
+
+test('origins of the snapshot by prefix; a path with an AS_SET has none', () => {
+  const s = snapshotOrigins([
+    { target_prefix: '0.0.0.0/0', path: [57111, 41327] },
+    { target_prefix: '193.0.0.0/21', path: [1, 3333] }, { target_prefix: '193.0.0.0/21', path: [2, 3333] }, { target_prefix: '193.0.0.0/21', path: [2, 9] },
+    { target_prefix: '10.0.0.0/8', path: [1, [2, 3]] },
+  ]);
+  assert.deepEqual([...s.get('193.0.0.0/21')], [[3333, 2], [9, 1]]);
+  assert.equal(s.has('10.0.0.0/8'), false);
+});
+
+test('origins of the looking glass: peers per origin, only the prefix asked', () => {
+  const lg = { rrcs: [{ peers: [{ asn_origin: '3333', prefix: '193.0.0.0/21' }, { asn_origin: '3333', prefix: '193.0.0.0/21' }, { asn_origin: '9', prefix: '193.0.0.0/20' }] }, { peers: [{ asn_origin: '12', prefix: '193.0.0.0/21' }] }] };
+  assert.deepEqual([...lookingGlassOrigins(lg, '193.0.0.0/21')], [[3333, 2], [12, 1]]);
+  assert.equal(lookingGlassOrigins(null, 'x').size, 0);
+});
+
+test('the comparison: gone, added, kept, and a prefix that could not be read is skipped', () => {
+  const snap = new Map([['0.0.0.0/0', new Map([[41327, 1]])], ['193.0.0.0/21', new Map([[3333, 5]])], ['10.0.0.0/8', new Map([[1, 1]])], ['11.0.0.0/8', new Map([[1, 1]])]]);
+  const now = new Map([['0.0.0.0/0', new Map([[7, 3]])], ['193.0.0.0/21', new Map([[3333, 9]])], ['10.0.0.0/8', new Map()]]);
+  const rows = compare(snap, now);
+  assert.equal(rows.length, 3);
+  assert.deepEqual(rows[0].gone, [41327]);
+  assert.deepEqual(rows[0].added, [7]);
+  assert.equal(rows[1].changed, false);
+  assert.deepEqual(rows[1].kept, [3333]);
+  assert.deepEqual(rows[2].gone, [1]);
+  assert.equal(rows[2].changed, true);
 });
 
 console.log(`${passed} tests passed`);
