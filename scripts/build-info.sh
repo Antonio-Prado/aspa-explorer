@@ -1,5 +1,5 @@
 #!/bin/sh
-# Print the build information shown in the page footer ("Last commit ...") as JSON.
+# Print the build information shown in the page footer ("Source ...") as JSON.
 # Run it on the commit being deployed and publish the output as build.json next to
 # index.html:
 #

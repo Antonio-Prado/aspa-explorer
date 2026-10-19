@@ -123,7 +123,7 @@
     if (showCommit.api && !fromApi) return;
     if (fromApi) showCommit.api = true;
     const when = iso ? new Date(iso) : null;
-    commitLink.textContent = 'Last commit ' + sha.slice(0, 7) + (when && !isNaN(when) ? '@' + stamp(when) : '');
+    commitLink.textContent = 'Source ' + sha.slice(0, 7) + (when && !isNaN(when) ? '@' + stamp(when) : '');
     commitLink.href = PROJECT;
     commitItem.hidden = false;
     refresh();
@@ -134,7 +134,7 @@
     .then((d) => { if (d) showCommit(String(d.commit || ''), d.date, false); })
     .catch(() => { /* no build file */ });
 
-  // Last commit on main from GitLab, if reachable.
+  // Source commit on main from GitLab, if reachable.
   getJson(`${API}/repository/commits/main`)
     .then((c) => { if (c) showCommit(String(c.id || ''), c.committed_date, true); })
     .catch(() => { /* as above */ });
