@@ -2,7 +2,7 @@
 import { createRequire } from 'node:module';
 import assert from 'node:assert/strict';
 
-const { subscription, parseUpdate, ageText, snapshotOrigins, lookingGlassOrigins, compare } = createRequire(import.meta.url)('../site/live.js');
+const { subscription, parseUpdate, ageText, snapshotOrigins, lookingGlassOrigins, compare, withdrawn } = createRequire(import.meta.url)('../site/live.js');
 
 let passed = 0;
 const test = (name, fn) => { fn(); passed++; console.log('ok  ', name); };
@@ -60,6 +60,15 @@ test('the comparison: gone, added, kept, and a prefix that could not be read is 
   assert.deepEqual(rows[1].kept, [3333]);
   assert.deepEqual(rows[2].gone, [1]);
   assert.equal(rows[2].changed, true);
+});
+
+test('withdrawn: the routes of the snapshot whose origin the looking glass no longer holds', () => {
+  const snap = new Map([['0.0.0.0/0', new Map([[41327, 1]])], ['193.0.0.0/21', new Map([[3333, 5]])], ['10.0.0.0/8', new Map([[1, 2], [2, 3]])]]);
+  const now = new Map([['0.0.0.0/0', new Map([[7, 3]])], ['193.0.0.0/21', new Map([[3333, 9]])], ['10.0.0.0/8', new Map([[2, 1]])]]);
+  const w = withdrawn(compare(snap, now));
+  assert.equal(w.routes, 3);
+  assert.deepEqual(w.items.map((i) => [i.prefix, i.origins, i.routes]), [['0.0.0.0/0', [41327], 1], ['10.0.0.0/8', [1], 2]]);
+  assert.equal(withdrawn([]).routes, 0);
 });
 
 console.log(`${passed} tests passed`);

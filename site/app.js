@@ -497,7 +497,7 @@ async function fetchRoutesSampled(resource) {
 // The routes of the snapshot against what the RIPE RIS looking glass holds right now, prefix by prefix. The snapshot of
 // RIPEstat (bgp-state) can be hours old; the looking glass answers for one prefix at a time, so the shortest prefixes
 // are read (LG_MAX of them), four at once, and only on a press of the button.
-function lookingGlassPanel(q, routes) {
+function lookingGlassPanel(q, routes, notice) {
   const snapshot = AspaLive.snapshotOrigins(routes);
   const len = (pf) => Number(pf.split('/')[1]);
   const all = [...snapshot.keys()].sort((a, b) => len(a) - len(b) || (a < b ? -1 : 1));
@@ -529,10 +529,17 @@ function lookingGlassPanel(q, routes) {
     if (!now.size) { out.replaceChildren(el('p', { class: 'error', text: 'The looking glass could not be read. Try again in a moment.' })); return; }
     const rows = AspaLive.compare(snapshot, now);
     const changed = rows.filter((r) => r.changed);
+    const gone = AspaLive.withdrawn(rows);
     const stamp = when ? ` as of ${fmtDate(when.endsWith('Z') ? when : when + 'Z')}` : '';
     const lines = [el('p', { class: changed.length ? 'src lgdiff' : 'src', text: changed.length
       ? `${fmt.format(changed.length)} of ${fmt.format(rows.length)} prefixes differ from the snapshot in the looking glass${stamp}.`
       : `All ${fmt.format(rows.length)} prefixes are announced by the same origins in the looking glass${stamp} as in the snapshot.` })];
+    if (gone.routes) {
+      const shown = gone.items.slice(0, 5).map((i) => `${i.prefix} (${list(i.origins)})`).join(', ') + (gone.items.length > 5 ? ` and ${fmt.format(gone.items.length - 5)} more` : '');
+      const text = `${fmt.format(gone.routes)} route${gone.routes === 1 ? '' : 's'} of the snapshot ${gone.routes === 1 ? 'is' : 'are'} gone from the looking glass: ${shown}. ${gone.routes === 1 ? 'It was' : 'They were'} withdrawn after the snapshot, so the verdicts below still count ${gone.routes === 1 ? 'it' : 'them'}.`;
+      lines.push(el('p', { class: 'stale', text }));
+      if (notice) notice.textContent = `These routes are a snapshot ${notice.dataset.age} old, and the looking glass shows that ${fmt.format(gone.routes)} of them ${gone.routes === 1 ? 'has' : 'have'} been withdrawn since: they are still in the verdicts below.`;
+    }
     if (changed.length) {
       lines.push(el('section', { class: 'table-wrap card', tabindex: '0', 'aria-label': 'Prefixes that differ between the snapshot and the looking glass' }, el('table', { class: 'checks live lg' },
         el('caption', { class: 'sr-only', text: 'Prefixes whose origins in the looking glass differ from the snapshot' }),
@@ -1276,12 +1283,15 @@ async function renderLiveRoutes(text) {
   const ts = data.timestamp ? ` as of ${fmtDate(data.timestamp.endsWith('Z') ? data.timestamp : data.timestamp + 'Z')}` : '';
   const stampMs = data.timestamp ? Date.parse(data.timestamp.endsWith('Z') ? data.timestamp : data.timestamp + 'Z') : NaN;
   const age = Number.isNaN(stampMs) ? null : Date.now() - stampMs;
+  const notice = age !== null && age > STALE_MS
+    ? el('p', { class: 'stale', 'data-age': AspaLive.ageText(age), text: `These routes are a snapshot ${AspaLive.ageText(age)} old. A route announced or withdrawn since then is not in them, nor in the verdicts below.` })
+    : null;
   const kids = [
     ...(data.sample ? [el('p', { class: 'hint', text: `${q.label} originates ${fmt.format(data.sample.total)} prefixes, too many to read at once: the view is limited to the routes of ${fmt.format(data.sample.used)} of them, the shortest ones. Check a single prefix to see the others.` })] : []),
     ...(q.host ? [hostNote(q.host, routes)] : []),
     el('p', { class: 'src', text: `${fmt.format(routes.length)} routes${q.kind === 'as' ? ` originated by ${q.label}` : ` for ${q.label}`}, seen by the RIPE RIS collectors${ts}${age === null ? '' : ` (${AspaLive.ageText(age)} ago)`}, ${fmt.format(rows.length)} distinct AS path${rows.length === 1 ? '' : 's'}${skipped ? `; ${fmt.format(skipped)} with an AS_SET left out` : ''}.` }),
-    ...(age !== null && age > STALE_MS ? [el('p', { class: 'stale', text: `These routes are a snapshot ${AspaLive.ageText(age)} old. A route announced or withdrawn since then is not in them, nor in the verdicts below.` })] : []),
-    lookingGlassPanel(q, routes),
+    ...(notice ? [notice] : []),
+    lookingGlassPanel(q, routes, notice),
     ...(pairs.length ? [el('h3', { class: 'subhead', text: 'Origin validation (ROAs)' }), rovPanel(pairs)] : []),
     el('h3', { class: 'subhead', text: 'AS paths (ASPA)' }),
     el('div', { class: 'tiles live-tiles' }, ...tiles),

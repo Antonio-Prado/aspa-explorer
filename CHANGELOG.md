@@ -5,6 +5,11 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.43.11] - 2026-10-19
+
+### Added
+- Routes seen in BGP: when *Compare with the looking glass* finds routes of the snapshot that the looking glass no longer holds, it says so in plain words ("1 route of the snapshot is gone from the looking glass: 0.0.0.0/0 (AS41327). It was withdrawn after the snapshot, so the verdicts below still count it") and the yellow notice above changes to say that some of the routes have been withdrawn since. A default route of AS41327, withdrawn at 13:00 UTC, was still in the RIPEstat snapshot of 15:59. `withdrawn()` in `site/live.js`, with a unit test.
+
 ## [1.43.10] - 2026-10-19
 
 ### Added

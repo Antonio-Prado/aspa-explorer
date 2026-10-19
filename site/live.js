@@ -75,7 +75,14 @@
     return rows;
   }
 
-  const api = { subscription, parseUpdate, URL, ageText, snapshotOrigins, lookingGlassOrigins, compare };
+  // The routes of the snapshot whose origin the looking glass no longer holds, from the rows of compare: how many routes,
+  // and for which prefixes (`items`: prefix, the origins gone, the routes they had in the snapshot).
+  function withdrawn(rows) {
+    const items = rows.filter((r) => r.gone.length).map((r) => ({ prefix: r.prefix, origins: r.gone, routes: r.gone.reduce((n, o) => n + r.before.get(o), 0) }));
+    return { routes: items.reduce((n, i) => n + i.routes, 0), items };
+  }
+
+  const api = { subscription, parseUpdate, URL, ageText, snapshotOrigins, lookingGlassOrigins, compare, withdrawn };
   if (typeof module !== 'undefined' && module.exports) { module.exports = api; return; }
 
   // handlers: {announcement(a), status(text, state)}; returns {stop()}
