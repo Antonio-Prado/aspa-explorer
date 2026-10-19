@@ -5,6 +5,11 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.43.7] - 2026-10-19
+
+### Fixed
+- The History box of an AS said "has never published an ASPA" for an AS whose ASPA had appeared after the daily snapshot of the archive (AS6762 published its ASPA on 19 October), next to a valid ASPA shown in the box beside it. When the validated list has an ASPA, or an ASPA naming the AS as a provider, that the archive does not know yet, the box now says that it is newer than the archive and will appear the next day.
+
 ## [1.43.6] - 2026-10-19
 
 ### Changed

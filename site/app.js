@@ -231,11 +231,16 @@ function renderAsHistory(as) {
   const since = (d) => (d === changesFirstDay ? `${fmtDayLong(d)} (the start of the archive, so possibly earlier)` : fmtDayLong(d));
   const lines = own.map((e) => el('li', { class: 'k-' + e.kind }, el('time', { datetime: e.date, text: fmtDayShort(e.date) }), ' · ', changeText(e)));
   const out = [el('h4', { text: 'History' })];
-  if (!own.length && !named) out.push(el('p', { text: `No ASPA of ${as} or naming ${as} as a provider has been seen since ${fmtDayLong(changesFirstDay)}.` }));
+  // The archive is a snapshot taken once a day (about 04:30 UTC): what the validated list shows now can be newer.
+  const fresh = (what) => el('p', { class: 'hint', text: `${what} is in the validated list now, but it is newer than the archive, which is updated once a day: it will appear here tomorrow.` });
+  const liveOwn = byCustomer.has(as), liveNamed = byProvider.has(as);
+  if (!own.length && !named && !liveOwn && !liveNamed) out.push(el('p', { text: `No ASPA of ${as} or naming ${as} as a provider has been seen since ${fmtDayLong(changesFirstDay)}.` }));
   else {
     if (own.length) out.push(el('p', { text: `The ASPA of ${as}, since ${fmtDayLong(changesFirstDay)}:` }), el('ul', { class: 'timeline' }, ...lines));
+    else if (liveOwn) out.push(fresh(`The ASPA of ${as}`));
     else out.push(el('p', { text: `${as} has never published an ASPA since ${fmtDayLong(changesFirstDay)}.` }));
     if (named) out.push(el('p', { text: `First named as a provider in an ASPA on ${since(named)}.` }));
+    else if (liveNamed) out.push(fresh(`The ASPA that names ${as} as a provider`));
   }
   box.replaceChildren(...out);
 }
