@@ -8,7 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [1.43.4] - 2026-10-19
 
 ### Changed
-- The commit link in the page footer now reads "Source <sha>@<date>" instead of "Last commit <sha>@<date>".
+- The commit link in the page footer now reads "Source <sha>@<date>" instead of "Last commit <sha>@<date>", and "Contribute on GitHub" is shortened to "Contribute".
 
 ## [1.43.3] - 2026-10-18
 
