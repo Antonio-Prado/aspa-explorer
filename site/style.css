@@ -289,7 +289,7 @@ td.rir { color: var(--ink-2); white-space: nowrap; }
 .more { display: block; margin: 12px auto 0; background: var(--chip); color: var(--ink); }
 .more:hover { background: var(--chip-hover); }
 
-.foot { color: var(--ink-2); font-size: 0.875rem; padding-top: 2rem; padding-bottom: 3rem; }
+.foot { color: var(--ink-2); font-size: 0.75rem; padding-top: 2rem; padding-bottom: 3rem; }
 .foot p { max-width: 46rem; }
 
 .loading { opacity: 0.5; }
