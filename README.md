@@ -175,7 +175,7 @@ The validator is a [Routinator](https://github.com/NLnetLabs/routinator) instanc
 
 **Follow**
 
-- **Changes:** the ASPAs that appeared, changed or disappeared in the last 14 days, an Atom feed of them (`/changes.atom`), and the history of one AS. The series is rebuilt from the RIPE NCC RPKI archive (`tools/backfill-history.py`) and extended every day by the `aspa-snapshot` job.
+- **Changes:** the ASPAs that appeared, changed or disappeared in the last 14 days, an Atom feed of them (`/changes.atom`), and the history of one AS. The series is rebuilt from the RIPE NCC RPKI archive (`tools/backfill-history.py`) and extended by the `aspa-snapshot` job every day and by the `history-refresh` job every hour, so a new ASPA shows in its history within the hour.
 - **A feed and a badge for every AS:** `/feed/AS3333.atom` lists the changes of its ASPA and of the ASPAs that add or drop it as a provider; `/badge/AS3333.svg` is a badge with its number of providers (Markdown and HTML to paste are in the lookup).
 - **IRR next to the ASPA:** a button on the page of an AS reads its `aut-num` object (RIPE database and mirrors) and compares the transit providers that it declares with the providers of the ASPA, telling customers, peers and route servers (`import-via`) apart.
 - **Alerts on invalid announcements:** a threshold on a subscription (5 to 1000 in ten minutes, once every six hours at most) from the live watcher; **recent checks** kept only in the browser, with what changed since; a **quick look at any AS** on a click.

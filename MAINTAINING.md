@@ -30,12 +30,13 @@ When a page asset changes (script, style), change its `?v=` as well: the CDN in 
 
 ## Scheduled jobs
 
-Three jobs run only from pipeline schedules (variable `SCHEDULE`), on the runner of the host that serves the page; the third, `mirror-wiki` (daily, `SCHEDULE=wiki`), is described above:
+Four jobs run only from pipeline schedules (variable `SCHEDULE`), on the runner of the host that serves the page; the fourth, `mirror-wiki` (daily, `SCHEDULE=wiki`), is described above:
 
 - `host-package-audit` (weekly, `SCHEDULE=audit`): `pkg audit` on the host, including the FreeBSD base system. The job fails, and GitLab sends the usual pipeline-failure email, when an installed package has a known vulnerability for which the repository already offers a fix; vulnerabilities without a fix yet only produce a warning. A daily root cron job refreshes the vulnerability database (`deploy/freebsd/`).
-- `aspa-snapshot` (daily, `SCHEDULE=snapshot`): logs the number of ASPAs, provider ASes and the split per RIR as a run of the project's model experiment, so *Analyze > Model experiments* charts the adoption of ASPA over time (`scripts/log-snapshot.mjs`).
+- `aspa-snapshot` (daily, `SCHEDULE=snapshot`): logs the number of ASPAs, provider ASes and the split per RIR as a run of the project's model experiment, so *Analyze > Model experiments* charts the adoption of ASPA over time (`scripts/log-snapshot.mjs`). The same run commits the day's row, events and Atom feed to the `history` branch and the visibility file.
+- `history-refresh` (hourly, at minute 20, `SCHEDULE=history`): `scripts/log-snapshot.mjs --history-only` brings only the `history` branch up to date (the day's events and the Atom feed, replayed from the state of the day before), so that the history of an AS and the feed show a new ASPA within the hour and not the next morning. It makes no model experiment run and no RIPEstat call, keeps the coverage figures that the daily run wrote in the row of the day, and commits nothing when nothing changed. A change that appears and disappears between two runs leaves no event.
 
-The snapshot job needs a project access token kept as a masked and protected CI variable, because the model experiments API does not accept the CI job token. The token expires after one year: renew it.
+The snapshot and history jobs need a project access token kept as a masked and protected CI variable, because the model experiments API does not accept the CI job token. The token expires after one year: renew it. The history job needs the same token, because writing to the branch is not allowed to the job token either.
 
-Each job can be started by hand from *Build > Pipelines > Run pipeline* by setting the variable `SCHEDULE` to `audit`, `snapshot` or `wiki`.
+Each job can be started by hand from *Build > Pipelines > Run pipeline* by setting the variable `SCHEDULE` to `audit`, `snapshot`, `history` or `wiki`.
 

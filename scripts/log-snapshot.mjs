@@ -6,6 +6,9 @@
 // over time. Plain HTTP calls, no MLflow client needed (Node.js 18+).
 //
 //   node scripts/log-snapshot.mjs --dry-run     print the metrics, send nothing
+//   node scripts/log-snapshot.mjs --history-only   only bring the history branch up to date (the hourly job):
+//                                               no model experiment run, no RIPEstat call; the coverage
+//                                               figures of the day's row are kept
 //
 // In CI the job token authenticates the calls (CI_JOB_TOKEN, CI_API_V4_URL,
 // CI_PROJECT_ID). Outside CI set MLFLOW_API (the .../ml/mlflow/api/2.0/mlflow URL)
@@ -18,6 +21,7 @@ const { applyDay, classify } = createRequire(import.meta.url)('../site/history.j
 const SITE = process.env.ASPA_SITE || 'https://aspa.ping6.it';
 const EXPERIMENT = process.env.ASPA_EXPERIMENT || 'aspa-adoption';
 const DRY = process.argv.includes('--dry-run');
+const HISTORY_ONLY = process.argv.includes('--history-only');
 const API = process.env.MLFLOW_API ||
   `${process.env.CI_API_V4_URL}/projects/${process.env.CI_PROJECT_ID}/ml/mlflow/api/2.0/mlflow`;
 const TOKEN = process.env.MLFLOW_TOKEN || process.env.CI_JOB_TOKEN;
@@ -91,7 +95,7 @@ const metrics = summarise(data);
 // Coverage: of the ASes seen by the RIPE RIS route collectors (RIPEstat, ris-asns), how many have an
 // ASPA. Left out, with a message, when RIPEstat does not answer.
 let visibility = null;   // the ASes of the ASPAs that the collectors do not see, for the quality checks
-try {
+if (!HISTORY_ONLY) try {
   const seen = (await getJson('https://stat.ripe.net/data/ris-asns/data.json?list_asns=true')).data.asns;
   const customers = new Set((data.aspas || []).map((a) => a.customer));
   metrics.bgp_ases = seen.length;
@@ -114,7 +118,7 @@ console.log(`${day}`, metrics, params, visibility ? `${visibility.unseen.length}
 if (!metrics.aspas) throw new Error('no ASPAs in the data: not logging an empty snapshot');
 if (DRY) process.exit(0);
 if (!TOKEN) throw new Error('no token: set CI_JOB_TOKEN or MLFLOW_TOKEN');
-await detectAuth();
+if (!HISTORY_ONLY) await detectAuth();
 
 // The same snapshot goes to the `history` branch, which the page reads through the mirror on the public
 // project (see site/history.js for the events): the day's row in history.json, the day's changes in
@@ -168,14 +172,21 @@ try {
   };
   const [historyText, eventsText, feedText] = await Promise.all([read('history.json'), read('events.json'), read('changes.atom')]);
   if (!historyText) throw new Error('history.json not found on the history branch');
-  const rows = JSON.parse(historyText).filter((r) => r.date !== day);
-  rows.push({ date: day, ...metrics, src: 'aspa' });
+  const oldRows = JSON.parse(historyText);
+  const rows = oldRows.filter((r) => r.date !== day);
+  // the row of the day keeps what an earlier run added (the coverage figures) and takes the new counts
+  rows.push({ ...oldRows.find((r) => r.date === day), date: day, ...metrics, src: 'aspa' });
   rows.sort((a, b) => a.date.localeCompare(b.date));
   const oldEvents = eventsText ? JSON.parse(eventsText) : [];
   const events = applyDay(oldEvents, data.aspas || [], day);
   const eventsJson = JSON.stringify(events);
   const eventsChanged = eventsJson !== JSON.stringify(oldEvents);
-  const actions = [{ action: 'update', file_path: 'history.json', content: JSON.stringify(rows) }];
+  const rowsJson = JSON.stringify(rows);
+  if (HISTORY_ONLY && rowsJson === historyText.trim() && !eventsChanged && eventsText !== null) {
+    console.log(`history: nothing changed on ${day}`);
+    process.exit(0);
+  }
+  const actions = [{ action: 'update', file_path: 'history.json', content: rowsJson }];
   if (eventsChanged || eventsText === null) actions.push({ action: eventsText === null ? 'create' : 'update', file_path: 'events.json', content: eventsJson });
   if (eventsChanged || feedText === null) actions.push({ action: feedText === null ? 'create' : 'update', file_path: 'changes.atom', content: atomFeed(events) });
   if (visibility) {
@@ -199,6 +210,11 @@ try {
 } catch (e) {
   historyError = e;
   console.error(`history not updated: ${e.message}`);
+}
+
+if (HISTORY_ONLY) {
+  if (historyError) throw historyError;
+  process.exit(0);
 }
 
 // Find or create the experiment.

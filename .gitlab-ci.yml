@@ -159,6 +159,17 @@ aspa-snapshot:
   script:
     - node scripts/log-snapshot.mjs
 
+# Hourly: the history branch only (the day's row and events, the Atom feed), so that the history of an AS
+# shows an ASPA within the hour instead of the next morning. No model experiment run, no RIPEstat call; a
+# run that finds nothing new commits nothing.
+history-refresh:
+  stage: security
+  tags: [aspa]
+  rules:
+    - if: ($CI_PIPELINE_SOURCE == "schedule" || $CI_PIPELINE_SOURCE == "web" || $CI_PIPELINE_SOURCE == "api") && $SCHEDULE == "history"
+  script:
+    - node scripts/log-snapshot.mjs --history-only
+
 # Publication to the public mirror. The push mirror copies branches and tags; releases and
 # the wiki are published through the API of the public project (MIRROR_TOKEN).
 publish-release:

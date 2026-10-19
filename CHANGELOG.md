@@ -5,6 +5,11 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.43.8] - 2026-10-19
+
+### Changed
+- The history of the ASPAs (the changes of the last 14 days, the History box of an AS and the Atom feed) is brought up to date every hour, not once a day: a new job `history-refresh` (`SCHEDULE=history`, `scripts/log-snapshot.mjs --history-only`) commits to the `history` branch only when something changed. The daily snapshot still logs the model experiment run and the coverage figures, which the hourly job keeps in the row of the day. The note added in 1.43.7 now says "in the validated list now, but newer than the archive, which is updated every hour".
+
 ## [1.43.7] - 2026-10-19
 
 ### Fixed

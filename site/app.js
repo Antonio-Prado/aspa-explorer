@@ -231,8 +231,8 @@ function renderAsHistory(as) {
   const since = (d) => (d === changesFirstDay ? `${fmtDayLong(d)} (the start of the archive, so possibly earlier)` : fmtDayLong(d));
   const lines = own.map((e) => el('li', { class: 'k-' + e.kind }, el('time', { datetime: e.date, text: fmtDayShort(e.date) }), ' · ', changeText(e)));
   const out = [el('h4', { text: 'History' })];
-  // The archive is a snapshot taken once a day (about 04:30 UTC): what the validated list shows now can be newer.
-  const fresh = (what) => el('p', { class: 'hint', text: `${what} is in the validated list now, but it is newer than the archive, which is updated once a day: it will appear here tomorrow.` });
+  // The archive is brought up to date every hour: what the validated list shows now can be newer.
+  const fresh = (what) => el('p', { class: 'hint', text: `${what} is in the validated list now, but it is newer than the archive, which is updated every hour: it will appear here soon.` });
   const liveOwn = byCustomer.has(as), liveNamed = byProvider.has(as);
   if (!own.length && !named && !liveOwn && !liveNamed) out.push(el('p', { text: `No ASPA of ${as} or naming ${as} as a provider has been seen since ${fmtDayLong(changesFirstDay)}.` }));
   else {
