@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 - Routes seen in BGP: the age of the snapshot. The line above the verdicts says how long ago RIPEstat read the routes ("as of 19 Oct 2026, 09:59 UTC (3 h 39 min ago)"), and a notice appears when the snapshot is more than an hour old: a route announced or withdrawn since then is not in it. The snapshot can be hours old, and a default route that the owner had already withdrawn was still shown.
-- Routes seen in BGP: *Compare with the looking glass*. A button reads, from RIPEstat, what the peers of the RIPE RIS collectors hold now for the shortest 24 prefixes of the snapshot (four requests at a time, only when pressed) and lists the prefixes whose origins changed: *no longer announced by AS…* or *now also by AS…*, with the number of routes in the snapshot and of peers in the looking glass. Pure helpers in `site/live.js`, with unit tests.
+- Routes seen in BGP: *Compare with the looking glass*. A button reads, from RIPEstat, what the peers of the RIPE RIS collectors hold now for the shortest 24 prefixes of the snapshot (four requests at a time, only when pressed) and lists the prefixes whose origins changed (a default route has dozens of origins: the six busiest are shown, and how many more): *no longer announced by AS…* or *now also by AS…*, with the number of routes in the snapshot and of peers in the looking glass. Pure helpers in `site/live.js`, with unit tests.
 
 ## [1.43.8] - 2026-10-19
 

@@ -504,8 +504,11 @@ function lookingGlassPanel(q, routes) {
   const used = all.slice(0, LG_MAX);
   const out = el('div', { 'aria-live': 'polite' });
   const button = el('button', { type: 'button', text: `Compare with the looking glass (${fmt.format(used.length)} prefix${used.length === 1 ? '' : 'es'})` });
-  const names = (m) => [...m].map(([o, n]) => `AS${o} (${fmt.format(n)})`).join(', ') || 'none';
-  const list = (origins) => origins.map((o) => `AS${o}`).join(', ');
+  // a default route has dozens of origins: the busiest few, and how many more
+  const MANY = 6;
+  const more = (n) => (n > MANY ? ` and ${fmt.format(n - MANY)} more` : '');
+  const names = (m) => ([...m].sort((a, b) => b[1] - a[1]).slice(0, MANY).map(([o, n]) => `AS${o} (${fmt.format(n)})`).join(', ') + more(m.size)) || 'none';
+  const list = (origins) => origins.slice(0, MANY).map((o) => `AS${o}`).join(', ') + more(origins.length);
   button.addEventListener('click', async () => {
     button.disabled = true;
     const now = new Map();
