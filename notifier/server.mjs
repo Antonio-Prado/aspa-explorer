@@ -129,7 +129,7 @@ export function makeApi(deps) {
     const c = checkReport(body);
     if (c.error) return bad(c.error);
     if (!perIpReport(ip)) return bad('too many reports from this address, try again later', 429);
-    if (!globalReport('all') || store.countReports() >= MAX_REPORTS || store.reportBytes() >= MAX_REPORT_BYTES) return bad('the service is busy, try again later', 503);
+    if (!globalReport('all') || store.countReports() >= MAX_REPORTS || store.reportBytes() + Buffer.byteLength(JSON.stringify(c.report)) > MAX_REPORT_BYTES) return bad('the service is busy, try again later', 503);
     const id = newId();
     store.addReport(id, now(), c.report.kind, c.report.title, JSON.stringify(c.report));
     return reply(201, { id, url: `${site}/r/${id}`, expires_days: TTL_DAYS });

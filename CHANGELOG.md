@@ -5,6 +5,13 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.46.3] - 2026-10-20
+
+### Security
+- The quota of the reports counts bytes: SQLite's `LENGTH()` of a text counts characters, so reports full of emoji weighed a quarter of what they take. The size of the report that arrives is added before it is kept.
+- The preview of a link to a report (title and description of the page, `og:` tags) says *Unverified report* as well, because it shows what a visitor wrote.
+- The sample nginx configuration verifies the certificate of GitLab when it fetches the Atom feed of the changes (`proxy_ssl_verify on`, as the proxy to Routinator already did).
+
 ## [1.46.2] - 2026-10-20
 
 ### Security

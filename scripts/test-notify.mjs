@@ -443,8 +443,8 @@ await test('reports: what is not understood is refused or dropped', () => {
 await test('reports: the tags of the head are escaped and replace the ones between the markers', () => {
   const r = goodReport(); r.title = 'A "quoted" <title>'; r.sections[0].text = 'Valid & sound';
   const out = shell('<head><!--og-->\n<title>x</title>\n<!--/og-->\n<meta name="robots" content="noindex"></head>', 'abcdef012345', checkReport(r).report, 'https://aspa.example.org');
-  assert.match(out, /<title>A &quot;quoted&quot; &lt;title&gt; · ASPA Explorer<\/title>/);
-  assert.match(out, /og:description" content="Valid &amp; sound"/);
+  assert.match(out, /<title>Unverified report: A &quot;quoted&quot; &lt;title&gt; · ASPA Explorer<\/title>/);
+  assert.match(out, /og:description" content="Unverified report shared by a visitor. Valid &amp; sound"/);
   assert.match(out, /og:url" content="https:\/\/aspa.example.org\/r\/abcdef012345"/);
   assert.match(out, /<meta name="robots" content="noindex">/);
   assert.equal((out.match(/<title>/g) || []).length, 1);
@@ -471,10 +471,18 @@ await test('API: a report is made, read back and refused when it is bad; the lim
   const { api: small } = setup({ maxReports: 1 });
   assert.equal(small.createReport(goodReport(), '2.2.2.2').status, 201);
   assert.equal(small.createReport(goodReport(), '2.2.2.3').status, 503);
-  const { api: tiny, store: tinyStore } = setup({ maxReportBytes: 1 });
+  const one = Buffer.byteLength(JSON.stringify(checkReport(goodReport()).report));
+  const { api: tiny, store: tinyStore } = setup({ maxReportBytes: one + 10 });
   assert.equal(tiny.createReport(goodReport(), '3.3.3.3').status, 201);
   assert.ok(tinyStore.reportBytes() > 0);
   assert.equal(tiny.createReport(goodReport(), '3.3.3.4').status, 503);      // the bytes kept count, not only the number
+  // bytes, not characters: 100 emoji are 100 characters and 400 bytes
+  const wide = openStore(':memory:'); wide.addReport('aaaaaaaaaaaa', 1, 'path', 't', '😀'.repeat(100));
+  assert.equal(wide.reportBytes(), 400);
+  const { api: room, store: roomStore } = setup({ maxReportBytes: 600 });
+  assert.equal(room.createReport(goodReport(), '4.4.4.4').status, 201);
+  roomStore.addReport('bbbbbbbbbbbb', 1, 'path', 't', 'x'.repeat(Math.max(0, 550 - roomStore.reportBytes())));
+  assert.equal(room.createReport(goodReport(), '4.4.4.5').status, 503);      // the one that arrives counts too
 });
 
 await test('HTTP: POST /api/v1/reports, GET as JSON and as a page', async () => {
@@ -494,7 +502,7 @@ await test('HTTP: POST /api/v1/reports, GET as JSON and as a page', async () => 
   assert.equal(page.status, 200);
   assert.match(page.headers.get('content-type'), /text\/html/);
   assert.equal(page.headers.get('x-robots-tag'), 'noindex');
-  assert.match(await page.text(), /<title>AS path 3356 1299 680: Valid · ASPA Explorer<\/title>[\s\S]*shell/);
+  assert.match(await page.text(), /<title>Unverified report: AS path 3356 1299 680: Valid · ASPA Explorer<\/title>[\s\S]*shell/);
   assert.equal((await fetch(`${base}/r/ffffffffffff`)).status, 404);
   assert.equal((await fetch(`${base}/api/v1/reports/ffffffffffff`)).status, 404);
   assert.equal((await post(goodReport(), { Origin: 'https://evil.example' })).status, 403);

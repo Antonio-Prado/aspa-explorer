@@ -70,8 +70,9 @@ const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replac
 // The head tags of the page of a report (title and the preview of a link), put between the markers of site/report.html.
 export function headTags(id, report, site) {
   const first = report.sections.find((s) => s.text);
-  const desc = esc((first ? first.text : `A result shared from ASPA Explorer: ${report.title}`).slice(0, 200));
-  const title = esc(`${report.title} · ASPA Explorer`);
+  // what a link preview shows is also what a visitor wrote, so it says so
+  const desc = esc(`Unverified report shared by a visitor. ${first ? first.text : report.title}`.slice(0, 200));
+  const title = esc(`Unverified report: ${report.title} · ASPA Explorer`);
   return [
     `<title>${title}</title>`,
     `<meta name="description" content="${desc}">`,

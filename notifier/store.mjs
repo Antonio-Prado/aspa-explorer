@@ -56,7 +56,7 @@ export function openStore(path) {
     getReport: db.prepare('SELECT id, created, kind, title, body FROM reports WHERE id = ?'),
     purgeReports: db.prepare('DELETE FROM reports WHERE created < ?'),
     countReports: db.prepare('SELECT COUNT(*) AS n FROM reports'),
-    reportBytes: db.prepare('SELECT COALESCE(SUM(LENGTH(body)), 0) AS n FROM reports'),
+    reportBytes: db.prepare('SELECT COALESCE(SUM(LENGTH(CAST(body AS BLOB))), 0) AS n FROM reports'),
     getState: db.prepare('SELECT value FROM state WHERE key = ?'),
     setState: db.prepare('INSERT INTO state (key, value) VALUES (?, ?) ON CONFLICT (key) DO UPDATE SET value = excluded.value'),
   };
@@ -83,6 +83,7 @@ export function openStore(path) {
     getReport: (id) => { const r = q.getReport.get(id); return r ? { ...r, body: JSON.parse(r.body) } : null; },
     purgeReports: (olderThan) => Number(q.purgeReports.run(olderThan).changes),
     countReports: () => q.countReports.get().n,
+    // bytes, not characters: LENGTH() of a TEXT value counts the characters, and an emoji is one of them and four bytes
     reportBytes: () => Number(q.reportBytes.get().n),
     getState: (key) => { const r = q.getState.get(key); return r ? JSON.parse(r.value) : null; },
     setState: (key, value) => q.setState.run(key, JSON.stringify(value)),
