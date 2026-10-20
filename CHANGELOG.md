@@ -5,6 +5,15 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.46.4] - 2026-10-20
+
+### Security
+- The check that a webhook name resolves to public addresses only compares the 128 bits of an IPv6 address, not its text. The same network written another way (`2001:0000::1`, `2001:00::1`) used to pass as public, and the documentation block `3fff::/20` and the SRv6 block `5f00::/16` were missing. The special-purpose space of `2001::/23` is refused as a whole. The tests try the same networks in all their written forms.
+- The sample nginx configuration logs the subscription endpoints without the query string, because the links to confirm and to unsubscribe carry a token in it.
+
+### Changed
+- Notifications are delivered eight at a time instead of one after the other (changes of ASPAs, places of valley, invalid announcements), so that a few webhooks that answer slowly do not hold up the others.
+
 ## [1.46.3] - 2026-10-20
 
 ### Security

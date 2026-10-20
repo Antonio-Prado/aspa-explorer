@@ -4,6 +4,7 @@ import http from 'node:http';
 import { generateKeyPairSync } from 'node:crypto';
 import { makeToken, readToken } from '../notifier/tokens.mjs';
 import { stabilise, audience, describeEvent, newPlaces, describePlace } from '../notifier/changes.mjs';
+import { pool } from '../notifier/pool.mjs';
 import { isPublicIp, parseWebhookUrl, post, signature } from '../notifier/webhook.mjs';
 import { sign, verify, relaxBody } from '../notifier/dkim.mjs';
 import { compose, serialize, sendmail, EMAIL_RE } from '../notifier/mail.mjs';
@@ -41,6 +42,10 @@ await test('addresses: which webhook targets are public', () => {
   for (const ip of ['8.8.8.8', '193.0.0.1', '2001:67c:2e8::1', '2a00:1450:4001::1']) assert.equal(isPublicIp(ip), true, ip);
   for (const ip of ['127.0.0.1', '10.1.2.3', '172.16.0.1', '172.31.255.255', '192.168.1.1', '169.254.169.254', '100.64.0.1', '0.0.0.0', '224.0.0.1', '255.255.255.255',
     '::1', '::', 'fe80::1', 'fc00::1', 'fd12::1', 'ff02::1', '::ffff:127.0.0.1', '::ffff:10.0.0.1', '2001:db8::1', 'not an ip']) assert.equal(isPublicIp(ip), false, ip);
+  // the same network in every way of writing it, and the blocks the text comparison used to miss
+  for (const ip of ['2001::1', '2001:0000::1', '2001:00::1', '2001:0:0:0:0:0:0:1', '2001:0001::1', '2001:1ff::1', '2001:db8::1', '2001:0DB8:0:0::1', '2002:c000:204::1', '3fff::1', '3fff:0fff::1', '5f00::1',
+    '::ffff:7f00:1', '0:0:0:0:0:ffff:10.0.0.1', '64:ff9b::1', '100::1', '0::1', 'fe80::1%eth0']) assert.equal(isPublicIp(ip), false, ip);
+  for (const ip of ['2001:200::1', '2001:4860:4860::8888', '2400:cb00::1', '2606:4700::1111', '::ffff:8.8.8.8', '3ffe::1', '4000::1']) assert.equal(isPublicIp(ip), ip.startsWith('4') ? false : true, ip);
   assert.equal(isPublicIp('172.32.0.1'), true);
 });
 
@@ -507,6 +512,21 @@ await test('HTTP: POST /api/v1/reports, GET as JSON and as a page', async () => 
   assert.equal((await fetch(`${base}/api/v1/reports/ffffffffffff`)).status, 404);
   assert.equal((await post(goodReport(), { Origin: 'https://evil.example' })).status, 403);
   server.close();
+});
+
+await test('pool: runs a few jobs at a time, finishes all of them, and a job that throws does not stop the rest', async () => {
+  let running = 0, peak = 0, done = 0; const errors = [];
+  const jobs = Array.from({ length: 20 }, (_, i) => async () => {
+    running++; peak = Math.max(peak, running);
+    await new Promise((r) => setTimeout(r, 5));
+    running--; done++;
+    if (i === 3) throw new Error('boom');
+  });
+  await pool(jobs, 4, (e) => errors.push(e.message));
+  assert.equal(done, 20);
+  assert.equal(peak, 4);
+  assert.deepEqual(errors, ['boom']);
+  await pool([], 4);
 });
 
 // ---- alerts on invalid announcements ----

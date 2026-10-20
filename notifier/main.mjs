@@ -24,6 +24,7 @@ import { openStore } from './store.mjs';
 import { stabilise, audience, describeEvent, stateOf, newPlaces, describePlace } from './changes.mjs';
 import { compose, serialize, sendmail } from './mail.mjs';
 import { post } from './webhook.mjs';
+import { pool } from './pool.mjs';
 import { TTL_DAYS } from './reports.mjs';
 import { dueInvalid, describeInvalid } from './invalid.mjs';
 import { watchStatus, describeStatusEvent, statusSubject } from './status.mjs';
@@ -41,6 +42,7 @@ const INVALID_FILE = env('INVALID_LAST', 'http://127.0.0.1:8080/api/v1/invalid-l
 const SITE_DIR = env('NOTIFY_SITE_DIR', '/usr/local/www/aspa');
 const POLL = Number(env('NOTIFY_POLL', '600')) * 1000;
 const MAX_FAILS = 5;
+const DELIVER_AT_ONCE = 8;       // messages sent at the same time: a slow endpoint holds one place, not the queue
 const PRIVACY = 'https://www.unipd.it/en/privacy';
 const log = (m) => console.log(`${new Date().toISOString()} ${m}`);
 
@@ -98,8 +100,9 @@ const api = makeApi({
 
 async function notify(events) {
   const subs = store.allActive();
+  const jobs = [];
   for (const e of events) {
-    for (const { sub, relation } of audience(e, subs)) {
+    for (const { sub, relation } of audience(e, subs)) jobs.push(async () => {
       const line = describeEvent(e, sub.asn, relation);
       const unsub = api.unsubscribeUrl(sub.id);          // POST: List-Unsubscribe header and webhooks
       const unsubPage = api.unsubscribePage(sub.id);     // a page for people
@@ -128,8 +131,9 @@ async function notify(events) {
         log(`delivery to subscription ${sub.id} (${sub.kind}) failed: ${err.message}`);
         if (now && now.fails >= MAX_FAILS) { store.disable(sub.id); log(`subscription ${sub.id} disabled after ${MAX_FAILS} failures`); }
       }
-    }
+    });
   }
+  await pool(jobs, DELIVER_AT_ONCE, (err) => log(`delivery job failed: ${err.message}`));
 }
 
 // One message for a subscription (mail or webhook); a failure is counted and disables the subscription after MAX_FAILS.
@@ -171,12 +175,14 @@ async function pollLeaks() {
   const out = newPlaces(doc.as, subs.map((s) => s.asn), saved.seen);
   store.setState('leaks', { generated: doc.generated, seen: out.seen });
   if (out.events.length) log(`${out.events.length} new place(s) of valley for the subscriptions`);
+  const jobs = [];
   for (const e of out.events) {
     const line = describePlace(e);
-    for (const sub of subs.filter((s) => s.asn === e.asn)) {
-      await deliver(sub, { subject: `Route leak or valley that involves ${e.asn}`, line, type: 'aspa.leak', extra: { place: { role: e.role, kind: e.kind, from: e.from, to: e.to, between: e.between, feeders: e.feeders, routes: e.routes } } });
-    }
+    for (const sub of subs.filter((s) => s.asn === e.asn)) jobs.push(() => {
+      return deliver(sub, { subject: `Route leak or valley that involves ${e.asn}`, line, type: 'aspa.leak', extra: { place: { role: e.role, kind: e.kind, from: e.from, to: e.to, between: e.between, feeders: e.feeders, routes: e.routes } } });
+    });
   }
+  await pool(jobs, DELIVER_AT_ONCE, (err) => log(`delivery job failed: ${err.message}`));
 }
 
 // The states of the parts of the service (status-history.json, a sample every 15 minutes): the subscriptions to the topic
@@ -226,11 +232,9 @@ async function pollInvalid() {
   const out = dueInvalid(doc, subs, saved.alerts, Math.floor(Date.now() / 1000));
   store.setState('invalid', { generated: doc.generated, alerts: out.alerts });
   if (out.events.length) log(`${out.events.length} alert(s) on invalid announcements`);
-  for (const e of out.events) {
-    await deliver(e.sub, { subject: `Invalid announcements of ${e.asn}: ${e.invalid} in ten minutes`, line: describeInvalid(e), type: 'aspa.invalid',
+  await pool(out.events.map((e) => () => deliver(e.sub, { subject: `Invalid announcements of ${e.asn}: ${e.invalid} in ten minutes`, line: describeInvalid(e), type: 'aspa.invalid',
       extra: { invalid: { announcements: e.announcements, invalid: e.invalid, prefixes: e.prefixes, from: e.from, to: e.to } },
-      footer: 'Read from the stream of RIPE RIS Live every ten minutes, and checked with the ASPAs of this site. You are told at most once every six hours.' });
-  }
+      footer: 'Read from the stream of RIPE RIS Live every ten minutes, and checked with the ASPAs of this site. You are told at most once every six hours.' })), DELIVER_AT_ONCE, (err) => log(`delivery job failed: ${err.message}`));
 }
 
 // what /api/v1/subscriptions/health says: when the data was last read, and whether the last reads worked

@@ -18,21 +18,38 @@ const V4_BLOCKED = [['0.0.0.0', 8], ['10.0.0.0', 8], ['100.64.0.0', 10], ['127.0
   ['192.0.0.0', 24], ['192.0.2.0', 24], ['192.88.99.0', 24], ['192.168.0.0', 16], ['198.18.0.0', 15], ['198.51.100.0', 24],
   ['203.0.113.0', 24], ['224.0.0.0', 4], ['240.0.0.0', 4]].map(([a, b]) => [v4(a), b]);
 
+// The 16 bytes of an IPv6 address in any of its written forms (leading zeros, "::", a dotted IPv4 tail), or null.
+function v6bytes(ip) {
+  if (!net.isIPv6(ip)) return null;
+  let text = ip.split('%')[0].toLowerCase();
+  const dotted = /(\d+\.\d+\.\d+\.\d+)$/.exec(text);
+  if (dotted) { const q = v4(dotted[1]); text = text.slice(0, dotted.index) + ((q[0] << 8) | q[1]).toString(16) + ':' + ((q[2] << 8) | q[3]).toString(16); }
+  const [head, tail] = text.split('::');
+  const a = head ? head.split(':') : [], b = tail === undefined ? [] : tail ? tail.split(':') : [];
+  const groups = tail === undefined ? a : [...a, ...Array(8 - a.length - b.length).fill('0'), ...b];
+  if (groups.length !== 8) return null;
+  return groups.flatMap((g) => { const n = parseInt(g, 16); return [n >> 8, n & 255]; });
+}
+const inV6 = (bytes, base, bits) => {
+  const b = v6bytes(base);
+  for (let i = 0; i < 16 && bits > 0; i++, bits -= 8) {
+    const mask = bits >= 8 ? 255 : (255 << (8 - bits)) & 255;
+    if ((bytes[i] & mask) !== (b[i] & mask)) return false;
+  }
+  return true;
+};
+// What is inside 2000::/3 and is not for the public Internet (IANA special-purpose registry): the Teredo, benchmarking, ORCHID and documentation
+// space of 2001::/23 and 2001:db8::/32, 6to4, SRv6 SIDs, and the documentation block 3fff::/20. Compared on the 128 bits, not on the text.
+const V6_BLOCKED = [['2001::', 23], ['2001:db8::', 32], ['2002::', 16], ['3fff::', 20], ['5f00::', 16]];
+
 // true only for a unicast address on the public Internet
 export function isPublicIp(ip) {
   if (net.isIPv4(ip)) { const n = v4(ip); return !V4_BLOCKED.some(([base, bits]) => inV4(n, base, bits)); }
-  if (!net.isIPv6(ip)) return false;
-  const l = ip.toLowerCase();
-  const mapped = /^::ffff:(\d+\.\d+\.\d+\.\d+)$/.exec(l);
-  if (mapped) return isPublicIp(mapped[1]);
-  if (l === '::' || l === '::1') return false;
-  const first = parseInt(l.split(':')[0] || '0', 16);
-  if ((first & 0xfe00) === 0xfc00) return false;          // fc00::/7 unique local
-  if ((first & 0xffc0) === 0xfe80) return false;          // fe80::/10 link local
-  if ((first & 0xff00) === 0xff00) return false;          // multicast
-  if (l.startsWith('2001:db8:') || l.startsWith('2001:0db8:')) return false;   // documentation
-  if (l.startsWith('64:ff9b:') || l.startsWith('100:') || first === 0x2002 || l.startsWith('2001:0:') || l.startsWith('2001::')) return false;   // NAT64, discard, 6to4, Teredo
-  return (first & 0xe000) === 0x2000;                     // global unicast 2000::/3 only
+  const x = v6bytes(ip);
+  if (!x) return false;
+  if (x.slice(0, 10).every((v) => v === 0) && x[10] === 255 && x[11] === 255) return isPublicIp(x.slice(12).join('.'));   // ::ffff:a.b.c.d
+  if ((x[0] & 0xe0) !== 0x20) return false;                // global unicast 2000::/3 only: not ::, ::1, fc00::/7, fe80::/10, ff00::/8, 64:ff9b::/96, 100::/64
+  return !V6_BLOCKED.some(([base, bits]) => inV6(x, base, bits));
 }
 
 // A webhook address we are willing to call, as a URL, or null.
