@@ -45,7 +45,10 @@ export function makeOutbox({ store, send, log = () => {}, now = () => Math.floor
       const rows = store.outboxDue(now());
       const bySub = new Map();
       for (const r of rows) { if (!bySub.has(r.sub_id)) bySub.set(r.sub_id, []); bySub.get(r.sub_id).push(r); }
-      await pool([...bySub].map(([id, list]) => () => oneSubscription(id, list)), concurrency, (err) => log(`delivery failed: ${err.message}`));
+      // a failure of a recipient is dealt with inside oneSubscription (retry, counter); what reaches the pool is the queue itself failing (the database)
+      const broken = [];
+      await pool([...bySub].map(([id, list]) => () => oneSubscription(id, list)), concurrency, (err) => { broken.push(err); log(`delivery failed: ${err.message}`); });
+      if (broken.length) throw new Error(`${broken.length} subscription(s) could not be processed: ${broken[0].message}`);
       return rows.length;
     } finally { draining = false; }
   }

@@ -1,6 +1,6 @@
 // Unit tests for scripts/watch-invalid.mjs (no dependencies, no network). Run with: node scripts/test-invalid.mjs
 import assert from 'node:assert/strict';
-import { announcementsOf, blankDay, count, buildReport, dayOf, buildLast } from './watch-invalid.mjs';
+import { announcementsOf, blankDay, count, buildReport, dayOf, buildLast, collection } from './watch-invalid.mjs';
 
 let passed = 0;
 const test = (name, fn) => { fn(); passed++; console.log('ok  ', name); };
@@ -69,6 +69,21 @@ test('what one run saw: only the origins with enough invalid announcements, the 
   assert.equal(d.to, '2026-10-18T12:00:00Z');
   assert.equal(d.min, 5);
   assert.deepEqual(Object.keys(buildLast(run, t, t, t, 5, 1).origins), ['AS300']);   // only the busiest `top`
+});
+
+test('a run that could not listen is told apart from a quiet one', () => {
+  const t = 1000000;
+  const quiet = collection({ connections: 1, messages: 5000, announcements: 90000, up: [[t, t + 540000]], error: null }, 540);
+  assert.equal(quiet.ok, true);
+  assert.equal(quiet.listened_seconds, 540);
+  const down = collection({ connections: 0, messages: 0, announcements: 0, up: [], error: 'ECONNREFUSED' }, 540);
+  assert.equal(down.ok, false);
+  assert.equal(down.error, 'ECONNREFUSED');
+  assert.equal(collection({ connections: 1, messages: 0, announcements: 0, up: [[t, t + 540000]], error: null }, 540).ok, false);     // connected, nothing received
+  assert.equal(collection({ connections: 4, messages: 30, announcements: 100, up: [[t, t + 20000]], error: null }, 540).ok, false);   // a few seconds out of nine minutes
+  const run = { origins: new Map(), prefixes: new Map() };
+  assert.deepEqual(buildLast(run, t, t, t, 5, 300, down).collected, down);
+  assert.equal('collected' in buildLast(run, t, t, t), false);
 });
 
 console.log(`${passed} tests passed`);

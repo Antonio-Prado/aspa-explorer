@@ -208,6 +208,9 @@ async function pollInvalid() {
   const r = await fetch(INVALID_FILE, { headers: { Accept: 'application/json', 'User-Agent': 'aspa-explorer-notifier' } });
   if (!r.ok) throw new Error(`invalid: HTTP ${r.status}`);
   const doc = await r.json();
+  // a run that could not listen to RIS Live has no origins, like a quiet one: the file says which it was, and a file that is not renewed is told apart too
+  if (doc && doc.collected && doc.collected.ok === false) throw new Error(`invalid: the last run could not listen to RIS Live (${doc.collected.messages} message(s), ${doc.collected.listened_seconds} s)`);
+  if (doc && doc.generated && Date.now() - Date.parse(doc.generated) > 3600 * 1000) throw new Error('invalid: the file is more than an hour old');
   const saved = store.getState('invalid') || { generated: null, alerts: {} };
   if (saved.generated === doc.generated) return;
   const subs = store.allActive().filter((s) => s.invalid_min > 0);

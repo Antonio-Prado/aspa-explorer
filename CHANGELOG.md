@@ -5,6 +5,14 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.47.4] - 2026-10-20
+
+### Fixed
+- A run of `watch-invalid` that could not listen to RIPE RIS Live wrote `invalid-last.json` like a quiet one: new time, no origin. The file now says how the run went (`collected`: connections, seconds listened, messages, announcements, error), and the seconds of the hours of `invalid.json` are only those in which the socket was open. The notifier does not take a file with `collected.ok` false, nor one that is more than an hour old: the source `invalid` of the health goes down after three such reads, and nobody is told that "nothing is invalid" when nothing could be seen.
+- An error on the pipe to `sendmail` (`EPIPE`, when the mailer ends before it has read the message) was not handled and ended the whole notifier. It now fails that delivery only, once, together with the time limit and the exit of the process.
+- The health said the delivery was fine when the queue itself failed (the database cannot be written): the errors of the pool were logged and not given back. `drain()` now fails when a subscription could not be processed; the failure of a recipient is still a normal retry.
+- `scripts/mirror-wiki.sh` ended with the status of `sed`, so that a `git push` that failed still printed *published* and left the job green. The status of git is kept, the output is filtered afterwards, and the token is still hidden.
+
 ## [1.47.3] - 2026-10-20
 
 ### Fixed

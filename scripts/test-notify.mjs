@@ -138,7 +138,7 @@ await test('mail: sendmail gets the envelope and the message', async () => {
   const run = (cmd, a) => {
     args = [cmd, ...a];
     const handlers = {};
-    return { stderr: { on() {} }, on(e, f) { handlers[e] = f; }, stdin: { end(m) { written = m; setImmediate(() => handlers.close(0)); } } };
+    return { stderr: { on() {} }, on(e, f) { handlers[e] = f; }, stdin: { on() {}, end(m) { written = m; setImmediate(() => handlers.close(0)); } } };
   };
   await sendmail('hello', 'n@x.org', 'a@example.com', { command: '/usr/sbin/sendmail', run });
   assert.deepEqual(args, ['/usr/sbin/sendmail', '-i', '-f', 'n@x.org', '--', 'a@example.com']);
@@ -796,7 +796,7 @@ await test('webhook post: the whole exchange has a limit, also when the peer ans
 
 await test('mail: a sendmail that hangs is killed and the delivery fails', async () => {
   let killed = null;
-  const run = () => ({ stderr: { on() {} }, on() {}, kill(sig) { killed = sig; }, stdin: { end() {} } });
+  const run = () => ({ stderr: { on() {} }, on() {}, kill(sig) { killed = sig; }, stdin: { on() {}, end() {} } });
   await assert.rejects(() => sendmail('hello', 'n@x.org', 'a@example.com', { run, timeoutMs: 30 }), /in time/);
   assert.equal(killed, 'SIGKILL');
 });
@@ -809,6 +809,27 @@ await test('pulse: the delivery of the queue is a source of its own', async () =
   assert.equal(s.aspas.ok, true);                                          // reading works, and does not clear the failures of the delivery
   assert.equal(s.delivery.failures_in_a_row, 5);
   assert.equal(s.delivery.ok, false);
+});
+
+
+await test('mail: an error on the pipe to sendmail (EPIPE) fails the delivery and does not end the process', async () => {
+  const handlers = {};
+  const run = () => ({ stderr: { on() {} }, on(e, f) { handlers[e] = f; }, kill() {}, stdin: { on(e, f) { handlers['stdin.' + e] = f; }, end() { setImmediate(() => { handlers['stdin.error'](new Error('write EPIPE')); handlers.close(1); }); } } });
+  await assert.rejects(() => sendmail('hello', 'n@x.org', 'a@example.com', { run }), /did not take the message: write EPIPE/);
+});
+
+await test('outbox: an error of the queue itself (the database) reaches the caller, a failure of a recipient does not', async () => {
+  const a = outboxSetup(async () => { throw new Error('recipient down'); });
+  a.outbox.enqueue(a.id, { n: 1 });
+  await a.outbox.drain();                                           // normal: retried later, no error for the caller
+  const b = outboxSetup(async () => {});
+  b.outbox.enqueue(b.id, { n: 1 });
+  b.store.outboxDone = () => { throw new Error('SQLITE_IOERR'); };
+  b.store.failed = () => { throw new Error('SQLITE_IOERR'); };          // and the counter of failures cannot be saved either
+  await assert.rejects(() => b.outbox.drain(), /could not be processed: SQLITE_IOERR/);
+  const p = makePulse(['delivery']);
+  await assert.rejects(() => p.track('delivery', () => b.outbox.drain()));
+  assert.equal(p.get('delivery').failures, 1);
 });
 
 console.log(`${passed} tests passed`);

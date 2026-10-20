@@ -38,15 +38,15 @@ export function serialize({ headers, body }, dkim) {
 export function sendmail(message, envelopeFrom, recipient, { command = '/usr/sbin/sendmail', run = spawn, timeoutMs = 60000 } = {}) {
   return new Promise((resolve, reject) => {
     const p = run(command, ['-i', '-f', envelopeFrom, '--', recipient], { stdio: ['pipe', 'ignore', 'pipe'] });
-    let err = '';
+    let err = '', over = false;
+    const end = (fn, value) => { if (over) return; over = true; clearTimeout(timer); fn(value); };       // the first outcome counts
     // a mailer that hangs must not hold the queue of the notifications: it is killed, and the message is tried again later
-    const timer = setTimeout(() => { reject(new Error('sendmail did not finish in time')); try { p.kill('SIGKILL'); } catch { /* gone already */ } }, timeoutMs);
+    const timer = setTimeout(() => { end(reject, new Error('sendmail did not finish in time')); try { p.kill('SIGKILL'); } catch { /* gone already */ } }, timeoutMs);
     p.stderr.on('data', (c) => { err += c; });
-    p.on('error', (e) => { clearTimeout(timer); reject(e); });
-    p.on('close', (code) => {
-      clearTimeout(timer);
-      if (code === 0) resolve(); else reject(new Error(`sendmail exited ${code}: ${err.trim().slice(0, 200)}`));
-    });
+    p.on('error', (e) => end(reject, e));
+    // a mailer that exits before it has read the message closes the pipe (EPIPE): without a handler that error ends the whole process
+    p.stdin.on('error', (e) => end(reject, new Error(`sendmail did not take the message: ${e.message}`)));
+    p.on('close', (code) => (code === 0 ? end(resolve) : end(reject, new Error(`sendmail exited ${code}: ${err.trim().slice(0, 200)}`))));
     p.stdin.end(message);
   });
 }

@@ -58,7 +58,8 @@ export function count(day, ms, origin, prefix, verdict) {
 // What one run saw, by origin: the file that the notifier reads (invalid-last.json) to tell the subscribers who asked for a threshold.
 // run: {origins: Map origin -> [announcements, invalid], prefixes: Map 'prefix|origin' -> invalid}; only the origins with at least `min` invalid
 // announcements are listed, the busiest `top`, each with its busiest prefixes.
-export function buildLast(run, from, to, now = Date.now(), min = LAST_MIN, top = LAST_TOP) {
+// `collected` says how the run went (see collection()): no origin in the file means "no invalid announcements" only when collected.ok is true.
+export function buildLast(run, from, to, now = Date.now(), min = LAST_MIN, top = LAST_TOP, collected = null) {
   const byOrigin = new Map();
   for (const [k, n] of run.prefixes) {
     const at = k.lastIndexOf('|'), origin = k.slice(at + 1);
@@ -68,7 +69,15 @@ export function buildLast(run, from, to, now = Date.now(), min = LAST_MIN, top =
   const origins = {};
   const list = [...run.origins].filter(([, [, inv]]) => inv >= min).sort((a, b) => b[1][1] - a[1][1]).slice(0, top);
   for (const [as, [ann, inv]] of list) origins[`AS${as}`] = { invalid: inv, announcements: ann, prefixes: (byOrigin.get(String(as)) || []).sort((x, y) => y.invalid - x.invalid).slice(0, 5) };
-  return { generated: new Date(now).toISOString().replace(/\.\d+Z$/, 'Z'), from: new Date(from).toISOString().replace(/\.\d+Z$/, 'Z'), to: new Date(to).toISOString().replace(/\.\d+Z$/, 'Z'), min, origins };
+  return { generated: new Date(now).toISOString().replace(/\.\d+Z$/, 'Z'), from: new Date(from).toISOString().replace(/\.\d+Z$/, 'Z'), to: new Date(to).toISOString().replace(/\.\d+Z$/, 'Z'), min, ...(collected ? { collected } : {}), origins };
+}
+
+// How a run went: a run that could not listen (RIS Live down, connection refused, nothing received) must not look like a quiet one.
+// stat: {connections, messages, announcements, up: [[from, to], ...] (ms, the times the socket was open), error}; seconds: what was asked for.
+export function collection(stat, seconds) {
+  const listened = Math.round(stat.up.reduce((s, [a, b]) => s + Math.max(0, b - a), 0) / 1000);
+  const ok = stat.connections > 0 && stat.messages > 0 && listened >= seconds / 2;
+  return { ok, connections: stat.connections, listened_seconds: listened, requested_seconds: seconds, messages: stat.messages, announcements: stat.announcements, error: stat.error };
 }
 
 // The report of the days (oldest first): the hours, the profile and the busiest origins and prefixes.
@@ -135,17 +144,21 @@ async function main() {
   let today = await dayAt(started);
 
   const run = { origins: new Map(), prefixes: new Map() };       // this run only, for invalid-last.json
+  const stat = { connections: 0, messages: 0, announcements: 0, up: [], error: null };
+  let upSince = null;
+  const closeUp = () => { if (upSince !== null) { stat.up.push([upSince, Date.now()]); upSince = null; } };
   const onMessage = (m) => {
     const now = Date.now();
     const d = days.get(dayOf(now)) || today;
     const h = d.hours[new Date(now).getUTCHours()];
-    h.messages++;
+    h.messages++; stat.messages++;
     const s = Math.floor(now / 1000);
     if (s !== sec.at) {                                            // close the second that ended: its peak, and the time listened to
       if (sec.at) { const sh = (days.get(dayOf(sec.at * 1000)) || d).hours[new Date(sec.at * 1000).getUTCHours()]; sh.peak_ann = Math.max(sh.peak_ann, sec.ann); sh.peak_inv = Math.max(sh.peak_inv, sec.inv); }
       sec = { at: s, ann: 0, inv: 0 };
     }
     for (const a of announcementsOf(m, ixp)) {
+      stat.announcements++;
       const k = classify(aspas, a.path);
       sec.ann++; if (k === 2) sec.inv++;
       count(d, now, a.path[0], a.prefix, k);
@@ -161,16 +174,18 @@ async function main() {
     let ws = null, tries = 0;
     const open = () => {
       ws = new WebSocket(RIS_LIVE);
-      ws.onopen = () => { for (const host of hosts.length ? hosts : [undefined]) ws.send(JSON.stringify({ type: 'ris_subscribe', data: { type: 'UPDATE', require: 'announcements', ...(host ? { host } : {}) } })); };
+      ws.onopen = () => { stat.connections++; upSince = Date.now(); for (const host of hosts.length ? hosts : [undefined]) ws.send(JSON.stringify({ type: 'ris_subscribe', data: { type: 'UPDATE', require: 'announcements', ...(host ? { host } : {}) } })); };
       ws.onmessage = (e) => { try { const m = JSON.parse(e.data); if (m.type === 'ris_message') onMessage(m.data); } catch { /* a message that is not JSON */ } };
-      ws.onclose = () => { if (Date.now() < deadline - 5000 && tries++ < 3) setTimeout(open, 2000); else resolve(); };
-      ws.onerror = () => { /* the close follows */ };
+      ws.onclose = () => { closeUp(); if (Date.now() < deadline - 5000 && tries++ < 3) setTimeout(open, 2000); else resolve(); };
+      ws.onerror = (e) => { stat.error = String((e && (e.message || e.type)) || 'error').slice(0, 100); };
     };
     open();
-    setTimeout(() => { if (ws) { ws.onclose = () => resolve(); ws.close(); } setTimeout(resolve, 2000); }, seconds * 1000);
+    setTimeout(() => { if (ws) { ws.onclose = () => { closeUp(); resolve(); }; ws.close(); } setTimeout(resolve, 2000); }, seconds * 1000);
   });
-  // the time listened to goes to the hours it covered
-  for (let t = started; t < Date.now(); t += 1000) { const d = days.get(dayOf(t)) || (await dayAt(t)); d.hours[new Date(t).getUTCHours()].seconds++; }
+  closeUp();
+  const collected = collection(stat, seconds);
+  // the time listened to goes to the hours it covered: the seconds in which the socket was open, not the ones in which nothing could be heard
+  for (const [from, to] of stat.up) for (let t = from; t < to; t += 1000) { const d = days.get(dayOf(t)) || (await dayAt(t)); d.hours[new Date(t).getUTCHours()].seconds++; }
   for (const d of days.values()) await writeJson(join(dir, `${d.date.replaceAll('-', '')}.json`), d);
   const names = (await readdir(dir)).filter((f) => /^\d{8}\.json$/.test(f)).sort();
   for (const f of names.slice(0, -KEEP_DAYS)) await unlink(join(dir, f));
@@ -178,7 +193,8 @@ async function main() {
   for (const f of names.slice(-KEEP_DAYS)) keep.push(JSON.parse(await readFile(join(dir, f), 'utf8')));
   const report = buildReport(keep);
   await writeJson(join(out, 'invalid.json'), report);
-  await writeJson(join(out, 'invalid-last.json'), buildLast(run, started, Date.now()));
+  await writeJson(join(out, 'invalid-last.json'), buildLast(run, started, Date.now(), Date.now(), LAST_MIN, LAST_TOP, collected));
+  if (!collected.ok) console.error(`collection failed: ${collected.connections} connection(s), ${collected.messages} message(s), ${collected.listened_seconds} s listened of ${seconds}${collected.error ? `, ${collected.error}` : ''}`);
   console.log(`${report.generated}: ${report.profile.announcements} announcements in ${report.profile.seconds} s over ${keep.length} days, ${report.profile.invalid} invalid (${report.profile.invalid_share}%)`);
 }
 
