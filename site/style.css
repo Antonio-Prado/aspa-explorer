@@ -368,6 +368,7 @@ main:focus { outline: none; }
 .check select { flex: 1; min-width: 12rem; }
 .verdict { margin: 1rem 0 0.5rem; padding: 0.6rem 0.9rem; border-radius: 8px; border: 1px solid currentColor; }
 .verdict strong { margin-right: 0.35rem; text-transform: uppercase; letter-spacing: 0.04em; }
+.verdict strong.plain-lead { text-transform: none; letter-spacing: 0; }
 .v-valid { background: var(--ok-bg); color: var(--ok-ink); }
 .v-unknown { background: var(--warn-bg); color: var(--warn-ink); }
 .v-invalid { background: var(--bad-bg); color: var(--bad-ink); }

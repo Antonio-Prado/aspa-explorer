@@ -56,7 +56,7 @@ const PAGES = [
   ['home', '/'], ['as', '/#AS12779'], ['path', '/#path=3356+12779&from=up'], ['changes', '/#changes'], ['quality', '/#quality'],
   ['statistics', '/statistics.html'], ['guide', '/guide.html'], ['api', '/api.html'],
   ['examples', '/examples.html'], ['embed', '/embed.html?country=IT'], ['status', '/status.html'], ['subscription', '/subscription.html#confirm=abc'],
-  ['bulk', '/#path=3356+12779&from=up'], ['peek', '/#AS12779'], ['irr', '/#AS12779'], ['ixp', '/#path=12779+1200+24796&from=up'], ['recent', '/#AS12779'], ['report', '/r/0123456789ab'],
+  ['bulk', '/#path=3356+12779&from=up'], ['peek', '/#AS12779'], ['irr', '/#AS12779'], ['valley', '/#routes=AS12779'], ['ixp', '/#path=12779+1200+24796&from=up'], ['recent', '/#AS12779'], ['report', '/r/0123456789ab'],
 ];
 const VIEWPORTS = [['desktop', { width: 1280, height: 800 }], ['narrow', { width: 320, height: 640 }]];
 const SCHEMES = ['light', 'dark'];
@@ -75,6 +75,11 @@ for (const [name, path] of PAGES) {
         const u = route.request().url();
         const irr = /^https:\/\/rest\.db\.ripe\.net\/search\.json\?query-string=AS(\d+)&/.exec(u);
         if (irr) { try { return route.fulfill({ status: 200, contentType: 'application/json', body: await readFile(join(FIX, 'irr', `AS${irr[1]}.json`)) }); } catch { return route.fulfill({ status: 404, contentType: 'application/json', body: '{}' }); } }
+        if (name === 'valley') {
+          // a valley in the routes of AS12779: AS174 has an AS0 ASPA, AS99999 is not a provider of AS24796, so the ramps do not meet
+          if (/^https:\/\/stat\.ripe\.net\/data\/bgp-state\//.test(u)) return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ status: 'ok', data: { timestamp: '2026-10-20T08:00:00', bgp_state: [{ target_prefix: '193.0.0.0/21', source_id: '10-217.29.66.120', path: [24796, 99999, 174, 12779] }, { target_prefix: '193.0.0.0/21', source_id: '00-94.247.111.254', path: [174, 12779] }] } }) });
+          if (/^https:\/\/stat\.ripe\.net\/data\/asn-neighbours\//.test(u)) return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ status: 'ok', data: { neighbours: [{ asn: 5394, type: 'left', power: 100 }] } }) });
+        }
         const fx = GITLAB_FIXTURE(u);
         if (fx) return route.fulfill({ status: 200, contentType: 'application/json', body: await readFile(join(FIX, fx)) });
         return route.abort();
@@ -103,6 +108,22 @@ for (const [name, path] of PAGES) {
           const note = await page.locator('.ixp-note').count();
           if (note !== 1) extra.push(`ixp: ${note} notes about the exchange point, expected 1`);
           else if (!(await page.locator('.ixp-note a[href*="rfc7947"]').count())) extra.push('ixp: the note does not link RFC 7947');
+        }
+        if (name === 'valley') {
+          // the table of the valleys, the button that explains one, and the reading that comes back (nothing in the fixtures explains it)
+          const why = page.locator('button', { hasText: 'why?' }).first();
+          if (!(await why.count())) extra.push('valley: no table of valleys, or no button to ask why');
+          else {
+            await why.click();
+            await page.waitForSelector('.detailrow .verdict', { timeout: 8000 }).catch(() => {});
+            const text = await page.locator('.detailrow').first().innerText().catch(() => '');
+            if (!/Nothing read here explains|Possibly a gap|Probably a gap|Not enough data/i.test(text)) extra.push(`valley: no reading after the button (got: ${text.slice(0, 80)})`);
+            if ((await page.locator('.detailrow tbody tr').count()) !== 3) extra.push('valley: the hops of the example path are not all in the table');
+            if ((await why.getAttribute('aria-expanded')) !== 'true') extra.push('valley: aria-expanded is not true after opening');
+            await why.click();
+            if ((await why.getAttribute('aria-expanded')) !== 'false' || (await page.locator('.detailrow').first().isVisible())) extra.push('valley: the second press does not close it');
+            await why.click();
+          }
         }
         if (name === 'irr') {
           // the IRR object against the ASPA: press the button, expect what the fixture says (AS6762 is transit in the object and not in the ASPA)

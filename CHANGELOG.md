@@ -5,6 +5,11 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.44.0] - 2026-10-20
+
+### Added
+- Routes seen in BGP: each place of valley has a *why?* button. It reads, for the hops that the ASPAs refuse, the IRR objects of the two ASes (the RIPE database and its mirrors), CAIDA and the paths that RIPEstat sees before the customer of the hop, and says what they make of it: *probably a gap in an ASPA* (the IRR object of the customer declares the provider as transit, or the provider's object calls the customer its own, with CAIDA or RIPEstat agreeing), *possibly* (some evidence, with the objection said), *an exchange-point AS in the valley*, *nothing read here explains it* (not an accusation: it can still be an ASPA that misses an undeclared provider, a leak or a forged path), or *not enough data*. It tries the ASPA of the customer with the provider added and tells whether the path would stop being a valley, names who to ask, says when the valley sits next to the AS that reports the path to the collector (which only listens), and lists every hop with what the ASPAs, the IRR objects and CAIDA say. It is a reading with its evidence, not a verdict. `site/valley.js` (pure, tested in `scripts/test-valley.mjs` with the valleys of AS41327 of 2026-10-20: Connesi and Zayo, RASCOM and Rostelecom, FNXTEC and Hurricane Electric, NetIX, Hopus), and a page of the accessibility test with a valley in its routes.
+
 ## [1.43.12] - 2026-10-20
 
 ### Changed

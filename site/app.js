@@ -607,24 +607,74 @@ function leakPanel(rows) {
     const v = r.v;
     const from = v.path[v.maxUp - 1], to = v.path[v.N - v.maxDown];
     const key = `${from}|${to}`;
-    const g = groups.get(key) || { from, to, between: v.path.slice(v.maxUp, v.N - v.maxDown), paths: 0, routes: 0, feeders: new Set(), example: r.shown };
+    const g = groups.get(key) || { from, to, between: v.path.slice(v.maxUp, v.N - v.maxDown), paths: 0, routes: 0, feeders: new Set(), example: r.shown, v };
     g.paths++; g.routes += r.routes; for (const f of r.feeders) g.feeders.add(f);
     groups.set(key, g);
   }
   if (!groups.size) return null;
   const list = [...groups.values()].sort((x, y) => y.feeders.size - x.feeders.size || y.routes - x.routes);
   const head = el('tr', {}, ...['Valley between', 'ASes in the valley', 'Paths', 'Routes', 'Feeders', 'Example'].map((t, i) => el('th', { scope: 'col', class: i >= 2 && i <= 4 ? 'num' : undefined, text: t })));
-  const trs = list.slice(0, 10).map((g) => el('tr', {},
-    el('td', {}, asChip(g.from), ' ', asChip(g.to)),
-    el('td', {}, ...(g.between.length ? g.between.flatMap((x, i) => (i ? [' ', asChip(x)] : [asChip(x)])) : ['–'])),
-    el('td', { class: 'num', text: fmt.format(g.paths) }), el('td', { class: 'num', text: fmt.format(g.routes) }), el('td', { class: 'num', text: fmt.format(g.feeders.size) }),
-    el('td', {}, el('a', { href: `#path=${encodeURIComponent(g.example.join(' '))}&from=down`, text: 'open the path' }))));
+  const trs = list.slice(0, 10).flatMap((g) => {
+    const why = el('button', { type: 'button', class: 'linkish', text: 'why?', 'aria-expanded': 'false' });
+    const row = el('tr', {},
+      el('td', {}, asChip(g.from), ' ', asChip(g.to)),
+      el('td', {}, ...(g.between.length ? g.between.flatMap((x, i) => (i ? [' ', asChip(x)] : [asChip(x)])) : ['–'])),
+      el('td', { class: 'num', text: fmt.format(g.paths) }), el('td', { class: 'num', text: fmt.format(g.routes) }), el('td', { class: 'num', text: fmt.format(g.feeders.size) }),
+      el('td', {}, el('a', { href: `#path=${encodeURIComponent(g.example.join(' '))}&from=down`, text: 'open the path' }), ' · ', why));
+    let detail = null;
+    why.addEventListener('click', () => {
+      if (detail) { detail.hidden = !detail.hidden; why.setAttribute('aria-expanded', String(!detail.hidden)); return; }
+      const body = el('div', { 'aria-live': 'polite' }, el('span', { class: 'busy', text: 'Asking the RIPE database and RIPEstat' }));
+      detail = el('tr', { class: 'detailrow' }, el('td', { colspan: '6' }, body));
+      row.after(detail);
+      why.setAttribute('aria-expanded', 'true');
+      valleyWhy(g, body).catch(() => body.replaceChildren(el('p', { text: 'The registries could not be read just now. Try again later.' })));
+    });
+    return [row];
+  });
   return el('div', {},
     el('h3', { class: 'subhead', text: 'Valleys seen now (possible route leaks)' }),
     el('section', { class: 'table-wrap card', tabindex: '0', 'aria-label': 'Valleys seen now, possible route leaks' }, el('table', { class: 'checks live nb' },
       el('caption', { class: 'sr-only', text: 'Paths that the ASPAs show to contain a valley, grouped by the place of the valley, with the paths, routes and feeders that see it' }),
       el('thead', {}, head), el('tbody', {}, ...trs))),
     el('p', { class: 'hint', text: `${fmt.format(list.length)} place${list.length === 1 ? '' : 's'} of valley${list.length > 10 ? ', the ten seen by most feeders are listed' : ''}. A valley is a route that came down from a provider or a peer and went up again: a route leak, or a forged path. The ASes in the valley are the ones to look at first. Before blaming them, look at the neighbours below: an ASPA that does not list one of its real providers makes valid routes look like valleys, and many of these places can be just that. The ASPAs prove a valley only where they are published, so paths of unknown verdict may hide others.` }));
+}
+
+// Why one place of valley, as a reading of the evidence (site/valley.js), asked when the button is pressed: the IRR objects of the ASes at the hops that
+// the ASPAs refuse, CAIDA (relations.json) and the paths that RIPEstat sees before the customer of each of those hops.
+async function valleyWhy(g, box) {
+  const v = g.v, bs = AspaValley.breakers(v);
+  const ases = [...new Set(bs.flatMap((b) => [b.customer, b.provider]))].map((x) => Number(x.slice(2)));
+  const customers = [...new Set(bs.map((b) => Number(b.customer.slice(2))))];
+  const [rel, irrs, nbs] = await Promise.all([
+    getRelations(),
+    Promise.all(ases.map((n) => fetchIrr(n).catch(() => undefined))),
+    Promise.all(customers.map((n) => getJson(`https://stat.ripe.net/data/asn-neighbours/data.json?resource=AS${n}`).then((d) => d.data.neighbours).catch(() => null))),
+  ]);
+  const irr = new Map();
+  ases.forEach((n, i) => { if (irrs[i] === undefined) return; const roles = irrs[i] ? AspaIrr.roles(irrs[i].attrs) : null; irr.set(n, roles && roles.rules ? roles : null); });
+  const observed = new Map();
+  customers.forEach((n, i) => { if (nbs[i]) observed.set(n, nbs[i]); });
+  const ctx = { irr, caida: rel && rel.providers ? rel.providers : null, observed };
+  const r = AspaValley.explain(v, aspaSets, ctx, ixpSet);
+  const w = AspaValley.words(r);
+  const kids = [el('p', { class: `verdict ${r.kind === 'gap' ? 'v-valid' : 'v-unknown'}` }, el('strong', { class: 'plain-lead', text: w.lead }), ' ', w.body)];
+  if (w.ask.length) kids.push(el('p', { text: `Ask ${[...new Set(w.ask.map((x) => x.as))].join(' and ')} whether ${w.ask.length === 1 ? `${w.ask[0].add} belongs` : 'these belong'} in the ASPA.` }));
+  const last = v.path[v.N - 1];
+  if (last === g.to) {
+    const rrcs = [...new Set([...g.feeders].map((f) => String(f).split('-')[0]).filter((x) => /^\d+$/.test(x)).map((x) => `rrc${x}`))];
+    kids.push(el('p', { class: 'hint', text: `${last} is the AS that reports this path${rrcs.length ? ` to ${rrcs.join(', ')}` : ''}: it is the first AS of the path as BGP shows it. The collector only listens, so nothing here says that ${last} passed the route on to a provider or a peer.` }));
+  }
+  const rows = AspaValley.hops(v, aspaSets, ctx).map((h) => el('tr', {},
+    el('th', { scope: 'row', class: 'nowrap' }, asChip(h.a), ' → ', asChip(h.b)),
+    el('td', {}, ...h.aspa.flatMap((t, i) => (i ? [el('br'), t] : [t]))),
+    el('td', {}, ...(h.irr.length ? h.irr.flatMap((t, i) => (i ? [el('br'), t] : [t])) : ['not asked'])),
+    el('td', { text: h.caida || 'not available' })));
+  kids.push(el('section', { class: 'table-wrap card', tabindex: '0', 'aria-label': 'What the ASPAs, the IRR objects and CAIDA say about each hop of the example path' }, el('table', { class: 'checks live nb' },
+    el('caption', { class: 'sr-only', text: 'The hops of the example path, from the origin, and what each source says about them' }),
+    el('thead', {}, el('tr', {}, ['Hop, from the origin', 'ASPA', 'IRR object', 'CAIDA'].map((t) => el('th', { scope: 'col', text: t })))), el('tbody', {}, ...rows))));
+  kids.push(el('p', { class: 'hint', text: 'A reading, not a verdict. The IRR objects say what their owners declared, when they last edited them. CAIDA and RIPEstat infer from the routes what nobody declared. Any of them can be out of date, and a registry object can be wrong, so where they disagree with an ASPA, ask the owner which one is right. The IRR is asked only for the ASes at the hops that the ASPAs refuse.' }));
+  box.replaceChildren(...kids);
 }
 
 // The registry of the ASes (country and region), from the daily numbers: a function AS number -> {cc, rir} or null.
