@@ -6,7 +6,7 @@ import { createRequire } from 'node:module';
 const require = createRequire(import.meta.url);
 const { verify, parsePath } = require('../site/verify.js');
 const { roles } = require('../site/irr.js');
-const { breakers, dominantUpstream, explain, words, hops } = require('../site/valley.js');
+const { breakers, dominantUpstream, explain, words, hops, neighbourReading } = require('../site/valley.js');
 let passed = 0;
 const test = (name, fn) => { fn(); passed++; console.log('ok  ', name); };
 const attrs = (...lines) => lines.map((l) => { const i = l.indexOf(': '); return { name: l.slice(0, i), value: l.slice(i + 2) }; });
@@ -120,6 +120,30 @@ test('hops: what each source says about each hop, in the order of the path from 
   assert.equal(h[0].caida, 'no relation');
   assert.equal(h[1].caida, 'AS6461 is a provider of AS15605');
   assert.deepEqual(h[1].irr, ['IRR of AS15605 on AS6461: a transit provider']);
+});
+
+test('neighbours: an unlisted transit of the IRR object is probably a missing provider, a peer is not', () => {
+  const ft = roles(attrs('remarks: Transit', 'import: from AS44530 accept ANY', 'remarks: Peering', 'import: from AS6939 accept AS-HE', 'export: to AS6939 announce AS41327:AS-CUSTOMERS'));
+  const a = neighbourReading(false, 44530, ft, [44530], 'weak');
+  assert.equal(a.kind, 'probably-missing');
+  assert.deepEqual(a.sources, ['a transit provider in its IRR object', 'a provider for CAIDA']);
+  const b = neighbourReading(false, 6939, ft, [1299], null);
+  assert.equal(b.kind, 'other');
+  assert.match(b.against[0], /sets of prefixes only/);
+});
+
+test('neighbours: only CAIDA or only the routes is "maybe", and an unlisted neighbour that nothing mentions says nothing', () => {
+  assert.equal(neighbourReading(false, 7, undefined, [7], null).kind, 'maybe-missing');
+  assert.equal(neighbourReading(false, 7, null, [1], 'provider').kind, 'maybe-missing');
+  assert.equal(neighbourReading(false, 7, null, [1], 'weak').kind, 'none');
+  assert.equal(neighbourReading(false, 7, undefined, null, null).kind, 'none');
+});
+
+test('neighbours: a listed one is confirmed by any source, and "only the ASPA" when the sources were asked and say nothing', () => {
+  const r = roles(attrs('remarks: Transit', 'import: from AS3356 accept ANY'));
+  assert.equal(neighbourReading(true, 3356, r, [], null).kind, 'agrees');
+  assert.equal(neighbourReading(true, 3491, r, [], null).kind, 'aspa-only');
+  assert.equal(neighbourReading(true, 3491, undefined, null, null).kind, 'none');
 });
 
 console.log(`${passed} tests passed`);

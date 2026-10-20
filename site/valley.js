@@ -126,7 +126,30 @@
     return out;
   }
 
-  const api = { breakers, dominantUpstream, evidenceFor, whatIf, explain, words, hops };
+  // What the registry and CAIDA add to a neighbour of the origin in the routes. `listed`: the ASPA of the origin lists it; `r`: the roles of the IRR object
+  // of the origin (null when the registry holds no policy for it, undefined when it was not read); `caida`: the providers that CAIDA gives to the origin, or null;
+  // `evidence`: the label of the evidence of the routes ('provider', 'weak', ...). Returns {kind, label, sources, against}.
+  function neighbourReading(listed, n, r, caida, evidence) {
+    const N = Number(n), sources = [], against = [];
+    let score = 0;
+    if (r) {
+      if (r.transit.includes(N)) { score += 3; sources.push('a transit provider in its IRR object'); }
+      else if (r.candidate.includes(N)) { score += 1; sources.push('accepted from ANY in its IRR object'); }
+      else { const s = irrLib.say(r, N); if (s) against.push(`its IRR object: ${s}`); }
+    }
+    if (caida && caida.includes(N)) { score += 1; sources.push('a provider for CAIDA'); }
+    if (evidence === 'provider') { score += 1; sources.push('the routes reach a Tier-1 through it'); }
+    const asked = r !== undefined || Boolean(caida);
+    let kind;
+    if (listed) kind = score > 0 ? 'agrees' : (asked ? 'aspa-only' : 'none');
+    else if (score >= 3) kind = 'probably-missing';
+    else if (score >= 1) kind = 'maybe-missing';
+    else kind = against.length ? 'other' : 'none';
+    const label = { agrees: 'confirmed', 'aspa-only': 'only the ASPA', 'probably-missing': 'probably missing', 'maybe-missing': 'maybe missing', other: 'not a provider?', none: '–' }[kind];
+    return { kind, label, sources, against };
+  }
+
+  const api = { neighbourReading, breakers, dominantUpstream, evidenceFor, whatIf, explain, words, hops };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.AspaValley = api;
 })(typeof self !== 'undefined' ? self : this);

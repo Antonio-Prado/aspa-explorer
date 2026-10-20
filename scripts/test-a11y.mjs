@@ -124,6 +124,16 @@ for (const [name, path] of PAGES) {
             if ((await why.getAttribute('aria-expanded')) !== 'false' || (await page.locator('.detailrow').first().isVisible())) extra.push('valley: the second press does not close it');
             await why.click();
           }
+          // the neighbours of the origin, read against the registry
+          const read = page.locator('button', { hasText: 'Read what the registry says' });
+          if (!(await read.count())) extra.push('valley: no button to read the registry for the neighbours');
+          else {
+            await read.click();
+            await page.waitForTimeout(800);
+            const cell = await page.locator('section[aria-label^="Neighbours of"] tbody tr').first().locator('td').nth(3).innerText().catch(() => '');
+            if (!/confirmed|only the ASPA|missing|not a provider/i.test(cell)) extra.push(`valley: the neighbours were not read against the registry (got: ${cell.slice(0, 60)})`);
+            if ((await page.locator('section[aria-label^="Neighbours of"] thead th', { hasText: 'Invalid' }).count()) > 0) extra.push('valley: the neighbours table still has an Invalid column');
+          }
         }
         if (name === 'irr') {
           // the IRR object against the ASPA: press the button, expect what the fixture says (AS6762 is transit in the object and not in the ASPA)

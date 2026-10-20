@@ -1127,9 +1127,10 @@ function neighbourPanel(origin, rows, ev) {
   const unlisted = list.filter(([n]) => listed && !listed.has(n));
   const notSeen = listed ? [...listed].filter((p) => p !== 'AS0' && !byN.has(p)) : [];
   const evOf = (n) => (ev ? ev.get(Number(n.slice(2))) : null);
-  const cols = ['Neighbour', 'Routes', `In the ASPA of ${as}`, ...(ev ? ['Evidence'] : []), 'Valid', 'Unknown', 'Invalid'];
-  const numCol = (i) => i === 1 || i >= (ev ? 4 : 3);
+  const cols = ['Neighbour', 'Routes', `In the ASPA of ${as}`, 'Evidence', 'Valid', 'Unknown'];
+  const numCol = (i) => i === 1 || i >= 4;
   const head = el('tr', {}, ...cols.map((t, i) => el('th', { scope: 'col', class: numCol(i) ? 'num' : undefined, text: t })));
+  const evTds = new Map();
   const evCell = (n) => {
     const x = evOf(n);
     if (!x || x.label === 'few' || x.label === 'none') return el('td', { class: 'muted', text: '–', title: !x || x.label === 'few' ? 'too few paths to tell' : 'no route of this AS goes through it to a Tier-1: no evidence' });
@@ -1139,8 +1140,9 @@ function neighbourPanel(origin, rows, ev) {
   const trs = list.slice(0, 15).map(([n, e]) => el('tr', {},
     el('td', {}, asChip(n)), el('td', { class: 'num', text: fmt.format(e.routes) }),
     el('td', {}, el('span', { class: 'badge nb-' + status(n).replace(' ', '-'), text: status(n) })),
-    ...(ev ? [evCell(n)] : []),
-    el('td', { class: 'num', text: fmt.format(e.Valid) }), el('td', { class: 'num', text: fmt.format(e.Unknown) }), el('td', { class: 'num', text: fmt.format(e.Invalid) })));
+    evCell(n),
+    el('td', { class: 'num', text: fmt.format(e.Valid) }), el('td', { class: 'num', text: fmt.format(e.Unknown) })));
+  trs.forEach((tr, i) => evTds.set(list[i][0], tr.children[3]));
   const notes = [];
   if (!listed) notes.push(`${as} has no ASPA. These are the networks next to it in the routes; the ones that are its providers are the ones to list.`);
   else {
@@ -1157,10 +1159,46 @@ function neighbourPanel(origin, rows, ev) {
   if (notSeen.length) notes.push(`Listed but not seen next to ${as} in these routes: ${notSeen.slice(0, 8).join(', ')}${notSeen.length > 8 ? ` and ${notSeen.length - 8} more` : ''} (a backup provider, or one the collectors do not see).`);
   return el('div', {},
     el('h3', { class: 'subhead', text: `Neighbours of ${as} in these routes` }),
+    registryButton(origin, list.slice(0, 15), listed, evOf, evTds),
     el('section', { class: 'table-wrap card', tabindex: '0', 'aria-label': `Neighbours of ${as} in the routes` }, el('table', { class: 'checks live nb' },
       el('caption', { class: 'sr-only', text: `The AS before ${as} in the paths, how many routes go through it and whether the ASPA of ${as} lists it` }),
       el('thead', {}, head), el('tbody', {}, ...trs))),
     ...notes.map((t) => el('p', { class: 'hint', text: t })));
+}
+
+// The Evidence column of the neighbours, read against the IRR object of the origin and CAIDA when the button is pressed (valley.js): which of the
+// neighbours that the ASPA does not list look like providers that it misses, and which are declared as something else.
+function registryButton(origin, shown, listed, evOf, tds) {
+  const as = 'AS' + origin;
+  const out = el('div', { 'aria-live': 'polite' });
+  const btn = el('button', { type: 'button', class: 'linkish', text: `Read what the registry says about these neighbours` });
+  btn.addEventListener('click', async () => {
+    btn.disabled = true; out.replaceChildren(el('span', { class: 'busy', text: 'Asking the RIPE database' }));
+    try {
+      const [o, rel] = await Promise.all([fetchIrr(origin).catch(() => undefined), getRelations()]);
+      const roles = o === undefined ? undefined : (o ? AspaIrr.roles(o.attrs) : null);
+      const r = roles && roles.rules ? roles : (roles === undefined ? undefined : null);
+      const caida = rel && rel.providers ? (rel.providers[origin] || []) : null;
+      const missing = [];
+      for (const [n] of shown) {
+        const x = evOf(n), rd = AspaValley.neighbourReading(Boolean(listed && listed.has(n)), Number(n.slice(2)), r, caida, x ? x.label : null);
+        const cls = rd.kind === 'agrees' ? 'v-valid' : rd.kind.endsWith('missing') ? 'v-unknown' : null;
+        const td = tds.get(n);
+        if (!td || rd.kind === 'none') continue;
+        td.className = '';
+        td.replaceChildren(el('span', { class: 'badge' + (cls ? ' ' + cls : ''), text: rd.label }), ...(rd.sources.length || rd.against.length ? [el('span', { class: 'hint block', text: [...rd.sources, ...rd.against.map((t) => `against: ${t}`)].join('; ') })] : []));
+        if (rd.kind.endsWith('missing')) missing.push([n, rd.kind]);
+      }
+      const noPolicy = r === undefined ? 'The RIPE database could not be read just now, so only CAIDA and the routes are used.' : r === null ? `The registry holds no policy for ${as}, so only CAIDA and the routes are used.` : `The IRR object of ${as} is the one in ${o.source}.`;
+      const probable = missing.filter(([, k]) => k === 'probably-missing').map(([n]) => n), maybe = missing.filter(([, k]) => k === 'maybe-missing').map(([n]) => n);
+      const lines = [];
+      if (probable.length) lines.push(`${probable.join(', ')} ${probable.length === 1 ? 'looks' : 'look'} like ${probable.length === 1 ? 'a provider' : 'providers'} of ${as} that its ASPA does not list.`);
+      if (maybe.length) lines.push(`Possibly missing, with less evidence: ${maybe.join(', ')}.`);
+      if (!lines.length) lines.push(`Nothing read here says that a provider of ${as} is missing from its ASPA.`);
+      out.replaceChildren(el('p', { class: 'hint', text: `${lines.join(' ')} ${noPolicy} A reading, not a verdict: an IRR object is what its owner declared, and CAIDA infers from the routes.` }));
+    } catch { out.replaceChildren(el('p', { class: 'hint', text: 'The registry could not be read just now. Try again later.' })); btn.disabled = false; }
+  });
+  return el('p', {}, btn, ' ', out);
 }
 
 // A starting point for the ASPA of the origin, from its declared providers and the evidence of the routes (site/evidence.js).

@@ -5,6 +5,11 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.45.0] - 2026-10-20
+
+### Changed
+- Routes seen in BGP, *Neighbours of the origin in these routes*: a button reads the IRR object of the origin and CAIDA (one request) and rewrites the Evidence column for every neighbour: *confirmed* (listed in the ASPA and said to be a provider by the registry, CAIDA or the routes), *only the ASPA* (listed, and nobody else says it), *probably missing* (not listed, and the IRR object declares it as transit, or three sources agree), *maybe missing* (one source says it), *not a provider?* (not listed, and the object describes it as a peer, a customer or an exchange point). The sources and the objections are written under the label, and a sentence says which providers the ASPA seems to miss. Before the button the column shows what the routes alone say, as before. The *Invalid* column is gone: those routes are the places of valley above, with their *why?*. `neighbourReading` in `site/valley.js`, with tests.
+
 ## [1.44.0] - 2026-10-20
 
 ### Added
