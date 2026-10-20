@@ -174,8 +174,9 @@ async function pollLeaks() {
   if (!r.ok) throw new Error(`leaks: HTTP ${r.status}`);
   const doc = await r.json();
   if (!doc || typeof doc.as !== 'object' || !doc.generated) throw new Error('leaks: unexpected file, ignored');
+  const at = Date.parse(doc.generated);
   const saved = store.getState('leaks') || { generated: null, seen: {} };
-  if (saved.generated === doc.generated) return;
+  if (saved.generated === doc.generated) return at;
   const subs = store.allActive().filter((s) => s.leaks);
   const out = newPlaces(doc.as, subs.map((s) => s.asn), saved.seen);
   if (out.events.length) log(`${out.events.length} new place(s) of valley for the subscriptions`);
@@ -186,6 +187,7 @@ async function pollLeaks() {
     }
     store.setState('leaks', { generated: doc.generated, seen: out.seen });
   });
+  return at;
 }
 
 // The states of the parts of the service (status-history.json, a sample every 15 minutes): the subscriptions to the topic
@@ -193,13 +195,16 @@ async function pollLeaks() {
 async function pollStatus() {
   const r = await fetch(STATUS_FILE, { headers: { Accept: 'application/json', 'User-Agent': 'aspa-explorer-notifier' } });
   if (!r.ok) throw new Error(`status: HTTP ${r.status}`);
-  const out = watchStatus(await r.json(), store.getState('status'), Math.floor(Date.now() / 1000));
-  if (!out.events.length) { store.setState('status', out.saved); return; }
+  const doc = await r.json();
+  const at = Date.parse(doc && doc.generated);
+  const out = watchStatus(doc, store.getState('status'), Math.floor(Date.now() / 1000));
+  if (!out.events.length) { store.setState('status', out.saved); return at; }
   log(`${out.events.length} change(s) of state of the service`);
   store.transaction(() => {
     for (const sub of store.allActive().filter((s) => s.asn === STATUS)) outbox.enqueue(sub.id, { type: 'status', events: out.events });
     store.setState('status', out.saved);
   });
+  return at;
 }
 
 // Invalid announcements (invalid-last.json, written every ten minutes by watch-invalid): the subscriptions with a threshold are told when
@@ -210,9 +215,9 @@ async function pollInvalid() {
   const doc = await r.json();
   // a run that could not listen to RIS Live has no origins, like a quiet one: the file says which it was, and a file that is not renewed is told apart too
   if (doc && doc.collected && doc.collected.ok === false) throw new Error(`invalid: the last run could not listen to RIS Live (${doc.collected.messages} message(s), ${doc.collected.listened_seconds} s)`);
-  if (doc && doc.generated && Date.now() - Date.parse(doc.generated) > 3600 * 1000) throw new Error('invalid: the file is more than an hour old');
+  const at = Date.parse(doc.generated);                              // what the health compares with the age that is allowed
   const saved = store.getState('invalid') || { generated: null, alerts: {} };
-  if (saved.generated === doc.generated) return;
+  if (saved.generated === doc.generated) return at;
   const subs = store.allActive().filter((s) => s.invalid_min > 0);
   const out = dueInvalid(doc, subs, saved.alerts, Math.floor(Date.now() / 1000));
   if (out.events.length) log(`${out.events.length} alert(s) on invalid announcements`);
@@ -222,6 +227,7 @@ async function pollInvalid() {
         footer: 'Read from the stream of RIPE RIS Live every ten minutes, and checked with the ASPAs of this site. You are told at most once every six hours.' });
     store.setState('invalid', { generated: doc.generated, alerts: out.alerts });
   });
+  return at;
 }
 
 // what /api/v1/subscriptions/health says: when the data was last read, and whether the last reads worked
@@ -255,7 +261,7 @@ async function poll() {
     if (!Array.isArray(data.aspas) || !data.aspas.length) throw new Error('empty ASPA data, ignored');
     const current = stateOf(data.aspas);
     const saved = store.getState('committed');
-    pulse.lastOk = Date.now(); pulse.failures = 0; sources.ok('aspas');
+    pulse.lastOk = Date.now(); pulse.failures = 0; sources.ok('aspas', Date.parse(data.metadata && data.metadata.generatedTime));
     if (!saved) { store.setState('committed', [...current]); store.setState('pending', {}); log(`first run: ${current.size} ASPAs taken as the starting point`); return; }
     const out = stabilise(new Map(saved), current, store.getState('pending') || {});
     if (out.events.length) log(`${out.events.length} change(s) confirmed`);

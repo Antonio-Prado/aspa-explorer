@@ -9,6 +9,7 @@
 // Environment: ASPA_DATA (Routinator's jsonext, default http://127.0.0.1:8080/data/aspas.json), WATCH_HOSTS (the collectors of RIS
 // Live to listen to, comma separated; default all of them: it costs about a tenth of a core), WATCH_ADOPTION (the file with the IXP ASes,
 // default adoption.json in OUT_DIR).
+import { readFileSync } from 'node:fs';
 import { readFile, writeFile, rename, mkdir, readdir, unlink } from 'node:fs/promises';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -20,7 +21,8 @@ const UA = 'aspa-explorer';
 const RIS_LIVE = `wss://ris-live.ripe.net/v1/ws/?client=${UA}`;
 export const KEEP_DAYS = 14;
 export const LAST_MIN = 5;          // an origin is in invalid-last.json when it had at least this many invalid announcements in the run
-export const LAST_TOP = 300;
+export const LAST_TOP = 5000;       // every origin that reached the threshold must be in the file, also in a large incident: this is a limit of size, and `omitted` says when it cut
+export const LAST_DETAIL = 300;     // the busiest origins get their prefixes, the others only the counts
 const VERDICT = ['valid', 'unknown', 'invalid'];
 
 // The announcements of one RIS Live message: [{prefix, path (origin first, no prepending, no IXP ASes), peer}]; paths with an AS_SET
@@ -59,7 +61,7 @@ export function count(day, ms, origin, prefix, verdict) {
 // run: {origins: Map origin -> [announcements, invalid], prefixes: Map 'prefix|origin' -> invalid}; only the origins with at least `min` invalid
 // announcements are listed, the busiest `top`, each with its busiest prefixes.
 // `collected` says how the run went (see collection()): no origin in the file means "no invalid announcements" only when collected.ok is true.
-export function buildLast(run, from, to, now = Date.now(), min = LAST_MIN, top = LAST_TOP, collected = null) {
+export function buildLast(run, from, to, now = Date.now(), min = LAST_MIN, top = LAST_TOP, collected = null, detail = LAST_DETAIL) {
   const byOrigin = new Map();
   for (const [k, n] of run.prefixes) {
     const at = k.lastIndexOf('|'), origin = k.slice(at + 1);
@@ -67,17 +69,23 @@ export function buildLast(run, from, to, now = Date.now(), min = LAST_MIN, top =
     byOrigin.get(origin).push({ prefix: k.slice(0, at), invalid: n });
   }
   const origins = {};
-  const list = [...run.origins].filter(([, [, inv]]) => inv >= min).sort((a, b) => b[1][1] - a[1][1]).slice(0, top);
-  for (const [as, [ann, inv]] of list) origins[`AS${as}`] = { invalid: inv, announcements: ann, prefixes: (byOrigin.get(String(as)) || []).sort((x, y) => y.invalid - x.invalid).slice(0, 5) };
-  return { generated: new Date(now).toISOString().replace(/\.\d+Z$/, 'Z'), from: new Date(from).toISOString().replace(/\.\d+Z$/, 'Z'), to: new Date(to).toISOString().replace(/\.\d+Z$/, 'Z'), min, ...(collected ? { collected } : {}), origins };
+  const all = [...run.origins].filter(([, [, inv]]) => inv >= min).sort((a, b) => b[1][1] - a[1][1]);
+  const list = all.slice(0, top);
+  list.forEach(([as, [ann, inv]], i) => { origins[`AS${as}`] = { invalid: inv, announcements: ann, prefixes: i < detail ? (byOrigin.get(String(as)) || []).sort((x, y) => y.invalid - x.invalid).slice(0, 5) : [] }; });
+  return { generated: new Date(now).toISOString().replace(/\.\d+Z$/, 'Z'), from: new Date(from).toISOString().replace(/\.\d+Z$/, 'Z'), to: new Date(to).toISOString().replace(/\.\d+Z$/, 'Z'), min, omitted: all.length - list.length, ...(collected ? { collected } : {}), origins };
 }
 
 // How a run went: a run that could not listen (RIS Live down, connection refused, nothing received) must not look like a quiet one.
 // stat: {connections, messages, announcements, up: [[from, to], ...] (ms, the times the socket was open), error}; seconds: what was asked for.
-export function collection(stat, seconds) {
+export function collection(stat, seconds, hosts = []) {
   const listened = Math.round(stat.up.reduce((s, [a, b]) => s + Math.max(0, b - a), 0) / 1000);
-  const ok = stat.connections > 0 && stat.messages > 0 && listened >= seconds / 2;
-  return { ok, connections: stat.connections, listened_seconds: listened, requested_seconds: seconds, messages: stat.messages, announcements: stat.announcements, error: stat.error };
+  const seen = stat.collectors ? stat.collectors.size : 0;
+  const errors = stat.errors || 0;
+  // a subscription that RIS Live did not confirm or refused, or a collector that was asked for and never spoke, makes the run partial
+  const confirmed = stat.requested === undefined || stat.acked >= stat.requested;
+  const complete = errors === 0 && confirmed && (!hosts.length || !stat.collectors || hosts.every((h) => stat.collectors.has(h)));
+  const ok = stat.connections > 0 && stat.messages > 0 && listened >= seconds / 2 && complete;
+  return { ok, connections: stat.connections, listened_seconds: listened, requested_seconds: seconds, messages: stat.messages, announcements: stat.announcements, subscriptions: stat.requested || 0, confirmed: stat.acked || 0, collectors: seen, ris_errors: errors, error: stat.error };
 }
 
 // The report of the days (oldest first): the hours, the profile and the busiest origins and prefixes.
@@ -119,8 +127,14 @@ export function buildReport(days, now = Date.now(), top = 50) {
   };
 }
 
-async function readDay(dir, date) {
-  try { return JSON.parse(await readFile(join(dir, `${date.replaceAll('-', '')}.json`), 'utf8')); } catch { return blankDay(date); }
+// sync: a message that arrives after midnight UTC needs the document of the new day at once (the handler of the socket cannot wait)
+function readDay(dir, date) {
+  try { return JSON.parse(readFileSync(join(dir, `${date.replaceAll('-', '')}.json`), 'utf8')); } catch { return blankDay(date); }
+}
+// the documents of the days a run touches, by the day of each moment (a run that crosses midnight UTC touches two)
+export function makeDays(dir) {
+  const days = new Map();
+  return { days, at: (ms) => { const d = dayOf(ms); if (!days.has(d)) days.set(d, readDay(dir, d)); return days.get(d); } };
 }
 const writeJson = async (file, value) => { await writeFile(`${file}.tmp`, JSON.stringify(value)); await rename(`${file}.tmp`, file); };
 
@@ -137,19 +151,18 @@ async function main() {
   try { ixp = new Set(JSON.parse(await readFile(process.env.WATCH_ADOPTION || join(out, 'adoption.json'), 'utf8')).ixp || []); } catch { /* no list */ }
   const hosts = (process.env.WATCH_HOSTS || '').split(',').map((s) => s.trim()).filter(Boolean);
 
-  const days = new Map();
-  const dayAt = async (ms) => { const d = dayOf(ms); if (!days.has(d)) days.set(d, await readDay(dir, d)); return days.get(d); };
+  const { days, at: dayAt } = makeDays(dir);
   let sec = { at: 0, ann: 0, inv: 0 };
   const started = Date.now();
-  let today = await dayAt(started);
+  dayAt(started);
 
   const run = { origins: new Map(), prefixes: new Map() };       // this run only, for invalid-last.json
-  const stat = { connections: 0, messages: 0, announcements: 0, up: [], error: null };
+  const stat = { connections: 0, messages: 0, announcements: 0, up: [], error: null, requested: 0, acked: 0, errors: 0, collectors: new Set(), lastMsg: 0 };
   let upSince = null;
   const closeUp = () => { if (upSince !== null) { stat.up.push([upSince, Date.now()]); upSince = null; } };
   const onMessage = (m) => {
     const now = Date.now();
-    const d = days.get(dayOf(now)) || today;
+    const d = dayAt(now);                                          // the day of this message, which is not the one of the start when the run crosses midnight UTC
     const h = d.hours[new Date(now).getUTCHours()];
     h.messages++; stat.messages++;
     const s = Math.floor(now / 1000);
@@ -174,18 +187,29 @@ async function main() {
     let ws = null, tries = 0;
     const open = () => {
       ws = new WebSocket(RIS_LIVE);
-      ws.onopen = () => { stat.connections++; upSince = Date.now(); for (const host of hosts.length ? hosts : [undefined]) ws.send(JSON.stringify({ type: 'ris_subscribe', data: { type: 'UPDATE', require: 'announcements', ...(host ? { host } : {}) } })); };
-      ws.onmessage = (e) => { try { const m = JSON.parse(e.data); if (m.type === 'ris_message') onMessage(m.data); } catch { /* a message that is not JSON */ } };
+      ws.onopen = () => { stat.connections++; upSince = Date.now(); stat.lastMsg = upSince; for (const host of hosts.length ? hosts : [undefined]) { stat.requested++; ws.send(JSON.stringify({ type: 'ris_subscribe', data: { type: 'UPDATE', require: 'announcements', ...(host ? { host } : {}), socketOptions: { acknowledge: true } } })); } };
+      ws.onmessage = (e) => {
+        try {
+          const m = JSON.parse(e.data);
+          stat.lastMsg = Date.now();
+          // "rrc00.ripe.net" is asked for as "rrc00"
+          if (m.type === 'ris_message') { if (m.data && m.data.host) stat.collectors.add(String(m.data.host).split('.')[0]); onMessage(m.data); }
+          else if (m.type === 'ris_subscribe_ok') stat.acked++;
+          else if (m.type === 'ris_error') { stat.errors++; stat.error = String((m.data && m.data.message) || 'ris_error').slice(0, 100); }
+        } catch { /* a message that is not JSON */ }
+      };
       ws.onclose = () => { closeUp(); if (Date.now() < deadline - 5000 && tries++ < 3) setTimeout(open, 2000); else resolve(); };
       ws.onerror = (e) => { stat.error = String((e && (e.message || e.type)) || 'error').slice(0, 100); };
     };
     open();
-    setTimeout(() => { if (ws) { ws.onclose = () => { closeUp(); resolve(); }; ws.close(); } setTimeout(resolve, 2000); }, seconds * 1000);
+    // the stream of the collectors never stays silent for long: a socket that says nothing for 30 s is dead, and is closed to be opened again
+    const watchdog = setInterval(() => { if (upSince !== null && Date.now() - stat.lastMsg > 30000 && ws) ws.close(); }, 5000);
+    setTimeout(() => { clearInterval(watchdog); if (ws) { ws.onclose = () => { closeUp(); resolve(); }; ws.close(); } setTimeout(resolve, 2000); }, seconds * 1000);
   });
   closeUp();
-  const collected = collection(stat, seconds);
+  const collected = collection(stat, seconds, hosts);
   // the time listened to goes to the hours it covered: the seconds in which the socket was open, not the ones in which nothing could be heard
-  for (const [from, to] of stat.up) for (let t = from; t < to; t += 1000) { const d = days.get(dayOf(t)) || (await dayAt(t)); d.hours[new Date(t).getUTCHours()].seconds++; }
+  for (const [from, to] of stat.up) for (let t = from; t < to; t += 1000) { const d = dayAt(t); d.hours[new Date(t).getUTCHours()].seconds++; }
   for (const d of days.values()) await writeJson(join(dir, `${d.date.replaceAll('-', '')}.json`), d);
   const names = (await readdir(dir)).filter((f) => /^\d{8}\.json$/.test(f)).sort();
   for (const f of names.slice(0, -KEEP_DAYS)) await unlink(join(dir, f));

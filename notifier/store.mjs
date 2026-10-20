@@ -79,7 +79,8 @@ export function openStore(path) {
     countReports: db.prepare('SELECT COUNT(*) AS n FROM reports'),
     outboxAdd: db.prepare('INSERT INTO outbox (sub_id, job, created, next_try) VALUES (?, ?, ?, ?)'),
     // the subscriptions whose OLDEST message is due, with all their messages: a new message never goes before an older one that is waiting to be tried again
-    outboxDue: db.prepare('SELECT o.* FROM outbox o JOIN (SELECT sub_id, MIN(id) AS first FROM outbox GROUP BY sub_id) h ON h.sub_id = o.sub_id JOIN outbox f ON f.id = h.first AND f.next_try <= ? ORDER BY o.id LIMIT ?'),
+    // at most `perSub` messages for each, so that one with a backlog does not take the whole round from the others
+    outboxDue: db.prepare('SELECT id, sub_id, job, created, attempts, next_try FROM (SELECT o.*, ROW_NUMBER() OVER (PARTITION BY o.sub_id ORDER BY o.id) AS rn FROM outbox o JOIN (SELECT sub_id, MIN(id) AS first FROM outbox GROUP BY sub_id) h ON h.sub_id = o.sub_id JOIN outbox f ON f.id = h.first AND f.next_try <= ?) WHERE rn <= ? ORDER BY id LIMIT ?'),
     outboxOldest: db.prepare('SELECT MIN(created) AS t FROM outbox'),
     disabledCount: db.prepare('SELECT COUNT(*) AS n FROM subscriptions WHERE status = \'disabled\''),
     outboxDone: db.prepare('DELETE FROM outbox WHERE id = ?'),
@@ -120,7 +121,7 @@ export function openStore(path) {
     countReports: () => q.countReports.get().n,
     // bytes, not characters: LENGTH() of a TEXT value counts the characters, and an emoji is one of them and four bytes
     outboxAdd: (subId, job, now) => Number(q.outboxAdd.run(subId, job, now, now).lastInsertRowid),
-    outboxDue: (now, limit = 2000) => q.outboxDue.all(now, limit).map(plain),
+    outboxDue: (now, limit = 2000, perSub = 10) => q.outboxDue.all(now, perSub, limit).map(plain),
     outboxDone: (id) => q.outboxDone.run(id),
     // a failure delays the whole queue of the subscription, so that the messages behind the one that failed do not overtake it
     outboxRetry: (id, subId, nextTry) => { q.outboxRetry.run(id); q.outboxWait.run(nextTry, subId); },

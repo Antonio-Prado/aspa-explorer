@@ -5,6 +5,15 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.47.5] - 2026-10-20
+
+### Fixed
+- A subscription with a long queue took the whole round of 2,000 messages and the others waited: the round now takes at most ten messages for each subscription (in order, with the retries as before), and a drain goes on in rounds until nothing is due.
+- A run of `watch-invalid` that crossed midnight UTC put the announcements of the first minutes of the new day in the document of the day before. Each announcement now goes to the document of the day it arrived.
+- `invalid-last.json` kept only the 300 busiest origins, so that an AS with exactly the threshold chosen by a subscriber was left out in a large incident, and nobody was told. The file now holds every origin that reached the minimum (up to 5,000; `omitted` says how many were cut, if any); only the busiest 300 carry their prefixes.
+- The subscriptions to RIS Live are asked to be confirmed. The run is called partial (`collected.ok` false) when RIS Live answers `ris_error`, when a subscription is not confirmed, or when a collector that was asked for (`WATCH_HOSTS`) never spoke; the file says how many subscriptions were confirmed and how many collectors were heard. A socket that is silent for 30 seconds is closed and opened again.
+- The health called a source `ok` when it was read well, although its data was days old (the web server keeps answering with the last file when the job that makes it stops). The notifier now looks at the date of the data of each source: ASPAs and state of the service one hour, invalid announcements 30 minutes, places of valley 36 hours; the health shows `data_generated` and `data_age_seconds`.
+
 ## [1.47.4] - 2026-10-20
 
 ### Fixed

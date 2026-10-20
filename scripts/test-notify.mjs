@@ -658,7 +658,7 @@ await test('API: two verifications of the same webhook and AS do not run togethe
 
 await test('pulse: each source has its own count, and one that is down shows although the others work', () => {
   let t = 1000000;
-  const p = makePulse(['aspas', 'invalid'], () => t);
+  const p = makePulse(['aspas', 'invalid'], () => t, {});
   p.ok('aspas'); p.ok('invalid');
   assert.equal(p.summary(600000).invalid.ok, true);
   p.fail('invalid'); p.fail('invalid');
@@ -676,7 +676,7 @@ await test('pulse: each source has its own count, and one that is down shows alt
 });
 
 await test('pulse: track counts the failure and gives the error back', async () => {
-  const p = makePulse(['leaks']);
+  const p = makePulse(['leaks'], undefined, {});
   assert.equal(await p.track('leaks', async () => 7), 7);
   await assert.rejects(() => p.track('leaks', async () => { throw new Error('no file'); }), /no file/);
   assert.equal(p.get('leaks').failures, 1);
@@ -802,7 +802,7 @@ await test('mail: a sendmail that hangs is killed and the delivery fails', async
 });
 
 await test('pulse: the delivery of the queue is a source of its own', async () => {
-  const p = makePulse(['aspas', 'delivery']);
+  const p = makePulse(['aspas', 'delivery'], undefined, {});
   p.ok('aspas');
   for (let i = 0; i < 5; i++) { p.ok('aspas'); await assert.rejects(() => p.track('delivery', async () => { throw new Error('db'); })); }
   const s = p.summary(600000);
@@ -830,6 +830,38 @@ await test('outbox: an error of the queue itself (the database) reaches the call
   const p = makePulse(['delivery']);
   await assert.rejects(() => p.track('delivery', () => b.outbox.drain()));
   assert.equal(p.get('delivery').failures, 1);
+});
+
+
+await test('pulse: a source that is read well but whose data is old is not ok', () => {
+  let t = Date.UTC(2026, 9, 20, 12, 0, 0);
+  const p = makePulse(['invalid', 'leaks', 'delivery'], () => t, { invalid: 1800, leaks: 36 * 3600 });
+  p.ok('invalid', t - 600 * 1000); p.ok('leaks', t - 20 * 3600 * 1000); p.ok('delivery');
+  let s = p.summary(60000 * 10);
+  assert.equal(s.invalid.ok, true); assert.equal(s.leaks.ok, true); assert.equal(s.delivery.ok, true);
+  for (let i = 0; i < 4; i++) { t += 600 * 1000; p.ok('invalid', t - 3 * 86400 * 1000); p.ok('delivery'); }     // read well every ten minutes, always the same old file
+  s = p.summary(60000 * 10);
+  assert.equal(s.invalid.ok, false);
+  assert.equal(s.invalid.failures_in_a_row, 0);
+  assert.ok(s.invalid.data_age_seconds >= 3 * 86400);
+  assert.equal(s.delivery.ok, true);                                       // no age for the queue
+  const fresh = makePulse(['invalid'], () => t, { invalid: 1800 });
+  fresh.ok('invalid');                                                      // a read with no date of the data is not fresh either
+  assert.equal(fresh.summary(600000).invalid.ok, false);
+});
+
+await test('outbox: a subscription with a long queue does not take the round from the others', async () => {
+  const { store, outbox, id } = outboxSetup(async () => {});
+  const b = store.insert('webhook', 'https://b.example.org/x', 'AS2', 's', 1000, 0, 0); store.activate(b, 1000);
+  const c = store.insert('webhook', 'https://c.example.org/x', 'AS3', 's', 1000, 0, 0); store.activate(c, 1000);
+  for (let i = 0; i < 40; i++) store.outboxAdd(id, '{}', 1000);
+  store.outboxAdd(b, '{}', 1000); store.outboxAdd(c, '{}', 1000);
+  const rows = store.outboxDue(1000, 30, 8);
+  const by = {}; for (const r of rows) by[r.sub_id] = (by[r.sub_id] || 0) + 1;
+  assert.deepEqual(by, { [id]: 8, [b]: 1, [c]: 1 });                         // the old limit of 30 would have been all for the first
+  assert.deepEqual(rows.filter((r) => r.sub_id === id).map((r) => r.id), [1, 2, 3, 4, 5, 6, 7, 8]);     // in order
+  await outbox.drain();
+  assert.equal(store.outboxCount(), 0);                                      // and a drain goes on in rounds until all has gone
 });
 
 console.log(`${passed} tests passed`);

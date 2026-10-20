@@ -1,6 +1,9 @@
 // Unit tests for scripts/watch-invalid.mjs (no dependencies, no network). Run with: node scripts/test-invalid.mjs
 import assert from 'node:assert/strict';
-import { announcementsOf, blankDay, count, buildReport, dayOf, buildLast, collection } from './watch-invalid.mjs';
+import { mkdtempSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { announcementsOf, blankDay, count, buildReport, dayOf, buildLast, collection, makeDays } from './watch-invalid.mjs';
 
 let passed = 0;
 const test = (name, fn) => { fn(); passed++; console.log('ok  ', name); };
@@ -84,6 +87,36 @@ test('a run that could not listen is told apart from a quiet one', () => {
   const run = { origins: new Map(), prefixes: new Map() };
   assert.deepEqual(buildLast(run, t, t, t, 5, 300, down).collected, down);
   assert.equal('collected' in buildLast(run, t, t, t), false);
+});
+
+test('every origin that reached the threshold is in the file, also when they are many, and the file says when it had to cut', () => {
+  const origins = new Map(); for (let i = 1; i <= 401; i++) origins.set(i, [100, i <= 400 ? 50 : 5]);      // 401 origins over the threshold; AS401 has exactly 5
+  const run = { origins, prefixes: new Map([['192.0.2.0/24|1', 9]]) };
+  const d = buildLast(run, 0, 0, 0);
+  assert.equal(Object.keys(d.origins).length, 401);
+  assert.ok(d.origins.AS401);
+  assert.equal(d.omitted, 0);
+  assert.equal(d.origins.AS1.prefixes.length, 1);                           // the busiest have their prefixes
+  assert.equal(d.origins.AS401.prefixes.length, 0);                         // the others only the counts
+  assert.equal(buildLast(run, 0, 0, 0, 5, 100).omitted, 301);
+});
+
+test('RIS Live: a run is partial when a subscription is refused or not confirmed, or a collector that was asked for never spoke', () => {
+  const base = { connections: 1, messages: 100, announcements: 900, up: [[0, 540000]], error: null, requested: 2, acked: 2, errors: 0, collectors: new Set(['rrc00', 'rrc01']) };
+  assert.equal(collection(base, 540, ['rrc00', 'rrc01']).ok, true);
+  assert.equal(collection({ ...base, errors: 1 }, 540).ok, false);
+  assert.equal(collection({ ...base, acked: 1 }, 540).ok, false);
+  assert.equal(collection(base, 540, ['rrc00', 'rrc01', 'rrc99']).ok, false);
+  assert.equal(collection(base, 540, ['rrc00', 'rrc01', 'rrc99']).collectors, 2);
+});
+
+test('a run that crosses midnight UTC puts each announcement in the day it arrived', () => {
+  const { days, at } = makeDays(mkdtempSync(join(tmpdir(), 'days-')));
+  const before = at(Date.UTC(2026, 9, 20, 23, 55)), after = at(Date.UTC(2026, 9, 21, 0, 1));
+  assert.notEqual(before, after);
+  assert.equal(before.date, '2026-10-20');
+  assert.equal(after.date, '2026-10-21');
+  assert.equal(days.size, 2);
 });
 
 console.log(`${passed} tests passed`);

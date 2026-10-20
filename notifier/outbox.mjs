@@ -7,6 +7,7 @@
 import { pool } from './pool.mjs';
 
 export const MAX_FAILS = 5;
+export const MAX_ROUNDS = 50;                                   // rounds in one drain: the rest waits for the next one, a minute later
 export const MAX_AGE = 2 * 86400;                              // a message that is older than this is not worth sending any more
 export const RETRY = [600, 1800, 3600, 7200, 14400];           // seconds to wait after the 1st, 2nd, ... failed attempt
 
@@ -42,14 +43,20 @@ export function makeOutbox({ store, send, log = () => {}, now = () => Math.floor
     if (draining) return 0;
     draining = true;
     try {
-      const rows = store.outboxDue(now());
-      const bySub = new Map();
-      for (const r of rows) { if (!bySub.has(r.sub_id)) bySub.set(r.sub_id, []); bySub.get(r.sub_id).push(r); }
-      // a failure of a recipient is dealt with inside oneSubscription (retry, counter); what reaches the pool is the queue itself failing (the database)
-      const broken = [];
-      await pool([...bySub].map(([id, list]) => () => oneSubscription(id, list)), concurrency, (err) => { broken.push(err); log(`delivery failed: ${err.message}`); });
-      if (broken.length) throw new Error(`${broken.length} subscription(s) could not be processed: ${broken[0].message}`);
-      return rows.length;
+      // rounds of a few messages for each subscription, until nothing is due: a subscription with a long queue goes on, but never at the expense of the others
+      let total = 0;
+      for (let round = 0; round < MAX_ROUNDS; round++) {
+        const rows = store.outboxDue(now());
+        if (!rows.length) break;
+        const bySub = new Map();
+        for (const r of rows) { if (!bySub.has(r.sub_id)) bySub.set(r.sub_id, []); bySub.get(r.sub_id).push(r); }
+        // a failure of a recipient is dealt with inside oneSubscription (retry, counter); what reaches the pool is the queue itself failing (the database)
+        const broken = [];
+        await pool([...bySub].map(([id, list]) => () => oneSubscription(id, list)), concurrency, (err) => { broken.push(err); log(`delivery failed: ${err.message}`); });
+        if (broken.length) throw new Error(`${broken.length} subscription(s) could not be processed: ${broken[0].message}`);
+        total += rows.length;
+      }
+      return total;
     } finally { draining = false; }
   }
 
