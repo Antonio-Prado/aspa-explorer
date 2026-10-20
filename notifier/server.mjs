@@ -37,6 +37,7 @@ export function makeApi(deps) {
   const perIp = deps.perIp || limiter(10, HOUR);
   const global = deps.global || limiter(400, HOUR);
   const MAX_PER_TARGET = deps.maxPerTarget || 20, MAX_PER_ASN = deps.maxPerAsn || 500;
+  const verifying = new Set();
   const MAX_PENDING_PER_ASN = deps.maxPendingPerAsn || 100, MAX_PENDING = deps.maxPending || 5000;
 
   const confirmSalt = (id) => { const r = store.get(id); return r ? String(r.attempted) : ''; };
@@ -92,20 +93,26 @@ export function makeApi(deps) {
     if (row && row.status === 'active') return bad('this webhook is already subscribed to this AS', 409);
     if (!row && store.countTarget('webhook', target) >= MAX_PER_TARGET) return bad('too many subscriptions for this webhook', 429);
     if (!global('webhook')) return bad('the service is busy, try again later', 503);
-    const secret = 'whsec_' + randomBytes(24).toString('hex');
-    const id = row ? row.id : store.insert('webhook', target, asn, secret, t, leaks, invalid);
-    if (row) { store.attempt(id, t, secret); store.setLeaks(id, leaks); store.setInvalid(id, invalid); }
-    const challenge = randomBytes(16).toString('hex');
+    // one verification at a time for the same address and AS: a second request would change the secret, or delete the record, under the first one
+    const vkey = `${target} ${asn}`;
+    if (verifying.has(vkey)) return bad('this webhook is being verified already, try again in a minute', 409);
+    verifying.add(vkey);
     try {
-      const r = await verifyWebhook(target, { type: 'verification', challenge, asn, unsubscribe: unsubscribeUrl(id) }, secret);
-      if (!(r.status >= 200 && r.status < 300) || !String(r.body).includes(challenge)) throw new Error(`the address answered HTTP ${r.status} without repeating the challenge`);
-    } catch (err) {
-      store.remove(id);
-      return bad(`verification failed: ${err.message}`, 400);
-    }
-    if (store.countAsn(asn) >= MAX_PER_ASN) { store.remove(id); return bad('this AS has reached the limit of subscriptions', 429); }     // other requests may have taken the place while the address answered
-    store.activate(id, t);
-    return reply(201, { status: 'active', asn, leaks: !!leaks, invalid, secret, unsubscribe: unsubscribeUrl(id), message: 'Subscribed. The secret is shown only now: use it to check the X-ASPA-Signature header of each delivery.' });
+      const secret = 'whsec_' + randomBytes(24).toString('hex');
+      const id = row ? row.id : store.insert('webhook', target, asn, secret, t, leaks, invalid);
+      if (row) { store.attempt(id, t, secret); store.setLeaks(id, leaks); store.setInvalid(id, invalid); }
+      const challenge = randomBytes(16).toString('hex');
+      try {
+        const r = await verifyWebhook(target, { type: 'verification', challenge, asn, unsubscribe: unsubscribeUrl(id) }, secret);
+        if (!(r.status >= 200 && r.status < 300) || !String(r.body).includes(challenge)) throw new Error(`the address answered HTTP ${r.status} without repeating the challenge`);
+      } catch (err) {
+        store.remove(id);
+        return bad(`verification failed: ${err.message}`, 400);
+      }
+      if (store.countAsn(asn) >= MAX_PER_ASN) { store.remove(id); return bad('this AS has reached the limit of subscriptions', 429); }     // other requests may have taken the place while the address answered
+      store.activate(id, t);
+      return reply(201, { status: 'active', asn, leaks: !!leaks, invalid, secret, unsubscribe: unsubscribeUrl(id), message: 'Subscribed. The secret is shown only now: use it to check the X-ASPA-Signature header of each delivery.' });
+    } finally { verifying.delete(vkey); }
   }
 
   function confirm(body) {

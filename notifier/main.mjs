@@ -25,6 +25,7 @@ import { stabilise, audience, describeEvent, stateOf, newPlaces, describePlace }
 import { compose, serialize, sendmail } from './mail.mjs';
 import { post } from './webhook.mjs';
 import { makeOutbox } from './outbox.mjs';
+import { makePulse } from './pulse.mjs';
 import { TTL_DAYS } from './reports.mjs';
 import { dueInvalid, describeInvalid } from './invalid.mjs';
 import { watchStatus, describeStatusEvent, statusSubject } from './status.mjs';
@@ -215,15 +216,17 @@ async function pollInvalid() {
 
 // what /api/v1/subscriptions/health says: when the data was last read, and whether the last reads worked
 const pulse = { lastOk: null, lastTry: null, failures: 0 };
+const sources = makePulse();      // the same for each file that is read: one that is down shows in the health even when the others work
 const STUCK = 12 * 3600;      // the retries of a message last about eight hours and then the subscription is switched off: older than this, the delivery is stuck
 const health = () => {
   const oldest = store.outboxOldest();
   const waiting = oldest ? Math.floor(Date.now() / 1000) - oldest : 0;
   return {
-  ok: pulse.lastOk !== null && pulse.failures < 3 && Date.now() - pulse.lastOk < 3 * POLL && waiting < STUCK,
+  ok: pulse.lastOk !== null && pulse.failures < 3 && Date.now() - pulse.lastOk < 3 * POLL && waiting < STUCK && Object.values(sources.summary(POLL)).every((x) => x.ok),
   outbox_pending: store.outboxCount(),
   oldest_pending_seconds: waiting,
   disabled_subscriptions: store.countDisabled(),
+  sources: sources.summary(POLL),
   last_poll: pulse.lastOk && new Date(pulse.lastOk).toISOString(),
   failures_in_a_row: pulse.failures,
   poll_seconds: POLL / 1000,
@@ -242,17 +245,17 @@ async function poll() {
     if (!Array.isArray(data.aspas) || !data.aspas.length) throw new Error('empty ASPA data, ignored');
     const current = stateOf(data.aspas);
     const saved = store.getState('committed');
-    pulse.lastOk = Date.now(); pulse.failures = 0;
+    pulse.lastOk = Date.now(); pulse.failures = 0; sources.ok('aspas');
     if (!saved) { store.setState('committed', [...current]); store.setState('pending', {}); log(`first run: ${current.size} ASPAs taken as the starting point`); return; }
     const out = stabilise(new Map(saved), current, store.getState('pending') || {});
     if (out.events.length) { log(`${out.events.length} change(s) confirmed`); queueChanges(out.events); }
     store.setState('committed', [...out.committed]);
     store.setState('pending', out.pending);
-    try { await pollLeaks(); } catch (err) { log(`leaks not read: ${err.message}`); }
-    try { await pollStatus(); } catch (err) { log(`status not read: ${err.message}`); }
-    try { await pollInvalid(); } catch (err) { log(`invalid announcements not read: ${err.message}`); }
+    try { await sources.track('leaks', pollLeaks); } catch (err) { log(`leaks not read: ${err.message}`); }
+    try { await sources.track('status', pollStatus); } catch (err) { log(`status not read: ${err.message}`); }
+    try { await sources.track('invalid', pollInvalid); } catch (err) { log(`invalid announcements not read: ${err.message}`); }
     await outbox.drain();
-  } catch (err) { pulse.failures++; log(`poll failed: ${err.message}`); } finally { busy = false; }
+  } catch (err) { pulse.failures++; sources.fail('aspas'); log(`poll failed: ${err.message}`); } finally { busy = false; }
 }
 
 // the shell of the page of a report, read from the web root and kept a minute
@@ -270,6 +273,8 @@ function housekeeping() {
   try {
     const purged = store.purge(Math.floor(Date.now() / 1000) - 2 * 86400);
     if (purged) log(`${purged} unconfirmed request(s) deleted`);
+    const gone = store.purgeDisabled(Math.floor(Date.now() / 1000) - 30 * 86400);
+    if (gone) log(`${gone} subscription(s) switched off for more than 30 days deleted`);
     const old = store.purgeReports(Math.floor(Date.now() / 1000) - TTL_DAYS * 86400);
     if (old) log(`${old} expired report(s) deleted`);
   } catch (err) { log(`clean-up failed: ${err.message}`); }

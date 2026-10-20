@@ -38,6 +38,7 @@ export function openStore(path) {
       next_try INTEGER NOT NULL
     );
     CREATE INDEX IF NOT EXISTS outbox_due ON outbox (next_try, id);
+    CREATE INDEX IF NOT EXISTS outbox_sub ON outbox (sub_id, id);
   `);
   // 1.19.0: a subscription can ask for the places of valley that involve its AS as well (older files do not have the column)
   if (!db.prepare('PRAGMA table_info(subscriptions)').all().some((c) => c.name === 'leaks')) db.exec('ALTER TABLE subscriptions ADD COLUMN leaks INTEGER NOT NULL DEFAULT 0');
@@ -58,7 +59,9 @@ export function openStore(path) {
     failed: db.prepare('UPDATE subscriptions SET fails = fails + 1 WHERE id = ?'),
     disable: db.prepare('UPDATE subscriptions SET status = \'disabled\' WHERE id = ?'),
     purge: db.prepare('DELETE FROM subscriptions WHERE status = \'pending\' AND attempted < ?'),
-    perTarget: db.prepare('SELECT COUNT(*) AS n FROM subscriptions WHERE kind = ? AND target = ?'),
+    // the limit for an address counts the subscriptions that are not switched off: those do not hold a place
+    perTarget: db.prepare('SELECT COUNT(*) AS n FROM subscriptions WHERE kind = ? AND target = ? AND status != \'disabled\''),
+    purgeDisabled: db.prepare('DELETE FROM subscriptions WHERE status = \'disabled\' AND COALESCE(last_sent, confirmed, created) < ?'),
     // the limit of an AS is on the subscriptions that are working: the ones that nobody has confirmed (and are deleted after two days) must not fill it
     perAsn: db.prepare('SELECT COUNT(*) AS n FROM subscriptions WHERE asn = ? AND status = \'active\''),
     pendingAsn: db.prepare('SELECT COUNT(*) AS n FROM subscriptions WHERE asn = ? AND status = \'pending\''),
@@ -71,7 +74,7 @@ export function openStore(path) {
     countReports: db.prepare('SELECT COUNT(*) AS n FROM reports'),
     outboxAdd: db.prepare('INSERT INTO outbox (sub_id, job, created, next_try) VALUES (?, ?, ?, ?)'),
     // the subscriptions whose OLDEST message is due, with all their messages: a new message never goes before an older one that is waiting to be tried again
-    outboxDue: db.prepare('SELECT o.* FROM outbox o WHERE o.sub_id IN (SELECT h.sub_id FROM outbox h WHERE h.id = (SELECT MIN(id) FROM outbox WHERE sub_id = h.sub_id) AND h.next_try <= ?) ORDER BY o.id'),
+    outboxDue: db.prepare('SELECT o.* FROM outbox o JOIN (SELECT sub_id, MIN(id) AS first FROM outbox GROUP BY sub_id) h ON h.sub_id = o.sub_id JOIN outbox f ON f.id = h.first AND f.next_try <= ? ORDER BY o.id LIMIT ?'),
     outboxOldest: db.prepare('SELECT MIN(created) AS t FROM outbox'),
     disabledCount: db.prepare('SELECT COUNT(*) AS n FROM subscriptions WHERE status = \'disabled\''),
     outboxDone: db.prepare('DELETE FROM outbox WHERE id = ?'),
@@ -98,6 +101,7 @@ export function openStore(path) {
     sent: (id, now) => q.sent.run(now, id),
     failed: (id) => q.failed.run(id),
     disable: (id) => q.disable.run(id),
+    purgeDisabled: (olderThan) => Number(q.purgeDisabled.run(olderThan).changes),
     purge: (olderThan) => Number(q.purge.run(olderThan).changes),
     countTarget: (kind, target) => q.perTarget.get(kind, target).n,
     countAsn: (asn) => q.perAsn.get(asn).n,
@@ -111,7 +115,7 @@ export function openStore(path) {
     countReports: () => q.countReports.get().n,
     // bytes, not characters: LENGTH() of a TEXT value counts the characters, and an emoji is one of them and four bytes
     outboxAdd: (subId, job, now) => Number(q.outboxAdd.run(subId, job, now, now).lastInsertRowid),
-    outboxDue: (now) => q.outboxDue.all(now).map(plain),
+    outboxDue: (now, limit = 2000) => q.outboxDue.all(now, limit).map(plain),
     outboxDone: (id) => q.outboxDone.run(id),
     // a failure delays the whole queue of the subscription, so that the messages behind the one that failed do not overtake it
     outboxRetry: (id, subId, nextTry) => { q.outboxRetry.run(id); q.outboxWait.run(nextTry, subId); },

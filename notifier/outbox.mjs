@@ -44,7 +44,7 @@ export function makeOutbox({ store, send, log = () => {}, now = () => Math.floor
     try {
       const rows = store.outboxDue(now());
       const bySub = new Map();
-      for (const r of rows) bySub.set(r.sub_id, [...(bySub.get(r.sub_id) || []), r]);
+      for (const r of rows) { if (!bySub.has(r.sub_id)) bySub.set(r.sub_id, []); bySub.get(r.sub_id).push(r); }
       await pool([...bySub].map(([id, list]) => () => oneSubscription(id, list)), concurrency, (err) => log(`delivery failed: ${err.message}`));
       return rows.length;
     } finally { draining = false; }

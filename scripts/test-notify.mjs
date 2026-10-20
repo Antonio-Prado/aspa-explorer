@@ -5,6 +5,7 @@ import { generateKeyPairSync } from 'node:crypto';
 import { makeToken, readToken } from '../notifier/tokens.mjs';
 import { stabilise, audience, describeEvent, newPlaces, describePlace } from '../notifier/changes.mjs';
 import { pool } from '../notifier/pool.mjs';
+import { makePulse } from '../notifier/pulse.mjs';
 import { makeOutbox, RETRY, MAX_FAILS } from '../notifier/outbox.mjs';
 import { isPublicIp, parseWebhookUrl, post, signature } from '../notifier/webhook.mjs';
 import { sign, verify, relaxBody } from '../notifier/dkim.mjs';
@@ -625,6 +626,59 @@ await test('API: the limit of an AS is checked again at the confirmation', async
   assert.equal(api.confirm({ token: mails[0].token }).status, 200);
   assert.equal(api.confirm({ token: mails[1].token }).status, 429);          // the place was taken while it waited
   assert.equal(store.countAsn('AS7'), 1);
+});
+
+await test('API: the subscriptions that are switched off do not count for the limit of an address, and they are deleted after thirty days', async () => {
+  const { store, api } = setup({ perIp: () => true, global: () => true });
+  for (let i = 0; i < 20; i++) { const id = store.insert('email', 'me@example.com', `AS${100 + i}`, null, 1000, 0, 0); store.activate(id, 1000); store.disable(id); }
+  assert.equal(store.countTarget('email', 'me@example.com'), 0);
+  assert.equal((await api.subscribe({ kind: 'email', target: 'me@example.com', asn: 'AS3333' }, '1.1.1.1')).status, 202);
+  assert.equal(store.countTarget('email', 'me@example.com'), 1);           // it is a new subscription: it was not refused for the 20 that do not work
+  assert.equal(store.purgeDisabled(1000 + 30 * 86400 + 1), 20);
+  assert.equal(store.countTarget('email', 'me@example.com'), 1);           // the one that is waiting stays
+});
+
+await test('API: two verifications of the same webhook and AS do not run together', async () => {
+  let release; const gate = new Promise((r) => { release = r; });
+  const { store, api } = setup({ perIp: () => true, global: () => true, verifyWebhook: async (url, payload) => { await gate; return { status: 200, body: JSON.stringify({ challenge: payload.challenge }) }; } });
+  const first = api.subscribe({ kind: 'webhook', target: 'https://hooks.example.org/in', asn: 'AS3333' }, '2.2.2.2');
+  const second = await api.subscribe({ kind: 'webhook', target: 'https://hooks.example.org/in', asn: 'AS3333' }, '2.2.2.3');
+  assert.equal(second.status, 409);                                        // the first one is still being checked
+  release();
+  const r = await first;
+  assert.equal(r.status, 201);
+  assert.equal(store.allActive().length, 1);
+  // and a failed check removes only its own record, once it is over the same address can try again
+  const { store: s2, api: a2 } = setup({ perIp: () => true, global: () => true, verifyWebhook: async () => ({ status: 500, body: '' }) });
+  assert.equal((await a2.subscribe({ kind: 'webhook', target: 'https://hooks.example.org/in', asn: 'AS3333' }, '2.2.2.2')).status, 400);
+  assert.equal((await a2.subscribe({ kind: 'webhook', target: 'https://hooks.example.org/in', asn: 'AS3333' }, '2.2.2.3')).status, 400);
+  assert.equal(s2.countAsn('AS3333'), 0);
+});
+
+await test('pulse: each source has its own count, and one that is down shows although the others work', () => {
+  let t = 1000000;
+  const p = makePulse(['aspas', 'invalid'], () => t);
+  p.ok('aspas'); p.ok('invalid');
+  assert.equal(p.summary(600000).invalid.ok, true);
+  p.fail('invalid'); p.fail('invalid');
+  assert.equal(p.summary(600000).invalid.ok, true);                        // two in a row is not yet down
+  p.fail('invalid');
+  const s = p.summary(600000);
+  assert.equal(s.invalid.ok, false);
+  assert.equal(s.invalid.failures_in_a_row, 3);
+  assert.equal(s.aspas.ok, true);
+  p.ok('invalid');
+  assert.equal(p.summary(600000).invalid.ok, true);                        // read well again
+  t += 3 * 600000 + 1;
+  assert.equal(p.summary(600000).aspas.ok, false);                         // not read for three rounds
+  assert.equal(makePulse(['x']).summary(1).x.ok, false);                   // never read
+});
+
+await test('pulse: track counts the failure and gives the error back', async () => {
+  const p = makePulse(['leaks']);
+  assert.equal(await p.track('leaks', async () => 7), 7);
+  await assert.rejects(() => p.track('leaks', async () => { throw new Error('no file'); }), /no file/);
+  assert.equal(p.get('leaks').failures, 1);
 });
 
 await test('outbox: after five failures the subscription is disabled and its messages are dropped; a message that arrives later does not wake it', async () => {

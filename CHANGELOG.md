@@ -5,6 +5,19 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.47.2] - 2026-10-20
+
+### Fixed
+- Two requests together to subscribe the same webhook to the same AS could work on one record: the second changed the secret and, when its check failed, deleted the record that the first had just activated, so that the first one was told *active* and had nothing. Only one check of an address and AS runs at a time; the other is answered with 409.
+- The subscriptions that were switched off counted for the limit of 20 for an address (and were never deleted): an address that had lost 20 of them could not follow a new AS, and was answered *pending* without a mail. They no longer count, and are deleted after thirty days.
+- The Atom feed of the changes said every day was updated at 06:30 UTC, even when the hourly run added changes to that day, so that a reader that goes by *id* and *updated* did not see them. An entry now takes the time of the run when its content changes and keeps its time when it does not (`scripts/feed.mjs`, with tests).
+- `/api/v1/subscriptions/health` was `ok` when only the ASPAs were read: the places of valley, the state of the service and the invalid announcements could be unreadable for days. Each source now has its own last success and failures in a row (`sources`), and the answer is not `ok` if one of them has failed three times.
+
+### Changed
+- The queue is read with an index and with a limit (2,000 messages in a round), and a subscription is grouped in linear time: the query that picks the subscriptions whose oldest message is due grew with the square of their number.
+- `scripts/mirror-wiki.sh` gives the tokens to git in its environment and no longer in the address and the arguments, which every user of the host can read with `ps`.
+- `scripts/run-a11y.sh` installs exact versions of Playwright and axe-core, and without running their install scripts.
+
 ## [1.47.1] - 2026-10-20
 
 ### Fixed

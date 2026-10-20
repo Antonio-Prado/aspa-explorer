@@ -15,6 +15,7 @@
 // and MLFLOW_TOKEN.
 
 import { createRequire } from 'node:module';
+import { atomFeed } from './feed.mjs';
 
 const { applyDay, classify } = createRequire(import.meta.url)('../site/history.js');
 
@@ -126,39 +127,6 @@ if (!HISTORY_ONLY) await detectAuth();
 // the repository: the project access token (MLFLOW_TOKEN) can, the job token cannot. A failure here
 // must not hide the model experiment run below, so it is reported at the end.
 const HISTORY_BRANCH = process.env.ASPA_HISTORY_BRANCH || 'history';
-const esc = (t) => String(t).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-
-function atomFeed(events) {
-  const kinds = classify(events);
-  const days = [...new Set(kinds.map((e) => e.date))].sort().reverse().slice(0, 30);
-  const entries = days.map((d) => {
-    const ev = kinds.filter((e) => e.date === d);
-    const n = (k) => ev.filter((e) => e.kind === k).length;
-    const what = (e) => (e.kind === 'new' ? `new, providers ${e.providers.join(', ')}`
-      : e.kind === 'removed' ? 'removed'
-        : `providers ${[...e.added.map((p) => `+${p}`), ...e.dropped.map((p) => `-${p}`)].join(' ')}`);
-    const items = ev.slice(0, 200).map((e) => `<li><a href="${SITE}/#${e.customer}">${e.customer}</a>: ${esc(what(e))}</li>`).join('');
-    const more = ev.length > 200 ? `<p>and ${ev.length - 200} more</p>` : '';
-    return `  <entry>
-    <id>tag:aspa.ping6.it,${d}:changes</id>
-    <title>${d}: ${n('new')} new, ${n('removed')} removed, ${n('changed')} changed</title>
-    <updated>${d}T06:30:00Z</updated>
-    <link rel="alternate" href="${SITE}/"/>
-    <content type="html">${esc(`<ul>${items}</ul>${more}`)}</content>
-  </entry>`;
-  });
-  return `<?xml version="1.0" encoding="utf-8"?>
-<feed xmlns="http://www.w3.org/2005/Atom">
-  <id>tag:aspa.ping6.it,2026:changes</id>
-  <title>ASPA Explorer: changes</title>
-  <subtitle>ASPAs that appeared, changed their providers or disappeared, day by day</subtitle>
-  <link rel="self" href="${SITE}/changes.atom"/>
-  <link rel="alternate" href="${SITE}/"/>
-  <updated>${days.length ? `${days[0]}T06:30:00Z` : new Date(now).toISOString()}</updated>
-${entries.join('\n')}
-</feed>
-`;
-}
 
 let historyError = null;
 try {
@@ -188,7 +156,7 @@ try {
   }
   const actions = [{ action: 'update', file_path: 'history.json', content: rowsJson }];
   if (eventsChanged || eventsText === null) actions.push({ action: eventsText === null ? 'create' : 'update', file_path: 'events.json', content: eventsJson });
-  if (eventsChanged || feedText === null) actions.push({ action: feedText === null ? 'create' : 'update', file_path: 'changes.atom', content: atomFeed(events) });
+  if (eventsChanged || feedText === null) actions.push({ action: feedText === null ? 'create' : 'update', file_path: 'changes.atom', content: atomFeed(events, { site: SITE, classify, old: feedText }) });
   if (visibility) {
     const visText = await read('visibility.json');
     actions.push({ action: visText === null ? 'create' : 'update', file_path: 'visibility.json', content: JSON.stringify({ date: day, ...visibility }) });

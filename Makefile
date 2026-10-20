@@ -73,6 +73,7 @@ test:
 	node scripts/test-compare.mjs
 	node scripts/test-live.mjs
 	node scripts/test-evidence.mjs
+	node scripts/test-feed.mjs
 	node scripts/test-traceroute.mjs
 	node scripts/test-status.mjs
 	node --disable-warning=ExperimentalWarning scripts/test-notify.mjs
