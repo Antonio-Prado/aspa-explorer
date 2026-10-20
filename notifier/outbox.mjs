@@ -12,8 +12,6 @@ export const MAX_AGE = 2 * 86400;                              // a message that
 export const RETRY = [600, 1800, 3600, 7200, 14400];           // seconds to wait after the 1st, 2nd, ... failed attempt
 
 export function makeOutbox({ store, send, log = () => {}, now = () => Math.floor(Date.now() / 1000), concurrency = 8 }) {
-  let draining = false;
-
   // `job` is plain data (it goes to the database as JSON); `send(sub, job, row)` throws when the message did not go (`row.id` names the message, and stays
   // the same through every attempt).
   const enqueue = (subId, job) => store.outboxAdd(subId, JSON.stringify(job), now());
@@ -23,41 +21,42 @@ export function makeOutbox({ store, send, log = () => {}, now = () => Math.floor
       const sub = store.get(subId);
       if (!sub || sub.status !== 'active') { store.outboxDone(row.id); continue; }     // unsubscribed or disabled meanwhile
       if (now() - row.created > MAX_AGE) { store.outboxDone(row.id); log(`message ${row.id} for subscription ${subId} dropped: older than two days`); continue; }
-      try {
-        await send(sub, JSON.parse(row.job), row);
-        store.sent(subId, now());
-        store.outboxDone(row.id);
-      } catch (err) {
-        store.failed(subId);
-        const fails = (store.get(subId) || {}).fails || 0;
-        log(`delivery to subscription ${subId} (${sub.kind}) failed: ${err.message}`);
-        if (fails >= MAX_FAILS) { store.disable(subId, now()); store.outboxDropSub(subId); log(`subscription ${subId} disabled after ${MAX_FAILS} failures`); }
-        else store.outboxRetry(row.id, subId, now() + RETRY[Math.min(row.attempts, RETRY.length - 1)]);
-        return;                                                                         // the next ones of this subscription wait: the order is kept
+      // the message goes (or not): only a failure of the recipient is counted against it
+      let failure = null;
+      try { await send(sub, JSON.parse(row.job), row); } catch (err) { failure = err; }
+      // what is written afterwards is the queue's own business: an error of the database is not the fault of the recipient, it is thrown to the caller (the pool, the health)
+      if (!failure) {
+        store.transaction(() => { store.sent(subId, now()); store.outboxDone(row.id); });
+        continue;
       }
+      store.failed(subId);
+      const fails = (store.get(subId) || {}).fails || 0;
+      log(`delivery to subscription ${subId} (${sub.kind}) failed: ${failure.message}`);
+      if (fails >= MAX_FAILS) { store.disable(subId, now()); store.outboxDropSub(subId); log(`subscription ${subId} disabled after ${MAX_FAILS} failures`); }
+      else store.outboxRetry(row.id, subId, now() + RETRY[Math.min(row.attempts, RETRY.length - 1)]);
+      return;                                                                         // the next ones of this subscription wait: the order is kept
     }
   }
 
-  // Sends what is due. Safe to call at any time; a call while another one runs does nothing.
-  async function drain() {
-    if (draining) return 0;
-    draining = true;
-    try {
-      // rounds of a few messages for each subscription, until nothing is due: a subscription with a long queue goes on, but never at the expense of the others
-      let total = 0;
-      for (let round = 0; round < MAX_ROUNDS; round++) {
-        const rows = store.outboxDue(now());
-        if (!rows.length) break;
-        const bySub = new Map();
-        for (const r of rows) { if (!bySub.has(r.sub_id)) bySub.set(r.sub_id, []); bySub.get(r.sub_id).push(r); }
-        // a failure of a recipient is dealt with inside oneSubscription (retry, counter); what reaches the pool is the queue itself failing (the database)
-        const broken = [];
-        await pool([...bySub].map(([id, list]) => () => oneSubscription(id, list)), concurrency, (err) => { broken.push(err); log(`delivery failed: ${err.message}`); });
-        if (broken.length) throw new Error(`${broken.length} subscription(s) could not be processed: ${broken[0].message}`);
-        total += rows.length;
-      }
-      return total;
-    } finally { draining = false; }
+  // Sends what is due. Safe to call at any time; a call while another one runs waits for that one and has its outcome (so that a delivery that is stuck, or
+  // that failed, is not reported as a success by the call that came after it).
+  let running = null;
+  const drain = () => running || (running = drainOnce().finally(() => { running = null; }));
+  async function drainOnce() {
+    // rounds of a few messages for each subscription, until nothing is due: a subscription with a long queue goes on, but never at the expense of the others
+    let total = 0;
+    for (let round = 0; round < MAX_ROUNDS; round++) {
+      const rows = store.outboxDue(now());
+      if (!rows.length) break;
+      const bySub = new Map();
+      for (const r of rows) { if (!bySub.has(r.sub_id)) bySub.set(r.sub_id, []); bySub.get(r.sub_id).push(r); }
+      // a failure of a recipient is dealt with inside oneSubscription (retry, counter); what reaches the pool is the queue itself failing (the database)
+      const broken = [];
+      await pool([...bySub].map(([id, list]) => () => oneSubscription(id, list)), concurrency, (err) => { broken.push(err); log(`delivery failed: ${err.message}`); });
+      if (broken.length) throw new Error(`${broken.length} subscription(s) could not be processed: ${broken[0].message}`);
+      total += rows.length;
+    }
+    return total;
   }
 
   return { enqueue, drain };

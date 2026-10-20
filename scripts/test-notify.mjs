@@ -864,4 +864,36 @@ await test('outbox: a subscription with a long queue does not take the round fro
   assert.equal(store.outboxCount(), 0);                                      // and a drain goes on in rounds until all has gone
 });
 
+
+await test('outbox: an error of the database after a delivery that went is not a failure of the recipient', async () => {
+  const { store, outbox, id, logs } = outboxSetup(async () => {});
+  outbox.enqueue(id, { n: 1 });
+  const done = store.outboxDone;
+  store.outboxDone = () => { throw new Error('SQLITE_BUSY'); };
+  await assert.rejects(() => outbox.drain(), /SQLITE_BUSY/);
+  assert.equal(store.get(id).fails, 0);                                      // the webhook answered: nothing is counted against it
+  assert.equal(store.get(id).last_sent, null);                               // and the delivery is not recorded either: the two are written together
+  assert.equal(store.outboxCount(), 1);                                      // so the message goes again (at least once)
+  assert.ok(!logs.some((l) => /failed:/.test(l) && /subscription 1 \(/.test(l)));
+  store.outboxDone = done;
+  await outbox.drain();
+  assert.equal(store.outboxCount(), 0);
+});
+
+await test('outbox: a call that comes while a drain runs waits for it and has its outcome', async () => {
+  let release;
+  const gate = new Promise((r) => { release = r; });
+  const { outbox, id } = outboxSetup(async () => { await gate; });
+  outbox.enqueue(id, { n: 1 });
+  const first = outbox.drain();
+  const second = outbox.drain();
+  assert.equal(first, second);                                               // the same promise: the second is not "done" before the first
+  let settled = false; second.then(() => { settled = true; });
+  await new Promise((r) => setTimeout(r, 10));
+  assert.equal(settled, false);                                              // still running
+  release();
+  await second;
+  assert.equal(settled, true);
+});
+
 console.log(`${passed} tests passed`);
