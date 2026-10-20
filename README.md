@@ -62,7 +62,10 @@
     <td align="center"><sub>Examples with a checker, and the status page</sub></td>
   </tr>
   <tr>
-    <td colspan="2" align="center"><img src="assets/screenshots/evidence-dark.jpg" width="60%" alt="The neighbours of AS12779 in the routes seen in BGP: which are in its ASPA, which look like providers from the routes, and the note that AS60798 seems to be a provider its ASPA does not list"><br><sub>Neighbours of an origin: the evidence of who its providers are</sub></td>
+    <td colspan="2" align="center"><img src="assets/screenshots/neighbours-dark.jpg" width="60%" alt="The neighbours of AS41327 in the routes seen in BGP, after the button that reads the registry: which are confirmed as providers by its IRR object and CAIDA, and which are not listed in its ASPA and are declared as peers"><br><sub>Neighbours of an origin, read against its IRR object and CAIDA: confirmed, probably missing, or declared as something else</sub></td>
+  </tr>
+  <tr>
+    <td colspan="2" align="center"><img src="assets/screenshots/valley-why-dark.jpg" width="60%" alt="The table of valleys seen now for AS41327, with the why? button opened on one place: the reading says possibly a gap in an ASPA, who to ask, and the hops with what the ASPAs, the IRR objects and CAIDA say"><br><sub>Valleys seen now: <i>why?</i> reads the registry, CAIDA and RIPEstat for the hops the ASPAs refuse</sub></td>
   </tr>
   <tr>
     <td width="50%"><img src="assets/screenshots/graph-dark.jpg" alt="The neighbourhood graph of AS12779: the providers of its ASPA above, the ASes that name it below, and on the right the neighbours that the routes show, with AS60798 marked as a likely provider"></td>
@@ -166,8 +169,8 @@ The validator is a [Routinator](https://github.com/NLnetLabs/routinator) instanc
   - *the age of the snapshot*: RIPEstat reads the collectors from time to time, so the page says how long ago the routes were read, warns when that is more than an hour, and a button compares the shortest 24 prefixes with the looking glass of the RIPE RIS (the present state): which are no longer announced by an origin, which have a new one;
   - *origin validation*: every prefix and origin checked against the ROAs of the validator (valid, not found, invalid with the reason), asked of the page's own server;
   - *the AS paths* checked with the downstream procedure (valid, unknown, invalid);
-  - *valleys* (possible route leaks): the places that the ASPAs prove, grouped by place, with the feeders that see them;
-  - *the neighbours of the origin*, with an evidence column that says which of them look like its providers because its routes go on through them to a Tier-1 network, and which of them its ASPA does not list;
+  - *valleys* (possible route leaks): the places that the ASPAs prove, grouped by place, with the feeders that see them, and a *why?* button that reads the IRR objects, CAIDA and RIPEstat for the hops that the ASPAs refuse and says whether the valley is probably a gap in an ASPA, with the evidence and who to ask (a reading, not a verdict);
+  - *the neighbours of the origin*, with an evidence column that says which of them look like its providers because its routes go on through them to a Tier-1 network, and which of them its ASPA does not list; a button reads the IRR object of the origin and CAIDA and marks each neighbour as confirmed, probably or maybe missing from the ASPA, or declared as something else;
   - *tromboning*: a traceroute from twelve probes in the country of the origin (Globalping), with the median round trip and a row for each probe, to tell a route that goes far away (100 ms or more inside a country) from a normal one.
 
   Evidence and tromboning are readings, with their limits stated in the page, not verdicts.
