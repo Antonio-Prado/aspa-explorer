@@ -471,6 +471,10 @@ await test('API: a report is made, read back and refused when it is bad; the lim
   const { api: small } = setup({ maxReports: 1 });
   assert.equal(small.createReport(goodReport(), '2.2.2.2').status, 201);
   assert.equal(small.createReport(goodReport(), '2.2.2.3').status, 503);
+  const { api: tiny, store: tinyStore } = setup({ maxReportBytes: 1 });
+  assert.equal(tiny.createReport(goodReport(), '3.3.3.3').status, 201);
+  assert.ok(tinyStore.reportBytes() > 0);
+  assert.equal(tiny.createReport(goodReport(), '3.3.3.4').status, 503);      // the bytes kept count, not only the number
 });
 
 await test('HTTP: POST /api/v1/reports, GET as JSON and as a page', async () => {

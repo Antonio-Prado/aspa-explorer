@@ -5,6 +5,14 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.46.2] - 2026-10-20
+
+### Security
+- Shared reports say what they are: the page now reads *Shared by a visitor ... this site has not checked that the content is true*, and the note below it says that anybody can create a report. The old note claimed that the site had computed everything in it, which the service cannot guarantee.
+- The reports kept are limited by the bytes stored (512 MiB) and not only by their number, and the global rate of new reports is 300 an hour instead of 600.
+- The clean-up of expired reports and unconfirmed requests runs on its own, every hour, and no longer waits for the ASPA data to be read: if the upstream fails for days, the old ones still go.
+- The Content-Security-Policy has an explicit `object-src 'none'`, and `/data/validity/` (which asks Routinator) has a rate limit per address in the sample nginx configuration (300 a minute, burst 100).
+
 ## [1.46.1] - 2026-10-20
 
 ### Changed

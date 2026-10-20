@@ -43,12 +43,12 @@
       if (!r.ok) throw new Error(d.error || `HTTP ${r.status}`);
       document.title = `${d.title} · ASPA Explorer`;
       $('rp-title').textContent = d.title;
-      $('rp-sub').textContent = `Shared on ${when(d.created)}; kept until ${when(d.expires).split(',')[0]}.`;
+      $('rp-sub').textContent = `Shared by a visitor on ${when(d.created)}; kept until ${when(d.expires).split(',')[0]}. This site has not checked that the content is true.`;
       $('rp-body').replaceChildren(...d.sections.map(section));
       const links = [];
       if (d.source) links.push(el('a', { href: d.source, text: 'Run it again with the data of today' }), ' · ');
       links.push(el('a', { href: `/api/v1/reports/${m[1]}`, text: 'This report as JSON' }));
-      $('rp-note').replaceChildren('A frozen result: the ASPAs may have changed since. Whoever shared it wrote nothing in it that this site did not compute, but it is not signed. ', ...links);
+      $('rp-note').replaceChildren('Unverified: anybody can create a report, and this site does not check that the title, the text and the tables are what it computed. The ASPAs may also have changed since. To see the real result, run it again with the data of today. ', ...links);
     } catch (err) {
       $('rp-sub').textContent = `The report is not available (${err.message}).`;
     }

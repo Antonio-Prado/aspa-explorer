@@ -263,10 +263,6 @@ async function poll() {
     try { await pollLeaks(); } catch (err) { log(`leaks not read: ${err.message}`); }
     try { await pollStatus(); } catch (err) { log(`status not read: ${err.message}`); }
     try { await pollInvalid(); } catch (err) { log(`invalid announcements not read: ${err.message}`); }
-    const purged = store.purge(Math.floor(Date.now() / 1000) - 2 * 86400);
-    if (purged) log(`${purged} unconfirmed request(s) deleted`);
-    const old = store.purgeReports(Math.floor(Date.now() / 1000) - TTL_DAYS * 86400);
-    if (old) log(`${old} expired report(s) deleted`);
   } catch (err) { pulse.failures++; log(`poll failed: ${err.message}`); } finally { busy = false; }
 }
 
@@ -280,5 +276,16 @@ const server = http.createServer(httpHandler(api, { site: SITE, health, template
 server.requestTimeout = 15000; server.headersTimeout = 10000;
 server.listen(Number(env('NOTIFY_PORT', '8090')), '127.0.0.1', () => log(`listening on 127.0.0.1:${env('NOTIFY_PORT', '8090')}`));
 poll();
+// the clean-up does not wait for the data: if the upstream fails for days, the expired requests and reports must still go
+function housekeeping() {
+  try {
+    const purged = store.purge(Math.floor(Date.now() / 1000) - 2 * 86400);
+    if (purged) log(`${purged} unconfirmed request(s) deleted`);
+    const old = store.purgeReports(Math.floor(Date.now() / 1000) - TTL_DAYS * 86400);
+    if (old) log(`${old} expired report(s) deleted`);
+  } catch (err) { log(`clean-up failed: ${err.message}`); }
+}
+housekeeping();
+setInterval(housekeeping, 3600 * 1000);
 setInterval(poll, POLL);
 for (const s of ['SIGTERM', 'SIGINT']) process.on(s, () => { server.close(); store.close(); process.exit(0); });

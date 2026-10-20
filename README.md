@@ -122,7 +122,7 @@
     <td align="center"><sub>Many paths at once, with CSV and JSON download</sub></td>
   </tr>
   <tr>
-    <td width="50%"><img src="assets/screenshots/report-dark.jpg" alt="A shared result: the summary, the table of paths and the note that the result is frozen and not signed"></td>
+    <td width="50%"><img src="assets/screenshots/report-dark.jpg" alt="A shared result: the summary, the table of paths and the note that the report is unverified"></td>
     <td width="50%"><img src="assets/screenshots/peek-light.jpg" alt="The quick look at AS3356: no ASPA, named as a provider by 196 ASPAs, seen in BGP"></td>
   </tr>
   <tr>

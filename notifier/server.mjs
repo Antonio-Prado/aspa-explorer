@@ -122,13 +122,14 @@ export function makeApi(deps) {
 
   // shared results: kept TTL_DAYS days (the service purges them), at most MAX_REPORTS at a time
   const perIpReport = deps.perIpReport || limiter(20, HOUR);
-  const globalReport = deps.globalReport || limiter(600, HOUR);
+  const globalReport = deps.globalReport || limiter(300, HOUR);
   const MAX_REPORTS = deps.maxReports || 20000;
+  const MAX_REPORT_BYTES = deps.maxReportBytes || 512 * 1024 * 1024;     // what is stored, not what could be: the count alone lets 20000 big ones fill the disk
   function createReport(body, ip) {
     const c = checkReport(body);
     if (c.error) return bad(c.error);
     if (!perIpReport(ip)) return bad('too many reports from this address, try again later', 429);
-    if (!globalReport('all') || store.countReports() >= MAX_REPORTS) return bad('the service is busy, try again later', 503);
+    if (!globalReport('all') || store.countReports() >= MAX_REPORTS || store.reportBytes() >= MAX_REPORT_BYTES) return bad('the service is busy, try again later', 503);
     const id = newId();
     store.addReport(id, now(), c.report.kind, c.report.title, JSON.stringify(c.report));
     return reply(201, { id, url: `${site}/r/${id}`, expires_days: TTL_DAYS });

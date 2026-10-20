@@ -23,15 +23,15 @@
 <meta name="twitter:card" content="summary_large_image">
 <meta name="color-scheme" content="light dark">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
-<link rel="stylesheet" href="/style.css?v=1.46.1">
-<script src="/status-checks.js?v=1.46.1" defer></script>
-<script src="/footer.js?v=1.46.1" defer></script>
+<link rel="stylesheet" href="/style.css?v=1.46.2">
+<script src="/status-checks.js?v=1.46.2" defer></script>
+<script src="/footer.js?v=1.46.2" defer></script>
 </head>
 <body>
 <a class="skip" href="#main">Skip to main content</a>
 <header class="wrap masthead">
   <div class="top">
-    <p class="back"><a class="brandlink" href="/" title="Back to ASPA Explorer"><img class="brand" src="/img/logo-mark.svg?v=1.46.1" alt="" width="40" height="40"><span>ASPA Explorer</span></a></p>
+    <p class="back"><a class="brandlink" href="/" title="Back to ASPA Explorer"><img class="brand" src="/img/logo-mark.svg?v=1.46.2" alt="" width="40" height="40"><span>ASPA Explorer</span></a></p>
     <nav class="topnav" aria-label="Main"><a href="/">Home</a><a href="/statistics.html">Statistics</a><a href="/examples.html">Examples</a><a href="/api.html">API</a><a href="/guide.html" aria-current="page">Guide</a><a href="/status.html">Status</a></nav>
   </div>
   <h1>Guide</h1>
@@ -269,7 +269,7 @@
     <section aria-labelledby="share-result">
     <h2 id="share-result">Sharing a result</h2>
     <p><em>Share this result</em>, under the result of a path check or of many paths, turns it into a link such as <code>https://aspa.ping6.it/r/0123456789ab</code> that you can send to a colleague or cite. The page of the link shows the result as it was, with the time and the data it was computed with, and a link to run the same check again with today's data. A chat or a social network shows the title and a short summary when the link is pasted.</p>
-    <p>What is kept is exactly what the page sends when you press the button: a title, a few sentences and a table, written by the page and checked by the service (it takes only plain text, up to 500 table rows and 200 KB). It is kept for 30 days and then deleted. Anybody who has the link can read it, so do not share a result you would not show. The service does not store the address of the visitor: it only counts it in memory, 20 links an hour, to limit abuse (the log of the web server has it, as said in <a href="#notify">Notifications</a>). The link is not signed: it shows what the page computed, not a statement by anybody. The report is also available as JSON at <code>/api/v1/reports/&lt;id&gt;</code>.</p>
+    <p>What is kept is exactly what the page sends when you press the button: a title, a few sentences and a table, written by the page and checked by the service (it takes only plain text, up to 500 table rows and 200 KB). It is kept for 30 days and then deleted. Anybody who has the link can read it, so do not share a result you would not show. The service does not store the address of the visitor: it only counts it in memory, 20 links an hour, to limit abuse (the log of the web server has it, as said in <a href="#notify">Notifications</a>). The link is not signed and the service cannot check what it is sent: a report is what its author wrote, and anybody can write one, so treat it as a claim and run the check again to see the real result. The report is also available as JSON at <code>/api/v1/reports/&lt;id&gt;</code>.</p>
   </section>
 
   <section aria-labelledby="links">
