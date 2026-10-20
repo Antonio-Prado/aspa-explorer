@@ -30,7 +30,7 @@ export function makeOutbox({ store, send, log = () => {}, now = () => Math.floor
         store.failed(subId);
         const fails = (store.get(subId) || {}).fails || 0;
         log(`delivery to subscription ${subId} (${sub.kind}) failed: ${err.message}`);
-        if (fails >= MAX_FAILS) { store.disable(subId); store.outboxDropSub(subId); log(`subscription ${subId} disabled after ${MAX_FAILS} failures`); }
+        if (fails >= MAX_FAILS) { store.disable(subId, now()); store.outboxDropSub(subId); log(`subscription ${subId} disabled after ${MAX_FAILS} failures`); }
         else store.outboxRetry(row.id, subId, now() + RETRY[Math.min(row.attempts, RETRY.length - 1)]);
         return;                                                                         // the next ones of this subscription wait: the order is kept
       }

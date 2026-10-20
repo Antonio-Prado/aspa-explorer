@@ -79,7 +79,7 @@
     const path = [];
     for (const t of tokens) {
       const m = t.match(/^(?:as)?(\d{1,10})$/i);
-      if (!m || Number(m[1]) > 4294967295) return { error: `"${t}" is not an AS number. Use plain numbers such as 3356 or AS3356, separated by spaces.` };
+      if (!m || Number(m[1]) === 0 || Number(m[1]) > 4294967295) return { error: `"${t}" is not an AS number. Use plain numbers such as 3356 or AS3356, separated by spaces (AS0 cannot be in an AS path, RFC 7607).` };
       path.push('AS' + Number(m[1]));
     }
     return { path: path.reverse() };

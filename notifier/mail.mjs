@@ -35,13 +35,18 @@ export function serialize({ headers, body }, dkim) {
 }
 
 // Hand a serialized message to sendmail(8). Resolves when it is queued.
-export function sendmail(message, envelopeFrom, recipient, { command = '/usr/sbin/sendmail', run = spawn } = {}) {
+export function sendmail(message, envelopeFrom, recipient, { command = '/usr/sbin/sendmail', run = spawn, timeoutMs = 60000 } = {}) {
   return new Promise((resolve, reject) => {
     const p = run(command, ['-i', '-f', envelopeFrom, '--', recipient], { stdio: ['pipe', 'ignore', 'pipe'] });
     let err = '';
+    // a mailer that hangs must not hold the queue of the notifications: it is killed, and the message is tried again later
+    const timer = setTimeout(() => { reject(new Error('sendmail did not finish in time')); try { p.kill('SIGKILL'); } catch { /* gone already */ } }, timeoutMs);
     p.stderr.on('data', (c) => { err += c; });
-    p.on('error', reject);
-    p.on('close', (code) => (code === 0 ? resolve() : reject(new Error(`sendmail exited ${code}: ${err.trim().slice(0, 200)}`))));
+    p.on('error', (e) => { clearTimeout(timer); reject(e); });
+    p.on('close', (code) => {
+      clearTimeout(timer);
+      if (code === 0) resolve(); else reject(new Error(`sendmail exited ${code}: ${err.trim().slice(0, 200)}`));
+    });
     p.stdin.end(message);
   });
 }

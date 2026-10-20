@@ -164,6 +164,8 @@ const queueChanges = (events) => {
   const subs = store.allActive();
   for (const e of events) for (const { sub, relation } of audience(e, subs)) outbox.enqueue(sub.id, { type: 'change', event: e, relation });
 };
+// the queue and the state that says "seen" are written together: a crash between them would queue the same event again, with another id
+const deliver = () => sources.track('delivery', () => outbox.drain());
 
 // The places of valley (leaks-by-as.json, built once a day): the subscriptions that asked for them are told about the
 // places that are new since the previous build. Nothing happens until the file changes.
@@ -177,12 +179,13 @@ async function pollLeaks() {
   const subs = store.allActive().filter((s) => s.leaks);
   const out = newPlaces(doc.as, subs.map((s) => s.asn), saved.seen);
   if (out.events.length) log(`${out.events.length} new place(s) of valley for the subscriptions`);
-  // queued first, and only then marked as seen: a crash in between sends a place twice, it does not lose it
-  for (const e of out.events) {
-    const line = describePlace(e);
-    for (const sub of subs.filter((s) => s.asn === e.asn)) outbox.enqueue(sub.id, { subject: `Route leak or valley that involves ${e.asn}`, line, type: 'aspa.leak', extra: { place: { role: e.role, kind: e.kind, from: e.from, to: e.to, between: e.between, feeders: e.feeders, routes: e.routes } } });
-  }
-  store.setState('leaks', { generated: doc.generated, seen: out.seen });
+  store.transaction(() => {
+    for (const e of out.events) {
+      const line = describePlace(e);
+      for (const sub of subs.filter((s) => s.asn === e.asn)) outbox.enqueue(sub.id, { subject: `Route leak or valley that involves ${e.asn}`, line, type: 'aspa.leak', extra: { place: { role: e.role, kind: e.kind, from: e.from, to: e.to, between: e.between, feeders: e.feeders, routes: e.routes } } });
+    }
+    store.setState('leaks', { generated: doc.generated, seen: out.seen });
+  });
 }
 
 // The states of the parts of the service (status-history.json, a sample every 15 minutes): the subscriptions to the topic
@@ -193,8 +196,10 @@ async function pollStatus() {
   const out = watchStatus(await r.json(), store.getState('status'), Math.floor(Date.now() / 1000));
   if (!out.events.length) { store.setState('status', out.saved); return; }
   log(`${out.events.length} change(s) of state of the service`);
-  for (const sub of store.allActive().filter((s) => s.asn === STATUS)) outbox.enqueue(sub.id, { type: 'status', events: out.events });
-  store.setState('status', out.saved);
+  store.transaction(() => {
+    for (const sub of store.allActive().filter((s) => s.asn === STATUS)) outbox.enqueue(sub.id, { type: 'status', events: out.events });
+    store.setState('status', out.saved);
+  });
 }
 
 // Invalid announcements (invalid-last.json, written every ten minutes by watch-invalid): the subscriptions with a threshold are told when
@@ -208,10 +213,12 @@ async function pollInvalid() {
   const subs = store.allActive().filter((s) => s.invalid_min > 0);
   const out = dueInvalid(doc, subs, saved.alerts, Math.floor(Date.now() / 1000));
   if (out.events.length) log(`${out.events.length} alert(s) on invalid announcements`);
-  for (const e of out.events) outbox.enqueue(e.sub.id, { subject: `Invalid announcements of ${e.asn}: ${e.invalid} in ten minutes`, line: describeInvalid(e), type: 'aspa.invalid',
-      extra: { invalid: { announcements: e.announcements, invalid: e.invalid, prefixes: e.prefixes, from: e.from, to: e.to } },
-      footer: 'Read from the stream of RIPE RIS Live every ten minutes, and checked with the ASPAs of this site. You are told at most once every six hours.' });
-  store.setState('invalid', { generated: doc.generated, alerts: out.alerts });
+  store.transaction(() => {
+    for (const e of out.events) outbox.enqueue(e.sub.id, { subject: `Invalid announcements of ${e.asn}: ${e.invalid} in ten minutes`, line: describeInvalid(e), type: 'aspa.invalid',
+        extra: { invalid: { announcements: e.announcements, invalid: e.invalid, prefixes: e.prefixes, from: e.from, to: e.to } },
+        footer: 'Read from the stream of RIPE RIS Live every ten minutes, and checked with the ASPAs of this site. You are told at most once every six hours.' });
+    store.setState('invalid', { generated: doc.generated, alerts: out.alerts });
+  });
 }
 
 // what /api/v1/subscriptions/health says: when the data was last read, and whether the last reads worked
@@ -248,14 +255,13 @@ async function poll() {
     pulse.lastOk = Date.now(); pulse.failures = 0; sources.ok('aspas');
     if (!saved) { store.setState('committed', [...current]); store.setState('pending', {}); log(`first run: ${current.size} ASPAs taken as the starting point`); return; }
     const out = stabilise(new Map(saved), current, store.getState('pending') || {});
-    if (out.events.length) { log(`${out.events.length} change(s) confirmed`); queueChanges(out.events); }
-    store.setState('committed', [...out.committed]);
-    store.setState('pending', out.pending);
+    if (out.events.length) log(`${out.events.length} change(s) confirmed`);
+    store.transaction(() => { queueChanges(out.events); store.setState('committed', [...out.committed]); store.setState('pending', out.pending); });
     try { await sources.track('leaks', pollLeaks); } catch (err) { log(`leaks not read: ${err.message}`); }
     try { await sources.track('status', pollStatus); } catch (err) { log(`status not read: ${err.message}`); }
     try { await sources.track('invalid', pollInvalid); } catch (err) { log(`invalid announcements not read: ${err.message}`); }
-    await outbox.drain();
   } catch (err) { pulse.failures++; sources.fail('aspas'); log(`poll failed: ${err.message}`); } finally { busy = false; }
+  try { await deliver(); } catch (err) { log(`outbox: ${err.message}`); }       // a failure of the queue is counted by itself, not as one of the reads
 }
 
 // the shell of the page of a report, read from the web root and kept a minute
@@ -282,6 +288,6 @@ function housekeeping() {
 housekeeping();
 setInterval(housekeeping, 3600 * 1000);
 setInterval(poll, POLL);
-setInterval(() => outbox.drain().catch((err) => log(`outbox: ${err.message}`)), 60 * 1000);      // the messages that have to be tried again
-outbox.drain().catch((err) => log(`outbox: ${err.message}`));                                       // and the ones that a restart interrupted
+setInterval(() => deliver().catch((err) => log(`outbox: ${err.message}`)), 60 * 1000);      // the messages that have to be tried again
+deliver().catch((err) => log(`outbox: ${err.message}`));                                                // and the ones that a restart interrupted
 for (const s of ['SIGTERM', 'SIGINT']) process.on(s, () => { server.close(); store.close(); process.exit(0); });

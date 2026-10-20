@@ -100,7 +100,7 @@ export function makeApi(deps) {
     try {
       const secret = 'whsec_' + randomBytes(24).toString('hex');
       const id = row ? row.id : store.insert('webhook', target, asn, secret, t, leaks, invalid);
-      if (row) { store.attempt(id, t, secret); store.setLeaks(id, leaks); store.setInvalid(id, invalid); }
+      if (row) { store.repend(id); store.attempt(id, t, secret); store.setLeaks(id, leaks); store.setInvalid(id, invalid); }
       const challenge = randomBytes(16).toString('hex');
       try {
         const r = await verifyWebhook(target, { type: 'verification', challenge, asn, unsubscribe: unsubscribeUrl(id) }, secret);

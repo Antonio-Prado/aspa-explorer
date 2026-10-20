@@ -101,6 +101,10 @@ test('parsePath rejects junk and flags AS_SETs', () => {
   assert.ok(parsePath('3356 abc').error);
   assert.ok(parsePath('3356 99999999999').error);
   assert.ok(parsePath('3356 -1').error);
+  assert.ok(parsePath('0').error);                       // AS0 cannot be in an AS_PATH (RFC 7607)
+  assert.ok(parsePath('AS0').error);
+  assert.ok(parsePath('3356 0 680').error);
+  assert.ok(parsePath('00').error);
   assert.equal(parsePath('3356 {1299,174} 680').asSet, true);
   assert.ok(!('path' in parsePath('<script>')));
 });

@@ -537,7 +537,7 @@ await test('API: a disabled e-mail subscription is asked again, and it works onl
   await api.subscribe({ kind: 'email', target: 'me@example.com', asn: 'AS3333' }, '1.1.1.1');
   api.confirm({ token: mails[0].token });
   const id = store.allActive()[0].id;
-  store.disable(id);
+  store.disable(id, 1000);
   assert.equal(store.get(id).status, 'disabled');
   tick(7200);
   assert.equal((await api.subscribe({ kind: 'email', target: 'me@example.com', asn: 'AS3333' }, '1.1.1.2')).status, 202);
@@ -630,11 +630,12 @@ await test('API: the limit of an AS is checked again at the confirmation', async
 
 await test('API: the subscriptions that are switched off do not count for the limit of an address, and they are deleted after thirty days', async () => {
   const { store, api } = setup({ perIp: () => true, global: () => true });
-  for (let i = 0; i < 20; i++) { const id = store.insert('email', 'me@example.com', `AS${100 + i}`, null, 1000, 0, 0); store.activate(id, 1000); store.disable(id); }
+  for (let i = 0; i < 20; i++) { const id = store.insert('email', 'me@example.com', `AS${100 + i}`, null, 1000, 0, 0); store.activate(id, 1000); store.disable(id, 5000); }
   assert.equal(store.countTarget('email', 'me@example.com'), 0);
   assert.equal((await api.subscribe({ kind: 'email', target: 'me@example.com', asn: 'AS3333' }, '1.1.1.1')).status, 202);
   assert.equal(store.countTarget('email', 'me@example.com'), 1);           // it is a new subscription: it was not refused for the 20 that do not work
-  assert.equal(store.purgeDisabled(1000 + 30 * 86400 + 1), 20);
+  assert.equal(store.purgeDisabled(5000 - 1), 0);                          // counted from the day it was switched off, not from the day it was confirmed
+  assert.equal(store.purgeDisabled(5000 + 30 * 86400 + 1), 20);
   assert.equal(store.countTarget('email', 'me@example.com'), 1);           // the one that is waiting stays
 });
 
@@ -746,6 +747,68 @@ await test('API: the threshold is kept only as a whole number in range, for an A
   assert.equal(store.find('email', 'd@example.com', 'AS1').invalid_min, 0);
   const w = await api.subscribe({ kind: 'webhook', target: 'https://hooks.example.org/i', asn: 'AS2', invalid: 5 }, '4.4.4.5');
   assert.equal(w.body.invalid, 5);
+});
+
+
+await test('API: a webhook that was switched off and is subscribed again keeps what was asked this time', async () => {
+  const { store, api } = setup({ perIp: () => true, global: () => true });
+  const t = 'https://hooks.example.org/in';
+  assert.equal((await api.subscribe({ kind: 'webhook', target: t, asn: 'AS3333' }, '2.2.2.2')).status, 201);
+  const id = store.allActive()[0].id;
+  assert.equal(store.get(id).leaks, 0);
+  store.disable(id, 1000);
+  const r = await api.subscribe({ kind: 'webhook', target: t, asn: 'AS3333', leaks: true, invalid: 25 }, '2.2.2.2');
+  assert.equal(r.status, 201);
+  const row = store.get(id);
+  assert.equal(row.status, 'active');
+  assert.equal(row.leaks, 1);
+  assert.equal(row.invalid_min, 25);
+  assert.equal(row.disabled_at, null);
+});
+
+await test('store: the queue and the state are written together, or not at all', () => {
+  const store = openStore(':memory:');
+  const sub = store.insert('email', 'a@example.com', 'AS1', null, 1000);
+  assert.throws(() => store.transaction(() => { store.outboxAdd(sub, '{}', 1000); store.setState('committed', [1]); throw new Error('crash'); }), /crash/);
+  assert.equal(store.outboxCount(), 0);
+  assert.equal(store.getState('committed'), null);
+  store.transaction(() => { store.outboxAdd(sub, '{}', 1000); store.setState('committed', [1]); });
+  assert.equal(store.outboxCount(), 1);
+  assert.deepEqual(store.getState('committed'), [1]);
+});
+
+await test('webhook post: the whole exchange has a limit, also when the peer answers a byte at a time', async () => {
+  let destroyed = false;
+  const slow = (opts, cb) => {
+    const handlers = {};
+    const res = { statusCode: 200, setEncoding() {}, on(e, f) { handlers[e] = f; return res; }, destroy() {} };
+    let t;
+    const req = { on() { return req; }, destroy() { destroyed = true; clearInterval(t); handlers.close && handlers.close(); },
+      end() { setImmediate(() => { cb(res); t = setInterval(() => handlers.data && handlers.data('x'), 10); }); } };
+    return req;
+  };
+  const t0 = Date.now();
+  await assert.rejects(() => post('https://hooks.example.org/a', {}, { lookup: async () => [{ address: '93.184.216.34', family: 4 }], request: slow, timeoutMs: 5000, deadlineMs: 80 }), /timeout/);
+  assert.ok(Date.now() - t0 < 1000);
+  assert.equal(destroyed, true);
+  await assert.rejects(() => post('https://hooks.example.org/a', {}, { lookup: () => new Promise(() => {}), deadlineMs: 50 }), /timeout/);     // a name that never resolves
+});
+
+await test('mail: a sendmail that hangs is killed and the delivery fails', async () => {
+  let killed = null;
+  const run = () => ({ stderr: { on() {} }, on() {}, kill(sig) { killed = sig; }, stdin: { end() {} } });
+  await assert.rejects(() => sendmail('hello', 'n@x.org', 'a@example.com', { run, timeoutMs: 30 }), /in time/);
+  assert.equal(killed, 'SIGKILL');
+});
+
+await test('pulse: the delivery of the queue is a source of its own', async () => {
+  const p = makePulse(['aspas', 'delivery']);
+  p.ok('aspas');
+  for (let i = 0; i < 5; i++) { p.ok('aspas'); await assert.rejects(() => p.track('delivery', async () => { throw new Error('db'); })); }
+  const s = p.summary(600000);
+  assert.equal(s.aspas.ok, true);                                          // reading works, and does not clear the failures of the delivery
+  assert.equal(s.delivery.failures_in_a_row, 5);
+  assert.equal(s.delivery.ok, false);
 });
 
 console.log(`${passed} tests passed`);

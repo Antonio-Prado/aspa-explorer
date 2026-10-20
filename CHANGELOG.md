@@ -5,6 +5,17 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.47.3] - 2026-10-20
+
+### Fixed
+- A webhook that had been switched off and was subscribed again kept its old choices: the answer said that the places of valley and the alert on invalid announcements were on, and the record had them off. The record goes back to *pending* first, as the e-mail ones do, and then takes what was asked.
+- A message and the state that says "this was seen" were written one after the other: a crash between them queued the same event again, with another `event_id`. The two are now written in one transaction (ASPA changes, places of valley, state of the service, invalid announcements).
+- A webhook answering a few bytes at a time was never cut: `timeout` of Node.js is for a silent socket, and the exchange could last for as long as the peer wanted while the other deliveries (and the next poll) waited. The whole exchange, from the name to the end of the answer, now has a limit of 15 seconds, and the socket is closed.
+- `sendmail` had no limit of time either: a mailer that hangs is killed after a minute and the delivery is tried again later.
+- A failure of the queue was cleared by the next successful read of the ASPAs, so that `failures_in_a_row` stayed at 1 and the health stayed `ok`. The delivery is now a source of its own in `sources` (`delivery`), and counts its failures by itself.
+- The subscriptions that were switched off were deleted thirty days after their last message or confirmation, so that one confirmed long before was deleted the day it was switched off. The day is now kept (`disabled_at`); the ones that are off at the update count from that day.
+- The AS path checker accepted AS0 (`0`, `AS0`, or inside a path) and answered *Valid*. AS0 cannot be in an AS_PATH (RFC 7607): the path is refused.
+
 ## [1.47.2] - 2026-10-20
 
 ### Fixed

@@ -66,16 +66,22 @@ export function parseWebhookUrl(text) {
 export const signature = (secret, timestamp, body) => 'sha256=' + createHmac('sha256', secret).update(`${timestamp}.${body}`).digest('hex');
 
 // POST a JSON body. Returns {status, body} (body at most 2 KB) or throws.
-export async function post(url, payload, { secret, headers = {}, lookup = dns.lookup, request = https.request, timeoutMs = 5000 } = {}) {
+export async function post(url, payload, { secret, headers = {}, lookup = dns.lookup, request = https.request, timeoutMs = 5000, deadlineMs = 15000 } = {}) {
+  const started = Date.now();
   const u = parseWebhookUrl(url);
   if (!u) throw new Error('not an acceptable https address');
-  const addrs = await lookup(u.hostname, { all: true });
+  // the whole exchange has a limit (name, connection, answer): timeout alone is for a socket that is silent, and a peer that sends a byte at a time never is
+  let dnsTimer;
+  const addrs = await Promise.race([lookup(u.hostname, { all: true }), new Promise((_, rej) => { dnsTimer = setTimeout(() => rej(new Error('timeout')), deadlineMs); })]).finally(() => clearTimeout(dnsTimer));
   if (!addrs.length || !addrs.every((a) => isPublicIp(a.address))) throw new Error('the name does not resolve to public addresses only');
   const body = JSON.stringify(payload);
   const ts = String(Math.floor(Date.now() / 1000));
   const h = { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(body), 'User-Agent': 'aspa-explorer-notifier', 'X-ASPA-Timestamp': ts, ...headers };
   if (secret) h['X-ASPA-Signature'] = signature(secret, ts, body);
-  return new Promise((resolve, reject) => {
+  return new Promise((resolve, rej) => {
+    let timer;
+    const reject = (e) => { clearTimeout(timer); rej(e); };
+    const done = (v) => { clearTimeout(timer); resolve(v); };
     const req = request({
       host: addrs[0].address, family: addrs[0].family, port: u.port || 443, path: u.pathname + u.search, method: 'POST', servername: u.hostname,
       headers: { ...h, Host: u.host }, timeout: timeoutMs, agent: false,
@@ -83,11 +89,12 @@ export async function post(url, payload, { secret, headers = {}, lookup = dns.lo
       let got = '';
       res.setEncoding('utf8');
       res.on('data', (c) => { got += c; if (got.length > 2048) { got = got.slice(0, 2048); res.destroy(); } });
-      res.on('end', () => resolve({ status: res.statusCode, body: got }));
-      res.on('close', () => resolve({ status: res.statusCode, body: got }));
+      res.on('end', () => done({ status: res.statusCode, body: got }));
+      res.on('close', () => done({ status: res.statusCode, body: got }));
       res.on('error', reject);
     });
     req.on('timeout', () => req.destroy(new Error('timeout')));
+    timer = setTimeout(() => { reject(new Error('timeout')); req.destroy(); }, Math.max(1, deadlineMs - (Date.now() - started)));
     req.on('error', reject);
     req.end(body);
   });

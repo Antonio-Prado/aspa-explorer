@@ -44,6 +44,11 @@ export function openStore(path) {
   if (!db.prepare('PRAGMA table_info(subscriptions)').all().some((c) => c.name === 'leaks')) db.exec('ALTER TABLE subscriptions ADD COLUMN leaks INTEGER NOT NULL DEFAULT 0');
   // 1.38.0: a subscription can ask to be told when its AS is the origin of that many invalid announcements in ten minutes (0: no)
   if (!db.prepare('PRAGMA table_info(subscriptions)').all().some((c) => c.name === 'invalid_min')) db.exec('ALTER TABLE subscriptions ADD COLUMN invalid_min INTEGER NOT NULL DEFAULT 0');
+  // 1.47.3: the day a subscription was switched off (the clean-up counts thirty days from it); the ones that are off already start from the day of this update
+  if (!db.prepare('PRAGMA table_info(subscriptions)').all().some((c) => c.name === 'disabled_at')) {
+    db.exec('ALTER TABLE subscriptions ADD COLUMN disabled_at INTEGER');
+    db.prepare('UPDATE subscriptions SET disabled_at = ? WHERE status = \'disabled\'').run(Math.floor(Date.now() / 1000));
+  }
   const q = {
     find: db.prepare('SELECT * FROM subscriptions WHERE kind = ? AND target = ? AND asn = ?'),
     byId: db.prepare('SELECT * FROM subscriptions WHERE id = ?'),
@@ -57,16 +62,16 @@ export function openStore(path) {
     allActive: db.prepare('SELECT * FROM subscriptions WHERE status = \'active\''),
     sent: db.prepare('UPDATE subscriptions SET last_sent = ?, fails = 0 WHERE id = ?'),
     failed: db.prepare('UPDATE subscriptions SET fails = fails + 1 WHERE id = ?'),
-    disable: db.prepare('UPDATE subscriptions SET status = \'disabled\' WHERE id = ?'),
+    disable: db.prepare('UPDATE subscriptions SET status = \'disabled\', disabled_at = ? WHERE id = ?'),
     purge: db.prepare('DELETE FROM subscriptions WHERE status = \'pending\' AND attempted < ?'),
     // the limit for an address counts the subscriptions that are not switched off: those do not hold a place
     perTarget: db.prepare('SELECT COUNT(*) AS n FROM subscriptions WHERE kind = ? AND target = ? AND status != \'disabled\''),
-    purgeDisabled: db.prepare('DELETE FROM subscriptions WHERE status = \'disabled\' AND COALESCE(last_sent, confirmed, created) < ?'),
+    purgeDisabled: db.prepare('DELETE FROM subscriptions WHERE status = \'disabled\' AND disabled_at < ?'),
     // the limit of an AS is on the subscriptions that are working: the ones that nobody has confirmed (and are deleted after two days) must not fill it
     perAsn: db.prepare('SELECT COUNT(*) AS n FROM subscriptions WHERE asn = ? AND status = \'active\''),
     pendingAsn: db.prepare('SELECT COUNT(*) AS n FROM subscriptions WHERE asn = ? AND status = \'pending\''),
     pendingAll: db.prepare('SELECT COUNT(*) AS n FROM subscriptions WHERE status = \'pending\''),
-    repend: db.prepare('UPDATE subscriptions SET status = \'pending\', fails = 0 WHERE id = ? AND status = \'disabled\''),
+    repend: db.prepare('UPDATE subscriptions SET status = \'pending\', fails = 0, disabled_at = NULL WHERE id = ? AND status = \'disabled\''),
     counts: db.prepare('SELECT kind, status, COUNT(*) AS n FROM subscriptions GROUP BY kind, status'),
     addReport: db.prepare('INSERT INTO reports (id, created, kind, title, body) VALUES (?, ?, ?, ?, ?)'),
     getReport: db.prepare('SELECT id, created, kind, title, body FROM reports WHERE id = ?'),
@@ -100,7 +105,7 @@ export function openStore(path) {
     allActive: () => q.allActive.all().map(plain),
     sent: (id, now) => q.sent.run(now, id),
     failed: (id) => q.failed.run(id),
-    disable: (id) => q.disable.run(id),
+    disable: (id, now) => q.disable.run(now, id),
     purgeDisabled: (olderThan) => Number(q.purgeDisabled.run(olderThan).changes),
     purge: (olderThan) => Number(q.purge.run(olderThan).changes),
     countTarget: (kind, target) => q.perTarget.get(kind, target).n,
@@ -126,6 +131,8 @@ export function openStore(path) {
     reportBytes: () => Number(q.reportBytes.get().n),
     getState: (key) => { const r = q.getState.get(key); return r ? JSON.parse(r.value) : null; },
     setState: (key, value) => q.setState.run(key, JSON.stringify(value)),
+    // several writes that stand or fall together: what is queued and the state that says it was seen
+    transaction: (fn) => { db.exec('BEGIN IMMEDIATE'); try { const r = fn(); db.exec('COMMIT'); return r; } catch (err) { db.exec('ROLLBACK'); throw err; } },
     close: () => db.close(),
   };
 }
