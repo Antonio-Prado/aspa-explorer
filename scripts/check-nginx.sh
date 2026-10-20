@@ -18,6 +18,7 @@ sed -e "s|/usr/local/etc/nginx/tls|$work/tls|g" \
     -e "s|/usr/local/etc/nginx/rpki-proxy.conf|$root/deploy/nginx/rpki-proxy.conf|g" \
     -e "s|/usr/local/etc/nginx/security-headers.conf|$root/deploy/nginx/security-headers.conf|g" \
     -e "s|/var/cache/nginx/aspa|$work/cache|g" \
+    -e "s|/var/log/nginx/access.log|$work/access.log|g" \
     -e "s|/var/db/aspa-gen/adoption.json|$work/gen/adoption.json|g" \
     -e "s|/var/db/aspa-gen/asn-registry.json|$work/gen/asn-registry.json|g" \
     -e "s|/var/db/aspa-gen/leaks.json|$work/gen/leaks.json|g" \
