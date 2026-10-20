@@ -5,6 +5,11 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.43.12] - 2026-10-20
+
+### Changed
+- Routes seen in BGP: the table of the valleys is now titled *Valleys seen now (possible route leaks)*, it was *Route leaks (valleys) seen now*. A valley is a place where the ASPAs cannot explain the path, which a leak produces but an ASPA that misses a real provider produces too (the first valleys of AS41327 on 2026-10-20 all went away when the neighbours published a complete ASPA), so the title should not accuse. The guide uses the same name.
+
 ## [1.43.11] - 2026-10-19
 
 ### Added

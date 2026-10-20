@@ -620,8 +620,8 @@ function leakPanel(rows) {
     el('td', { class: 'num', text: fmt.format(g.paths) }), el('td', { class: 'num', text: fmt.format(g.routes) }), el('td', { class: 'num', text: fmt.format(g.feeders.size) }),
     el('td', {}, el('a', { href: `#path=${encodeURIComponent(g.example.join(' '))}&from=down`, text: 'open the path' }))));
   return el('div', {},
-    el('h3', { class: 'subhead', text: 'Route leaks (valleys) seen now' }),
-    el('section', { class: 'table-wrap card', tabindex: '0', 'aria-label': 'Route leaks seen now' }, el('table', { class: 'checks live nb' },
+    el('h3', { class: 'subhead', text: 'Valleys seen now (possible route leaks)' }),
+    el('section', { class: 'table-wrap card', tabindex: '0', 'aria-label': 'Valleys seen now, possible route leaks' }, el('table', { class: 'checks live nb' },
       el('caption', { class: 'sr-only', text: 'Paths that the ASPAs show to contain a valley, grouped by the place of the valley, with the paths, routes and feeders that see it' }),
       el('thead', {}, head), el('tbody', {}, ...trs))),
     el('p', { class: 'hint', text: `${fmt.format(list.length)} place${list.length === 1 ? '' : 's'} of valley${list.length > 10 ? ', the ten seen by most feeders are listed' : ''}. A valley is a route that came down from a provider or a peer and went up again: a route leak, or a forged path. The ASes in the valley are the ones to look at first. Before blaming them, look at the neighbours below: an ASPA that does not list one of its real providers makes valid routes look like valleys, and many of these places can be just that. The ASPAs prove a valley only where they are published, so paths of unknown verdict may hide others.` }));
