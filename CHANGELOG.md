@@ -5,6 +5,17 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.47.1] - 2026-10-20
+
+### Fixed
+- A new message of a subscription could go out before an older one that was waiting to be tried again. The queue now takes a subscription only when its oldest message is due, and sends its messages in order.
+- The limit of subscriptions of an AS is checked again when a subscription starts to work (the confirmation of an address, the end of the check of a webhook), not only when it is asked for, so that many requests made together cannot go over it.
+- The files of the notifier that already existed (the database and its journal) get permission 0600 at each start, not only the new ones.
+
+### Added
+- Every webhook delivery has an `event_id` (`aspa-<number>`) that is the same in all the attempts of a message, to drop the second copy after a crash. The API page says it, and corrects the line that said deliveries were not retried.
+- `/api/v1/subscriptions/health` also says how many messages wait (`outbox_pending`), how old the oldest is (`oldest_pending_seconds`) and how many subscriptions were switched off (`disabled_subscriptions`); it is not `ok` when a message has waited more than twelve hours, which is more than all its retries take. No address is shown.
+
 ## [1.47.0] - 2026-10-20
 
 ### Changed

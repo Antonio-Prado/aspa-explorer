@@ -595,6 +595,38 @@ await test('outbox: a failure keeps the message, waits, tries again, and the one
   assert.equal(store.get(id).status, 'active');
 });
 
+await test('outbox: a new message does not overtake one that is waiting to be tried again', async () => {
+  const delivered = []; let first = true;
+  const { outbox, id, tick } = outboxSetup(async (sub, job) => { if (job.n === 1 && first) { first = false; throw new Error('temporary'); } delivered.push(job.n); });
+  outbox.enqueue(id, { n: 1 });
+  await outbox.drain();
+  tick(1);
+  outbox.enqueue(id, { n: 2 });
+  await outbox.drain();
+  assert.deepEqual(delivered, []);                                 // 2 waits for 1
+  tick(RETRY[0]);
+  await outbox.drain();
+  assert.deepEqual(delivered, [1, 2]);
+});
+
+await test('outbox: the row is given to the sender, and its id is the same in every attempt', async () => {
+  const ids = []; let n = 0;
+  const { outbox, id, tick } = outboxSetup(async (sub, job, row) => { ids.push(row.id); if (++n === 1) throw new Error('once'); });
+  outbox.enqueue(id, { a: 1 });
+  await outbox.drain(); tick(RETRY[0] + 1); await outbox.drain();
+  assert.equal(ids.length, 2);
+  assert.equal(ids[0], ids[1]);
+});
+
+await test('API: the limit of an AS is checked again at the confirmation', async () => {
+  const { store, api, mails } = setup({ maxPerAsn: 1, perIp: () => true, global: () => true });
+  await api.subscribe({ kind: 'email', target: 'a@example.com', asn: 'AS7' }, '1.1.1.1');
+  await api.subscribe({ kind: 'email', target: 'b@example.com', asn: 'AS7' }, '1.1.1.2');
+  assert.equal(api.confirm({ token: mails[0].token }).status, 200);
+  assert.equal(api.confirm({ token: mails[1].token }).status, 429);          // the place was taken while it waited
+  assert.equal(store.countAsn('AS7'), 1);
+});
+
 await test('outbox: after five failures the subscription is disabled and its messages are dropped; a message that arrives later does not wake it', async () => {
   const { store, outbox, id, tick } = outboxSetup(async () => { throw new Error('down'); });
   outbox.enqueue(id, { n: 1 });

@@ -13,7 +13,8 @@ export const RETRY = [600, 1800, 3600, 7200, 14400];           // seconds to wai
 export function makeOutbox({ store, send, log = () => {}, now = () => Math.floor(Date.now() / 1000), concurrency = 8 }) {
   let draining = false;
 
-  // `job` is plain data (it goes to the database as JSON); `send(sub, job)` throws when the message did not go.
+  // `job` is plain data (it goes to the database as JSON); `send(sub, job, row)` throws when the message did not go (`row.id` names the message, and stays
+  // the same through every attempt).
   const enqueue = (subId, job) => store.outboxAdd(subId, JSON.stringify(job), now());
 
   async function oneSubscription(subId, rows) {
@@ -22,7 +23,7 @@ export function makeOutbox({ store, send, log = () => {}, now = () => Math.floor
       if (!sub || sub.status !== 'active') { store.outboxDone(row.id); continue; }     // unsubscribed or disabled meanwhile
       if (now() - row.created > MAX_AGE) { store.outboxDone(row.id); log(`message ${row.id} for subscription ${subId} dropped: older than two days`); continue; }
       try {
-        await send(sub, JSON.parse(row.job));
+        await send(sub, JSON.parse(row.job), row);
         store.sent(subId, now());
         store.outboxDone(row.id);
       } catch (err) {

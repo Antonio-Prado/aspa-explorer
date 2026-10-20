@@ -103,6 +103,7 @@ export function makeApi(deps) {
       store.remove(id);
       return bad(`verification failed: ${err.message}`, 400);
     }
+    if (store.countAsn(asn) >= MAX_PER_ASN) { store.remove(id); return bad('this AS has reached the limit of subscriptions', 429); }     // other requests may have taken the place while the address answered
     store.activate(id, t);
     return reply(201, { status: 'active', asn, leaks: !!leaks, invalid, secret, unsubscribe: unsubscribeUrl(id), message: 'Subscribed. The secret is shown only now: use it to check the X-ASPA-Signature header of each delivery.' });
   }
@@ -111,7 +112,10 @@ export function makeApi(deps) {
     const id = readToken(key, 'confirm', body && body.token, confirmSalt);
     const row = id && store.get(id);
     if (!row) return bad('this link is not valid any more; subscribe again', 404);
-    if (row.status === 'pending') store.activate(id, now());
+    if (row.status === 'pending') {
+      if (store.countAsn(row.asn) >= MAX_PER_ASN) return bad('this AS has reached the limit of subscriptions', 429);      // the limit is checked again when it starts to count
+      store.activate(id, now());
+    }
     return reply(200, { status: 'active', asn: row.asn, kind: row.kind });
   }
 

@@ -45,7 +45,9 @@ const PRIVACY = 'https://www.unipd.it/en/privacy';
 const log = (m) => console.log(`${new Date().toISOString()} ${m}`);
 
 process.umask(0o077);           // the database, its WAL and the keys are created readable by the service only, whatever the directory allows
-const store = openStore(env('NOTIFY_DB', '/var/db/aspa-notify/notify.db'));
+const dbPath = env('NOTIFY_DB', '/var/db/aspa-notify/notify.db');
+const store = openStore(dbPath);
+for (const f of [dbPath, `${dbPath}-wal`, `${dbPath}-shm`]) { try { chmodSync(f, 0o600); } catch (err) { if (err.code !== 'ENOENT') throw err; } }     // the files that were there before the umask above
 const keyPath = env('NOTIFY_KEY', '/var/db/aspa-notify/token.key');
 // the secret of the links is created once; the flag 'wx' makes a second creator fail instead of overwriting it
 try { writeFileSync(keyPath, randomBytes(32).toString('base64url'), { mode: 0o600, flag: 'wx' }); } catch (err) { if (err.code !== 'EEXIST') throw err; }
@@ -101,7 +103,8 @@ const api = makeApi({
 // `job` is plain data: {type: 'change', event, relation} for a change of ASPAs, {type: 'message', ...} for a place of valley or an alert on invalid
 // announcements, {type: 'status', events} for the state of the service.
 const FOOTER_LEAKS = 'The places of valley are read once a day from the table dumps of collectors of RIPE RIS and RouteViews. A place is a candidate, not a verdict.';
-async function send(sub, job) {
+async function send(sub, job, row) {
+  const event_id = `aspa-${row.id}`;                   // the same through every attempt: a receiver can drop the second copy of a message
   const unsub = api.unsubscribeUrl(sub.id);            // POST: List-Unsubscribe header and webhooks
   const unsubPage = api.unsubscribePage(sub.id);       // a page for people
   const ok = (r) => { if (!(r.status >= 200 && r.status < 300)) throw new Error(`HTTP ${r.status}`); };
@@ -119,7 +122,7 @@ async function send(sub, job) {
       ].join('\n'), unsub);
     } else {
       ok(await post(sub.target, {
-        type: 'aspa.change', asn: sub.asn, relation, text: line, time: new Date().toISOString(),
+        event_id, type: 'aspa.change', asn: sub.asn, relation, text: line, time: new Date().toISOString(),
         change: { customer: e.customer, kind: e.kind, providers: e.providers, added: e.added, dropped: e.dropped },
         page: `${SITE}/as/${sub.asn}`, unsubscribe: unsub,
       }, { secret: sub.secret }));
@@ -135,7 +138,7 @@ async function send(sub, job) {
         'A change is announced when two checks in a row (15 minutes apart) show it. If the server itself is down, no message can be sent.',
       ].join('\n'), unsub);
     } else {
-      ok(await post(sub.target, { type: 'aspa.status', text: text.join(' '), time: new Date().toISOString(), changes: job.events.map((e) => ({ part: e.id, name: e.name, from: e.from, to: e.to, at: new Date(e.at * 1000).toISOString() })), page: `${SITE}/status.html`, unsubscribe: unsub }, { secret: sub.secret }));
+      ok(await post(sub.target, { event_id, type: 'aspa.status', text: text.join(' '), time: new Date().toISOString(), changes: job.events.map((e) => ({ part: e.id, name: e.name, from: e.from, to: e.to, at: new Date(e.at * 1000).toISOString() })), page: `${SITE}/status.html`, unsubscribe: unsub }, { secret: sub.secret }));
     }
   } else {
     const { subject, line, type, extra, footer = FOOTER_LEAKS } = job;
@@ -148,7 +151,7 @@ async function send(sub, job) {
         footer,
       ].join('\n'), unsub);
     } else {
-      ok(await post(sub.target, { type, asn: sub.asn, text: line, time: new Date().toISOString(), ...extra, page: `${SITE}/as/${sub.asn}`, unsubscribe: unsub }, { secret: sub.secret }));
+      ok(await post(sub.target, { event_id, type, asn: sub.asn, text: line, time: new Date().toISOString(), ...extra, page: `${SITE}/as/${sub.asn}`, unsubscribe: unsub }, { secret: sub.secret }));
     }
   }
 }
@@ -212,12 +215,20 @@ async function pollInvalid() {
 
 // what /api/v1/subscriptions/health says: when the data was last read, and whether the last reads worked
 const pulse = { lastOk: null, lastTry: null, failures: 0 };
-const health = () => ({
-  ok: pulse.lastOk !== null && pulse.failures < 3 && Date.now() - pulse.lastOk < 3 * POLL,
+const STUCK = 12 * 3600;      // the retries of a message last about eight hours and then the subscription is switched off: older than this, the delivery is stuck
+const health = () => {
+  const oldest = store.outboxOldest();
+  const waiting = oldest ? Math.floor(Date.now() / 1000) - oldest : 0;
+  return {
+  ok: pulse.lastOk !== null && pulse.failures < 3 && Date.now() - pulse.lastOk < 3 * POLL && waiting < STUCK,
+  outbox_pending: store.outboxCount(),
+  oldest_pending_seconds: waiting,
+  disabled_subscriptions: store.countDisabled(),
   last_poll: pulse.lastOk && new Date(pulse.lastOk).toISOString(),
   failures_in_a_row: pulse.failures,
   poll_seconds: POLL / 1000,
-});
+  };
+};
 
 let busy = false;
 async function poll() {
