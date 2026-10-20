@@ -156,7 +156,13 @@
   // skip link and the menu and not the place that the reader left.
   const toTop = el('button', { type: 'button', class: 'totop', 'aria-label': 'Back to the top of the page' });
   toTop.hidden = true;
-  toTop.innerHTML = '<svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true" focusable="false"><path d="M12 19V5M5 12l7-7 7 7" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  const NS = 'http://www.w3.org/2000/svg';
+  const svg = document.createElementNS(NS, 'svg');
+  for (const [k, v] of Object.entries({ viewBox: '0 0 24 24', width: '22', height: '22', 'aria-hidden': 'true', focusable: 'false' })) svg.setAttribute(k, v);
+  const arrow = document.createElementNS(NS, 'path');
+  for (const [k, v] of Object.entries({ d: 'M12 19V5M5 12l7-7 7 7', fill: 'none', stroke: 'currentColor', 'stroke-width': '2.4', 'stroke-linecap': 'round', 'stroke-linejoin': 'round' })) arrow.setAttribute(k, v);
+  svg.append(arrow);
+  toTop.append(svg);
   const SHOW_AFTER = () => Math.max(600, window.innerHeight);
   let ticking = false;
   const place = () => { ticking = false; toTop.hidden = window.scrollY < SHOW_AFTER(); };
