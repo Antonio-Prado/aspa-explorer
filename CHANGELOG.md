@@ -5,6 +5,20 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.47.0] - 2026-10-20
+
+### Changed
+- Notifications are kept until they have gone. An event is written to a queue in the database, one row for each subscription that must hear about it, **before** the state that says it was seen is saved; a row is deleted only when the message has been delivered. A webhook that is down, a restart or a crash delays a notification and no longer loses it (it can come twice after a crash between the delivery and the delete). A failed message is tried again after 10 minutes, then 30 minutes, 1, 2 and 4 hours; the messages of one subscription go out in order and one at a time, the subscriptions eight at a time; after five failures in a row the subscription is switched off and its queue emptied; a message older than two days is dropped. The queue is read again at every start and every minute. It lives in `notifier/outbox.mjs` and the `outbox` table, with tests for the order, the retries, the five failures and the old messages.
+
+### Fixed
+- A subscription by e-mail that had been switched off was asked again, answered *active* after the confirmation, and stayed switched off, so that its owner believed to receive alerts that never came. Asking again now makes it pending, and the confirmation makes it active.
+- The limit of 500 subscriptions of an AS counted the requests that nobody had confirmed, so that a few hundred of them could fill it. It counts the working subscriptions; the unconfirmed ones have their own limits (100 for each AS, 5,000 in all).
+- Two deliveries to the same subscription could run at the same time, so that five quick failures disabled a subscription whose next message had gone. They are now one after the other.
+
+### Security
+- `3ffe::/16` (the old 6bone block) is refused as a webhook address.
+- The notifier creates its files (the database, its journal, the keys) readable by its own user only, whatever the directory allows (`umask 077`).
+
 ## [1.46.4] - 2026-10-20
 
 ### Security

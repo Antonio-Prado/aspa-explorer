@@ -39,8 +39,8 @@ const inV6 = (bytes, base, bits) => {
   return true;
 };
 // What is inside 2000::/3 and is not for the public Internet (IANA special-purpose registry): the Teredo, benchmarking, ORCHID and documentation
-// space of 2001::/23 and 2001:db8::/32, 6to4, SRv6 SIDs, and the documentation block 3fff::/20. Compared on the 128 bits, not on the text.
-const V6_BLOCKED = [['2001::', 23], ['2001:db8::', 32], ['2002::', 16], ['3fff::', 20], ['5f00::', 16]];
+// space of 2001::/23 and 2001:db8::/32, 6to4, the old 6bone block 3ffe::/16, SRv6 SIDs, and the documentation block 3fff::/20. Compared on the 128 bits, not on the text.
+const V6_BLOCKED = [['2001::', 23], ['2001:db8::', 32], ['2002::', 16], ['3ffe::', 16], ['3fff::', 20], ['5f00::', 16]];
 
 // true only for a unicast address on the public Internet
 export function isPublicIp(ip) {

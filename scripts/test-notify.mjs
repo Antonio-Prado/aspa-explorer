@@ -5,6 +5,7 @@ import { generateKeyPairSync } from 'node:crypto';
 import { makeToken, readToken } from '../notifier/tokens.mjs';
 import { stabilise, audience, describeEvent, newPlaces, describePlace } from '../notifier/changes.mjs';
 import { pool } from '../notifier/pool.mjs';
+import { makeOutbox, RETRY, MAX_FAILS } from '../notifier/outbox.mjs';
 import { isPublicIp, parseWebhookUrl, post, signature } from '../notifier/webhook.mjs';
 import { sign, verify, relaxBody } from '../notifier/dkim.mjs';
 import { compose, serialize, sendmail, EMAIL_RE } from '../notifier/mail.mjs';
@@ -43,9 +44,9 @@ await test('addresses: which webhook targets are public', () => {
   for (const ip of ['127.0.0.1', '10.1.2.3', '172.16.0.1', '172.31.255.255', '192.168.1.1', '169.254.169.254', '100.64.0.1', '0.0.0.0', '224.0.0.1', '255.255.255.255',
     '::1', '::', 'fe80::1', 'fc00::1', 'fd12::1', 'ff02::1', '::ffff:127.0.0.1', '::ffff:10.0.0.1', '2001:db8::1', 'not an ip']) assert.equal(isPublicIp(ip), false, ip);
   // the same network in every way of writing it, and the blocks the text comparison used to miss
-  for (const ip of ['2001::1', '2001:0000::1', '2001:00::1', '2001:0:0:0:0:0:0:1', '2001:0001::1', '2001:1ff::1', '2001:db8::1', '2001:0DB8:0:0::1', '2002:c000:204::1', '3fff::1', '3fff:0fff::1', '5f00::1',
+  for (const ip of ['2001::1', '2001:0000::1', '2001:00::1', '2001:0:0:0:0:0:0:1', '2001:0001::1', '2001:1ff::1', '2001:db8::1', '2001:0DB8:0:0::1', '2002:c000:204::1', '3fff::1', '3fff:0fff::1', '3ffe::1', '5f00::1',
     '::ffff:7f00:1', '0:0:0:0:0:ffff:10.0.0.1', '64:ff9b::1', '100::1', '0::1', 'fe80::1%eth0']) assert.equal(isPublicIp(ip), false, ip);
-  for (const ip of ['2001:200::1', '2001:4860:4860::8888', '2400:cb00::1', '2606:4700::1111', '::ffff:8.8.8.8', '3ffe::1', '4000::1']) assert.equal(isPublicIp(ip), ip.startsWith('4') ? false : true, ip);
+  for (const ip of ['2001:200::1', '2001:4860:4860::8888', '2400:cb00::1', '2606:4700::1111', '::ffff:8.8.8.8', '3fef::1', '4000::1']) assert.equal(isPublicIp(ip), ip.startsWith('4') ? false : true, ip);
   assert.equal(isPublicIp('172.32.0.1'), true);
 });
 
@@ -219,6 +220,7 @@ await test('API: validation, honeypot and limits', async () => {
   assert.equal((await api.subscribe({ kind: 'email', target: 'b@example.com', asn: 'AS9' }, 'ipx')).status, 202);
   assert.equal((await api.subscribe({ kind: 'email', target: 'c@example.com', asn: 'AS9' }, 'ipx')).status, 202);
   assert.equal((await api.subscribe({ kind: 'email', target: 'd@example.com', asn: 'AS9' }, 'ipx')).status, 429);   // per IP: 3 an hour
+  for (const m of mails) api.confirm({ token: m.token });                                                            // the limit of an AS is on the working ones
   assert.equal((await api.subscribe({ kind: 'email', target: 'd@example.com', asn: 'AS9' }, 'ipy')).status, 429);   // per AS: 3
 });
 
@@ -527,6 +529,98 @@ await test('pool: runs a few jobs at a time, finishes all of them, and a job tha
   assert.equal(peak, 4);
   assert.deepEqual(errors, ['boom']);
   await pool([], 4);
+});
+
+await test('API: a disabled e-mail subscription is asked again, and it works only after the new confirmation', async () => {
+  const { store, api, mails, tick } = setup();
+  await api.subscribe({ kind: 'email', target: 'me@example.com', asn: 'AS3333' }, '1.1.1.1');
+  api.confirm({ token: mails[0].token });
+  const id = store.allActive()[0].id;
+  store.disable(id);
+  assert.equal(store.get(id).status, 'disabled');
+  tick(7200);
+  assert.equal((await api.subscribe({ kind: 'email', target: 'me@example.com', asn: 'AS3333' }, '1.1.1.2')).status, 202);
+  assert.equal(store.get(id).status, 'pending');                  // asked again, not working yet
+  assert.equal(store.allActive().length, 0);
+  assert.equal(api.confirm({ token: mails[1].token }).status, 200);
+  assert.equal(store.get(id).status, 'active');
+  assert.equal(store.get(id).fails, 0);
+});
+
+await test('API: the limit of an AS counts the working subscriptions, and the unconfirmed ones have limits of their own', async () => {
+  const { store, api } = setup({ maxPerAsn: 2, maxPendingPerAsn: 3, maxPending: 4, perIp: () => true, global: () => true });
+  for (let i = 0; i < 3; i++) assert.equal((await api.subscribe({ kind: 'email', target: `p${i}@example.com`, asn: 'AS3333' }, `9.9.9.${i}`)).status, 202);
+  assert.equal(store.countAsn('AS3333'), 0);                       // three waiting, none working
+  assert.equal((await api.subscribe({ kind: 'email', target: 'p3@example.com', asn: 'AS3333' }, '9.9.9.9')).status, 503);   // too many waiting for this AS
+  assert.equal((await api.subscribe({ kind: 'email', target: 'q0@example.com', asn: 'AS3334' }, '9.9.8.1')).status, 202);
+  assert.equal((await api.subscribe({ kind: 'email', target: 'q1@example.com', asn: 'AS3335' }, '9.9.8.2')).status, 503);   // too many waiting in all
+  const ids = store.allActive();
+  assert.equal(ids.length, 0);
+});
+
+const outboxSetup = (send) => {
+  const store = openStore(':memory:');
+  let clock = 1000;
+  const logs = [];
+  const id = store.insert('webhook', 'https://hook.example.org/x', 'AS3333', 's', clock, 0, 0); store.activate(id, clock);
+  const outbox = makeOutbox({ store, send, log: (m) => logs.push(m), now: () => clock });
+  return { store, outbox, id, logs, tick: (n) => { clock += n; } };
+};
+
+await test('outbox: a message that went is deleted, and the messages of one subscription go out in order', async () => {
+  const seen = [];
+  const { store, outbox, id } = outboxSetup(async (sub, job) => { seen.push(job.n); });
+  for (const n of [1, 2, 3]) outbox.enqueue(id, { n });
+  assert.equal(store.outboxCount(), 3);
+  await outbox.drain();
+  assert.deepEqual(seen, [1, 2, 3]);
+  assert.equal(store.outboxCount(), 0);
+  assert.equal(store.get(id).last_sent, 1000);
+});
+
+await test('outbox: a failure keeps the message, waits, tries again, and the ones behind it wait too', async () => {
+  let up = false; const seen = [];
+  const { store, outbox, id, tick } = outboxSetup(async (sub, job) => { if (!up) throw new Error('down'); seen.push(job.n); });
+  outbox.enqueue(id, { n: 1 }); outbox.enqueue(id, { n: 2 });
+  await outbox.drain();
+  assert.equal(store.outboxCount(), 2);                            // nothing lost
+  assert.equal(store.get(id).fails, 1);
+  await outbox.drain();                                            // too early: not tried again
+  assert.equal(store.get(id).fails, 1);
+  up = true; tick(RETRY[0] + 1);
+  await outbox.drain();
+  assert.deepEqual(seen, [1, 2]);                                  // in order, after the retry
+  assert.equal(store.outboxCount(), 0);
+  assert.equal(store.get(id).fails, 0);                            // a delivery that works clears the count
+  assert.equal(store.get(id).status, 'active');
+});
+
+await test('outbox: after five failures the subscription is disabled and its messages are dropped; a message that arrives later does not wake it', async () => {
+  const { store, outbox, id, tick } = outboxSetup(async () => { throw new Error('down'); });
+  outbox.enqueue(id, { n: 1 });
+  for (let i = 0; i < MAX_FAILS; i++) { await outbox.drain(); tick(RETRY[RETRY.length - 1] + 1); }
+  assert.equal(store.get(id).status, 'disabled');
+  assert.equal(store.outboxCount(), 0);
+  outbox.enqueue(id, { n: 2 });
+  await outbox.drain();
+  assert.equal(store.outboxCount(), 0);                            // dropped, not sent
+  assert.equal(store.get(id).status, 'disabled');
+});
+
+await test('outbox: old messages are dropped, an unsubscribed one is cleaned, and the subscriptions go on in parallel', async () => {
+  const seen = []; let running = 0, peak = 0;
+  const { store, outbox, id, tick } = outboxSetup(async (sub, job) => { running++; peak = Math.max(peak, running); await new Promise((r) => setTimeout(r, 5)); running--; seen.push([sub.id, job.n]); });
+  outbox.enqueue(id, { n: 'old' });
+  tick(2 * 86400 + 1);
+  outbox.enqueue(id, { n: 'new' });
+  const ids = [id];
+  for (let i = 0; i < 5; i++) { const x = store.insert('webhook', `https://h${i}.example.org/x`, 'AS3333', 's', 1000, 0, 0); store.activate(x, 1000); ids.push(x); outbox.enqueue(x, { n: i }); }
+  const gone = store.insert('webhook', 'https://gone.example.org/x', 'AS3333', 's', 1000, 0, 0); store.activate(gone, 1000); outbox.enqueue(gone, { n: 'x' }); store.remove(gone);
+  await outbox.drain();
+  assert.deepEqual(seen.filter(([i]) => i === id).map(([, n]) => n), ['new']);   // the old one was not sent
+  assert.equal(seen.length, 6);
+  assert.ok(peak > 1);
+  assert.equal(store.outboxCount(), 0);
 });
 
 // ---- alerts on invalid announcements ----

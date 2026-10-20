@@ -29,6 +29,15 @@ export function openStore(path) {
       body TEXT NOT NULL
     );
     CREATE INDEX IF NOT EXISTS reports_created ON reports (created);
+    CREATE TABLE IF NOT EXISTS outbox (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      sub_id INTEGER NOT NULL,
+      job TEXT NOT NULL,
+      created INTEGER NOT NULL,
+      attempts INTEGER NOT NULL DEFAULT 0,
+      next_try INTEGER NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS outbox_due ON outbox (next_try, id);
   `);
   // 1.19.0: a subscription can ask for the places of valley that involve its AS as well (older files do not have the column)
   if (!db.prepare('PRAGMA table_info(subscriptions)').all().some((c) => c.name === 'leaks')) db.exec('ALTER TABLE subscriptions ADD COLUMN leaks INTEGER NOT NULL DEFAULT 0');
@@ -50,12 +59,23 @@ export function openStore(path) {
     disable: db.prepare('UPDATE subscriptions SET status = \'disabled\' WHERE id = ?'),
     purge: db.prepare('DELETE FROM subscriptions WHERE status = \'pending\' AND attempted < ?'),
     perTarget: db.prepare('SELECT COUNT(*) AS n FROM subscriptions WHERE kind = ? AND target = ?'),
-    perAsn: db.prepare('SELECT COUNT(*) AS n FROM subscriptions WHERE asn = ?'),
+    // the limit of an AS is on the subscriptions that are working: the ones that nobody has confirmed (and are deleted after two days) must not fill it
+    perAsn: db.prepare('SELECT COUNT(*) AS n FROM subscriptions WHERE asn = ? AND status = \'active\''),
+    pendingAsn: db.prepare('SELECT COUNT(*) AS n FROM subscriptions WHERE asn = ? AND status = \'pending\''),
+    pendingAll: db.prepare('SELECT COUNT(*) AS n FROM subscriptions WHERE status = \'pending\''),
+    repend: db.prepare('UPDATE subscriptions SET status = \'pending\', fails = 0 WHERE id = ? AND status = \'disabled\''),
     counts: db.prepare('SELECT kind, status, COUNT(*) AS n FROM subscriptions GROUP BY kind, status'),
     addReport: db.prepare('INSERT INTO reports (id, created, kind, title, body) VALUES (?, ?, ?, ?, ?)'),
     getReport: db.prepare('SELECT id, created, kind, title, body FROM reports WHERE id = ?'),
     purgeReports: db.prepare('DELETE FROM reports WHERE created < ?'),
     countReports: db.prepare('SELECT COUNT(*) AS n FROM reports'),
+    outboxAdd: db.prepare('INSERT INTO outbox (sub_id, job, created, next_try) VALUES (?, ?, ?, ?)'),
+    outboxDue: db.prepare('SELECT * FROM outbox WHERE next_try <= ? ORDER BY id'),
+    outboxDone: db.prepare('DELETE FROM outbox WHERE id = ?'),
+    outboxRetry: db.prepare('UPDATE outbox SET attempts = attempts + 1 WHERE id = ?'),
+    outboxWait: db.prepare('UPDATE outbox SET next_try = ? WHERE sub_id = ?'),
+    outboxDropSub: db.prepare('DELETE FROM outbox WHERE sub_id = ?'),
+    outboxCount: db.prepare('SELECT COUNT(*) AS n FROM outbox'),
     reportBytes: db.prepare('SELECT COALESCE(SUM(LENGTH(CAST(body AS BLOB))), 0) AS n FROM reports'),
     getState: db.prepare('SELECT value FROM state WHERE key = ?'),
     setState: db.prepare('INSERT INTO state (key, value) VALUES (?, ?) ON CONFLICT (key) DO UPDATE SET value = excluded.value'),
@@ -78,12 +98,22 @@ export function openStore(path) {
     purge: (olderThan) => Number(q.purge.run(olderThan).changes),
     countTarget: (kind, target) => q.perTarget.get(kind, target).n,
     countAsn: (asn) => q.perAsn.get(asn).n,
+    countPendingAsn: (asn) => q.pendingAsn.get(asn).n,
+    countPending: () => q.pendingAll.get().n,
+    repend: (id) => q.repend.run(id),
     counts: () => q.counts.all().map(plain),
     addReport: (id, now, kind, title, body) => q.addReport.run(id, now, kind, title, body),
     getReport: (id) => { const r = q.getReport.get(id); return r ? { ...r, body: JSON.parse(r.body) } : null; },
     purgeReports: (olderThan) => Number(q.purgeReports.run(olderThan).changes),
     countReports: () => q.countReports.get().n,
     // bytes, not characters: LENGTH() of a TEXT value counts the characters, and an emoji is one of them and four bytes
+    outboxAdd: (subId, job, now) => Number(q.outboxAdd.run(subId, job, now, now).lastInsertRowid),
+    outboxDue: (now) => q.outboxDue.all(now).map(plain),
+    outboxDone: (id) => q.outboxDone.run(id),
+    // a failure delays the whole queue of the subscription, so that the messages behind the one that failed do not overtake it
+    outboxRetry: (id, subId, nextTry) => { q.outboxRetry.run(id); q.outboxWait.run(nextTry, subId); },
+    outboxDropSub: (subId) => q.outboxDropSub.run(subId),
+    outboxCount: () => q.outboxCount.get().n,
     reportBytes: () => Number(q.reportBytes.get().n),
     getState: (key) => { const r = q.getState.get(key); return r ? JSON.parse(r.value) : null; },
     setState: (key, value) => q.setState.run(key, JSON.stringify(value)),

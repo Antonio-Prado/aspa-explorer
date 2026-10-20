@@ -37,6 +37,7 @@ export function makeApi(deps) {
   const perIp = deps.perIp || limiter(10, HOUR);
   const global = deps.global || limiter(400, HOUR);
   const MAX_PER_TARGET = deps.maxPerTarget || 20, MAX_PER_ASN = deps.maxPerAsn || 500;
+  const MAX_PENDING_PER_ASN = deps.maxPendingPerAsn || 100, MAX_PENDING = deps.maxPending || 5000;
 
   const confirmSalt = (id) => { const r = store.get(id); return r ? String(r.attempted) : ''; };
   const confirmToken = (row) => makeToken(key, 'confirm', row.id, String(row.attempted));
@@ -75,7 +76,9 @@ export function makeApi(deps) {
       if (row && t - row.attempted < HOUR) return accepted;                             // one confirmation per hour per subscription
       if (!row && store.countTarget('email', target) >= MAX_PER_TARGET) return accepted;
       if (!global('mail')) return bad('the service is busy, try again later', 503);
-      if (row) { store.attempt(row.id, t); store.setLeaks(row.id, leaks); store.setInvalid(row.id, invalid); } else row = { id: store.insert('email', target, asn, null, t, leaks, invalid), attempted: t };
+      // requests that nobody has confirmed yet are limited too, for each AS and in all: they cannot take the places of the working subscriptions
+      if (!row && (store.countPendingAsn(asn) >= MAX_PENDING_PER_ASN || store.countPending() >= MAX_PENDING)) return bad('the service is busy, try again later', 503);
+      if (row) { store.repend(row.id); store.attempt(row.id, t); store.setLeaks(row.id, leaks); store.setInvalid(row.id, invalid); } else row = { id: store.insert('email', target, asn, null, t, leaks, invalid), attempted: t };
       row = store.get(row.id);
       try { await sendConfirmation({ to: target, asn, token: confirmToken(row), site, leaks: !!leaks, invalid }); } catch (err) { deps.log && deps.log(`confirmation not sent: ${err.message}`); store.remove(row.id); return bad('the confirmation message could not be sent', 502); }
       return accepted;
