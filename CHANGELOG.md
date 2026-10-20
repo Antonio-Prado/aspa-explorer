@@ -5,6 +5,11 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.46.0] - 2026-10-20
+
+### Added
+- Every page but the embeddable chart: a round button, bottom right, that goes back to the top of a long page. It appears after the reader has scrolled down a screen, has a name for screen readers (*Back to the top of the page*), is 44 px wide, clear of the safe areas of phones, hidden when printing, scrolls without animation for people who ask for less motion, and moves the focus to the top so that the next Tab reaches the skip link. It lives in `footer.js`, which every page already loads; the accessibility test scrolls the guide, checks that the button appears, that axe finds nothing with it shown, and that it takes the reader to the top.
+
 ## [1.45.1] - 2026-10-20
 
 ### Changed

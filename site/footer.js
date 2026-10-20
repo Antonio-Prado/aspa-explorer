@@ -1,6 +1,6 @@
 'use strict';
 
-// Site footer shared by all pages. Two rows:
+// Site footer shared by all pages, and the floating button that goes back to the top of a long page. The footer has two rows:
 //   1. release, last commit, accessibility, visitor's address
 //   2. credits: Powered by DEI, Served by FreeBSD, Validated by Routinator, Made with vi
 // The release comes from /version.json and the commit the running page was built
@@ -150,6 +150,27 @@
       refresh();
     })
     .catch(() => { /* endpoint not available */ });
+
+  // A button that goes back to the top of the page, shown only after the reader has gone down a screen or two. It is a real button with a name for
+  // screen readers; it scrolls without animation for people who ask for less motion, and moves the focus to the top, so that the next Tab reaches the
+  // skip link and the menu and not the place that the reader left.
+  const toTop = el('button', { type: 'button', class: 'totop', 'aria-label': 'Back to the top of the page' });
+  toTop.hidden = true;
+  toTop.innerHTML = '<svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true" focusable="false"><path d="M12 19V5M5 12l7-7 7 7" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  const SHOW_AFTER = () => Math.max(600, window.innerHeight);
+  let ticking = false;
+  const place = () => { ticking = false; toTop.hidden = window.scrollY < SHOW_AFTER(); };
+  window.addEventListener('scroll', () => { if (!ticking) { ticking = true; requestAnimationFrame(place); } }, { passive: true });
+  toTop.addEventListener('click', () => {
+    const calm = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    window.scrollTo({ top: 0, left: 0, behavior: calm ? 'auto' : 'smooth' });
+    const body = document.body;
+    body.setAttribute('tabindex', '-1');
+    body.focus({ preventScroll: true });
+    body.addEventListener('blur', () => body.removeAttribute('tabindex'), { once: true });
+  });
+  document.body.append(toTop);
+  place();
 
   // How to cite, under the title of every page: the DOI of the software on Zenodo (the one of the concept, that always leads to the latest version).
   const top = document.querySelector('header.masthead .top');

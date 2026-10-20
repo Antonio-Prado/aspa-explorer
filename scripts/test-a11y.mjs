@@ -135,6 +135,13 @@ for (const [name, path] of PAGES) {
             if ((await page.locator('section[aria-label^="Neighbours of"] thead th', { hasText: 'Invalid' }).count()) > 0) extra.push('valley: the neighbours table still has an Invalid column');
           }
         }
+        if (name === 'guide') {
+          // the button that goes back to the top: hidden at the top of the page, shown after a long scroll (and left so for axe to check its contrast)
+          if (await page.locator('.totop').isVisible()) extra.push('totop: the button is shown at the top of the page');
+          await page.evaluate(() => window.scrollTo(0, 3000));
+          await page.waitForTimeout(300);
+          if (!(await page.locator('.totop').isVisible())) extra.push('totop: no button after scrolling down');
+        }
         if (name === 'irr') {
           // the IRR object against the ASPA: press the button, expect what the fixture says (AS6762 is transit in the object and not in the ASPA)
           await page.locator('#as-irr button').click();
@@ -183,6 +190,13 @@ for (const [name, path] of PAGES) {
         }
         await page.addScriptTag({ content: axeSource });
         const result = await page.evaluate(() => axe.run(document, { runOnly: ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'best-practice'] }));
+        if (name === 'guide' && (await page.locator('.totop').isVisible())) {
+          await page.locator('.totop').click();
+          await page.waitForFunction(() => window.scrollY < 2, null, { timeout: 5000 }).catch(() => {});
+          if ((await page.evaluate(() => window.scrollY)) > 2) extra.push('totop: the button does not go to the top');
+          if (await page.locator('.totop').isVisible()) extra.push('totop: the button stays after going to the top');
+          if ((await page.evaluate(() => document.activeElement && document.activeElement.tagName)) !== 'BODY') extra.push('totop: the focus does not go to the top');
+        }
         const over = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
         const notes = extra.concat(result.violations.map((v) => `${v.id} (${v.nodes.length}): ${v.nodes[0].target.join(' ')} -- ${v.help}`));
         if (over > 1) {
