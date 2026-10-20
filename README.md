@@ -73,11 +73,11 @@
     <td align="center"><sub>Live updates from RIS Live, checked as they arrive</sub></td>
   </tr>
   <tr>
-    <td width="50%"><img src="assets/screenshots/leaks-dark.jpg" alt="Route leaks today: the invalid routes of the collectors, grouped by the place of the valley, with the ASes inside it"></td>
+    <td width="50%"><img src="assets/screenshots/leaks-dark.jpg" alt="Valleys today: the invalid routes of the collectors, grouped by the place of the valley, with the ASes inside it"></td>
     <td width="50%"><img src="assets/screenshots/validators-dark.jpg" alt="Validators compared: the customers whose providers differ between Routinator, rpki-client and the rpki-client of Cloudflare"></td>
   </tr>
   <tr>
-    <td align="center"><sub>Route leaks seen today in the table dumps</sub></td>
+    <td align="center"><sub>Valleys seen today in the table dumps</sub></td>
     <td align="center"><sub>Validators compared</sub></td>
   </tr>
   <tr>
@@ -166,7 +166,7 @@ The validator is a [Routinator](https://github.com/NLnetLabs/routinator) instanc
   - *the age of the snapshot*: RIPEstat reads the collectors from time to time, so the page says how long ago the routes were read, warns when that is more than an hour, and a button compares the shortest 24 prefixes with the looking glass of the RIPE RIS (the present state): which are no longer announced by an origin, which have a new one;
   - *origin validation*: every prefix and origin checked against the ROAs of the validator (valid, not found, invalid with the reason), asked of the page's own server;
   - *the AS paths* checked with the downstream procedure (valid, unknown, invalid);
-  - *route leaks*: the valleys that the ASPAs prove, grouped by place, with the feeders that see them;
+  - *valleys* (possible route leaks): the places that the ASPAs prove, grouped by place, with the feeders that see them;
   - *the neighbours of the origin*, with an evidence column that says which of them look like its providers because its routes go on through them to a Tier-1 network, and which of them its ASPA does not list;
   - *tromboning*: a traceroute from twelve probes in the country of the origin (Globalping), with the median round trip and a row for each probe, to tell a route that goes far away (100 ms or more inside a country) from a normal one.
 
@@ -187,7 +187,7 @@ The validator is a [Routinator](https://github.com/NLnetLabs/routinator) instanc
 
 - **Overview:** summary tiles on the home page, with the coverage (the share of the ASes seen in BGP that have an ASPA).
 - **Statistics:** the charts of the ASPAs (over time since October 2023 by RIR, provider ASes, median providers, no-provider ASPAs or coverage, over any period, with a logarithmic scale and CSV/JSON download; per RIR; providers per ASPA; most-named providers) and the adoption: who has an ASPA by size of the network, RIR and country, and the 100 largest transit networks.
-- **Route leaks today:** every route of 30 collectors, sixteen of RIPE RIS (rrc00, 01, 03, 04, 05, 06, 07, 10, 11, 12, 14, 15, 16, 19, 21 and 23) and fourteen of RouteViews (Oregon, route-views3 and 4, London, Palo Alto, Tokyo, New York, Perth, Atlanta, Singapore, Johannesburg, Sao Paulo, Sydney and Equinix), on five continents, checked with the downstream ASPA verification once a day (`scripts/build-leaks.mjs`, a small MRT reader in `scripts/mrt.mjs`), the places of valley grouped and told apart with the CAIDA relationships into possible leaks and ASPAs that seem to miss a provider, also as `/api/v1/leaks.json`.
+- **Valleys today (possible route leaks):** every route of 30 collectors, sixteen of RIPE RIS (rrc00, 01, 03, 04, 05, 06, 07, 10, 11, 12, 14, 15, 16, 19, 21 and 23) and fourteen of RouteViews (Oregon, route-views3 and 4, London, Palo Alto, Tokyo, New York, Perth, Atlanta, Singapore, Johannesburg, Sao Paulo, Sydney and Equinix), on five continents, checked with the downstream ASPA verification once a day (`scripts/build-leaks.mjs`, a small MRT reader in `scripts/mrt.mjs`), the places of valley grouped and told apart with the CAIDA relationships into possible leaks and ASPAs that seem to miss a provider, also as `/api/v1/leaks.json`.
 - **Collectors compared:** a bar for each of the 30 collectors (places of valley seen, places that only it sees, invalid routes, feeders, routes read) and the same places told apart by who sees them, RIPE RIS only, both projects or RouteViews only (`comparison` and the figures of each collector in `/api/v1/leaks.json`).
 - **Leaks over time, alerts and comparison:** the daily totals of the leaks (`/api/v1/leaks-history.json`, a chart on the statistics page), the places of valley that involve each AS (`/api/v1/leaks-by-as.json`, and one file for each of the last 60 days), an opt-in alert for the new places that involve a subscribed AS, and *Compare two dates* on the page of an AS (providers added and dropped, the ASPAs that began or stopped naming it, its places of valley).
 - **A starting point for an ASPA:** from the evidence about the neighbours of an origin, the providers to list, the ones already declared and the weak leads, with a list ready to copy.

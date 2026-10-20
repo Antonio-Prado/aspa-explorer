@@ -1,6 +1,6 @@
 'use strict';
 
-// The "Route leaks today" section of the statistics page: /api/v1/leaks.json, built once a day by
+// The "Valleys today (possible route leaks)" section of the statistics page: /api/v1/leaks.json, built once a day by
 // scripts/build-leaks.mjs from the table dumps of collectors of RIPE RIS and RouteViews.
 (function () {
   const $ = (id) => document.getElementById(id);
@@ -188,7 +188,7 @@
       if (!r.ok) throw new Error(`HTTP ${r.status}`);
       d = await r.json();
     } catch (err) {
-      $('leaks-sub').textContent = `The route leaks are not available (${err.message}). They are rebuilt once a day.`;
+      $('leaks-sub').textContent = `The valleys are not available (${err.message}). They are rebuilt once a day.`;
       return;
     }
     numbers(d);

@@ -5,6 +5,11 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.45.1] - 2026-10-20
+
+### Changed
+- Statistics page and guide: the section *Route leaks today* is now *Valleys today (possible route leaks)*, as the table of the routes check was renamed in 1.43.12: a valley is a candidate, which a leak makes but an ASPA that misses a provider makes too, and the title should not accuse. The text of the section already said so. README likewise.
+
 ## [1.45.0] - 2026-10-20
 
 ### Changed
