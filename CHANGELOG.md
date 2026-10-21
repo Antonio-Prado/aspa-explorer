@@ -5,6 +5,11 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.47.8] - 2026-10-22
+
+### Fixed
+- `scripts/watch-invalid.mjs` wrote the error text of the RIS Live stream to the log as it came: a line break in it could have forged a line of the log (code scanning, `js/log-injection`). Line breaks are replaced by spaces.
+
 ## [1.47.7] - 2026-10-22
 
 ### Fixed
