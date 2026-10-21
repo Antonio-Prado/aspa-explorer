@@ -11,7 +11,8 @@ export const KINDS = ['path', 'bulk', 'routes', 'whatif', 'tromboning', 'other']
 export const CELL_CLASSES = ['valid', 'unknown', 'invalid', 'provider', 'not-provider', 'none'];
 export const LIMITS = { title: 140, source: 600, sections: 12, heading: 120, text: 2000, columns: 8, column: 60, rows: 500, cell: 240, bytes: 200 * 1024 };
 export const TTL_DAYS = 30;
-export const ID_RE = /^[0-9a-f]{12}$/;
+// 128 bits since 1.47.6; the 48-bit ones made before (12 characters) are read until they expire
+export const ID_RE = /^(?:[0-9a-f]{32}|[0-9a-f]{12})$/;
 
 const plain = (v, max) => (typeof v === 'string' ? v.replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f‪-‮⁦-⁩]/g, '').trim().slice(0, max) : null);
 
@@ -63,7 +64,7 @@ export function checkReport(body) {
   return { report };
 }
 
-export const newId = () => randomBytes(6).toString('hex');
+export const newId = () => randomBytes(16).toString('hex');
 
 const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 

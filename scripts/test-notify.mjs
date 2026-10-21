@@ -504,7 +504,7 @@ await test('HTTP: POST /api/v1/reports, GET as JSON and as a page', async () => 
   const { id } = await r.json();
   const j = await fetch(`${base}/api/v1/reports/${id}`);
   assert.equal(j.status, 200);
-  assert.match(j.headers.get('cache-control'), /max-age/);
+  assert.equal(j.headers.get('cache-control'), 'no-store');             // a report is read from the notifier every time: it expires, and its address is the only key
   assert.equal((await j.json()).kind, 'path');
   const page = await fetch(`${base}/r/${id}`);
   assert.equal(page.status, 200);
@@ -894,6 +894,33 @@ await test('outbox: a call that comes while a drain runs waits for it and has it
   release();
   await second;
   assert.equal(settled, true);
+});
+
+
+await test('reports: an expired one is not served even if the clean-up has not run, and the new ones have 128 bits', async () => {
+  const { api, tick, store } = setup({ perIp: () => true, perIpReport: () => true, globalReport: () => true });
+  const made = api.createReport(goodReport(), '1.1.1.1');
+  assert.match(made.body.id, /^[0-9a-f]{32}$/);
+  tick(30 * 86400 - 10);
+  assert.equal(api.getReport(made.body.id).status, 200);
+  assert.ok(api.reportPage(made.body.id, '<html><head><title>x</title></head><body></body></html>'));
+  tick(20);                                                                  // thirty days and ten seconds: past the expiry, the record is still there
+  assert.equal(store.countReports(), 1);
+  assert.equal(api.getReport(made.body.id).status, 404);
+  assert.equal(api.reportPage(made.body.id, '<html><head><title>x</title></head><body></body></html>'), null);
+  store.addReport('0123456789ab', 1000, 'path', 't', JSON.stringify(goodReport()));        // the 48-bit ones made before are still read, until they expire
+  assert.equal(api.getReport('0123456789ab').status, 404);                   // (this one is old: expired)
+  store.addReport('abcdef012345', 1000 + 30 * 86400 - 5, 'path', 't', JSON.stringify(goodReport()));
+  assert.equal(api.getReport('abcdef012345').status, 200);
+});
+
+await test('reports: an address has a limit for the day as well as for the hour', () => {
+  let t = 0;
+  const { api } = setup({ perIpReport: limiter(1000, 3600, () => t), perIpReportDay: limiter(3, 86400, () => t), globalReport: () => true, maxReports: 1000 });
+  for (let i = 0; i < 3; i++) { t += 3700; assert.equal(api.createReport(goodReport(), '5.5.5.5').status, 201); }
+  t += 3700;
+  assert.equal(api.createReport(goodReport(), '5.5.5.5').status, 429);
+  assert.equal(api.createReport(goodReport(), '5.5.5.6').status, 201);
 });
 
 console.log(`${passed} tests passed`);

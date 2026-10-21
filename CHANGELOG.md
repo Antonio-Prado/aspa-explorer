@@ -5,6 +5,19 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.47.6] - 2026-10-21
+
+### Fixed
+- A shared report that had expired (30 days) was still served until the hourly clean-up deleted it, and for as long as the clean-up failed. `getReport()` and the page `/r/<id>` now answer 404 after the expiry; the clean-up only frees the room.
+- The CI pipeline of GitLab checked fewer files than `make check`: `site/bulk.js`, `irr.js`, `valley.js`, `recent.js`, `peek.js`, `share.js`, `report.js` and several tests were not in its lists. The Makefile and the pipeline now call the same two scripts (`scripts/check-js.sh`, `scripts/run-tests.sh`) which take the files by pattern, and the security lint takes `site/*.js`; a new file is covered without anybody adding it to a list.
+- The confirmation e-mail waited up to 60 seconds for `sendmail` while nginx gives up on a subscription after 20: the mailer now has 15 seconds.
+
+### Changed
+- The identifiers of the shared reports have 128 bits (32 characters) instead of 48. The ones made before are read until they expire. The nginx rule and `site/report.js` accept both.
+- A report is not cached any more (`Cache-Control: no-store`, page and JSON): its address is its only key, and it has to disappear when it expires.
+- An address can make at most 100 reports a day, besides the 20 an hour: the hourly limit alone let one address take the room over a few hours.
+- `/api/v1/subscriptions/health` gives the number and the bytes of the shared reports (`reports`, `report_bytes`), to see the room fill before it is full.
+
 ## [1.47.5] - 2026-10-20
 
 ### Fixed

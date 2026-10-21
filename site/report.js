@@ -35,7 +35,7 @@
 
   async function main() {
     if (!$('rp-body')) return;
-    const m = /^\/r\/([0-9a-f]{12})\/?$/.exec(location.pathname);
+    const m = /^\/r\/([0-9a-f]{32}|[0-9a-f]{12})\/?$/.exec(location.pathname);
     if (!m) { $('rp-sub').textContent = 'This address is not the one of a report.'; return; }
     try {
       const r = await fetch(`/api/v1/reports/${m[1]}`, { headers: { Accept: 'application/json' } });

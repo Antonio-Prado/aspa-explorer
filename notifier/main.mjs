@@ -242,6 +242,8 @@ const health = () => {
   outbox_pending: store.outboxCount(),
   oldest_pending_seconds: waiting,
   disabled_subscriptions: store.countDisabled(),
+  reports: store.countReports(),                    // what the shared results take of their room (20,000 and 512 MiB): to see it fill before it is full
+  report_bytes: store.reportBytes(),
   sources: sources.summary(POLL),
   last_poll: pulse.lastOk && new Date(pulse.lastOk).toISOString(),
   failures_in_a_row: pulse.failures,

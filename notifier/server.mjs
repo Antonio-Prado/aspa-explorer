@@ -136,24 +136,27 @@ export function makeApi(deps) {
 
   // shared results: kept TTL_DAYS days (the service purges them), at most MAX_REPORTS at a time
   const perIpReport = deps.perIpReport || limiter(20, HOUR);
+  const perIpReportDay = deps.perIpReportDay || limiter(100, 24 * HOUR);     // one address cannot take the room over several hours
   const globalReport = deps.globalReport || limiter(300, HOUR);
   const MAX_REPORTS = deps.maxReports || 20000;
   const MAX_REPORT_BYTES = deps.maxReportBytes || 512 * 1024 * 1024;     // what is stored, not what could be: the count alone lets 20000 big ones fill the disk
   function createReport(body, ip) {
     const c = checkReport(body);
     if (c.error) return bad(c.error);
-    if (!perIpReport(ip)) return bad('too many reports from this address, try again later', 429);
+    if (!perIpReport(ip) || !perIpReportDay(ip)) return bad('too many reports from this address, try again later', 429);
     if (!globalReport('all') || store.countReports() >= MAX_REPORTS || store.reportBytes() + Buffer.byteLength(JSON.stringify(c.report)) > MAX_REPORT_BYTES) return bad('the service is busy, try again later', 503);
     const id = newId();
     store.addReport(id, now(), c.report.kind, c.report.title, JSON.stringify(c.report));
     return reply(201, { id, url: `${site}/r/${id}`, expires_days: TTL_DAYS });
   }
+  // a report that has expired is not served, whether the hourly clean-up has deleted it yet or not
+  const readable = (id) => { const r = ID_RE.test(id) && store.getReport(id); return r && r.created + TTL_DAYS * 86400 > now() ? r : null; };
   function getReport(id) {
-    const r = ID_RE.test(id) && store.getReport(id);
+    const r = readable(id);
     if (!r) return bad('this report does not exist or has expired', 404);
     return reply(200, { id: r.id, created: new Date(r.created * 1000).toISOString(), expires: new Date((r.created + TTL_DAYS * 86400) * 1000).toISOString(), ...r.body });
   }
-  const reportPage = (id, template) => { const r = ID_RE.test(id) && store.getReport(id); return r ? shell(template, id, r.body, site) : null; };
+  const reportPage = (id, template) => { const r = readable(id); return r ? shell(template, id, r.body, site) : null; };
 
   const unsubscribePage = (id) => `${site}/subscription.html#unsubscribe=${unsubscribeToken(id)}`;
   return { subscribe, confirm, unsubscribe, unsubscribeUrl, unsubscribePage, unsubscribeToken, createReport, getReport, reportPage };
@@ -179,12 +182,12 @@ export function httpHandler(api, { site, perIpUnsub = limiter(60, HOUR), health 
       const ip = String(req.headers['x-real-ip'] || req.socket.remoteAddress || '');
       if (req.method === 'GET' && url.pathname === '/api/v1/subscriptions/health' && health) return send({ status: 200, body: health() });
       const rep = /^\/api\/v1\/reports\/([^/]+)$/.exec(url.pathname);
-      if (req.method === 'GET' && rep) { const r = api.getReport(rep[1]); return send(r, r.status === 200 ? 'public, max-age=3600' : 'no-store'); }
+      if (req.method === 'GET' && rep) { const r = api.getReport(rep[1]); return send(r, 'no-store'); }
       const page = /^\/r\/([^/]+)$/.exec(url.pathname);
       if (req.method === 'GET' && page) {
         const tpl = template();
         const html = tpl && api.reportPage(page[1], tpl);
-        res.writeHead(html ? 200 : 404, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': html ? 'public, max-age=300' : 'no-store', 'X-Robots-Tag': 'noindex', 'X-Content-Type-Options': 'nosniff' });
+        res.writeHead(html ? 200 : 404, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store', 'X-Robots-Tag': 'noindex', 'X-Content-Type-Options': 'nosniff' });
         return res.end(html || '<!doctype html><title>Not found</title><p>This report does not exist or has expired.</p>');
       }
       if (req.method !== 'POST') return send({ status: 405, body: { error: 'POST only' } });
