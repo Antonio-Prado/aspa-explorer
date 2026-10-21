@@ -5,6 +5,11 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.47.7] - 2026-10-22
+
+### Fixed
+- The home page stayed half faded (opacity 0.5 on the whole page) until the slow requests behind the overview (the BGP snapshot, the registry data) had finished, and went back to normal only after a query. The page is now dimmed only while the ASPA data itself is loading.
+
 ## [1.47.6] - 2026-10-21
 
 ### Fixed

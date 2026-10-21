@@ -1866,6 +1866,7 @@ async function load() {
     dataStatus = status;
     renderOverview(status);
     addCoverageTile();
+    document.body.classList.remove('loading');
     await loadVisibility();
     computeQuality();
     renderQuality();
