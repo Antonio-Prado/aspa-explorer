@@ -23,7 +23,7 @@ const FIX = join(here, 'fixtures', 'a11y');
 const TYPES = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.svg': 'image/svg+xml', '.json': 'application/json', '.png': 'image/png', '.jpg': 'image/jpeg', '.pdf': 'application/pdf' };
 const FIXTURE_OF = (p) => {
   if (p === '/data/aspas.json' || p === '/data/status.json') return p.slice(1);
-  if (/^\/api\/v1\/(adoption|leaks|validators|meta|leaks-history|status-history|trends|resources|invalid|status-months|relations)\.json$/.test(p)) return p.slice(1);
+  if (/^\/api\/v1\/(adoption|leaks|validators|meta|leaks-history|status-history|trends|resources|invalid|status-months|relations|incidents)\.json$/.test(p)) return p.slice(1);
   const archive = /^\/api\/v1\/archive\/(events|history|visibility)\.json$/.exec(p);
   if (archive) return `gitlab/${archive[1]}.json`;
   if (/^\/api\/v1\/as\/\d+$/.test(p)) return 'api/v1/as.json';
@@ -56,7 +56,7 @@ const base = `http://127.0.0.1:${server.address().port}`;
 
 const PAGES = [
   ['home', '/'], ['as', '/#AS12779'], ['path', '/#path=3356+12779&from=up'], ['changes', '/#changes'], ['quality', '/#quality'],
-  ['statistics', '/statistics.html'], ['guide', '/guide.html'], ['api', '/api.html'],
+  ['statistics', '/statistics.html'], ['incidents', '/incidents.html'], ['guide', '/guide.html'], ['api', '/api.html'],
   ['examples', '/examples.html'], ['embed', '/embed.html?country=IT'], ['status', '/status.html'], ['subscription', '/subscription.html#confirm=abc'],
   ['bulk', '/#path=3356+12779&from=up'], ['peek', '/#AS12779'], ['irr', '/#AS12779'], ['valley', '/#routes=AS12779'], ['ixp', '/#path=12779+1200+24796&from=up'], ['recent', '/#AS12779'], ['report', '/r/0123456789ab'],
 ];

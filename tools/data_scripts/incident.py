@@ -1,0 +1,665 @@
+import glob
+import gzip
+import bz2
+import lzma 
+import json
+import os
+import signal
+import pickle
+import ipaddress
+import copy
+from datetime import datetime, timezone
+import argparse
+from collections import Counter, defaultdict
+
+# configuration
+DATA_PATHS = ["data/*.jsonl", "data/*.jsonl.gz"]
+CAIDA_FILE = "20260901.as-rel.txt.bz2"
+ROA_FILE = "roas/*.xz"
+STATE_FILE = "active_state.pkl"
+TIMEOUT_SECONDS = 900  # 15 minutes
+GC_INTERVAL_SECONDS = 600  # run garbage collection every 10 minutes of bgp time
+BASELINE_TTL_SECONDS = 2592000  # 30 days ttl for baselines
+
+stop_requested = False
+
+
+def signal_handler(signum, frame):
+    global stop_requested
+    print("\ntermination signal received. aborting run...", flush=True)
+    stop_requested = True
+
+
+def load_caida_relationships(filepath):
+    rel = {}
+    print(f"loading caida relationships from '{filepath}'...", flush=True)
+    if not os.path.exists(filepath):
+        print("caida file not found. rlk detection will be disabled.")
+        return rel
+
+    open_fn = bz2.open if filepath.endswith(".bz2") else open
+    with open_fn(filepath, "rt", encoding="utf-8") as f:
+        for line in f:
+            if line.startswith("#"):
+                continue
+            parts = line.strip().split("|")
+            if len(parts) >= 3:
+                as1, as2, rel_type = int(parts[0]), int(parts[1]), int(parts[2])
+                if rel_type == -1:
+                    rel[(as1, as2)] = "p2c"
+                    rel[(as2, as1)] = "c2p"
+                elif rel_type == 0:
+                    rel[(as1, as2)] = "p2p"
+                    rel[(as2, as1)] = "p2p"
+
+    print(f"loaded {len(rel)} directional relationship links.", flush=True)
+    return rel
+
+
+def load_roas(path_pattern):
+    roas = defaultdict(set)
+    print(f"loading roas from '{path_pattern}'...", flush=True)
+    files = glob.glob(path_pattern)
+    if not files:
+        print("roa files not found. prh detection will be disabled.")
+        return roas
+
+    for filepath in sorted(files):
+        try:
+            with lzma.open(filepath, "rt", encoding="utf-8") as f:
+                data = json.load(f)
+                for entry in data.get("roas", []):
+                    prefix = entry.get("prefix")
+                    asn = entry.get("asn")
+                    max_len = entry.get("maxLength") or entry.get("max_length")
+                    
+                    if prefix and asn:
+                        asn_int = int(str(asn).replace("AS", ""))
+                        try:
+                            max_len_int = int(max_len) if max_len else ipaddress.ip_network(prefix, strict=False).prefixlen
+                        except Exception:
+                            max_len_int = ipaddress.ip_network(prefix, strict=False).prefixlen
+                            
+                        roas[prefix].add((asn_int, max_len_int))
+        except Exception as e:
+            print(f"error reading '{filepath}': {e}", flush=True)
+            
+    print(f"loaded roas for {len(roas)} prefixes across {len(files)} files.", flush=True)
+    return roas
+
+
+# --- DETECTOR MODULES ---
+
+def check_route_leak(rec, rel, state, current_epoch):
+    path = rec.get("compressed_path", [])
+    if not path or len(path) < 3 or not rel:
+        return False, {}
+
+    for i in range(1, len(path) - 1):
+        try:
+            to_as = int(path[i - 1])
+            by_as = int(path[i])
+            from_as = int(path[i + 1])
+        except ValueError:
+            continue
+
+        in_rel = rel.get((from_as, by_as))
+        out_rel = rel.get((by_as, to_as))
+
+        if in_rel in ("p2c", "p2p") and out_rel in ("c2p", "p2p"):
+            return True, {
+                "anomaly": "Valley-Free Violation (Route Leak)", 
+                "from": from_as, "by": by_as, "to": to_as, "path": path
+            }
+
+    return False, {}
+
+
+def check_prefix_hijack(rec, roas, state, current_epoch):
+    prefix_str = rec.get("prefix")
+    origin = rec.get("origin")
+    
+    if not prefix_str or origin is None or not roas:
+        return False, {}
+
+    try:
+        net = ipaddress.ip_network(prefix_str, strict=False)
+    except (ValueError, IndexError):
+        return False, {}
+
+    # gather all covering roas before evaluating
+    covering_roas = set()
+    
+    if prefix_str in roas:
+        covering_roas.update(roas[prefix_str])
+        
+    min_len = 8 if net.version == 4 else 16
+    if net.prefixlen > min_len:
+        for i in range(net.prefixlen - 1, min_len - 1, -1):
+            supernet = str(net.supernet(new_prefix=i))
+            if supernet in roas:
+                covering_roas.update(roas[supernet])
+                
+    if covering_roas:
+        is_valid = False
+        invalid_length = False
+        
+        for roa_asn, roa_max_len in covering_roas:
+            if origin == roa_asn:
+                if net.prefixlen <= roa_max_len:
+                    is_valid = True
+                    break
+                else:
+                    invalid_length = True
+                    
+        if not is_valid:
+            if invalid_length:
+                return True, {
+                    "anomaly": "Invalid_Length (Sub-Prefix Hijack)",
+                    "expected_roas": list(covering_roas), 
+                    "actual_origin": origin,
+                    "prefix": prefix_str
+                }
+            else:
+                return True, {
+                    "anomaly": "Invalid_Origin (Prefix Hijack)",
+                    "expected_roas": list(covering_roas), 
+                    "actual_origin": origin,
+                    "prefix": prefix_str
+                }
+
+    return False, {}
+
+
+"""def check_as_path_manipulation(rec, rel, state, current_epoch):
+    if rec.get("flag") == 1:
+        return True, {"anomaly": "Operational Anomaly (Excessive Prepending)", "origin": rec.get("origin")}
+
+    path = rec.get("compressed_path", [])
+    if not path:
+        return False, {}
+
+    for asn_str in path:
+        try:
+            asn = int(asn_str)
+            if (64512 <= asn <= 65534) or (4200000000 <= asn <= 4294967294):
+                return True, {"anomaly": "Policy Inconsistency (Private ASN Leaked)", "violating_asn": asn, "path": path}
+        except ValueError:
+            continue
+
+    if len(path) > 15:
+        return True, {"anomaly": "Operational Anomaly (Path Inflation)", "length": len(path), "path": path}
+
+    return False, {}"""
+
+
+def check_deaggregation(rec, rel, state, current_epoch):
+    prefix_str = rec.get("prefix")
+    origin = rec.get("origin")
+    
+    if not prefix_str or origin is None:
+        return False, {}
+
+    try:
+        net = ipaddress.ip_network(prefix_str, strict=False)
+    except (ValueError, IndexError):
+        return False, {}
+
+    deg_state = state.setdefault("prefix_history", {})
+    pending_specs = state.setdefault("pending_specifics", {})
+
+    if net.version == 4:
+        if net.prefixlen >= 24:
+            found_parent = False
+            for i in range(16, net.prefixlen):
+                supernet = str(net.supernet(new_prefix=i))
+                if supernet in deg_state:
+                    parent_origin = deg_state[supernet]["origin"]
+                    # only flag if origins diverge (fixes normal multi-homing flood)
+                    if parent_origin != origin:
+                        return True, {
+                            "anomaly": "Cross-Origin Deaggregation", 
+                            "parent_aggregate": supernet, 
+                            "parent_origin": parent_origin,
+                            "sub_prefix": prefix_str, 
+                            "sub_origin": origin
+                        }
+                    found_parent = True
+                    break
+                    
+            if not found_parent:
+                # add timestamp to pending specifically to prevent memory leak
+                for i in range(16, net.prefixlen):
+                    supernet = str(net.supernet(new_prefix=i))
+                    pending_specs.setdefault(supernet, {})[(prefix_str, origin)] = current_epoch
+                    
+        elif net.prefixlen <= 22:
+            deg_state[str(net)] = {"origin": origin, "ts": current_epoch}
+            if str(net) in pending_specs:
+                specifics = [(sp, so, ts) for (sp, so), ts in pending_specs.pop(str(net)).items()]
+                
+                # check specifics against newly arrived parent
+                flagged_specifics = [s for s in specifics if s[1] != origin]
+                if flagged_specifics:
+                    return True, {
+                        "anomaly": "Cross-Origin Deaggregation (Retroactive)", 
+                        "parent_aggregate": str(net), 
+                        "parent_origin": origin, 
+                        "covered_specifics": flagged_specifics[:5]
+                    }
+                
+    elif net.version == 6:
+        if net.prefixlen >= 48:
+            found_parent = False
+            for i in range(32, net.prefixlen):
+                supernet = str(net.supernet(new_prefix=i))
+                if supernet in deg_state:
+                    parent_origin = deg_state[supernet]["origin"]
+                    if parent_origin != origin:
+                        return True, {
+                            "anomaly": "Cross-Origin Deaggregation", 
+                            "parent_aggregate": supernet, 
+                            "parent_origin": parent_origin,
+                            "sub_prefix": prefix_str, 
+                            "sub_origin": origin
+                        }
+                    found_parent = True
+                    break
+                    
+            if not found_parent:
+                for i in range(32, net.prefixlen):
+                    supernet = str(net.supernet(new_prefix=i))
+                    pending_specs.setdefault(supernet, {})[(prefix_str, origin)] = current_epoch
+                    
+        elif net.prefixlen <= 32:
+            deg_state[str(net)] = {"origin": origin, "ts": current_epoch}
+            if str(net) in pending_specs:
+                specifics = [(sp, so, ts) for (sp, so), ts in pending_specs.pop(str(net)).items()]
+                
+                flagged_specifics = [s for s in specifics if s[1] != origin]
+                if flagged_specifics:
+                    return True, {
+                        "anomaly": "Cross-Origin Deaggregation (Retroactive)", 
+                        "parent_aggregate": str(net), 
+                        "parent_origin": origin, 
+                        "covered_specifics": flagged_specifics[:5]
+                    }
+
+    return False, {}
+
+
+def check_state_volatility(rec, state, current_epoch):
+    prefix = rec.get("prefix")
+    peer = rec.get("peer")
+    if not prefix or not peer or current_epoch == 0:
+        return False, {}
+
+    vol_state = state.setdefault("vol_flaps", {})
+    key = (prefix, peer)
+    
+    history = vol_state.get(key, [])
+    history.append((current_epoch, rec.get("type")))
+    history = [x for x in history if current_epoch - x[0] <= 300]
+    vol_state[key] = history
+
+    if len(history) >= 5:
+        types = set(x[1] for x in history)
+        if "A" in types and "W" in types:
+            return True, {"flap_count": len(history), "window_seconds": 300}
+
+    return False, {}
+
+
+# --- CORE LOGIC ---
+
+def parse_timestamp(ts_str):
+    try:
+        dt = datetime.fromisoformat(ts_str)
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=timezone.utc)
+        return int(dt.timestamp())
+    except Exception:
+        return 0
+
+
+def flush_incident(out_f, inc, end_time, end_reason, end_msg=None):
+    if end_msg:
+        inc["messages"].append(end_msg)
+        
+    # keep buffer constrained to start, evolving middle, penultimate, and end
+    if len(inc["messages"]) > 4:
+        inc["messages"] = [
+            inc["messages"][0],
+            inc["messages"][1],
+            inc["messages"][-2],
+            inc["messages"][-1]
+        ]
+
+    inc_record = {
+        "incident_type": inc["incident_type"],
+        "actor_key": inc["actor_key"],
+        "prefixes": list(inc["prefixes"]),
+        "start": inc["start_time"],
+        "end": end_time,
+        "end_reason": end_reason,
+        "total_updates": inc["total_updates"],
+        "details": inc["details"],
+        "messages": inc["messages"],
+    }
+    out_f.write(json.dumps(inc_record, ensure_ascii=False) + "\n")
+
+
+def check_timeouts(active_incidents, current_epoch, timeout_seconds, out_f):
+    expired_keys = []
+    for key, inc in active_incidents.items():
+        timeout = 600 if inc["incident_type"] == "VOL" else timeout_seconds
+        if current_epoch - inc["last_epoch"] > timeout:
+            expired_keys.append(key)
+
+    for key in expired_keys:
+        inc = active_incidents.pop(key)
+        flush_incident(out_f, inc, end_time=inc["last_time"], end_reason="timeout")
+
+
+def garbage_collect_state(state, current_epoch):
+    if "vol_flaps" in state:
+        stale = [k for k, v in state["vol_flaps"].items() if not v or (current_epoch - v[-1][0]) > 300]
+        for k in stale: 
+            del state["vol_flaps"][k]
+            
+    if "peer_withdrawals" in state:
+        stale = [k for k, v in state["peer_withdrawals"].items() if not v or (current_epoch - v[-1]) > 10]
+        for k in stale:
+            del state["peer_withdrawals"][k]
+
+    if "prefix_history" in state:
+        stale = [k for k, v in state["prefix_history"].items() if (current_epoch - v["ts"]) > BASELINE_TTL_SECONDS]
+        for k in stale: 
+            del state["prefix_history"][k]
+            
+    # clear old pending specifics to prevent memory leaks
+    if "pending_specifics" in state:
+        for k in list(state["pending_specifics"].keys()):
+            # keep items newer than ttl
+            state["pending_specifics"][k] = {
+                key: ts for key, ts in state["pending_specifics"][k].items()
+                if current_epoch - ts <= BASELINE_TTL_SECONDS
+            }
+            if not state["pending_specifics"][k]:
+                del state["pending_specifics"][k]
+
+
+def new_incident(incident_type, actor_key, prefix, peer, ts_str, current_epoch, details, rec, total_updates=1):
+    return {
+        "incident_type": incident_type,
+        "actor_key": actor_key,
+        "prefixes": {prefix},
+        "peers": {peer},
+        "start_time": ts_str,
+        "last_time": ts_str,
+        "last_epoch": current_epoch,
+        "total_updates": total_updates,
+        "details": details,
+        "messages": [rec],
+    }
+
+
+def add_message(inc, rec, ts_str, current_epoch):
+    inc["total_updates"] += 1
+    inc["last_time"] = ts_str
+    inc["last_epoch"] = current_epoch
+
+    if len(inc["messages"]) < 4:
+        inc["messages"].append(rec)
+    else:
+        # power of 2 trick for logarithmic middle
+        if (inc["total_updates"] & (inc["total_updates"] - 1)) == 0:
+            inc["messages"][1] = inc["messages"][2]
+        # shift final slots
+        inc["messages"][2] = inc["messages"][3]
+        inc["messages"][3] = rec
+
+
+def process_record(rec, rel, roas, active_incidents, timeout_seconds, out_f, state):
+    msg_type = rec.get("type")
+    prefix = rec.get("prefix")
+    peer = rec.get("peer")
+    ts_str = rec.get("timestamp")
+    origin = rec.get("origin")
+
+    if not prefix or not peer or not ts_str:
+        return
+
+    current_epoch = parse_timestamp(ts_str)
+
+    if current_epoch > 0:
+        last_gc = state.setdefault("last_gc_check", current_epoch)
+        if current_epoch - last_gc > GC_INTERVAL_SECONDS:
+            if len(active_incidents) > 0:
+                check_timeouts(active_incidents, current_epoch, timeout_seconds, out_f)
+            garbage_collect_state(state, current_epoch)
+            state["last_gc_check"] = current_epoch
+
+    if msg_type == "W":
+        if current_epoch > 0:
+            atr_state = state.setdefault("peer_withdrawals", {})
+            history = atr_state.get(peer, [])
+            history.append(current_epoch)
+            history = [x for x in history if current_epoch - x <= 10]
+            atr_state[peer] = history
+
+            if len(history) > 500:
+                atr_key = f"ATR_{peer}"
+                if atr_key not in active_incidents:
+                    active_incidents[atr_key] = new_incident(
+                        "ATR", atr_key, prefix, peer, ts_str, current_epoch,
+                        {"dropping_peer": peer, "withdrawal_count": len(history)}, rec)
+                else:
+                    inc = active_incidents[atr_key]
+                    inc["prefixes"].add(prefix)
+                    add_message(inc, rec, ts_str, current_epoch)
+
+        is_vol, vol_details = check_state_volatility(rec, state, current_epoch)
+        if is_vol:
+            vol_key = f"VOL_{prefix}_{peer}"
+            if vol_key not in active_incidents:
+                # the flaps that triggered the detection are already part of the incident
+                active_incidents[vol_key] = new_incident(
+                    "VOL", vol_key, prefix, peer, ts_str, current_epoch, vol_details, rec,
+                    total_updates=vol_details["flap_count"])
+            else:
+                add_message(active_incidents[vol_key], rec, ts_str, current_epoch)
+
+        # a withdrawal belongs to an incident only if the peer that sends it announced the anomaly
+        keys_to_resolve = []
+        for k, inc in active_incidents.items():
+            if (prefix in inc["prefixes"] and inc["incident_type"] not in ["VOL", "ATR"]
+                    and peer in inc.get("peers", {peer})):
+                keys_to_resolve.append(k)
+
+        for k in keys_to_resolve:
+            add_message(active_incidents[k], rec, ts_str, current_epoch)
+        return
+
+    if msg_type == "A":
+        is_vol, vol_details = check_state_volatility(rec, state, current_epoch)
+        if is_vol:
+            vol_key = f"VOL_{prefix}_{peer}"
+            if vol_key in active_incidents:
+                add_message(active_incidents[vol_key], rec, ts_str, current_epoch)
+
+        anomalies = []
+        is_rlk, rlk_det = check_route_leak(rec, rel, state, current_epoch)
+        if is_rlk: anomalies.append(("RLK", f"RLK_{rlk_det.get('from')}_{rlk_det.get('by')}_{rlk_det.get('to')}", rlk_det))
+        
+        is_prh, prh_det = check_prefix_hijack(rec, roas, state, current_epoch)
+        if is_prh: anomalies.append(("PRH", f"PRH_{origin}", prh_det))
+        
+        # is_asm, asm_det = check_as_path_manipulation(rec, rel, state, current_epoch)
+        # if is_asm: anomalies.append(("ASM", f"ASM_{origin}", asm_det))
+        
+        is_deg, deg_det = check_deaggregation(rec, rel, state, current_epoch)
+        if is_deg: anomalies.append(("DEG", f"DEG_{origin}", deg_det))
+
+        for inc_type, actor_key, details in anomalies:
+            if actor_key not in active_incidents:
+                active_incidents[actor_key] = new_incident(
+                    inc_type, actor_key, prefix, peer, ts_str, current_epoch, details, rec)
+            else:
+                inc = active_incidents[actor_key]
+                inc["prefixes"].add(prefix)
+                inc.setdefault("peers", set()).add(peer)
+                add_message(inc, rec, ts_str, current_epoch)
+
+
+def generate_incident_summary(output_file):
+    base_name = os.path.basename(output_file).split('.')[0]
+    summary_file = f"summary_{base_name}.txt"
+
+    print(f"generating incident summary for '{output_file}'...", flush=True)
+
+    counts = Counter()
+    try:
+        with open(output_file, "rt", encoding="utf-8") as f:
+            for line in f:
+                try:
+                    counts[json.loads(line).get("incident_type") or "unknown"] += 1
+                except json.JSONDecodeError:
+                    continue
+        with open(summary_file, "w", encoding="utf-8") as out:
+            out.write("=" * 40 + "\n")
+            out.write(f" INCIDENT TYPE SUMMARY: {base_name}\n")
+            out.write("=" * 40 + "\n")
+            out.write(f"{'Incident Type':<35} | Count\n")
+            out.write("-" * 40 + "\n")
+            for inc_type, count in counts.most_common():
+                out.write(f"{inc_type:<35} | {count}\n")
+            out.write("=" * 40 + "\n")
+        print(f"summary written to '{summary_file}'.", flush=True)
+    except Exception as e:
+        print(f"could not generate summary: {e}")
+
+
+def main():
+    global stop_requested
+    parser = argparse.ArgumentParser(description="Detect and classify BGP incidents in the files written by record.py and stream.py.")
+    parser.add_argument("--flush-open", action="store_true",
+                        help="at the end of the run write the incidents that are still open to incidents_open.jsonl "
+                             "(end_reason dataset_end) and clear them from the saved state; "
+                             "without it they stay in the state and are written when they time out in a later run")
+    args = parser.parse_args()
+
+    signal.signal(signal.SIGINT, signal_handler)
+    signal.signal(signal.SIGTERM, signal_handler)
+
+    rel = load_caida_relationships(CAIDA_FILE)
+    roas = load_roas(ROA_FILE)
+
+    file_list = sorted({f for pattern in DATA_PATHS for f in glob.glob(pattern)})
+    if not file_list:
+        print(f"no files found matching {DATA_PATHS}. fallback to live stream processing mode.")
+        file_list = ["live_data_stream.jsonl"]
+
+    active_incidents = {}
+    processed_files = set()
+    state = {}
+    
+    if os.path.exists(STATE_FILE):
+        print(f"loading state from previous run ('{STATE_FILE}')...", flush=True)
+        try:
+            with open(STATE_FILE, "rb") as f:
+                saved_data = pickle.load(f)
+                active_incidents = copy.deepcopy(saved_data.get("incidents", {}))
+                processed_files = copy.deepcopy(saved_data.get("processed_files", set()))
+                state = copy.deepcopy(saved_data.get("state", {}))
+                # a state saved before the dedup keeps the specifics as a set of (prefix, origin, epoch)
+                for k, v in state.get("pending_specifics", {}).items():
+                    if isinstance(v, set):
+                        state["pending_specifics"][k] = {(sp, so): ts for sp, so, ts in v}
+        except Exception as e:
+            print(f"could not load state: {e}. starting fresh.")
+
+    total_processed = 0
+
+    for filepath in file_list:
+        if stop_requested:
+            break
+
+        if filepath in processed_files:
+            print(f"skipping '{filepath}' (already processed)...")
+            continue
+
+        base_name = os.path.basename(filepath).split('.')[0]
+        dynamic_output_file = f"incidents_{base_name}.jsonl"
+        tmp_output_file = dynamic_output_file + ".tmp"
+
+        checkpoint_incidents = pickle.dumps(active_incidents)
+        checkpoint_state = pickle.dumps(state)
+
+        print(f"\nprocessing '{filepath}' -> '{dynamic_output_file}'...", flush=True)
+        open_fn = gzip.open if filepath.endswith(".gz") else open
+
+        try:
+            with open_fn(filepath, "rt", encoding="utf-8") as in_f, \
+                 open(tmp_output_file, "w", encoding="utf-8", buffering=1) as out_f:
+                
+                for line in in_f:
+                    if stop_requested:
+                        break
+                    
+                    line = line.strip()
+                    if not line:
+                        continue
+                    
+                    try:
+                        rec = json.loads(line)
+                    except json.JSONDecodeError:
+                        continue
+
+                    process_record(rec, rel, roas, active_incidents, TIMEOUT_SECONDS, out_f, state)
+                    total_processed += 1
+                    
+                    if total_processed % 50000 == 0:
+                        print(f"processed {total_processed} total records | active incidents: {len(active_incidents)}...", end="\r", flush=True)
+        except Exception as e:
+            print(f"\nerror reading {filepath}: {e}")
+            if not os.path.exists(filepath):
+                break
+            continue
+
+        if stop_requested:
+            print(f"\nrun aborted mid-file! state was NOT saved for '{filepath}'.")
+            if os.path.exists(tmp_output_file):
+                os.remove(tmp_output_file)
+            active_incidents = pickle.loads(checkpoint_incidents)
+            state = pickle.loads(checkpoint_state)
+            break
+        else:
+            if os.path.exists(tmp_output_file):
+                os.replace(tmp_output_file, dynamic_output_file)
+            processed_files.add(filepath)
+            print(f"\nfinished '{filepath}'. saving {len(active_incidents)} active incidents...", flush=True)
+            with open(STATE_FILE, "wb") as f:
+                pickle.dump({
+                    "incidents": active_incidents,
+                    "processed_files": processed_files,
+                    "state": state
+                }, f)
+
+            generate_incident_summary(dynamic_output_file)
+
+    if not stop_requested:
+        if args.flush_open and active_incidents:
+            print(f"\nflushing {len(active_incidents)} open incidents at dataset end...", flush=True)
+            with open("incidents_open.jsonl", "w", encoding="utf-8") as final_f:
+                for k, inc in list(active_incidents.items()):
+                    flush_incident(final_f, inc, end_time=inc["last_time"], end_reason="dataset_end")
+            active_incidents.clear()
+            with open(STATE_FILE, "wb") as f:
+                pickle.dump({"incidents": active_incidents, "processed_files": processed_files, "state": state}, f)
+
+        print(f"\nall files processed successfully! total raw updates evaluated: {total_processed}.")
+
+if __name__ == "__main__":
+    main()
+    

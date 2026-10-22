@@ -682,3 +682,7 @@ button.tile[aria-expanded="true"] { box-shadow: inset 0 0 0 2px currentColor; }
 .notify .chk-row { grid-column: 1 / -1; display: flex; flex-wrap: wrap; align-items: center; gap: 0.35rem 0.5rem; margin: 0; }
 .notify .chk-row label.chk { display: inline-flex; align-items: center; gap: 0.4rem; margin: 0; }
 .notify .chk-row select { width: auto; }
+
+.notes { margin: 0.4rem 0 0; padding-left: 1.2rem; max-width: 46rem; color: var(--ink-2); font-size: 0.9rem; }
+.notes li + li { margin-top: 0.45rem; }
+table.live th.grp { text-align: center; }

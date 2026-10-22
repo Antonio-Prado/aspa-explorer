@@ -60,7 +60,7 @@ export async function latestDumpUrl(collector, now = new Date()) {
   }
   throw new Error(`no RIB file found for ${collector}`);
 }
-const EVENTS = 'https://gitlab.dei.unipd.it/api/v4/projects/5246/repository/files/events.json/raw?ref=history';
+export const EVENTS = 'https://gitlab.dei.unipd.it/api/v4/projects/5246/repository/files/events.json/raw?ref=history';
 const History = createRequire(import.meta.url)('../site/history.js');
 const UA = 'aspa-explorer (https://aspa.ping6.it; antonio.prado@dei.unipd.it)';
 
