@@ -5,6 +5,13 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.48.0] - 2026-10-22
+
+### Added
+- **Incidents**, a new page in the menu (`/incidents.html`): what the ASPAs say about the routing incidents that the detectors of the research project find in the updates of a RIPE RIS collector (`data_scripts`, `incident.py`). For each incident the AS paths it kept are checked with the downstream procedure with the ASPAs of the day it began (replayed from the history of changes), with complete ASPAs (the providers that CAIDA infers) and with a part of the networks publishing, from none to all, at random or the largest first. A table by type of incident and a chart; aggregates only, no AS number.
+- `scripts/build-incidents.mjs` builds `/api/v1/incidents.json` from the incident files (`incidents_*.jsonl[.gz]`) and, with `--detail`, a file with the verdict of each incident that is not published; `scripts/test-incidents.mjs` tests it.
+- `tools/data_scripts/`: the scripts of the research project (`record.py`, `stream.py`, `incident.py`) with the corrections of the cross-check of 2026-10-22 and their tests. On the host, the service `aspa_stream` (`deploy/freebsd/aspa_stream`) collects the updates of RIPE RIS Live and `scripts/run-incidents.sh` runs `incident.py` and the builder once a day.
+
 ## [1.47.12] - 2026-10-22
 
 ### Fixed

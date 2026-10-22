@@ -26,8 +26,9 @@ async function main() {
     try {
       const r = await fetch(`${PROJECT}/${name}.json/raw?ref=${BRANCH}`, { headers: { 'User-Agent': UA }, signal: AbortSignal.timeout(60000) });
       if (!r.ok) throw new Error(`HTTP ${r.status}`);
-      const text = await r.text();
-      if (!valid(text)) throw new Error('not a JSON that can be published');
+      const raw = await r.text();
+      if (!valid(raw)) throw new Error('not a JSON that can be published');
+      const text = JSON.stringify(JSON.parse(raw));          // what is written is the parsed JSON, not the text of the network
       const file = join(dir, `${name}.json`);
       let old = null;
       try { old = await readFile(file, 'utf8'); } catch { /* the first run */ }
