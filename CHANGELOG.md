@@ -5,6 +5,13 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.47.11] - 2026-10-22
+
+### Changed
+- The words "route leak" are not the label of what the statistics page counts any more. The section is *Valleys today* (and *Valleys seen now* in the lookup), without the parenthesis; the table that said *Possible route leaks* is *Valleys through a peer or a customer*, and its tile, the chart and the comparison say *Via peer or customer*. The hint says what a valley can be: a route passed on when it should not have been, or an ASPA or a relationship that is missing; the operators are the ones who know.
+- The text under *Valleys seen now* does not point at the ASes in the valley any more: it says that a valley can be a leak, a forged path or, more often, a gap in the ASPAs, and asks to read the neighbours first.
+- The e-mail of the notifier has the subject *New place of valley that involves ASx* (it was *Route leak or valley that involves ASx*), and the confirmation and the form do not say "possible route leak". The name of the check on the status page and the identifiers of the API (`leak`, `/api/v1/leaks.json`) are unchanged.
+
 ## [1.47.10] - 2026-10-22
 
 ### Fixed

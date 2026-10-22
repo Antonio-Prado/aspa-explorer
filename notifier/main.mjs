@@ -81,7 +81,7 @@ async function sendConfirmation({ to, asn, token, site, leaks, invalid }) {
   }
   await mailTo(to, `Confirm: ASPA changes for ${asn}`, [
     `Somebody (probably you) asked ASPA Explorer to send a message to this address`,
-    `whenever the ASPA of ${asn}, or a mention of ${asn} as a provider in other ASPAs, changes${leaks ? ', and when a new place of valley (a possible route leak) involves it' : ''}${invalid ? `, and when ${asn} is the origin of at least ${invalid} invalid announcements in ten minutes (at most one such message every six hours)` : ''}.`,
+    `whenever the ASPA of ${asn}, or a mention of ${asn} as a provider in other ASPAs, changes${leaks ? ', and when a new place of valley involves it' : ''}${invalid ? `, and when ${asn} is the origin of at least ${invalid} invalid announcements in ten minutes (at most one such message every six hours)` : ''}.`,
     '',
     'To start receiving these messages, open this link:',
     `${site}/subscription.html#confirm=${token}`,
@@ -183,7 +183,7 @@ async function pollLeaks() {
   store.transaction(() => {
     for (const e of out.events) {
       const line = describePlace(e);
-      for (const sub of subs.filter((s) => s.asn === e.asn)) outbox.enqueue(sub.id, { subject: `Route leak or valley that involves ${e.asn}`, line, type: 'aspa.leak', extra: { place: { role: e.role, kind: e.kind, from: e.from, to: e.to, between: e.between, feeders: e.feeders, routes: e.routes } } });
+      for (const sub of subs.filter((s) => s.asn === e.asn)) outbox.enqueue(sub.id, { subject: `New place of valley that involves ${e.asn}`, line, type: 'aspa.leak', extra: { place: { role: e.role, kind: e.kind, from: e.from, to: e.to, between: e.between, feeders: e.feeders, routes: e.routes } } });
     }
     store.setState('leaks', { generated: doc.generated, seen: out.seen });
   });

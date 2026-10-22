@@ -1,6 +1,6 @@
 'use strict';
 
-// The "Valleys today (possible route leaks)" section of the statistics page: /api/v1/leaks.json, built once a day by
+// The "Valleys today" section of the statistics page: /api/v1/leaks.json, built once a day by
 // scripts/build-leaks.mjs from the table dumps of collectors of RIPE RIS and RouteViews.
 (function () {
   const $ = (id) => document.getElementById(id);
@@ -20,10 +20,10 @@
   const pct = (a, b) => (b ? `${((100 * a) / b).toFixed(a / b < 0.1 ? 2 : 1)}%` : '0%');
 
 
-  // The daily totals (/api/v1/leaks-history.json): the places of possible leak and of gap, one point a day.
+  // The daily totals (/api/v1/leaks-history.json): the places of valley through a peer or a customer and of gap, one point a day.
   const SVG = 'http://www.w3.org/2000/svg';
   const svg = (tag, attrs, ...kids) => { const n = document.createElementNS(SVG, tag); for (const [k, v] of Object.entries(attrs || {})) n.setAttribute(k, v); n.append(...kids); return n; };
-  const SERIES = [{ key: 'leak', label: 'Possible leaks', cls: 's1' }, { key: 'gap', label: 'Gaps in ASPAs', cls: 's2' }];
+  const SERIES = [{ key: 'leak', label: 'Via peer or customer', cls: 's1' }, { key: 'gap', label: 'Gaps in ASPAs', cls: 's2' }];
   const dayLabel = (iso) => new Date(iso + 'T00:00:00Z').toLocaleDateString('en-GB', { day: 'numeric', month: 'short', timeZone: 'UTC' });
 
   function drawHistory(box, rows) {
@@ -33,7 +33,7 @@
     const step = 10 ** Math.floor(Math.log10(max)), top = Math.ceil(max / step) * step;
     const x = (i) => m.l + (rows.length === 1 ? iw / 2 : (iw * i) / (rows.length - 1));
     const y = (v) => m.t + ih - (ih * v) / top;
-    const g = svg('svg', { viewBox: `0 0 ${W} ${H}`, role: 'img', 'aria-label': `Places of possible leak and of gap, one value a day, from ${dayLabel(rows[0].date)} to ${dayLabel(rows[rows.length - 1].date)}: ${SERIES.map((s) => `${s.label} ${rows[0][s.key]} then ${rows[rows.length - 1][s.key]}`).join('; ')}.` });
+    const g = svg('svg', { viewBox: `0 0 ${W} ${H}`, role: 'img', 'aria-label': `Places of valley through a peer or a customer and of gap, one value a day, from ${dayLabel(rows[0].date)} to ${dayLabel(rows[rows.length - 1].date)}: ${SERIES.map((s) => `${s.label} ${rows[0][s.key]} then ${rows[rows.length - 1][s.key]}`).join('; ')}.` });
     for (let v = 0; v <= top; v += top / 4) {
       g.append(svg('line', { class: 'grid', x1: m.l, x2: W - m.r, y1: y(v), y2: y(v) }), svg('text', { class: 'tick', x: m.l - 6, y: y(v) + 4, 'text-anchor': 'end' }, fmt.format(Math.round(v))));
     }
@@ -53,7 +53,7 @@
       const r = await fetch('/api/v1/leaks-history.json', { headers: { Accept: 'application/json' } });
       if (!r.ok) throw new Error(`HTTP ${r.status}`);
       rows = await r.json();
-    } catch { box.replaceChildren(); $('leaks-history-note').textContent = 'The history of the leaks is not available.'; return; }
+    } catch { box.replaceChildren(); $('leaks-history-note').textContent = 'The history of the valleys is not available.'; return; }
     if (!rows.length) return;
     $('leaks-history-note').textContent = rows.length < 2
       ? 'One point a day: the history starts on ' + dayLabel(rows[0].date) + ' and grows every day.'
@@ -167,7 +167,7 @@
     if (!c) { sub.textContent = 'The comparison comes with the next daily build.'; return; }
     const all = c.all, tot = all.ris + all.both + all.rv;
     const rows = [
-      { label: 'All places', ...all }, { label: 'Possible leaks', ...all.kinds.leak }, { label: 'Gaps in ASPAs', ...all.kinds.gap },
+      { label: 'All places', ...all }, { label: 'Via peer or customer', ...all.kinds.leak }, { label: 'Gaps in ASPAs', ...all.kinds.gap },
       { label: '3+ feeders', ...c.strong },
     ];
     sub.textContent = `The same places of valley, told apart by who sees them: ${fmt.format(all.both)} of ${fmt.format(tot)} (${pct1(all.both, tot)}) are seen by both RIPE RIS and RouteViews, ${fmt.format(all.ris)} (${pct1(all.ris, tot)}) only by RIS and ${fmt.format(all.rv)} (${pct1(all.rv, tot)}) only by RouteViews.`;
@@ -201,7 +201,7 @@
     $('leaks-tiles').replaceChildren(
       tile('Invalid routes', fmt.format(t.invalid), `${pct(t.invalid, t.routes)} of the routes`, 'v-invalid'),
       tile('Places of valley', fmt.format(d.places), 'distinct places'),
-      tile('Possible leaks', fmt.format(d.kinds.leak), 'places'),
+      tile('Via peer or customer', fmt.format(d.kinds.leak), 'places'),
       tile('Gaps in ASPAs', fmt.format(d.kinds.gap), 'places'),
       tile('Unknown', pct(t.unknown, t.routes), 'of the routes, no ASPA to say', 'v-unknown'));
 

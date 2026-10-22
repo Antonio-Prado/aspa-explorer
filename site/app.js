@@ -300,7 +300,7 @@ function pathVerdict(v, missing) {
     const i = v.maxUp;
     return `${v.path[i - 1]} publishes an ASPA that does not list ${v.path[i]} as a provider, so the route is not a plain climb from the origin to the neighbour.`;
   }
-  return `Even in the best case the up-ramp (at most ${v.maxUp} of ${v.N} ASes, from the origin ${first}) and the down-ramp (at most ${v.maxDown}, from the neighbour ${last}) do not meet: part of the path is a valley, which is how a route leak or a forged path segment looks.`;
+  return `Even in the best case the up-ramp (at most ${v.maxUp} of ${v.N} ASes, from the origin ${first}) and the down-ramp (at most ${v.maxDown}, from the neighbour ${last}) do not meet: part of the path is a valley, which is how a route leak, a forged path segment or a gap in the ASPAs looks.`;
 }
 
 // The verdict and the hop-by-hop table of a path, as nodes: shown in the AS path box and, for a route,
@@ -633,11 +633,11 @@ function leakPanel(rows) {
     return [row];
   });
   return el('div', {},
-    el('h3', { class: 'subhead', text: 'Valleys seen now (possible route leaks)' }),
-    el('section', { class: 'table-wrap card', tabindex: '0', 'aria-label': 'Valleys seen now, possible route leaks' }, el('table', { class: 'checks live nb' },
+    el('h3', { class: 'subhead', text: 'Valleys seen now' }),
+    el('section', { class: 'table-wrap card', tabindex: '0', 'aria-label': 'Valleys seen now' }, el('table', { class: 'checks live nb' },
       el('caption', { class: 'sr-only', text: 'Paths that the ASPAs show to contain a valley, grouped by the place of the valley, with the paths, routes and feeders that see it' }),
       el('thead', {}, head), el('tbody', {}, ...trs))),
-    el('p', { class: 'hint', text: `${fmt.format(list.length)} place${list.length === 1 ? '' : 's'} of valley${list.length > 10 ? ', the ten seen by most feeders are listed' : ''}. A valley is a route that came down from a provider or a peer and went up again: a route leak, or a forged path. The ASes in the valley are the ones to look at first. Before blaming them, look at the neighbours below: an ASPA that does not list one of its real providers makes valid routes look like valleys, and many of these places can be just that. The ASPAs prove a valley only where they are published, so paths of unknown verdict may hide others.` }));
+    el('p', { class: 'hint', text: `${fmt.format(list.length)} place${list.length === 1 ? '' : 's'} of valley${list.length > 10 ? ', the ten seen by most feeders are listed' : ''}. A valley is a route that came down from a provider or a peer and went up again. It can be a route leak, a forged path or, more often, a gap in the ASPAs: look at the neighbours below before drawing a conclusion about the ASes in the valley: an ASPA that does not list one of its real providers makes valid routes look like valleys, and many of these places can be just that. The ASPAs prove a valley only where they are published, so paths of unknown verdict may hide others.` }));
 }
 
 // Why one place of valley, as a reading of the evidence (site/valley.js), asked when the button is pressed: the IRR objects of the ASes at the hops that
@@ -1701,7 +1701,7 @@ function notifyForm(as) {
     target.autocomplete = hook ? 'off' : 'email';
   });
   const leaks = el('input', { type: 'checkbox', id: 'nf-leaks' });
-  const leaksLabel = el('label', { class: 'chk', for: 'nf-leaks' }, leaks, ` Also tell me, once a day, about new places of valley (possible route leaks) that involve ${as}`);
+  const leaksLabel = el('label', { class: 'chk', for: 'nf-leaks' }, leaks, ` Also tell me, once a day, about new places of valley that involve ${as}`);
   // an alert when the AS is the origin of that many invalid announcements in ten minutes (the stream of RIPE RIS Live, watched by the server)
   const inv = el('input', { type: 'checkbox', id: 'nf-invalid' });
   const invAt = el('select', { id: 'nf-invalid-at', 'aria-label': 'Threshold of invalid announcements in ten minutes' }, ...[5, 10, 50, 100, 500, 1000].map((n) => el('option', { value: String(n), text: `${n} or more` })));
@@ -1732,7 +1732,7 @@ function notifyForm(as) {
   });
   return el('details', { class: 'embed' },
     el('summary', { text: 'Get notified by e-mail or webhook' }),
-    el('p', { class: 'hint' }, `A message when the ASPA of ${as} changes, or when another ASPA adds or drops ${as} as a provider; if you tick the first box, also when a new place of valley (a possible route leak) involves it; the second one tells you when the routes that the RIPE RIS collectors see show many invalid announcements with this AS as the origin. An e-mail address has to be confirmed through a link; a webhook has to repeat a challenge. Nothing else is kept or used. `, el('a', { href: 'https://www.unipd.it/en/privacy', target: '_blank', rel: 'noopener' }, 'Privacy information', el('span', { class: 'sr-only', text: ' (opens in a new tab)' })), '.'),
+    el('p', { class: 'hint' }, `A message when the ASPA of ${as} changes, or when another ASPA adds or drops ${as} as a provider; if you tick the first box, also when a new place of valley involves it; the second one tells you when the routes that the RIPE RIS collectors see show many invalid announcements with this AS as the origin. An e-mail address has to be confirmed through a link; a webhook has to repeat a challenge. Nothing else is kept or used. `, el('a', { href: 'https://www.unipd.it/en/privacy', target: '_blank', rel: 'noopener' }, 'Privacy information', el('span', { class: 'sr-only', text: ' (opens in a new tab)' })), '.'),
     form, msg,
     el('p', { class: 'hint' }, 'How it works, what is kept and how to stop: ', el('a', { href: '/guide.html#notify', text: 'the guide' }), '.'));
 }
