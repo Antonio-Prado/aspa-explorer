@@ -1,0 +1,27 @@
+#!/bin/sh
+#
+# PROVIDE: aspa_stream
+# REQUIRE: LOGIN NETWORKING
+# KEYWORD: shutdown
+#
+# rc.d script of the collector of the updates of RIPE RIS Live (tools/data_scripts/stream.py), which feeds the Incidents page.
+# Install as /usr/local/etc/rc.d/aspa_stream and add aspa_stream_enable="YES" to /etc/rc.conf. daemon(8) supervises and restarts
+# it, and forwards SIGTERM, with which stream.py closes its file; chroot(8) with -u only drops privileges (the root directory stays /).
+# It writes one file for each UTC day, records_<epoch>.jsonl.gz, in the directory below; scripts/run-incidents.sh, once a day,
+# takes the closed ones.
+. /etc/rc.subr
+
+name=aspa_stream
+rcvar=aspa_stream_enable
+load_rc_config $name
+: ${aspa_stream_enable:=NO}
+: ${aspa_stream_runas:=aspagen}
+: ${aspa_stream_dir:=/var/db/aspa-data/incoming}
+: ${aspa_stream_code:=/usr/local/libexec/aspa-data}
+
+pidfile=/var/run/${name}.pid
+logfile=/var/log/aspa-stream.log
+command=/usr/sbin/daemon
+command_args="-r -P ${pidfile} -o ${logfile} /usr/sbin/chroot -u ${aspa_stream_runas} -g ${aspa_stream_runas} -G ${aspa_stream_runas} / /bin/sh -c 'cd ${aspa_stream_dir} && exec /usr/local/bin/python3.12 ${aspa_stream_code}/stream.py'"
+
+run_rc_command "$1"
