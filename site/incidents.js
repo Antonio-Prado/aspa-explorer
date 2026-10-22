@@ -10,6 +10,11 @@
     VOL: 'State volatility (flapping)', ATR: 'Attribute-based session reset (mass withdrawal)', ASM: 'AS path manipulation', other: 'Other',
   };
   const ORDER = ['RLK', 'PRH', 'DEG', 'VOL', 'ATR', 'ASM', 'other'];
+  // the types of the survey that a detector can tell apart (data_scripts, extra_detectors.py), shown under their class
+  const SUBNAMES = {
+    'RLK-UL': 'Upward leak (to a provider)', 'RLK-LL': 'Lateral leak (to a peer)', 'RLK-FP': 'Full propagation (one AS leaks to 3 or more neighbours)',
+    'ASM-FI': 'Forged origin candidate (link to the origin that CAIDA does not know)', 'ASM-PS': 'Path shortening candidate (other link that CAIDA does not know)',
+  };
 
   function el(tag, attrs, ...kids) {
     const n = document.createElement(tag);
@@ -46,14 +51,16 @@
 
   function rows(d) {
     const cell = (n, of) => el('td', { class: 'num' }, of ? [fmt.format(n), el('span', { class: 'hint block', text: pct(n, of) })] : '–');
-    $('inc-rows').replaceChildren(...typesOf(d).map((k) => {
-      const b = d.by_type[k];
-      return el('tr', {}, el('th', { scope: 'row' }, el('span', { class: 'chip', text: k }), ' ', NAMES[k] || k),
-        el('td', { class: 'num', text: fmt.format(b.incidents) }), el('td', { class: 'num', text: fmt.format(b.with_path) }),
-        cell(b.real[2], b.with_path), cell(b.real[1], b.with_path), cell(b.real[0], b.with_path),
-        cell(b.ideal[2], b.with_path), cell(b.ideal[1], b.with_path), cell(b.ideal[0], b.with_path));
-    }));
-    $('inc-note').textContent = 'The percentages are of the incidents with a path: flapping and mass withdrawals mostly have none. A type with no path shows a dash.';
+    const line = (th, b) => el('tr', {}, th,
+      el('td', { class: 'num', text: fmt.format(b.incidents) }), el('td', { class: 'num', text: fmt.format(b.with_path) }),
+      cell(b.real[2], b.with_path), cell(b.real[1], b.with_path), cell(b.real[0], b.with_path),
+      cell(b.ideal[2], b.with_path), cell(b.ideal[1], b.with_path), cell(b.ideal[0], b.with_path));
+    const subs = d.subtypes || {};
+    $('inc-rows').replaceChildren(...typesOf(d).flatMap((k) => [
+      line(el('th', { scope: 'row' }, el('span', { class: 'chip', text: k }), ' ', NAMES[k] || k), d.by_type[k]),
+      ...Object.keys(SUBNAMES).filter((t) => t.startsWith(`${k}-`) && subs[t]).map((t) => line(el('th', { scope: 'row', class: 'sub' }, el('span', { class: 'chip', text: t }), ' ', SUBNAMES[t]), subs[t])),
+    ]));
+    $('inc-note').textContent = 'The percentages are of the incidents with a path: flapping and mass withdrawals mostly have none. A type with no path shows a dash. The lines under a type are those of its types in the survey that the detector tells apart; each incident is in one of them at most, and the ones that no type fits are only in the line of the class. ASM is made of candidates: a link that CAIDA does not know may be a real one.';
   }
 
   // The curve: the share of the incidents with a path that would be Invalid, for 0 to 100% of the networks publishing.

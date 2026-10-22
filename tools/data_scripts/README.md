@@ -1,5 +1,7 @@
 > **Corrected copy of the scripts of the research project.** These are `record.py`, `stream.py` and `incident.py` of the project `internet_routing_sec/data_scripts` (written by Yunus Atçeken), with the corrections of the cross-check of 2026-10-22 already made (source: branch `cross-check-2026-10-22`, commit `e50d7e2`; what was changed and why is in `CROSS-CHECK.md` there). ASPA Explorer uses the incident files that `incident.py` writes: `scripts/build-incidents.mjs` reads them and adds the verdict of the ASPAs (the **Incidents** page). Keep this copy in step with the project: the terms of the code are those of `data_scripts`.
 >
+> **Extensions of this copy** (not in the project): `extra_detectors.py` adds the type of the route leaks (upward, lateral) to `incident.py`, and a detector of ASM candidates (a link that the CAIDA relationships do not know). They are listed in `CROSS-CHECK.md` of the project as items X-1 to X-3, with the status PROPOSED: Yunus's repository does not have them. The full propagation of a leaker (RLK-FP) is decided when the page is built (`scripts/build-incidents.mjs`).
+>
 > Run the tests with `cd tools/data_scripts && python3 -m unittest discover -s tests`.
 
 # data_scripts

@@ -22,6 +22,8 @@ const History = createRequire(import.meta.url)('../site/history.js');
 const UA = 'aspa-explorer (https://aspa.ping6.it; antonio.prado@dei.unipd.it)';
 
 export const TYPES = ['RLK', 'PRH', 'DEG', 'VOL', 'ATR', 'ASM'];
+// A leaking AS that sends the leak to this many different neighbours in the period is taken as a full propagation (RLK-FP).
+export const FP_MIN_NEIGHBOURS = 3;
 export const LEVELS = [0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100];
 const MAX_BYTES = 1 << 30;
 
@@ -92,13 +94,31 @@ export function orders(ideal, degree) {
 const limited = (ideal, rank, cut) => ({ get: (as) => (rank.get(as) < cut ? ideal.get(as) : undefined) });
 
 const empty = () => ({ incidents: 0, with_path: 0, real: [0, 0, 0], ideal: [0, 0, 0] });
+// The type of the survey that an incident has, when the detector says: RLK-UL and RLK-LL (incident.py records which), RLK-FP
+// (the same AS leaks to FP_MIN_NEIGHBOURS neighbours or more: it takes the place of UL and LL), ASM-FI and ASM-PS.
+// `receivers`: Map leaking AS -> Set of the ASes that it leaked to, in all the incidents.
+export function subtypeOf(inc, receivers) {
+  const d = inc.details || {};
+  if (inc.incident_type === 'RLK') {
+    if (receivers.get(d.by)?.size >= FP_MIN_NEIGHBOURS) return 'RLK-FP';
+    return d.rlk_type === 'UL' || d.rlk_type === 'LL' ? `RLK-${d.rlk_type}` : null;
+  }
+  if (inc.incident_type === 'ASM' && (d.asm_type === 'FI' || d.asm_type === 'PS')) return `ASM-${d.asm_type}`;
+  return null;
+}
+
 const day = (start) => (/^\d{4}-\d{2}-\d{2}/.test(start || '') ? start.slice(0, 10) : null);
 const stamp = (t) => (/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}/.test(t || '') ? t.slice(0, 19) : null);
 
 // incidents: parsed; aspasOf(day): the ASPA lookup of a day (Map AS number -> Set of providers); ideal, degree: complete ASPAs
 export function analyse(incidents, aspasOf, ideal, degree, detail = null) {
   const ord = orders(ideal, degree);
-  const byType = {}, adoption = { random: {}, largest: {} };
+  const byType = {}, bySub = {}, adoption = { random: {}, largest: {} };
+  const receivers = new Map();
+  for (const inc of incidents) {
+    const d = inc.details || {};
+    if (inc.incident_type === 'RLK' && d.by !== undefined && d.to !== undefined) { if (!receivers.has(d.by)) receivers.set(d.by, new Set()); receivers.get(d.by).add(d.to); }
+  }
   const bucket = (t) => (byType[t] ||= empty());
   const curve = (o, t) => (adoption[o][t] ||= new Array(LEVELS.length).fill(0));
   const total = empty();
@@ -106,25 +126,28 @@ export function analyse(incidents, aspasOf, ideal, degree, detail = null) {
   for (const inc of incidents) {
     const t = TYPES.includes(inc.incident_type) ? inc.incident_type : 'other';
     const b = bucket(t);
-    for (const x of [b, total]) x.incidents++;
+    const sub = subtypeOf(inc, receivers);
+    const sb = sub ? (bySub[sub] ||= empty()) : null;
+    const all = sb ? [b, total, sb] : [b, total];
+    for (const x of all) x.incidents++;
     const s = day(inc.start);
     const t0 = stamp(inc.start), t1 = stamp(inc.end) || t0;
     if (t0 && (!from || t0 < from)) from = t0;
     if (t1 && (!to || t1 > to)) to = t1;
     const paths = pathsOf(inc);
-    if (!paths.length) { detail?.push({ type: t, actor: inc.actor_key, start: inc.start, end: inc.end, end_reason: inc.end_reason, paths: 0 }); continue; }
+    if (!paths.length) { detail?.push({ type: t, subtype: sub, actor: inc.actor_key, start: inc.start, end: inc.end, end_reason: inc.end_reason, paths: 0 }); continue; }
     const real = verdictOf(aspasOf(s), paths), full = verdictOf(ideal, paths);
-    for (const x of [b, total]) { x.with_path++; x.real[real]++; x.ideal[full]++; }
+    for (const x of all) { x.with_path++; x.real[real]++; x.ideal[full]++; }
     for (const o of ['random', 'largest']) {
       LEVELS.forEach((level, i) => {
         if (verdictOf(limited(ideal, ord[o], Math.round((ord.n * level) / 100)), paths) === 2) { curve(o, t)[i]++; curve(o, 'total')[i]++; }
       });
     }
-    detail?.push({ type: t, actor: inc.actor_key, start: inc.start, end: inc.end, end_reason: inc.end_reason, paths: paths.length,
+    detail?.push({ type: t, subtype: sub, actor: inc.actor_key, start: inc.start, end: inc.end, end_reason: inc.end_reason, paths: paths.length,
       real: ['valid', 'unknown', 'invalid'][real], complete: ['valid', 'unknown', 'invalid'][full] });
   }
   for (const o of ['random', 'largest']) for (const t of [...Object.keys(byType), 'total']) curve(o, t);
-  return { period: { from, to }, total, by_type: byType, adoption: { levels: LEVELS, ases: ord.n, ...adoption } };
+  return { period: { from, to }, total, by_type: byType, subtypes: bySub, adoption: { levels: LEVELS, ases: ord.n, ...adoption } };
 }
 
 async function files(args) {

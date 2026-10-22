@@ -12,6 +12,8 @@ from datetime import datetime, timezone
 import argparse
 from collections import Counter, defaultdict
 
+import extra_detectors  # detectors of the copy of ASPA Explorer: see CROSS-CHECK.md, items X-1 and X-3
+
 # configuration
 DATA_PATHS = ["data/*.jsonl", "data/*.jsonl.gz"]
 CAIDA_FILE = "20260901.as-rel.txt.bz2"
@@ -109,7 +111,9 @@ def check_route_leak(rec, rel, state, current_epoch):
         if in_rel in ("p2c", "p2p") and out_rel in ("c2p", "p2p"):
             return True, {
                 "anomaly": "Valley-Free Violation (Route Leak)", 
-                "from": from_as, "by": by_as, "to": to_as, "path": path
+                "from": from_as, "by": by_as, "to": to_as, "path": path,
+                "rlk_type": extra_detectors.rlk_type(in_rel, out_rel),
+                "learned_from": "provider" if in_rel == "p2c" else "peer",
             }
 
     return False, {}
@@ -497,6 +501,9 @@ def process_record(rec, rel, roas, active_incidents, timeout_seconds, out_f, sta
         
         # is_asm, asm_det = check_as_path_manipulation(rec, rel, state, current_epoch)
         # if is_asm: anomalies.append(("ASM", f"ASM_{origin}", asm_det))
+
+        is_asm, asm_det = extra_detectors.check_forged_link(rec, rel)
+        if is_asm: anomalies.append(("ASM", f"ASM_{asm_det['asm_type']}_{asm_det['link'][0]}_{asm_det['link'][1]}", asm_det))
         
         is_deg, deg_det = check_deaggregation(rec, rel, state, current_epoch)
         if is_deg: anomalies.append(("DEG", f"DEG_{origin}", deg_det))

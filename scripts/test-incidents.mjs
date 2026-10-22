@@ -1,6 +1,6 @@
 // Unit tests for scripts/build-incidents.mjs (no dependencies). Run with: node scripts/test-incidents.mjs
 import assert from 'node:assert/strict';
-import { relationSets, parseIncidents, pathsOf, verdictOf, orders, analyse, LEVELS } from './build-incidents.mjs';
+import { relationSets, parseIncidents, pathsOf, verdictOf, orders, analyse, subtypeOf, LEVELS, FP_MIN_NEIGHBOURS } from './build-incidents.mjs';
 
 let passed = 0;
 const test = async (name, fn) => { await fn(); passed++; console.log('ok  ', name); };
@@ -79,6 +79,23 @@ await test('analyse: counts by type, real and complete ASPAs, the curve of adopt
   assert.equal(detail.length, 3);
   assert.deepEqual(detail.map((d) => d.real), ['invalid', 'unknown', undefined]);
   assert.deepEqual(detail.map((d) => d.complete), ['invalid', 'valid', undefined]);
+});
+
+await test('subtypes: UL and LL as the detector recorded them, FP when one AS leaks to enough neighbours, ASM-FI and ASM-PS', () => {
+  const rlk = (by, to, rlk_type) => inc('RLK', { details: { by, to, rlk_type, path: [to, by, 1, 100] }, messages: [ann([to, by, 1, 100])] });
+  const list = [rlk(2, 3, 'UL'), rlk(7, 3, 'UL'), rlk(7, 5, 'LL')];
+  for (let to = 10; to < 10 + FP_MIN_NEIGHBOURS; to++) list.push(rlk(9, to, 'UL'));
+  list.push(inc('ASM', { details: { asm_type: 'FI', path: [4, 1, 666] }, messages: [ann([4, 1, 666])] }), inc('ASM', { details: { asm_type: 'PS' } }), inc('ASM', { details: {} }), rlk(8, 3, undefined));
+  const res = analyse(list, () => NO_ASPAS, IDEAL, DEGREE);
+  assert.equal(res.subtypes['RLK-UL'].incidents, 2);        // AS2 and AS7 leak to one or two neighbours
+  assert.equal(res.subtypes['RLK-LL'].incidents, 1);
+  assert.equal(res.subtypes['RLK-FP'].incidents, FP_MIN_NEIGHBOURS);
+  assert.equal(res.subtypes['ASM-FI'].incidents, 1);
+  assert.equal(res.subtypes['ASM-FI'].with_path, 1);
+  assert.equal(res.subtypes['ASM-PS'].incidents, 1);
+  assert.equal(res.by_type.ASM.incidents, 3);                // the one with no type is only in its type
+  assert.equal(res.by_type.RLK.incidents, list.filter((i) => i.incident_type === 'RLK').length);
+  assert.equal(subtypeOf(inc('VOL', {}), new Map()), null);
 });
 
 await test('the aggregate has no AS number and no actor', () => {

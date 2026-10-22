@@ -23,16 +23,16 @@
 <meta name="twitter:card" content="summary_large_image">
 <meta name="color-scheme" content="light dark">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
-<link rel="stylesheet" href="/style.css?v=1.48.3">
-<script src="/incidents.js?v=1.48.3" defer></script>
-<script src="/status-checks.js?v=1.48.3" defer></script>
-<script src="/footer.js?v=1.48.3" defer></script>
+<link rel="stylesheet" href="/style.css?v=1.49.0">
+<script src="/incidents.js?v=1.49.0" defer></script>
+<script src="/status-checks.js?v=1.49.0" defer></script>
+<script src="/footer.js?v=1.49.0" defer></script>
 </head>
 <body>
 <a class="skip" href="#main">Skip to main content</a>
 <header class="wrap masthead">
   <div class="top">
-    <p class="back"><a class="brandlink" href="/" title="Back to ASPA Explorer"><img class="brand" src="/img/logo-mark.svg?v=1.48.3" alt="" width="40" height="40"><span>ASPA Explorer</span></a></p>
+    <p class="back"><a class="brandlink" href="/" title="Back to ASPA Explorer"><img class="brand" src="/img/logo-mark.svg?v=1.49.0" alt="" width="40" height="40"><span>ASPA Explorer</span></a></p>
     <nav class="topnav" aria-label="Main"><a href="/">Home</a><a href="/statistics.html">Statistics</a><a href="/incidents.html" aria-current="page">Incidents</a><a href="/examples.html">Examples</a><a href="/api.html">API</a><a href="/guide.html">Guide</a><a href="/status.html">Status</a></nav>
   </div>
   <h1>Incidents</h1>
@@ -152,13 +152,13 @@
           <tr><th scope="row"><span class="chip">DEG</span> Prefix deaggregation</th><td>A more specific prefix whose origin is not the one of the aggregate. It is often legitimate, so it is a candidate and not a verdict.</td><td>Nothing: the path of a more specific can be perfectly valid.</td></tr>
           <tr><th scope="row"><span class="chip">VOL</span> State volatility</th><td>Five or more announcements and withdrawals of a prefix from one peer within five minutes.</td><td>Nothing to say about the flapping; the paths of its announcements are judged like any other.</td></tr>
           <tr><th scope="row"><span class="chip">ATR</span> Attribute-based session reset</th><td>Only its effect: a mass of withdrawals from one peer within seconds, which is also what the reset of an ordinary session looks like. The malformed attribute itself is not seen.</td><td>Nothing.</td></tr>
-          <tr><th scope="row"><span class="chip">ASM</span> AS path manipulation</th><td>Not detected yet.</td><td>Some of the types (a forged origin, a shortened path) show as hops that the ASPAs do not attest.</td></tr>
+          <tr><th scope="row"><span class="chip">ASM</span> AS path manipulation</th><td>Only candidates: a link of the path that the relationships of CAIDA do not know (forged origin when it is the one to the origin, path shortening otherwise).</td><td>Some of the types (a forged origin, a shortened path) show as hops that the ASPAs do not attest, so it can say something about these candidates.</td></tr>
           <tr><th scope="row"><span class="chip">POL</span> Policy manipulation</th><td>Not detected: it cannot be inferred from the updates of a collector, or it would be prone to false positives.</td><td>Nothing.</td></tr>
         </tbody>
       </table>
     </section>
     <h3 class="subhead" id="inc-coverage-title">Which types of the taxonomy can we observe</h3>
-    <p>Not all of them. The table goes through the 27 types of the survey, one by one, and says what the detectors of the project do with each. <strong>5</strong> are detected, <strong>5</strong> only partly, <strong>11</strong> are observable but not implemented yet, and <strong>6</strong> cannot be observed from the data that we collect.</p>
+    <p>Not all of them. The table goes through the 27 types of the survey, one by one, and says what the detectors of the project do with each. <strong>5</strong> are detected, <strong>8</strong> only partly, <strong>8</strong> are observable but not implemented yet, and <strong>6</strong> cannot be observed from the data that we collect.</p>
     <section class="card table-wrap" tabindex="0" aria-label="Coverage of the types of the taxonomy by the detectors of the project">
       <table class="checks live">
         <caption class="sr-only">For each type of the taxonomy: whether the detectors of the project observe it, and why</caption>
@@ -173,8 +173,8 @@
         <tbody>
           <tr><th scope="rowgroup" colspan="3"><span class="chip">ASM</span> AS path manipulation</th></tr>
           <tr><th scope="row"><span class="chip">ASM-PE</span> AS Path poisoning</th><td><span class="badge sev-note">Not implemented</span></td><td>Visible in the path (private or unexpected ASNs), but the detector is switched off in the scripts. Poisoning is also used legitimately, for traffic engineering, so a flag would be a candidate at best.</td></tr>
-          <tr><th scope="row"><span class="chip">ASM-FI</span> Forged origin Injection</th><td><span class="badge sev-note">Not implemented</span></td><td>Needs a reference for who is really connected to whom (ASPAs, topology). An ASPA is the tool that exposes it; the detector does not check this yet.</td></tr>
-          <tr><th scope="row"><span class="chip">ASM-PS</span> Path Shortening</th><td><span class="badge sev-note">Not implemented</span></td><td>As ASM-FI: a missing hop is visible only against a reference topology.</td></tr>
+          <tr><th scope="row"><span class="chip">ASM-FI</span> Forged origin Injection</th><td><span class="badge v-unknown">Partly</span></td><td>A candidate: the link between the last AS and the origin is not in the relationships of CAIDA, as if the announcer were next to the prefix owner. CAIDA lacks real links too, so some candidates are false; how many is still to be measured.</td></tr>
+          <tr><th scope="row"><span class="chip">ASM-PS</span> Path Shortening</th><td><span class="badge v-unknown">Partly</span></td><td>A candidate: another link of the path that CAIDA does not know, as if ASes in between had been removed. Same limit as ASM-FI.</td></tr>
           <tr><th scope="row"><span class="chip">ASM-EX</span> path EXtension evasion</th><td><span class="badge sev-note">Not implemented</span></td><td>Long paths and prepending are in the data (the flag of the record), but the detector is switched off.</td></tr>
         </tbody>
         <tbody>
@@ -193,10 +193,10 @@
         </tbody>
         <tbody>
           <tr><th scope="rowgroup" colspan="3"><span class="chip">RLK</span> Routing leak</th></tr>
-          <tr><th scope="row"><span class="chip">RLK-UL</span> Upward Leak</th><td><span class="badge v-valid">Detected</span></td><td>A hop that learned the route from a provider or a peer and sent it to a provider or a peer, by the relationships of CAIDA. The incident does not record which of the two types it is.</td></tr>
-          <tr><th scope="row"><span class="chip">RLK-LL</span> Lateral Leak</th><td><span class="badge v-valid">Detected</span></td><td>The same detector, when the route crosses peers. As above, the type is not recorded.</td></tr>
+          <tr><th scope="row"><span class="chip">RLK-UL</span> Upward Leak</th><td><span class="badge v-valid">Detected</span></td><td>A hop that learned the route from a provider or a peer and sent it to a provider, by the relationships of CAIDA. The incident records the type (incident.py, <code>rlk_type</code>).</td></tr>
+          <tr><th scope="row"><span class="chip">RLK-LL</span> Lateral Leak</th><td><span class="badge v-valid">Detected</span></td><td>The same detector, when the route is sent to a peer: our reading of the survey is that an upward leak goes to a provider and a lateral one to a peer.</td></tr>
           <tr><th scope="row"><span class="chip">RLK-DL</span> Downward Leak</th><td><span class="badge sev-note">Not implemented</span></td><td>The detector looks only at the announcements that go to a provider or a peer; those towards a customer are never flagged.</td></tr>
-          <tr><th scope="row"><span class="chip">RLK-FP</span> Full Propagation</th><td><span class="badge sev-note">Not implemented</span></td><td>Would need the whole set of neighbours of the leaking AS; the detector judges one path at a time.</td></tr>
+          <tr><th scope="row"><span class="chip">RLK-FP</span> Full Propagation</th><td><span class="badge v-unknown">Partly</span></td><td>A proxy: one AS that leaks to three or more different neighbours in the period. The survey means all the neighbours, whatever their role, which needs the policy of that AS; the proxy is set when the page is built, over all the incidents.</td></tr>
         </tbody>
         <tbody>
           <tr><th scope="rowgroup" colspan="3"><span class="chip">POL</span> Policy manipulation</th></tr>

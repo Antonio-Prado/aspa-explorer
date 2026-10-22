@@ -24,8 +24,8 @@ def withdraw(ts, prefix, peer):
             "origin": None, "flag": None, "compressed_path": None}
 
 
-# AS1 and AS3 are providers of AS2; AS4 is a provider of AS1; AS5 and AS3 are peers
-REL = {(1, 2): "p2c", (2, 1): "c2p", (3, 2): "p2c", (2, 3): "c2p", (4, 1): "p2c", (1, 4): "c2p", (5, 3): "p2p", (3, 5): "p2p"}
+# AS1 is a provider of AS100; AS1 and AS3 are providers of AS2; AS4 is a provider of AS1; AS5 and AS3 are peers
+REL = {(1, 100): "p2c", (100, 1): "c2p", (1, 2): "p2c", (2, 1): "c2p", (3, 2): "p2c", (2, 3): "c2p", (4, 1): "p2c", (1, 4): "c2p", (5, 3): "p2p", (3, 5): "p2p"}
 ROAS = {"10.0.0.0/16": {(100, 16)}}
 
 
@@ -41,6 +41,25 @@ class Detectors(unittest.TestCase):
         active, _ = run([announce("2026-10-22 10:00:00", "10.1.0.0/16", 3, [3, 2, 1, 100])])
         self.assertEqual(list(active), ["RLK_1_2_3"])
         active, _ = run([announce("2026-10-22 10:00:00", "10.1.0.0/16", 4, [4, 1, 100])])
+        self.assertEqual(active, {})
+
+    def test_route_leak_records_its_type(self):
+        active, _ = run([announce("2026-10-22 10:00:00", "10.1.0.0/16", 3, [3, 2, 1, 100])])
+        self.assertEqual(active["RLK_1_2_3"]["details"]["rlk_type"], "UL")          # to a provider
+        self.assertEqual(active["RLK_1_2_3"]["details"]["learned_from"], "provider")
+        rel = dict(REL); rel.update({(6, 2): "p2p", (2, 6): "p2p"})                 # 6 is a peer of 2
+        active, _ = run([announce("2026-10-22 10:00:00", "10.1.0.0/16", 6, [6, 2, 1, 100])], rel=rel)
+        self.assertEqual(active["RLK_1_2_6"]["details"]["rlk_type"], "LL")          # to a peer
+
+    def test_link_that_caida_does_not_know(self):
+        rel = dict(REL)
+        active, _ = run([announce("2026-10-22 10:00:00", "10.1.0.0/16", 4, [4, 1, 100])], rel=rel)       # every link is known
+        self.assertEqual([k for k in active if k.startswith("ASM")], [])
+        active, _ = run([announce("2026-10-22 10:00:00", "10.1.0.0/16", 4, [4, 1, 666])], rel=rel)       # the origin is not next to 1
+        self.assertEqual(active["ASM_FI_1_666"]["details"]["asm_type"], "FI")
+        active, _ = run([announce("2026-10-22 10:00:00", "10.1.0.0/16", 4, [4, 5, 1, 100])], rel=rel)    # 4 and 5 are not linked
+        self.assertEqual(active["ASM_PS_4_5"]["details"]["asm_type"], "PS")
+        active, _ = run([announce("2026-10-22 10:00:00", "10.1.0.0/16", 4, [4, 5, 1, 100])], rel={})     # no relationships: off
         self.assertEqual(active, {})
 
     def test_hijack_by_origin_and_by_length(self):
@@ -79,7 +98,7 @@ class Files(unittest.TestCase):
         self.dir = tempfile.TemporaryDirectory()
         os.makedirs(os.path.join(self.dir.name, "data"))
         with bz2.open(os.path.join(self.dir.name, "20260901.as-rel.txt.bz2"), "wt") as f:
-            f.write("1|2|-1|bgp\n3|2|-1|bgp\n")
+            f.write("1|2|-1|bgp\n3|2|-1|bgp\n1|100|-1|bgp\n")
         os.makedirs(os.path.join(self.dir.name, "roas"))
         with lzma.open(os.path.join(self.dir.name, "roas", "r.json.xz"), "wt") as f:
             json.dump({"roas": []}, f)

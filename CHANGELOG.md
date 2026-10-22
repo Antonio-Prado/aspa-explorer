@@ -5,6 +5,18 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.49.0] - 2026-10-22
+
+### Added
+- Three kinds of incident that the detectors did not tell apart, in the copy of the scripts that runs here (`tools/data_scripts/`, new module `extra_detectors.py`; the project `data_scripts` is not changed, the extensions are documented in its `CROSS-CHECK.md`, items X-1 to X-3):
+  - **RLK-UL and RLK-LL**: the valley detector records the type of the leak (`rlk_type`, `learned_from`): a route sent to a provider is an upward leak, one sent to a peer a lateral one.
+  - **RLK-FP**: when the page is built, a leaking AS that sent leaks to three or more different neighbours counts as a full propagation (a proxy of the definition of the survey, which needs the policy of that AS).
+  - **ASM-FI and ASM-PS**: a link of the path that the CAIDA relationships do not know is a candidate of forged origin injection (the link to the origin) or path shortening (any other). They are candidates: CAIDA lacks real links too.
+- `/api/v1/incidents.json` has `subtypes` (the same counts and verdicts as `by_type`), and the table of the Incidents page shows them under their class.
+
+### Changed
+- The table of coverage of the Incidents page: 5 types detected, 8 partly (the three above, PRH-AB, DEG-MA and the three ATR), 8 observable but not implemented, 6 not observable.
+
 ## [1.48.3] - 2026-10-22
 
 ### Added
