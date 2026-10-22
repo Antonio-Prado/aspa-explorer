@@ -1,4 +1,4 @@
-// Route leaks (valleys) in the routes of the RIPE RIS collectors, today: every route of three collectors is
+// Valleys (possible route leaks, or gaps in ASPAs) in the routes of the RIPE RIS collectors, today: every route of three collectors is
 // checked with the downstream ASPA verification, and the paths that the ASPAs prove to contain a valley are
 // grouped by the place of the valley. Written as one JSON file (served as /api/v1/leaks.json).
 //

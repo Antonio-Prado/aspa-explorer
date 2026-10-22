@@ -1,5 +1,5 @@
 // A dated snapshot of the data behind the site, for research that has to be repeated: the ASPAs as they are now, their
-// history and events, the adoption numbers, the route leaks and the status of the validators, with a manifest (size and
+// history and events, the adoption numbers, the valleys and the status of the validators, with a manifest (size and
 // SHA-256 of each file) and a README, in one .tar.gz, plus an index of all the snapshots (served under /datasets/).
 // Run it once a month (cron) as an unprivileged user.
 //
