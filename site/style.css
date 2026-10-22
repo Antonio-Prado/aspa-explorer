@@ -690,3 +690,6 @@ table.live th.grp { text-align: center; }
 .checks td .badge { white-space: nowrap; }
 .checks th.sub, table.live tbody th.sub { padding-left: 1.6rem; font-weight: 400; }
 .checks td.gnote { background: var(--chip); color: var(--ink-2); font-size: 0.85rem; }
+.linechart .axistitle { fill: var(--ink-2); font-size: 12px; }
+.linechart .dot.s1 { fill: var(--s1); }
+.linechart .dot.s2 { fill: var(--s2); }

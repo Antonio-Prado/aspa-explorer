@@ -70,7 +70,7 @@
   // The curve: the share of the incidents with a path that would be Invalid, for 0 to 100% of the networks publishing.
   const SVG = 'http://www.w3.org/2000/svg';
   const svg = (tag, attrs, ...kids) => { const n = document.createElementNS(SVG, tag); for (const [k, v] of Object.entries(attrs || {})) n.setAttribute(k, v); n.append(...kids); return n; };
-  const SERIES = [{ key: 'largest', label: 'Largest networks first', cls: 's1' }, { key: 'random', label: 'At random', cls: 's2' }];
+  const SERIES = [{ key: 'largest', label: 'The biggest networks publish first', cls: 's1' }, { key: 'random', label: 'Networks publish in random order', cls: 's2' }];
 
   function points(d, type) {
     const base = type === 'total' ? d.total.with_path : d.by_type[type].with_path;
@@ -78,16 +78,21 @@
   }
 
   function draw(box, d, type) {
-    const levels = d.adoption.levels, series = points(d, type);
-    const W = Math.max(280, box.clientWidth || 640), H = 220, m = { l: 40, r: 10, t: 10, b: 28 };
+    const levels = d.adoption.levels, series = points(d, type), i10 = levels.indexOf(10), i50 = levels.indexOf(50);
+    const W = Math.max(280, box.clientWidth || 640), H = 260, m = { l: 52, r: 12, t: 10, b: 48 };
     const iw = W - m.l - m.r, ih = H - m.t - m.b;
     const x = (i) => m.l + (iw * i) / (levels.length - 1);
     const y = (v) => m.t + ih - (ih * v) / 100;
-    const label = (s) => `${s.label.toLowerCase()} ${s.values[0].toFixed(0)}% then ${s.values[s.values.length - 1].toFixed(0)}%`;
-    const g = svg('svg', { viewBox: `0 0 ${W} ${H}`, role: 'img', 'aria-label': `Share of the incidents that the ASPAs would prove Invalid, from none to all of the networks publishing: ${series.map(label).join('; ')}.` });
+    const label = (s) => `${s.label.toLowerCase()}: ${s.values[i10].toFixed(0)}% with 10% of the networks publishing, ${s.values[i50].toFixed(0)}% with half, ${s.values[s.values.length - 1].toFixed(0)}% with all`;
+    const g = svg('svg', { viewBox: `0 0 ${W} ${H}`, role: 'img', 'aria-label': `Share of the incidents that the ASPAs would prove Invalid, against the share of the networks that publish an ASPA. ${series.map(label).join('; ')}.` });
     for (const v of [0, 25, 50, 75, 100]) g.append(svg('line', { class: 'grid', x1: m.l, x2: W - m.r, y1: y(v), y2: y(v) }), svg('text', { class: 'tick', x: m.l - 6, y: y(v) + 4, 'text-anchor': 'end' }, `${v}%`));
-    levels.forEach((l, i) => { if (l % 20 === 0) g.append(svg('text', { class: 'tick', x: x(i), y: H - 8, 'text-anchor': i === 0 ? 'start' : i === levels.length - 1 ? 'end' : 'middle' }, `${l}%`)); });
-    for (const s of series) g.append(svg('polyline', { class: `line ${s.cls}`, points: s.values.map((v, i) => `${x(i).toFixed(1)},${y(v).toFixed(1)}`).join(' ') }));
+    levels.forEach((l, i) => { if (l % 20 === 0) g.append(svg('text', { class: 'tick', x: x(i), y: H - 28, 'text-anchor': i === 0 ? 'start' : i === levels.length - 1 ? 'end' : 'middle' }, `${l}%`)); });
+    for (const s of series) {
+      g.append(svg('polyline', { class: `line ${s.cls}`, points: s.values.map((v, i) => `${x(i).toFixed(1)},${y(v).toFixed(1)}`).join(' ') }));
+      s.values.forEach((v, i) => g.append(svg('circle', { class: `dot ${s.cls}`, cx: x(i).toFixed(1), cy: y(v).toFixed(1), r: 3 })));
+    }
+    g.append(svg('text', { class: 'axistitle', x: m.l + iw / 2, y: H - 6, 'text-anchor': 'middle' }, 'Networks that publish an ASPA (% of all the networks)'),
+      svg('text', { class: 'axistitle', transform: `translate(13 ${m.t + ih / 2}) rotate(-90)`, 'text-anchor': 'middle' }, 'Incidents that are Invalid (%)'));
     box.replaceChildren(g);
     return series;
   }
@@ -99,9 +104,10 @@
     select.replaceChildren(...options.map(([v, t]) => el('option', { value: v, text: t })));
     const show = () => {
       const type = select.value, series = draw(box, d, type), i10 = d.adoption.levels.indexOf(10);
-      $('inc-legend').replaceChildren(...series.map((s) => el('li', {}, el('span', { class: `sw ${s.cls}`, 'aria-hidden': 'true' }), el('span', { class: 'lg', text: s.label }), ' ', el('span', { class: 'lv', text: `${s.values[i10].toFixed(0)}% at 10%` }))));
-      const [largest, random] = series;
-      $('inc-curve-note').textContent = `With the largest 10% of the ${fmt.format(d.adoption.ases)} networks of the dataset publishing, ${largest.values[i10].toFixed(0)}% of these incidents would be Invalid; with 10% chosen at random, ${random.values[i10].toFixed(0)}%.`;
+      $('inc-legend').replaceChildren(...series.map((s) => el('li', {}, el('span', { class: `sw ${s.cls}`, 'aria-hidden': 'true' }), el('span', { class: 'lg', text: s.label }), ' ', el('span', { class: 'lv', text: `${s.values[i10].toFixed(0)}% Invalid when 10% publish` }))));
+      const [largest, random] = series, i50 = d.adoption.levels.indexOf(50), leaks = type === 'RLK';
+      const pc = (v) => `${v.toFixed(0)}%`;
+      $('inc-curve-note').textContent = `How to read it: if only the biggest 10% of the ${fmt.format(d.adoption.ases)} networks of the dataset published an ASPA, ${pc(largest.values[i10])} of these incidents would be Invalid; if 10% of the networks did it in random order, ${pc(random.values[i10])}. With half of the networks, ${pc(largest.values[i50])} and ${pc(random.values[i50])}. The dots are the points that were computed (every 10%); the lines between them only join them.${leaks ? ' For a valley the right end is always 100%, because the detector and the ASPAs use the same CAIDA relationships: look at the shape of the lines, not at the end.' : ''}`;
     };
     select.addEventListener('change', show);
     show();
