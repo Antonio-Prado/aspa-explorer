@@ -4,7 +4,7 @@
 //   - with the ASPAs that were published on the day the incident began (replayed from the history of changes);
 //   - with complete ASPAs: every AS publishes the providers that CAIDA infers for it (the best case, and not independent of CAIDA);
 //   - with a part of the ASes publishing those complete ASPAs, from 0 to 100%, in a random order and the largest networks first.
-// The result is an aggregate (no AS number), served as /api/v1/incidents.json; with --detail the verdict of each incident goes to a
+// The result is an aggregate (no AS number; `period` is the time, in UTC, of the first incident and of the last), served as /api/v1/incidents.json; with --detail the verdict of each incident goes to a
 // file that is not published.
 //   node scripts/build-incidents.mjs OUT_FILE [FILE_OR_DIR ...] [--detail=FILE] [--caida=FILE] [--cache=DIR]
 // Environment:
@@ -93,6 +93,7 @@ const limited = (ideal, rank, cut) => ({ get: (as) => (rank.get(as) < cut ? idea
 
 const empty = () => ({ incidents: 0, with_path: 0, real: [0, 0, 0], ideal: [0, 0, 0] });
 const day = (start) => (/^\d{4}-\d{2}-\d{2}/.test(start || '') ? start.slice(0, 10) : null);
+const stamp = (t) => (/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}/.test(t || '') ? t.slice(0, 19) : null);
 
 // incidents: parsed; aspasOf(day): the ASPA lookup of a day (Map AS number -> Set of providers); ideal, degree: complete ASPAs
 export function analyse(incidents, aspasOf, ideal, degree, detail = null) {
@@ -106,9 +107,10 @@ export function analyse(incidents, aspasOf, ideal, degree, detail = null) {
     const t = TYPES.includes(inc.incident_type) ? inc.incident_type : 'other';
     const b = bucket(t);
     for (const x of [b, total]) x.incidents++;
-    const s = day(inc.start), e = day(inc.end) || s;
-    if (s && (!from || s < from)) from = s;
-    if (e && (!to || e > to)) to = e;
+    const s = day(inc.start);
+    const t0 = stamp(inc.start), t1 = stamp(inc.end) || t0;
+    if (t0 && (!from || t0 < from)) from = t0;
+    if (t1 && (!to || t1 > to)) to = t1;
     const paths = pathsOf(inc);
     if (!paths.length) { detail?.push({ type: t, actor: inc.actor_key, start: inc.start, end: inc.end, end_reason: inc.end_reason, paths: 0 }); continue; }
     const real = verdictOf(aspasOf(s), paths), full = verdictOf(ideal, paths);
@@ -188,7 +190,7 @@ async function main() {
   const write = async (file, text) => { const tmp = `${file}.tmp`; await writeFile(tmp, text); await rename(tmp, file); };
   await write(outFile, JSON.stringify(doc) + '\n');
   if (detail) await write(flag('detail'), detail.map((d) => JSON.stringify(d)).join('\n') + '\n');
-  console.log(`${doc.generated}: ${doc.total.incidents} incidents (${doc.total.with_path} with a path) from ${doc.period.from} to ${doc.period.to}`);
+  console.log(`${doc.generated}: ${doc.total.incidents} incidents (${doc.total.with_path} with a path) from ${doc.period.from} to ${doc.period.to} UTC`);
 }
 
 if (import.meta.url === `file://${process.argv[1]}`) main().catch((err) => { console.error(err.message); process.exit(1); });

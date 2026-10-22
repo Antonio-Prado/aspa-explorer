@@ -22,6 +22,14 @@
   }
   const pct = (a, b) => (b ? `${((100 * a) / b).toFixed(a / b < 0.1 && a ? 1 : 0)}%` : '0%');
   const day = (iso) => new Date(iso + 'T00:00:00Z').toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' });
+  // "2026-10-22 11:42:03" (UTC) -> "22 Oct 2026, 11:42 UTC"; an older file has the day only
+  const utc = (t) => (/^\d{4}-\d{2}-\d{2}$/.test(t) ? day(t) : `${new Date(t.replace(' ', 'T') + 'Z').toLocaleString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', timeZone: 'UTC' })} UTC`);
+  const plural = (n, w) => `${fmt.format(n)} ${w}${n === 1 ? '' : 's'}`;
+  function span(a, b) {
+    const m = Math.round((Date.parse(b.replace(' ', 'T') + 'Z') - Date.parse(a.replace(' ', 'T') + 'Z')) / 60000);
+    if (!(m >= 0)) return '';
+    return m < 90 ? plural(m, 'minute') : m < 48 * 60 ? plural(Math.round(m / 60), 'hour') : plural(Math.round(m / 1440), 'day');
+  }
   const typesOf = (d) => ORDER.filter((t) => d.by_type[t]);
 
   const tile = (label, value, note, cls) => el('div', { class: 'tile card ' + (cls || '') }, el('div', { class: 'label', text: label }), el('div', { class: 'value', text: value }), el('div', { class: 'note', text: note }));
@@ -101,7 +109,8 @@
       for (const id of ['inc-types-title', 'inc-curve-title']) $(id).parentElement.hidden = true;
       return;
     }
-    $('meta').textContent = `${fmt.format(d.total.incidents)} incidents, from ${day(d.period.from)} to ${day(d.period.to)} · built ${new Date(d.generated).toLocaleString('en-GB', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'UTC' })} UTC`;
+    const length = span(d.period.from, d.period.to);
+    $('meta').textContent = `${plural(d.total.incidents, 'incident')} in the updates of RIPE RIS rrc00, from ${utc(d.period.from)} to ${utc(d.period.to)}${length ? ` (${length} of data)` : ''} · built ${new Date(d.generated).toLocaleString('en-GB', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'UTC' })} UTC`;
     tiles(d);
     rows(d);
     curve(d);

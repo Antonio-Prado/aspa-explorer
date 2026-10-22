@@ -68,7 +68,7 @@ await test('analyse: counts by type, real and complete ASPAs, the curve of adopt
   assert.deepEqual(res.by_type.PRH.real, [0, 1, 0]);          // 100 and 4 have no ASPA: the path is not proved either way
   assert.deepEqual(res.by_type.PRH.ideal, [1, 0, 0]);
   assert.equal(res.by_type.VOL.with_path, 0);
-  assert.deepEqual(res.period, { from: '2026-10-22', to: '2026-10-22' });
+  assert.deepEqual(res.period, { from: '2026-10-22 10:00:00', to: '2026-10-22 10:05:00' });   // the time of the first incident and of the last, UTC
   for (const o of ['random', 'largest']) {
     const c = res.adoption[o].RLK;
     assert.equal(c.length, LEVELS.length);

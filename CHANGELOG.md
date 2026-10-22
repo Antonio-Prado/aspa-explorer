@@ -11,6 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The Incidents page explains the whole taxonomy of routing incidents of our survey of Internet routing security (Servillo et al., *IEEE Communications Surveys & Tutorials*, vol. 28, 2026, Sec. III): the four macro-categories (route manipulation, routing consistency, policy violation, session-based), their micro-categories and types with the acronyms of the survey (PRH, ASM, VOL, DEG, RLK, POL, ATR), the documented incidents it cites, and a table of what each detector of the project sees and what an ASPA can say about it.
 
 ### Changed
+- The Incidents page says the time frame exactly: the updates of the collector from one date and time to another (UTC), with its length (`period` of `/api/v1/incidents.json` has the time of the day), and that the page covers the last 30 days at most (`run-incidents.sh` drops the older incident files).
 - The types in the table of the Incidents page have the names of the survey (*Routing leak*, *Prefix hijack*, *Prefix deaggregation*, *State volatility*, *Attribute-based session reset*), with how the detector sees them in brackets.
 
 ## [1.48.0] - 2026-10-22

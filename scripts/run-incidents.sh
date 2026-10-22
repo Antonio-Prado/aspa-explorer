@@ -6,7 +6,8 @@
 #   4. builds /api/v1/incidents.json (scripts/build-incidents.mjs) and a file with the verdict of each incident, that is not published.
 # Everything is in $BASE: incoming/ (stream.py), work/ (incident.py, with its state), incidents-detail.jsonl.
 #   0 2 * * * /bin/sh /usr/local/libexec/aspa-data/run-incidents.sh >/var/db/aspa-data/run.log 2>&1      (02:00 CEST = 00:00 UTC)
-# The record files of more than KEEP_DAYS days are deleted once they have been read.
+# The record files of more than KEEP_DAYS days are deleted once they have been read, and the incident files of more than
+# KEEP_INCIDENT_DAYS days are not part of the page any more.
 set -eu
 BASE=${INCIDENTS_BASE:-/var/db/aspa-data}
 CODE=${INCIDENTS_CODE:-/usr/local/libexec/aspa-data}
@@ -16,6 +17,7 @@ PY=${PYTHON:-/usr/local/bin/python3.12}
 NODE=${NODE:-/usr/local/bin/node}
 ROAS_URL=${INCIDENTS_ROAS_URL:-https://rpki.ping6.it/json}
 KEEP_DAYS=${INCIDENTS_KEEP_DAYS:-3}
+KEEP_INCIDENT_DAYS=${INCIDENTS_KEEP_INCIDENT_DAYS:-30}
 
 mkdir -p "$BASE/incoming" "$BASE/work/data" "$BASE/work/roas"
 cd "$BASE/work"
@@ -46,7 +48,8 @@ else
 fi
 find data -name 'records_*.jsonl.gz' -mtime +"$KEEP_DAYS" -delete
 
-# 4. the page
+# 4. the page: the incident files of the last KEEP_INCIDENT_DAYS days (the period shown is the one of these)
+find . -maxdepth 1 -name 'incidents_*.jsonl' -mtime +"$KEEP_INCIDENT_DAYS" -delete
 if ls incidents_*.jsonl >/dev/null 2>&1; then
   "$NODE" "$SCRIPTS/build-incidents.mjs" "$GEN/incidents.json" . --cache="$GEN/cache" --detail="$BASE/incidents-detail.jsonl"
 else
