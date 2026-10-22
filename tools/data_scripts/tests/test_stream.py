@@ -40,6 +40,15 @@ class Parser(unittest.TestCase):
             self.assertEqual((r["peer"], r["collector"]), (64500, "rrc00"))
         self.assertEqual(records[0]["compressed_path"], [64500, 2, 3])
 
+    def test_session_messages_become_records_without_a_prefix(self):
+        notification = {"type": "ris_message", "data": {"host": "rrc00.ripe.net", "timestamp": 1792663820.5, "peer_asn": "64500", "type": "NOTIFICATION",
+                                                         "notification": {"code": 3, "subcode": 9, "data": "x"}}}
+        state = {"type": "ris_message", "data": {"host": "rrc00.ripe.net", "timestamp": 1792663821.5, "peer_asn": "64500", "type": "RIS_PEER_STATE", "state": "down"}}
+        records = list(stream.parser(FakeSocket([notification, state])))
+        self.assertEqual([(r["type"], r["peer"]) for r in records], [("N", 64500), ("S", 64500)])
+        self.assertEqual((records[0]["code"], records[0]["subcode"], records[1]["state"]), (3, 9, "down"))
+        self.assertNotIn("prefix", records[0])
+
     def test_as_set_in_the_path_is_dropped(self):
         records = list(stream.parser(FakeSocket([ris([64500, [2, 3], 4])])))
         self.assertEqual([r["type"] for r in records], ["W"])

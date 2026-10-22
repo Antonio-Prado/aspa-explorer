@@ -94,17 +94,30 @@ export function orders(ideal, degree) {
 const limited = (ideal, rank, cut) => ({ get: (as) => (rank.get(as) < cut ? ideal.get(as) : undefined) });
 
 const empty = () => ({ incidents: 0, with_path: 0, real: [0, 0, 0], ideal: [0, 0, 0] });
-// The type of the survey that an incident has, when the detector says: RLK-UL and RLK-LL (incident.py records which), RLK-FP
-// (the same AS leaks to FP_MIN_NEIGHBOURS neighbours or more: it takes the place of UL and LL), ASM-FI and ASM-PS.
-// `receivers`: Map leaking AS -> Set of the ASes that it leaked to, in all the incidents.
+// The type of the survey that an incident has, when the detector says (extra_detectors.py of the copy of the scripts):
+// RLK-UL, RLK-LL (the leak type that incident.py records), RLK-FP (the same AS leaks to FP_MIN_NEIGHBOURS neighbours or more:
+// it takes the place of UL and LL), PRH-AB, ASM-FI, ASM-PS, ASM-PE, ASM-EX, VOL-FO, VOL-DC, VOL-AC, DEG-MA (another origin than
+// the aggregate), DEG-XS (excessive: careless, exploitative or malicious, the intent is not visible; a jump counts here), DEG-FF,
+// ATR-EH and ATR-MA (a session ended by an UPDATE message error). `receivers`: Map leaking AS -> Set of the ASes that it leaked to.
 export function subtypeOf(inc, receivers) {
   const d = inc.details || {};
-  if (inc.incident_type === 'RLK') {
-    if (receivers.get(d.by)?.size >= FP_MIN_NEIGHBOURS) return 'RLK-FP';
-    return d.rlk_type === 'UL' || d.rlk_type === 'LL' ? `RLK-${d.rlk_type}` : null;
+  switch (inc.incident_type) {
+    case 'RLK':
+      if (receivers.get(d.by)?.size >= FP_MIN_NEIGHBOURS) return 'RLK-FP';
+      return d.rlk_type === 'UL' || d.rlk_type === 'LL' ? `RLK-${d.rlk_type}` : null;
+    case 'PRH': return d.prh_type === 'AB' ? 'PRH-AB' : null;
+    case 'ASM': return ['FI', 'PS', 'PE', 'EX'].includes(d.asm_type) ? `ASM-${d.asm_type}` : null;
+    case 'VOL': {
+      const t = d.vol_type || (d.flap_count !== undefined ? 'FO' : null);
+      return ['FO', 'DC', 'AC'].includes(t) ? `VOL-${t}` : null;
+    }
+    case 'DEG':
+      if (d.deg_type === 'flood') return 'DEG-FF';
+      if (d.deg_type === 'excessive' || d.deg_type === 'jump') return 'DEG-XS';
+      return /^Cross-Origin/.test(d.anomaly || '') ? 'DEG-MA' : null;
+    case 'ATR': return d.atr_type === 'EH' || d.atr_type === 'MA' ? `ATR-${d.atr_type}` : null;
+    default: return null;
   }
-  if (inc.incident_type === 'ASM' && (d.asm_type === 'FI' || d.asm_type === 'PS')) return `ASM-${d.asm_type}`;
-  return null;
 }
 
 const day = (start) => (/^\d{4}-\d{2}-\d{2}/.test(start || '') ? start.slice(0, 10) : null);

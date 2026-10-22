@@ -90,6 +90,17 @@ def parser(ws):
         except (TypeError, ValueError):
             continue
 
+        # the messages of the session itself (extension of the copy of ASPA Explorer, see CROSS-CHECK.md, X-6): a NOTIFICATION that a peer
+        # sends, and a change of state of the session. incident.py of the project ignores them (they have no prefix)
+        if data.get("type") == "NOTIFICATION":
+            note = data.get("notification") or {}
+            yield {"type": "N", "collector": collector, "timestamp": timestamp, "peer": peer,
+                   "code": note.get("code"), "subcode": note.get("subcode")}
+            continue
+        if data.get("type") == "RIS_PEER_STATE":
+            yield {"type": "S", "collector": collector, "timestamp": timestamp, "peer": peer, "state": data.get("state")}
+            continue
+
         # handle announcements
         for ann in data.get("announcements", []):
             for prefix in ann.get("prefixes", []):
@@ -181,13 +192,15 @@ def main():
             # subscribe to the collectors with update filter
             collectors = ["rrc00"]
             for c in collectors:
-                ws.send(json.dumps({
-                    "type": "ris_subscribe",
-                    "data": {
-                        "type": "UPDATE",
-                        "host": c
-                    }
-                }))
+                # the updates, and the messages of the session (NOTIFICATION, RIS_PEER_STATE: a few an hour)
+                for message_type in ("UPDATE", "NOTIFICATION", "RIS_PEER_STATE"):
+                    ws.send(json.dumps({
+                        "type": "ris_subscribe",
+                        "data": {
+                            "type": message_type,
+                            "host": c
+                        }
+                    }))
 
             print("connected! streaming data. press Ctrl+C to stop.", flush=True)
 

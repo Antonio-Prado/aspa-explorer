@@ -23,16 +23,16 @@
 <meta name="twitter:card" content="summary_large_image">
 <meta name="color-scheme" content="light dark">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
-<link rel="stylesheet" href="/style.css?v=1.49.2">
-<script src="/incidents.js?v=1.49.2" defer></script>
-<script src="/status-checks.js?v=1.49.2" defer></script>
-<script src="/footer.js?v=1.49.2" defer></script>
+<link rel="stylesheet" href="/style.css?v=1.50.0">
+<script src="/incidents.js?v=1.50.0" defer></script>
+<script src="/status-checks.js?v=1.50.0" defer></script>
+<script src="/footer.js?v=1.50.0" defer></script>
 </head>
 <body>
 <a class="skip" href="#main">Skip to main content</a>
 <header class="wrap masthead">
   <div class="top">
-    <p class="back"><a class="brandlink" href="/" title="Back to ASPA Explorer"><img class="brand" src="/img/logo-mark.svg?v=1.49.2" alt="" width="40" height="40"><span>ASPA Explorer</span></a></p>
+    <p class="back"><a class="brandlink" href="/" title="Back to ASPA Explorer"><img class="brand" src="/img/logo-mark.svg?v=1.50.0" alt="" width="40" height="40"><span>ASPA Explorer</span></a></p>
     <nav class="topnav" aria-label="Main"><a href="/">Home</a><a href="/statistics.html">Statistics</a><a href="/incidents.html" aria-current="page">Incidents</a><a href="/examples.html">Examples</a><a href="/api.html">API</a><a href="/guide.html">Guide</a><a href="/status.html">Status</a></nav>
   </div>
   <h1>Incidents</h1>
@@ -153,7 +153,7 @@
     <p>The survey also distinguishes <strong>structural or inter-domain policy attacks</strong> (PRH, RLK, POL and part of ASM), whose mitigation needs new validation frameworks, shared semantics and coordinated adoption across many networks, from <strong>implementation or operational robustness attacks</strong> (ATR, VOL, DEG and part of ASM), whose mitigation depends on software robustness, configuration hygiene, monitoring and operational hardening. Academia tends to work first on the former, industry operators on the latter, and institutions become relevant when the countermeasures are mature and the challenge is the coordinated adoption.</p>
 
     <h3 class="subhead" id="inc-coverage-title">Which types of the taxonomy can we observe</h3>
-    <p>Not all of them. The table goes through the 27 types of the survey, one by one, and says what the detectors of the project do with each. <strong>5</strong> are detected, <strong>8</strong> only partly, <strong>8</strong> are observable but not implemented yet, and <strong>6</strong> cannot be observed from the data that we collect.</p>
+    <p>Not all of them. The table goes through the 27 types of the survey, one by one, and says what the detectors of the project do with each. <strong>5</strong> are detected, <strong>15</strong> only partly (as candidates, or by a related symptom) and <strong>7</strong> cannot be observed from the data that we collect.</p>
     <section class="card table-wrap" tabindex="0" aria-label="Coverage of the types of the taxonomy by the detectors of the project">
       <table class="checks live">
         <caption class="sr-only">For each type of the taxonomy: whether the detectors of the project observe it and why, and for each class what an ASPA can say</caption>
@@ -163,34 +163,34 @@
           <tr><th scope="row"><span class="chip">PRH-CH</span> Complete Hijack</th><td><span class="badge v-valid">Detected</span></td><td>An origin that no ROA authorises for a covered prefix. Needs a ROA: a prefix without one is never flagged, and a forged origin that matches the ROA is not seen.</td></tr>
           <tr><th scope="row"><span class="chip">PRH-IH</span> Incomplete Hijack</th><td><span class="badge v-valid">Detected</span></td><td>A more specific prefix longer than the maximum length of the ROA, or announced by another origin. Same limit: only prefixes covered by ROAs.</td></tr>
           <tr><th scope="row"><span class="chip">PRH-MIT</span> Interception Hijack</th><td><span class="badge nb-no-ASPA">Not observable here</span></td><td>The interception happens in the data plane and the announcement looks like any other hijack; telling it apart needs traceroutes.</td></tr>
-          <tr><th scope="row"><span class="chip">PRH-AB</span> Abusive Hijack</th><td><span class="badge v-unknown">Partly</span></td><td>Seen only when a ROA covers the unannounced space (it then looks like any invalid origin); with no ROA there is nothing to compare with.</td></tr>
+          <tr><th scope="row"><span class="chip">PRH-AB</span> Abusive Hijack</th><td><span class="badge v-unknown">Partly</span></td><td>A candidate: a prefix in space that is not for the public Internet, or that the RIRs list as available or reserved. It needs no ROA. Space that no registry lists is not seen.</td></tr>
         </tbody>
         <tbody>
           <tr><th scope="rowgroup"><span class="chip">ASM</span> AS path manipulation</th><td colspan="2" class="gnote"><em>An ASPA can expose some of the types: a forged origin or a shortened path shows as a hop that the ASPAs do not attest.</em></td></tr>
-          <tr><th scope="row"><span class="chip">ASM-PE</span> AS Path poisoning</th><td><span class="badge sev-note">Not implemented</span></td><td>Visible in the path (private or unexpected ASNs), but the detector is switched off in the scripts. Poisoning is also used legitimately, for traffic engineering, so a flag would be a candidate at best.</td></tr>
-          <tr><th scope="row"><span class="chip">ASM-FI</span> Forged origin Injection</th><td><span class="badge v-unknown">Partly</span></td><td>A candidate: the link between the last AS and the origin is not in the relationships of CAIDA, as if the announcer were next to the prefix owner. CAIDA lacks real links too, so some candidates are false; how many is still to be measured.</td></tr>
-          <tr><th scope="row"><span class="chip">ASM-PS</span> Path Shortening</th><td><span class="badge v-unknown">Partly</span></td><td>A candidate: another link of the path that CAIDA does not know, as if ASes in between had been removed. Same limit as ASM-FI.</td></tr>
-          <tr><th scope="row"><span class="chip">ASM-EX</span> path EXtension evasion</th><td><span class="badge sev-note">Not implemented</span></td><td>Long paths and prepending are in the data (the flag of the record), but the detector is switched off.</td></tr>
+          <tr><th scope="row"><span class="chip">ASM-PE</span> AS Path poisoning</th><td><span class="badge v-unknown">Partly</span></td><td>A candidate: an AS that comes back in the path after another one (the shape of poisoning, which routers also drop as a loop), or an AS number that no registry has allocated. Poisoning that does not repeat the announcer is not seen.</td></tr>
+          <tr><th scope="row"><span class="chip">ASM-FI</span> Forged origin Injection</th><td><span class="badge v-unknown">Partly</span></td><td>A candidate: the link between the last AS and the origin is not in the relationships of CAIDA, as if the announcer were next to the prefix owner. CAIDA lacks real links too: in a first sample of 23 minutes there were more than two thousand, far more than real attacks, so most are links that CAIDA does not know. The ASPA verdict of the incident is what tells them apart.</td></tr>
+          <tr><th scope="row"><span class="chip">ASM-PS</span> Path Shortening</th><td><span class="badge v-unknown">Partly</span></td><td>A candidate: another link of the path that CAIDA does not know, as if ASes in between had been removed. Same limit as ASM-FI: most are real links that CAIDA lacks (469 in the same sample).</td></tr>
+          <tr><th scope="row"><span class="chip">ASM-EX</span> path EXtension evasion</th><td><span class="badge v-unknown">Partly</span></td><td>A candidate: a private AS number in the path, which should have been removed at the border. Prepending is not flagged: it is ordinary traffic engineering.</td></tr>
         </tbody>
         <tbody>
           <tr><th scope="rowgroup"><span class="chip">VOL</span> State volatility</th><td colspan="2" class="gnote"><em>An ASPA says nothing of the flapping; the paths of its announcements are judged like any other.</em></td></tr>
           <tr><th scope="row"><span class="chip">VOL-FO</span> Flooding Through Oscillation</th><td><span class="badge v-valid">Detected</span></td><td>Five or more announcements and withdrawals of a prefix from one peer within five minutes. The cause of the oscillation is not visible.</td></tr>
           <tr><th scope="row"><span class="chip">VOL-DF</span> Disruptive Flapping</th><td><span class="badge nb-no-ASPA">Not observable here</span></td><td>The difference from VOL-FO is the intent of an attacker, which the updates do not carry.</td></tr>
-          <tr><th scope="row"><span class="chip">VOL-AC</span> Amplified Churn Injection</th><td><span class="badge sev-note">Not implemented</span></td><td>Needs the correlation of the updates of many peers and prefixes to a single origin of the instability; each flapping is judged on its own.</td></tr>
-          <tr><th scope="row"><span class="chip">VOL-DC</span> Delayed Convergence</th><td><span class="badge sev-note">Not implemented</span></td><td>Needs the time that the system takes to settle after an event; the detector does not measure it.</td></tr>
+          <tr><th scope="row"><span class="chip">VOL-AC</span> Amplified Churn Injection</th><td><span class="badge v-unknown">Partly</span></td><td>A candidate: one origin with 3,000 updates in five minutes, for 300 prefixes or more, seen from 8 peers or more. The thresholds are first guesses.</td></tr>
+          <tr><th scope="row"><span class="chip">VOL-DC</span> Delayed Convergence</th><td><span class="badge v-unknown">Partly</span></td><td>A candidate: a prefix that keeps receiving updates from any peer, with no pause of a minute, for ten minutes or more and 100 updates or more.</td></tr>
         </tbody>
         <tbody>
           <tr><th scope="rowgroup"><span class="chip">DEG</span> Prefix deaggregation</th><td colspan="2" class="gnote"><em>An ASPA says nothing: the path of a more specific can be perfectly valid.</em></td></tr>
           <tr><th scope="row"><span class="chip">DEG-MA</span> Malicious Deaggregation</th><td><span class="badge v-unknown">Partly</span></td><td>Seen only when the more specific has another origin than the aggregate; the intent is not visible.</td></tr>
-          <tr><th scope="row"><span class="chip">DEG-CA</span> Careless Deaggregation</th><td><span class="badge sev-note">Not implemented</span></td><td>A more specific with the same origin as the aggregate is skipped on purpose, because it is normal traffic engineering.</td></tr>
-          <tr><th scope="row"><span class="chip">DEG-EX</span> Exploitative Deaggregation</th><td><span class="badge sev-note">Not implemented</span></td><td>Same: the same origin is skipped, and so a /29 split in /32s is not flagged.</td></tr>
-          <tr><th scope="row"><span class="chip">DEG-FF</span> Fragmentation Flood</th><td><span class="badge sev-note">Not implemented</span></td><td>Would need the count of the more specifics per aggregate over time; it is not kept.</td></tr>
+          <tr><th scope="row"><span class="chip">DEG-CA</span> Careless Deaggregation</th><td><span class="badge v-unknown">Partly</span></td><td>Seen as excessive deaggregation: 32 or more more specifics of one origin under a /16 (IPv4) or a /32 (IPv6) in a day, from 2 peers or more, or a jump of an origin against its days before. The intent is not visible, so DEG-CA, DEG-EX and DEG-MA share the same line.</td></tr>
+          <tr><th scope="row"><span class="chip">DEG-EX</span> Exploitative Deaggregation</th><td><span class="badge v-unknown">Partly</span></td><td>The same line as DEG-CA: the count of the more specifics tells how many, not why.</td></tr>
+          <tr><th scope="row"><span class="chip">DEG-FF</span> Fragmentation Flood</th><td><span class="badge v-unknown">Partly</span></td><td>A candidate: 1,024 more specifics or more under a /32 (IPv6), or 1,000 IPv4 more specifics of one origin, in a day. The thresholds are first guesses.</td></tr>
         </tbody>
         <tbody>
           <tr><th scope="rowgroup"><span class="chip">RLK</span> Routing leak</th><td colspan="2" class="gnote"><em>This is what an ASPA proves: a path with a valley is Invalid.</em></td></tr>
           <tr><th scope="row"><span class="chip">RLK-UL</span> Upward Leak</th><td><span class="badge v-valid">Detected</span></td><td>A hop that learned the route from a provider or a peer and sent it to a provider, by the relationships of CAIDA. The incident records the type (incident.py, <code>rlk_type</code>).</td></tr>
           <tr><th scope="row"><span class="chip">RLK-LL</span> Lateral Leak</th><td><span class="badge v-valid">Detected</span></td><td>The same detector, when the route is sent to a peer: our reading of the survey is that an upward leak goes to a provider and a lateral one to a peer.</td></tr>
-          <tr><th scope="row"><span class="chip">RLK-DL</span> Downward Leak</th><td><span class="badge sev-note">Not implemented</span></td><td>The detector looks only at the announcements that go to a provider or a peer; those towards a customer are never flagged.</td></tr>
+          <tr><th scope="row"><span class="chip">RLK-DL</span> Downward Leak</th><td><span class="badge nb-no-ASPA">Not observable here</span></td><td>A leak towards a customer shows in the path as an upward leak of that customer, so the detector flags the valley and cannot tell which of the two it is: that needs the policy of the sender.</td></tr>
           <tr><th scope="row"><span class="chip">RLK-FP</span> Full Propagation</th><td><span class="badge v-unknown">Partly</span></td><td>A proxy: one AS that leaks to three or more different neighbours in the period. The survey means all the neighbours, whatever their role, which needs the policy of that AS; the proxy is set when the page is built, over all the incidents.</td></tr>
         </tbody>
         <tbody>
@@ -202,14 +202,14 @@
         </tbody>
         <tbody>
           <tr><th scope="rowgroup"><span class="chip">ATR</span> Attribute-based session reset</th><td colspan="2" class="gnote"><em>An ASPA says nothing.</em></td></tr>
-          <tr><th scope="row"><span class="chip">ATR-EH</span> Error Handling Policy Abuse</th><td><span class="badge v-unknown">Partly</span></td><td>Only the effect: more than 500 withdrawals from one peer in 10 seconds. An ordinary session reset looks the same.</td></tr>
-          <tr><th scope="row"><span class="chip">ATR-MA</span> Malformed Optional Transitive Attribute Injection</th><td><span class="badge v-unknown">Partly</span></td><td>Same: the malformed attribute is not kept or seen, only the withdrawals that follow.</td></tr>
+          <tr><th scope="row"><span class="chip">ATR-EH</span> Error Handling Policy Abuse</th><td><span class="badge v-unknown">Partly</span></td><td>The session of a peer that ends with a NOTIFICATION for an UPDATE message error (RFC 7606 asks to treat such an update as withdrawn instead), and the mass withdrawal of a peer (more than 500 in 10 seconds), which an ordinary reset looks like. Only the sessions of the peers with the collector.</td></tr>
+          <tr><th scope="row"><span class="chip">ATR-MA</span> Malformed Optional Transitive Attribute Injection</th><td><span class="badge v-unknown">Partly</span></td><td>The same NOTIFICATION when the error is in an attribute (list, flags, length or optional attribute). The malformed attribute itself is not kept.</td></tr>
           <tr><th scope="row"><span class="chip">ATR-VE</span> Vendor-Specific Attribute Exploitation</th><td><span class="badge v-unknown">Partly</span></td><td>Same: the vendor and the attribute are not visible.</td></tr>
         </tbody>
       </table>
     </section>
     <ul class="notes">
-      <li><strong>Detected</strong>: a detector flags this behaviour. <strong>Partly</strong>: it flags a related symptom, or only some of the cases. <strong>Not implemented</strong>: the information is in the updates, the detector does not use it (yet). <strong>Not observable here</strong>: the updates of a collector do not carry it, and it would need other data (traceroutes, the configuration of the AS, a view from inside the network).</li>
+      <li><strong>Detected</strong>: a detector flags this behaviour. <strong>Partly</strong>: it flags a candidate, a related symptom, or only some of the cases; a candidate is not a verdict, and the thresholds that decide it are first guesses. <strong>Not observable here</strong>: the updates of a collector do not carry it, and it would need other data (traceroutes, the configuration of the AS, a view from inside the network).</li>
       <li><strong>One window on the Internet.</strong> The updates come from the peers of a single collector (RIPE RIS <code>rrc00</code>), and only the updates, not the tables. An incident that stays out of the best routes of those peers is not seen at all, and one that began before the capture is seen only from the moment it changes. The cases that a collector cannot see are studied after the fact, from reports.</li>
     </ul>
     <p class="hint">Source of the taxonomy: S. Servillo, P. Spadaccino, M. Centenaro, A. Prado, M. Rossi, F. Luciani, M. Scannapieco and F. Cuomo, “Survey on Internet Routing Security: Stakeholder Interests, Current, and Future Research Directions”, <em>IEEE Communications Surveys &amp; Tutorials</em>, vol. 28, 2026, Sec. III, <a href="https://doi.org/10.1109/COMST.2026.3714569">doi:10.1109/COMST.2026.3714569</a>. The text here follows the survey; for the full definitions, the incidents cited (A1 to A12) and the defences, read it.</p>

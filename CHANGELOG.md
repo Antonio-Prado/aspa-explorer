@@ -5,6 +5,21 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.50.0] - 2026-10-22
+
+### Added
+- More kinds of incident in the copy of the scripts that runs here (`tools/data_scripts/extra_detectors.py`; items X-4 to X-7 of the `CROSS-CHECK.md` of the project `data_scripts`, which is not changed):
+  - **PRH-AB**: a prefix that is not for the public Internet, or that the RIRs list as available or reserved (the delegation files of the adoption job; no ROA needed).
+  - **ASM-PE and ASM-EX**: an AS that comes back in the path after another one, or an AS number that no registry has allocated (poisoning); a private AS number (extension).
+  - **DEG-XS and DEG-FF**: the more specifics of one origin under a /16 (IPv4) or a /32 (IPv6), counted for a UTC day from two peers or more: 32 or more is an excessive deaggregation, 1,024 or more under a /32 (or 1,000 IPv4 of one origin) a flood; and a jump of an origin against the median of its last days. The thresholds are constants at the top of the module.
+  - **VOL-DC and VOL-AC**: a prefix that keeps receiving updates for ten minutes without a pause of a minute (delayed convergence), and one origin with 3,000 updates in five minutes for 300 prefixes seen from 8 peers (amplified churn). The flapping of one prefix at one peer has its type, VOL-FO.
+  - **ATR-EH and ATR-MA**: `stream.py` also records the NOTIFICATION messages and the changes of state of the sessions of the peers (records `N` and `S`, a few an hour); a session that ends with an UPDATE message error is an ATR incident, of the malformed-attribute type when the error is in an attribute. A mass withdrawal that follows a change of state of the session is marked.
+- The table of the Incidents page shows these types under their class, and the table of coverage has 5 types detected, 15 partly (as candidates, or by a symptom) and 7 that cannot be observed. In a first sample of 23 minutes of `rrc00` (1.5 million updates) there were 2,136 candidates of forged origin and 469 of path shortening, many more than real attacks: most are links that CAIDA does not know, and the page says so.
+
+### Changed
+- `incident.py` is faster, three times on 1.5 million updates of `rrc00` (577 s before, 252 s after, on this host): the ROA check is remembered for each prefix and origin (the same announcement comes from many peers), a withdrawal finds the incidents of its prefix through an index instead of looking at every open one, and the events of a flapping prefix are kept in a queue instead of a list that was rebuilt for every update. The output is the same (12,297 incidents on the same updates before and after). A day of data is about 95 million updates, so a run should take about four and a half hours instead of twelve or more.
+- `run-incidents.sh` links the delegation files of the adoption job into the working directory.
+
 ## [1.49.2] - 2026-10-22
 
 ### Changed

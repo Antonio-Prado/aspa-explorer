@@ -1,7 +1,7 @@
 #!/bin/sh
 # The daily job of the Incidents page, run from cron as the user of the builders (aspagen), a little after the end of the UTC day:
 #   1. takes the record files that stream.py has closed (every one but the newest, which it is still writing);
-#   2. refreshes the ROAs (Routinator, rpki.ping6.it) and points incident.py at the newest CAIDA relationships of the adoption job;
+#   2. refreshes the ROAs (Routinator, rpki.ping6.it) and points incident.py at the newest CAIDA relationships and at the delegation files of the adoption job;
 #   3. runs incident.py, which keeps its state between runs and writes incidents_<file>.jsonl for each file;
 #   4. builds /api/v1/incidents.json (scripts/build-incidents.mjs) and a file with the verdict of each incident, that is not published.
 # Everything is in $BASE: incoming/ (stream.py), work/ (incident.py, with its state), incidents-detail.jsonl.
@@ -20,7 +20,7 @@ ROAS_URL=${INCIDENTS_ROAS_URL:-https://rpki.ping6.it/json}
 KEEP_DAYS=${INCIDENTS_KEEP_DAYS:-3}
 KEEP_INCIDENT_DAYS=${INCIDENTS_KEEP_INCIDENT_DAYS:-30}
 
-mkdir -p "$BASE/incoming" "$BASE/work/data" "$BASE/work/roas"
+mkdir -p "$BASE/incoming" "$BASE/work/data" "$BASE/work/roas" "$BASE/work/delegations"
 cd "$BASE/work"
 
 # 1. the files that are closed: all but the newest of incoming/ (the names have the epoch of the opening)
@@ -40,6 +40,9 @@ fi
 rm -f roas.json.tmp roas/current.json.xz.tmp
 caida=$(ls -1 "$GEN"/cache/as-rel2-*.bz2 2>/dev/null | sort | tail -n 1 || true)
 [ -n "$caida" ] && ln -sf "$caida" 20260901.as-rel.txt.bz2     # CAIDA_FILE of incident.py
+
+# the delegation files of the five RIRs (the cache of the adoption job): extra_detectors.py reads delegations/delegated-*
+for f in "$GEN"/cache/delegated-*; do [ -f "$f" ] && ln -sf "$f" delegations/; done
 
 # 3. the incidents
 if ls data/records_*.jsonl.gz >/dev/null 2>&1; then

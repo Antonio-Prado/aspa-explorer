@@ -96,6 +96,13 @@ await test('subtypes: UL and LL as the detector recorded them, FP when one AS le
   assert.equal(res.by_type.ASM.incidents, 3);                // the one with no type is only in its type
   assert.equal(res.by_type.RLK.incidents, list.filter((i) => i.incident_type === 'RLK').length);
   assert.equal(subtypeOf(inc('VOL', {}), new Map()), null);
+  const sub = (type, details) => subtypeOf(inc(type, { details }), new Map());
+  assert.equal(sub('PRH', { prh_type: 'AB' }), 'PRH-AB');
+  assert.equal(sub('PRH', { anomaly: 'Invalid_Origin (Prefix Hijack)' }), null);
+  assert.deepEqual(['PE', 'EX', 'FI', 'PS'].map((t) => sub('ASM', { asm_type: t })), ['ASM-PE', 'ASM-EX', 'ASM-FI', 'ASM-PS']);
+  assert.deepEqual([{ vol_type: 'DC' }, { vol_type: 'AC' }, { vol_type: 'FO' }, { flap_count: 7 }, {}].map((d) => sub('VOL', d)), ['VOL-DC', 'VOL-AC', 'VOL-FO', 'VOL-FO', null]);
+  assert.deepEqual([{ deg_type: 'flood' }, { deg_type: 'excessive' }, { deg_type: 'jump' }, { anomaly: 'Cross-Origin Deaggregation' }, { anomaly: 'x' }].map((d) => sub('DEG', d)), ['DEG-FF', 'DEG-XS', 'DEG-XS', 'DEG-MA', null]);
+  assert.deepEqual([{ atr_type: 'EH' }, { atr_type: 'MA' }, {}].map((d) => sub('ATR', d)), ['ATR-EH', 'ATR-MA', null]);
 });
 
 await test('the aggregate has no AS number and no actor', () => {

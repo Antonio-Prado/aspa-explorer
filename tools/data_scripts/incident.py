@@ -10,7 +10,7 @@ import ipaddress
 import copy
 from datetime import datetime, timezone
 import argparse
-from collections import Counter, defaultdict
+from collections import Counter, defaultdict, deque
 
 import extra_detectors  # detectors of the copy of ASPA Explorer: see CROSS-CHECK.md, items X-1 and X-3
 
@@ -18,6 +18,7 @@ import extra_detectors  # detectors of the copy of ASPA Explorer: see CROSS-CHEC
 DATA_PATHS = ["data/*.jsonl", "data/*.jsonl.gz"]
 CAIDA_FILE = "20260901.as-rel.txt.bz2"
 ROA_FILE = "roas/*.xz"
+DELEGATIONS = os.environ.get("INCIDENTS_DELEGATIONS", "delegations/delegated-*")   # the files of the five RIRs (extra_detectors.py)
 STATE_FILE = "active_state.pkl"
 TIMEOUT_SECONDS = 900  # 15 minutes
 GC_INTERVAL_SECONDS = 600  # run garbage collection every 10 minutes of bgp time
@@ -119,7 +120,27 @@ def check_route_leak(rec, rel, state, current_epoch):
     return False, {}
 
 
+_ROA_CACHE = {}
+_ROA_OWNER = [None]
+
+
 def check_prefix_hijack(rec, roas, state, current_epoch):
+    """The ROA check of a record, remembered for each (prefix, origin): the same announcement comes again and again from many
+    peers, and the check (every covering prefix, as strings) was the largest cost of the run. The answer depends on the ROAs
+    only, which do not change while the script runs."""
+    if _ROA_OWNER[0] is not roas:
+        _ROA_CACHE.clear()
+        _ROA_OWNER[0] = roas
+    key = (rec.get("prefix"), rec.get("origin"))
+    hit = _ROA_CACHE.get(key)
+    if hit is None:
+        if len(_ROA_CACHE) > 1_000_000:
+            _ROA_CACHE.clear()
+        hit = _ROA_CACHE[key] = _check_prefix_hijack(rec, roas, state, current_epoch)
+    return hit
+
+
+def _check_prefix_hijack(rec, roas, state, current_epoch):
     prefix_str = rec.get("prefix")
     origin = rec.get("origin")
     
@@ -301,15 +322,18 @@ def check_state_volatility(rec, state, current_epoch):
     vol_state = state.setdefault("vol_flaps", {})
     key = (prefix, peer)
     
-    history = vol_state.get(key, [])
+    # a deque: the events older than the window leave from the left (the list that was rebuilt for every update cost more
+    # than everything else together for a prefix that flaps for hours); a state saved with lists is converted
+    history = vol_state.get(key)
+    if not isinstance(history, deque):
+        history = vol_state[key] = deque(history or ())
     history.append((current_epoch, rec.get("type")))
-    history = [x for x in history if current_epoch - x[0] <= 300]
-    vol_state[key] = history
+    while current_epoch - history[0][0] > 300:
+        history.popleft()
 
     if len(history) >= 5:
-        types = set(x[1] for x in history)
-        if "A" in types and "W" in types:
-            return True, {"flap_count": len(history), "window_seconds": 300}
+        if any(x[1] == "A" for x in history) and any(x[1] == "W" for x in history):
+            return True, {"flap_count": len(history), "window_seconds": 300, "vol_type": "FO"}
 
     return False, {}
 
@@ -353,7 +377,25 @@ def flush_incident(out_f, inc, end_time, end_reason, end_msg=None):
     out_f.write(json.dumps(inc_record, ensure_ascii=False) + "\n")
 
 
-def check_timeouts(active_incidents, current_epoch, timeout_seconds, out_f):
+def prefix_index(state, active_incidents):
+    """prefix -> the keys of the incidents that have it, so that a withdrawal finds its incidents without a look at all of them
+    (a run keeps thousands open). Built when first needed, and kept up to date where incidents are added and removed."""
+    idx = state.get("_idx")
+    if idx is None:
+        idx = state["_idx"] = {}
+        for key, inc in active_incidents.items():
+            for p in inc["prefixes"]:
+                idx.setdefault(p, set()).add(key)
+    return idx
+
+
+def index_prefix(state, key, prefix):
+    idx = state.get("_idx")
+    if idx is not None:
+        idx.setdefault(prefix, set()).add(key)
+
+
+def check_timeouts(active_incidents, current_epoch, timeout_seconds, out_f, state=None):
     expired_keys = []
     for key, inc in active_incidents.items():
         timeout = 600 if inc["incident_type"] == "VOL" else timeout_seconds
@@ -362,6 +404,13 @@ def check_timeouts(active_incidents, current_epoch, timeout_seconds, out_f):
 
     for key in expired_keys:
         inc = active_incidents.pop(key)
+        idx = state.get("_idx") if state else None
+        if idx is not None:
+            for p in inc["prefixes"]:
+                if p in idx:
+                    idx[p].discard(key)
+                    if not idx[p]:
+                        del idx[p]
         flush_incident(out_f, inc, end_time=inc["last_time"], end_reason="timeout")
 
 
@@ -381,6 +430,8 @@ def garbage_collect_state(state, current_epoch):
         for k in stale: 
             del state["prefix_history"][k]
             
+    extra_detectors.collect_garbage(state, current_epoch)
+
     # clear old pending specifics to prevent memory leaks
     if "pending_specifics" in state:
         for k in list(state["pending_specifics"].keys()):
@@ -424,12 +475,26 @@ def add_message(inc, rec, ts_str, current_epoch):
         inc["messages"][3] = rec
 
 
-def process_record(rec, rel, roas, active_incidents, timeout_seconds, out_f, state):
+def process_record(rec, rel, roas, active_incidents, timeout_seconds, out_f, state, reg=None):
     msg_type = rec.get("type")
     prefix = rec.get("prefix")
     peer = rec.get("peer")
     ts_str = rec.get("timestamp")
     origin = rec.get("origin")
+
+    if msg_type in ("N", "S"):
+        # the messages of the session (stream.py of the copy of ASPA Explorer); they have no prefix
+        if peer and ts_str:
+            epoch = parse_timestamp(ts_str)
+            details = extra_detectors.session_event(rec, state, epoch)
+            if details:
+                key = f"ATR_{details['atr_type']}_{peer}"
+                if key not in active_incidents:
+                    active_incidents[key] = new_incident("ATR", key, "", peer, ts_str, epoch, details, rec)
+                    active_incidents[key]["prefixes"] = set()
+                else:
+                    add_message(active_incidents[key], rec, ts_str, epoch)
+        return
 
     if not prefix or not peer or not ts_str:
         return
@@ -440,9 +505,20 @@ def process_record(rec, rel, roas, active_incidents, timeout_seconds, out_f, sta
         last_gc = state.setdefault("last_gc_check", current_epoch)
         if current_epoch - last_gc > GC_INTERVAL_SECONDS:
             if len(active_incidents) > 0:
-                check_timeouts(active_incidents, current_epoch, timeout_seconds, out_f)
+                check_timeouts(active_incidents, current_epoch, timeout_seconds, out_f, state)
             garbage_collect_state(state, current_epoch)
             state["last_gc_check"] = current_epoch
+
+    # an update of a prefix whose delayed convergence is already an incident belongs to it
+    dc_key = f"VOLDC_{prefix}"
+    if dc_key in active_incidents:
+        add_message(active_incidents[dc_key], rec, ts_str, current_epoch)
+    else:
+        is_dc, dc_det = extra_detectors.check_slow_convergence(rec, state, current_epoch)
+        if is_dc:
+            active_incidents[dc_key] = new_incident("VOL", dc_key, prefix, peer, ts_str, current_epoch, dc_det, rec,
+                                                    total_updates=dc_det["updates"])
+            index_prefix(state, dc_key, prefix)
 
     if msg_type == "W":
         if current_epoch > 0:
@@ -457,7 +533,8 @@ def process_record(rec, rel, roas, active_incidents, timeout_seconds, out_f, sta
                 if atr_key not in active_incidents:
                     active_incidents[atr_key] = new_incident(
                         "ATR", atr_key, prefix, peer, ts_str, current_epoch,
-                        {"dropping_peer": peer, "withdrawal_count": len(history)}, rec)
+                        dict({"dropping_peer": peer, "withdrawal_count": len(history)},
+                             **({"session_event": note} if (note := extra_detectors.session_note(state, peer, current_epoch)) else {})), rec)
                 else:
                     inc = active_incidents[atr_key]
                     inc["prefixes"].add(prefix)
@@ -476,9 +553,12 @@ def process_record(rec, rel, roas, active_incidents, timeout_seconds, out_f, sta
 
         # a withdrawal belongs to an incident only if the peer that sends it announced the anomaly
         keys_to_resolve = []
-        for k, inc in active_incidents.items():
-            if (prefix in inc["prefixes"] and inc["incident_type"] not in ["VOL", "ATR"]
-                    and peer in inc.get("peers", {peer})):
+        keys = prefix_index(state, active_incidents).get(prefix, ())
+        for k in list(keys):
+            inc = active_incidents.get(k)
+            if inc is None:
+                continue
+            if inc["incident_type"] not in ["VOL", "ATR"] and peer in inc.get("peers", {peer}):
                 keys_to_resolve.append(k)
 
         for k in keys_to_resolve:
@@ -498,23 +578,39 @@ def process_record(rec, rel, roas, active_incidents, timeout_seconds, out_f, sta
         
         is_prh, prh_det = check_prefix_hijack(rec, roas, state, current_epoch)
         if is_prh: anomalies.append(("PRH", f"PRH_{origin}", prh_det))
+
+        is_ab, ab_det = extra_detectors.check_unallocated_prefix(rec, reg)
+        if is_ab: anomalies.append(("PRH", f"PRH_AB_{origin}", ab_det))
         
         # is_asm, asm_det = check_as_path_manipulation(rec, rel, state, current_epoch)
         # if is_asm: anomalies.append(("ASM", f"ASM_{origin}", asm_det))
 
-        is_asm, asm_det = extra_detectors.check_forged_link(rec, rel)
-        if is_asm: anomalies.append(("ASM", f"ASM_{asm_det['asm_type']}_{asm_det['link'][0]}_{asm_det['link'][1]}", asm_det))
+        # the AS numbers of the path first: a link to a number that is not allocated would be flagged again as a forged link
+        is_asm, asm_det = extra_detectors.check_path_asns(rec, reg)
+        if is_asm:
+            anomalies.append(("ASM", f"ASM_{asm_det['asm_type']}_{asm_det['asn']}", asm_det))
+        else:
+            is_asm, asm_det = extra_detectors.check_forged_link(rec, rel)
+            if is_asm: anomalies.append(("ASM", f"ASM_{asm_det['asm_type']}_{asm_det['link'][0]}_{asm_det['link'][1]}", asm_det))
         
         is_deg, deg_det = check_deaggregation(rec, rel, state, current_epoch)
         if is_deg: anomalies.append(("DEG", f"DEG_{origin}", deg_det))
+
+        for deg_det in extra_detectors.check_deaggregation_scale(rec, state, current_epoch):
+            anomalies.append(("DEG", f"DEG_{deg_det['deg_type']}_{origin}", deg_det))
+
+        is_ac, ac_det = extra_detectors.check_amplified_churn(rec, state, current_epoch)
+        if is_ac: anomalies.append(("VOL", f"VOLAC_{origin}", ac_det))
 
         for inc_type, actor_key, details in anomalies:
             if actor_key not in active_incidents:
                 active_incidents[actor_key] = new_incident(
                     inc_type, actor_key, prefix, peer, ts_str, current_epoch, details, rec)
+                index_prefix(state, actor_key, prefix)
             else:
                 inc = active_incidents[actor_key]
                 inc["prefixes"].add(prefix)
+                index_prefix(state, actor_key, prefix)
                 inc.setdefault("peers", set()).add(peer)
                 add_message(inc, rec, ts_str, current_epoch)
 
@@ -561,6 +657,8 @@ def main():
 
     rel = load_caida_relationships(CAIDA_FILE)
     roas = load_roas(ROA_FILE)
+    reg = extra_detectors.load_delegations(DELEGATIONS)
+    print(f"loaded {sum(len(v[0]) for v in reg.values())} ranges that the registries list as available or reserved.", flush=True)
 
     file_list = sorted({f for pattern in DATA_PATHS for f in glob.glob(pattern)})
     if not file_list:
@@ -623,7 +721,7 @@ def main():
                     except json.JSONDecodeError:
                         continue
 
-                    process_record(rec, rel, roas, active_incidents, TIMEOUT_SECONDS, out_f, state)
+                    process_record(rec, rel, roas, active_incidents, TIMEOUT_SECONDS, out_f, state, reg)
                     total_processed += 1
                     
                     if total_processed % 50000 == 0:
@@ -662,6 +760,7 @@ def main():
                 for k, inc in list(active_incidents.items()):
                     flush_incident(final_f, inc, end_time=inc["last_time"], end_reason="dataset_end")
             active_incidents.clear()
+            state.pop("_idx", None)
             with open(STATE_FILE, "wb") as f:
                 pickle.dump({"incidents": active_incidents, "processed_files": processed_files, "state": state}, f)
 

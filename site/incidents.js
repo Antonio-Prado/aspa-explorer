@@ -13,9 +13,13 @@
   // the types of the survey that a detector can tell apart (data_scripts, extra_detectors.py), shown under their class
   const SUBNAMES = {
     'RLK-UL': 'Upward leak (to a provider)', 'RLK-LL': 'Lateral leak (to a peer)', 'RLK-FP': 'Full propagation (one AS leaks to 3 or more neighbours)',
+    'PRH-AB': 'Abusive hijack candidate (space that is not allocated)',
+    'ASM-PE': 'Poisoning candidate (an AS that comes back, or a number that is not allocated)', 'ASM-EX': 'Extension candidate (private AS number)',
     'ASM-FI': 'Forged origin candidate (link to the origin that CAIDA does not know)', 'ASM-PS': 'Path shortening candidate (other link that CAIDA does not know)',
+    'VOL-FO': 'Oscillation (flapping of a prefix from one peer)', 'VOL-DC': 'Delayed convergence (a prefix that does not settle)', 'VOL-AC': 'Amplified churn (one origin, many prefixes and peers)',
+    'DEG-MA': 'Deaggregation with another origin', 'DEG-XS': 'Excessive deaggregation (the intent is not visible)', 'DEG-FF': 'Fragmentation flood',
+    'ATR-EH': 'Session ended by an update error', 'ATR-MA': 'Session ended by a malformed attribute',
   };
-
   function el(tag, attrs, ...kids) {
     const n = document.createElement(tag);
     for (const [k, v] of Object.entries(attrs || {})) {

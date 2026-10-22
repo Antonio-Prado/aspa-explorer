@@ -1,6 +1,6 @@
 > **Corrected copy of the scripts of the research project.** These are `record.py`, `stream.py` and `incident.py` of the project `internet_routing_sec/data_scripts` (written by Yunus Atçeken), with the corrections of the cross-check of 2026-10-22 already made (source: branch `cross-check-2026-10-22`, commit `e50d7e2`; what was changed and why is in `CROSS-CHECK.md` there). ASPA Explorer uses the incident files that `incident.py` writes: `scripts/build-incidents.mjs` reads them and adds the verdict of the ASPAs (the **Incidents** page). Keep this copy in step with the project: the terms of the code are those of `data_scripts`.
 >
-> **Extensions of this copy** (not in the project): `extra_detectors.py` adds the type of the route leaks (upward, lateral) to `incident.py`, and a detector of ASM candidates (a link that the CAIDA relationships do not know). They are listed in `CROSS-CHECK.md` of the project as items X-1 to X-3, with the status PROPOSED: Yunus's repository does not have them. The full propagation of a leaker (RLK-FP) is decided when the page is built (`scripts/build-incidents.mjs`).
+> **Extensions of this copy** (not in the project): `extra_detectors.py` adds to `incident.py` the type of the route leaks (upward, lateral), candidates of AS path manipulation (a link that the CAIDA relationships do not know, a private or unallocated AS number, an AS that comes back in the path), the prefixes in space that the RIRs list as available or reserved, deaggregation by scale (excessive, flood, jump), delayed convergence and amplified churn, and the sessions that end with an UPDATE message error; `stream.py` also records the NOTIFICATION and the change of state of the sessions of the peers (records of type `N` and `S`, which `incident.py` of the project ignores). Every threshold is a constant at the top of `extra_detectors.py`. They are listed in `CROSS-CHECK.md` of the project as items X-1 to X-6, with the status EXTENDED: Yunus's repository does not have them. The full propagation of a leaker (RLK-FP) is decided when the page is built (`scripts/build-incidents.mjs`). The registry files are read from `delegations/delegated-*` (`INCIDENTS_DELEGATIONS` changes it).
 >
 > Run the tests with `cd tools/data_scripts && python3 -m unittest discover -s tests`.
 
@@ -38,6 +38,8 @@ RIPE RIS MRT  ──► record.py ──► records_<MM-DD>.jsonl.gz ─┼─�
 | `timestamp` | UTC, to the second |
 | `peer` | the ASN of the peer that feeds the collector (an integer) |
 | `origin`, `flag`, `compressed_path` | for `A` only. The path has the repetitions of prepending removed (`compressed_path`), `flag` is 1 if there were any. Paths with AS-sets or confederation segments are dropped. For `W` they are `null` |
+
+The copy of ASPA Explorer also writes two records of the session, with no prefix (`incident.py` skips what has no prefix): `{"type": "N", "collector": "rrc00", "timestamp": "...", "peer": 34854, "code": 6, "subcode": 5}` for a BGP NOTIFICATION that a peer sends, and `{"type": "S", ..., "peer": 34854, "state": "down"}` for a change of state of the session. They are a few an hour.
 
 ## stream.py
 
