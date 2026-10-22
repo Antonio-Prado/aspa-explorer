@@ -218,7 +218,11 @@ async function main() {
   const report = buildReport(keep);
   await writeJson(join(out, 'invalid.json'), report);
   await writeJson(join(out, 'invalid-last.json'), buildLast(run, started, Date.now(), Date.now(), LAST_MIN, LAST_TOP, collected));
-  if (!collected.ok) console.error(`collection failed: ${collected.connections} connection(s), ${collected.messages} message(s), ${collected.listened_seconds} s listened of ${seconds}${collected.error ? `, ${String(collected.error).replace(/[\r\n]/g, ' ')}` : ''}`);
+  if (!collected.ok) {
+    // the error text comes from the stream and the figures from the command line: no line break of theirs may forge a line of the log
+    const failure = `collection failed: ${collected.connections} connection(s), ${collected.messages} message(s), ${collected.listened_seconds} s listened of ${seconds}${collected.error ? `, ${collected.error}` : ''}`;
+    console.error(failure.replace(/[\r\n]/g, ' '));
+  }
   console.log(`${report.generated}: ${report.profile.announcements} announcements in ${report.profile.seconds} s over ${keep.length} days, ${report.profile.invalid} invalid (${report.profile.invalid_share}%)`);
 }
 
