@@ -221,10 +221,10 @@ async function main() {
   if (!collected.ok) {
     // the error text comes from the stream and the figures from the command line: no line break of theirs may forge a line of the log
     const failure = `collection failed: ${collected.connections} connection(s), ${collected.messages} message(s), ${collected.listened_seconds} s listened of ${seconds}${collected.error ? `, ${collected.error}` : ''}`;
-    console.error(failure.replace(/[\r\n]/g, ' '));
+    console.error(failure.replace(/\n|\r/g, ' '));
   }
   const summary = `${report.generated}: ${report.profile.announcements} announcements in ${report.profile.seconds} s over ${keep.length} days, ${report.profile.invalid} invalid (${report.profile.invalid_share}%)`;
-  console.log(summary.replace(/[\r\n]/g, ' '));
+  console.log(summary.replace(/\n|\r/g, ' '));
 }
 
-if (process.argv[1] === fileURLToPath(import.meta.url)) main().catch((err) => { console.error(String(err.message).replace(/[\r\n]/g, " ")); process.exit(1); });
+if (process.argv[1] === fileURLToPath(import.meta.url)) main().catch((err) => { console.error(String(err.message).replace(/\n|\r/g, ' ')); process.exit(1); });
