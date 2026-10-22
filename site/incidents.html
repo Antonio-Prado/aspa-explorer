@@ -23,16 +23,16 @@
 <meta name="twitter:card" content="summary_large_image">
 <meta name="color-scheme" content="light dark">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
-<link rel="stylesheet" href="/style.css?v=1.50.3">
-<script src="/incidents.js?v=1.50.3" defer></script>
-<script src="/status-checks.js?v=1.50.3" defer></script>
-<script src="/footer.js?v=1.50.3" defer></script>
+<link rel="stylesheet" href="/style.css?v=1.50.4">
+<script src="/incidents.js?v=1.50.4" defer></script>
+<script src="/status-checks.js?v=1.50.4" defer></script>
+<script src="/footer.js?v=1.50.4" defer></script>
 </head>
 <body>
 <a class="skip" href="#main">Skip to main content</a>
 <header class="wrap masthead">
   <div class="top">
-    <p class="back"><a class="brandlink" href="/" title="Back to ASPA Explorer"><img class="brand" src="/img/logo-mark.svg?v=1.50.3" alt="" width="40" height="40"><span>ASPA Explorer</span></a></p>
+    <p class="back"><a class="brandlink" href="/" title="Back to ASPA Explorer"><img class="brand" src="/img/logo-mark.svg?v=1.50.4" alt="" width="40" height="40"><span>ASPA Explorer</span></a></p>
     <nav class="topnav" aria-label="Main"><a href="/">Home</a><a href="/statistics.html">Statistics</a><a href="/incidents.html" aria-current="page">Incidents</a><a href="/examples.html">Examples</a><a href="/api.html">API</a><a href="/guide.html">Guide</a><a href="/status.html">Status</a></nav>
   </div>
   <h1>Incidents</h1>
@@ -213,6 +213,28 @@
       <li><strong>One window on the Internet.</strong> The updates come from the peers of a single collector (RIPE RIS <code>rrc00</code>), and only the updates, not the tables. An incident that stays out of the best routes of those peers is not seen at all, and one that began before the capture is seen only from the moment it changes. The cases that a collector cannot see are studied after the fact, from reports.</li>
     </ul>
     <p class="hint">Source of the taxonomy: S. Servillo, P. Spadaccino, M. Centenaro, A. Prado, M. Rossi, F. Luciani, M. Scannapieco and F. Cuomo, “Survey on Internet Routing Security: Stakeholder Interests, Current, and Future Research Directions”, <em>IEEE Communications Surveys &amp; Tutorials</em>, vol. 28, 2026, Sec. III, <a href="https://doi.org/10.1109/COMST.2026.3714569">doi:10.1109/COMST.2026.3714569</a>. The text here follows the survey; for the full definitions, the incidents cited (A1 to A12) and the defences, read it.</p>
+  </section>
+
+  <section aria-labelledby="inc-known-title">
+    <h2 id="inc-known-title" class="subhead">Checked against four known incidents</h2>
+    <p class="hint">The detectors were run over the updates that <code>rrc00</code> recorded during four incidents that the survey cites, with the CAIDA relationships of the time (the ROAs and the registries are today's, and the ASPAs of the day do not exist before 2023).</p>
+    <section class="card table-wrap" tabindex="0" aria-label="What the detectors found in four known incidents">
+      <table class="checks live">
+        <caption class="sr-only">Four known incidents, when they began, and what the detectors saw in the updates of one collector</caption>
+        <thead><tr><th scope="col">Incident</th><th scope="col">Start (UTC)</th><th scope="col">What the detectors saw</th></tr></thead>
+        <tbody>
+          <tr><th scope="row"><span class="chip">A9</span> Safe Host leaks to China Telecom</th><td>6 Jun 2019, 09:43</td><td>A path-shortening candidate on the link AS4134–AS21217, which CAIDA does not know, opened at 09:44:33: 6,582 prefixes, the first of 15,802 of its type by updates. No valley incident: CAIDA has no relationship between the two ASes.</td></tr>
+          <tr><th scope="row"><span class="chip">A2</span> Rostelecom announces other networks' prefixes</th><td>1 Apr 2020, 19:28</td><td>An origin that the ROAs refuse, with 8,200 prefixes, but one incident for the whole origin that starts at 19:01. The event shows in the volume: from about 150 to 315,574 announcements of that origin a minute at 19:27.</td></tr>
+          <tr><th scope="row"><span class="chip">A1</span> RTComm announces a prefix of Twitter</th><td>28 Mar 2022, about 12:06</td><td>An origin that the ROA does not authorise for 104.244.42.0/24 at 12:06:40, from a single update: the collector saw it once.</td></tr>
+          <tr><th scope="row"><span class="chip">A12</span> A corrupted Prefix-SID attribute resets sessions</th><td>20 May 2025, about 07:00</td><td>Volume, not the cause: updates from at most 160,000 to 558,000 a minute at 07:02, five mass withdrawals of peers and five amplified-churn incidents. The attribute is not in the records.</td></tr>
+        </tbody>
+      </table>
+    </section>
+    <ul class="notes">
+      <li><strong>The types complete each other.</strong> A9 is missed by the valley detector and found by the link detector; A2 is found by the origin detector, but its start says nothing, and the volume says when.</li>
+      <li><strong>There is noise.</strong> From 110,000 to 346,000 incidents in each window of an hour and a half or two, most of them flapping. Ordering the candidates of a type by prefixes and updates put the real case first in A9.</li>
+      <li><strong>Four cases are not a measure.</strong> They do not say how many real incidents are missed, or how many candidates are false. The method, the numbers and how to repeat it are in <a href="https://github.com/Antonio-Prado/aspa-explorer/blob/main/docs/validation-known-incidents.md">docs/validation-known-incidents.md</a>.</li>
+    </ul>
   </section>
 
   <p class="hint">The same numbers as JSON: <a href="/api/v1/incidents.json">/api/v1/incidents.json</a>. How they are made: <a href="/guide.html#incidents">the guide</a>.</p>

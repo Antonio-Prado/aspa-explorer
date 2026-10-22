@@ -5,6 +5,11 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.50.4] - 2026-10-22
+
+### Added
+- The detectors were run over the updates of `rrc00` during four known incidents of the survey (A9 Safe Host, A2 Rostelecom, A1 Twitter, A12 Prefix-SID), with the CAIDA relationships of the time. The Incidents page has a section *Checked against four known incidents* with what they saw (for A9, a path-shortening candidate on a link that CAIDA does not know, one minute after the start, the first of 15,802 by updates; the valley detector sees nothing), and `docs/validation-known-incidents.md` the method, the numbers, the limits and how to repeat it, with the tools in `tools/replay/` (`fetch.py`, `mrt2records.py`, `run_event.sh`, `analyse.py`, `events.json`).
+
 ## [1.50.3] - 2026-10-22
 
 ### Added
