@@ -5,6 +5,11 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.49.2] - 2026-10-22
+
+### Changed
+- The guide, read again. *Incidents and ASPA* says what the detectors look for now (the leak types, the candidates of forged origin and path shortening) without repeating the page, and points to the table of coverage. *Where the data comes from* names the source of the Incidents page and has its list punctuated. *Adoption* has back the paragraph on its numbers, which had ended up under *Validators compared*, and the definition of a feeder is given once. *About this page* says that the footer links to GitHub (it said GitLab since 1.48.2). The README has the new types in its feature list.
+
 ## [1.49.1] - 2026-10-22
 
 ### Changed
