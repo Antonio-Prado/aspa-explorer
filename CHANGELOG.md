@@ -5,6 +5,11 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.48.2] - 2026-10-22
+
+### Changed
+- No page asks GitLab any more. The footer (shared by all the pages, the status page included) used to read the latest tag and the last commit from the GitLab API on every load, which from the Internet hangs until it fails, and its links *Release* and *Source* went to GitLab, which visitors outside the University cannot open. It now reads `/version.json` and `/build.json` only, and the links go to the public copy on GitHub (`/releases/tag/vX.Y.Z` and `/commit/<sha>`). The Content-Security-Policy no longer lists the GitLab of the Department in `connect-src`. The link to `CITATION.cff` in the API page goes to GitHub, and the guide and the API page name `/api/v1/archive/` as the place of the history files.
+
 ## [1.48.1] - 2026-10-22
 
 ### Added

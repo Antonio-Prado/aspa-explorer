@@ -23,15 +23,15 @@
 <meta name="twitter:card" content="summary_large_image">
 <meta name="color-scheme" content="light dark">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
-<link rel="stylesheet" href="/style.css?v=1.48.1">
-<script src="/status-checks.js?v=1.48.1" defer></script>
-<script src="/footer.js?v=1.48.1" defer></script>
+<link rel="stylesheet" href="/style.css?v=1.48.2">
+<script src="/status-checks.js?v=1.48.2" defer></script>
+<script src="/footer.js?v=1.48.2" defer></script>
 </head>
 <body>
 <a class="skip" href="#main">Skip to main content</a>
 <header class="wrap masthead">
   <div class="top">
-    <p class="back"><a class="brandlink" href="/" title="Back to ASPA Explorer"><img class="brand" src="/img/logo-mark.svg?v=1.48.1" alt="" width="40" height="40"><span>ASPA Explorer</span></a></p>
+    <p class="back"><a class="brandlink" href="/" title="Back to ASPA Explorer"><img class="brand" src="/img/logo-mark.svg?v=1.48.2" alt="" width="40" height="40"><span>ASPA Explorer</span></a></p>
     <nav class="topnav" aria-label="Main"><a href="/">Home</a><a href="/statistics.html">Statistics</a><a href="/incidents.html">Incidents</a><a href="/examples.html">Examples</a><a href="/api.html">API</a><a href="/guide.html" aria-current="page">Guide</a><a href="/status.html">Status</a></nav>
   </div>
   <h1>Guide</h1>
@@ -296,7 +296,7 @@
       <li>the validator status, which supplies the last validation time and the Routinator version, and</li>
       <li>the origin validation of a route (prefix and origin), when you check the routes seen in BGP.</li>
     </ul>
-    <p>The chart of ASPAs over time, the changes and the quality checks read four more files, <code>history.json</code>, <code>events.json</code>, <code>changes.atom</code> and <code>visibility.json</code>, from the <code>history</code> branch of the <a href="https://gitlab.dei.unipd.it/Antonio-Prado/aspa-explorer/-/tree/history" target="_blank" rel="noopener">public project<span class="sr-only"> (opens in a new tab)</span></a>, where a daily job adds one row and an hourly one the day's changes. The routes seen in BGP come from RIPEstat, in your browser, when you ask for them.</p>
+    <p>The chart of ASPAs over time, the changes and the quality checks read four more files, <code>history.json</code>, <code>events.json</code>, <code>changes.atom</code> and <code>visibility.json</code>, from <code>/api/v1/archive/</code>, a copy (made every ten minutes) of the <code>history</code> branch of the project, where a daily job adds one row and an hourly one the day's changes. The routes seen in BGP come from RIPEstat, in your browser, when you ask for them.</p>
     <p>The numbers behind the statistics page and the country of each AS are built once a day from public datasets: the delegation files of the five RIRs (the country and the registry of each AS number), the <a href="https://www.caida.org/catalog/datasets/as-relationships/" target="_blank" rel="noopener">CAIDA AS Relationships dataset<span class="sr-only"> (opens in a new tab)</span></a> (the size of a network, the Tier-1 list and the exchange-point ASes) and the list of the ASes that the RIPE RIS collectors see. The JSON, the badge and the feed of each AS are built every 15 minutes from the validator's list and the history files.</p>
     <p>The validator refreshes about every 10 minutes and the web server keeps its answer for 2 minutes, so a new ASPA can take a little while to show up here. The <em>last validation</em> time in the header tells you how fresh the data is.</p>
   </section>

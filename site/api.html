@@ -23,17 +23,17 @@
 <meta name="twitter:card" content="summary_large_image">
 <meta name="color-scheme" content="light dark">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
-<link rel="stylesheet" href="/style.css?v=1.48.1">
-<script src="/download.js?v=1.48.1" defer></script>
-<script src="/datasets.js?v=1.48.1" defer></script>
-<script src="/status-checks.js?v=1.48.1" defer></script>
-<script src="/footer.js?v=1.48.1" defer></script>
+<link rel="stylesheet" href="/style.css?v=1.48.2">
+<script src="/download.js?v=1.48.2" defer></script>
+<script src="/datasets.js?v=1.48.2" defer></script>
+<script src="/status-checks.js?v=1.48.2" defer></script>
+<script src="/footer.js?v=1.48.2" defer></script>
 </head>
 <body>
 <a class="skip" href="#main">Skip to main content</a>
 <header class="wrap masthead">
   <div class="top">
-    <p class="back"><a class="brandlink" href="/" title="Back to ASPA Explorer"><img class="brand" src="/img/logo-mark.svg?v=1.48.1" alt="" width="40" height="40"><span>ASPA Explorer</span></a></p>
+    <p class="back"><a class="brandlink" href="/" title="Back to ASPA Explorer"><img class="brand" src="/img/logo-mark.svg?v=1.48.2" alt="" width="40" height="40"><span>ASPA Explorer</span></a></p>
     <nav class="topnav" aria-label="Main"><a href="/">Home</a><a href="/statistics.html">Statistics</a><a href="/incidents.html">Incidents</a><a href="/examples.html">Examples</a><a href="/api.html" aria-current="page">API</a><a href="/guide.html">Guide</a><a href="/status.html">Status</a></nav>
   </div>
   <h1>API</h1>
@@ -130,7 +130,7 @@ X-ASPA-Signature: sha256=…      HMAC-SHA256(secret, timestamp + "." + body), h
 
   <section aria-labelledby="datasets">
     <h2 id="datasets">Dated snapshots, for research</h2>
-    <p>Once a month the site keeps a snapshot of its data in one <code>.tar.gz</code>: the ASPAs (CSV and JSON), the daily history and every change since 12 October 2023, the adoption numbers, the numbers over time by RIR and country, the route leaks and the comparison of validators, with a <code>MANIFEST.json</code> (size and SHA-256 of each file) and a README. A snapshot never changes, so a study can say which one it used. License: CC BY 4.0; cite the <a href="https://gitlab.dei.unipd.it/Antonio-Prado/aspa-explorer/-/blob/main/CITATION.cff" target="_blank" rel="noopener">paper<span class="sr-only"> (opens in a new tab)</span></a>.</p>
+    <p>Once a month the site keeps a snapshot of its data in one <code>.tar.gz</code>: the ASPAs (CSV and JSON), the daily history and every change since 12 October 2023, the adoption numbers, the numbers over time by RIR and country, the route leaks and the comparison of validators, with a <code>MANIFEST.json</code> (size and SHA-256 of each file) and a README. A snapshot never changes, so a study can say which one it used. License: CC BY 4.0; cite the <a href="https://github.com/Antonio-Prado/aspa-explorer/blob/main/CITATION.cff" target="_blank" rel="noopener">paper<span class="sr-only"> (opens in a new tab)</span></a>.</p>
     <section class="card table-wrap" tabindex="0" aria-label="Snapshots">
       <table class="checks live">
         <caption class="sr-only">The snapshots, newest first, with size and SHA-256</caption>
@@ -152,7 +152,7 @@ X-ASPA-Signature: sha256=…      HMAC-SHA256(secret, timestamp + "." + body), h
       <li><a href="/api/v1/invalid.json">/api/v1/invalid.json</a>: the invalid announcements of the last 14 days as the collectors receive them (RIS Live): by hour, with the origins and prefixes that have most. Updated every ten minutes.</li>
       <li><a href="/api/v1/trends.json">/api/v1/trends.json</a>: the number of networks with an ASPA month by month, for all of them and for each RIR and country. Built once a day.</li>
       <li><a href="/api/v1/adoption.json">/api/v1/adoption.json</a>: the adoption numbers: networks seen in BGP and how many have an ASPA, by RIR, country and size, and the 100 largest networks. Built once a day; the sources are named in the file.</li>
-      <li>The daily history, the events and the BGP visibility are plain files on the <code>history</code> branch of the <a href="https://gitlab.dei.unipd.it/Antonio-Prado/aspa-explorer/-/tree/history" target="_blank" rel="noopener">public project<span class="sr-only"> (opens in a new tab)</span></a>.</li>
+      <li><a href="/api/v1/archive/history.json">/api/v1/archive/history.json</a>, <a href="/api/v1/archive/events.json">/api/v1/archive/events.json</a> and <a href="/api/v1/archive/visibility.json">/api/v1/archive/visibility.json</a>: the daily history (one row a day), the events (every change to an ASPA since 12 October 2023) and the BGP visibility. They are copied every ten minutes from the <code>history</code> branch of the project.</li>
     </ul>
   </section>
 
