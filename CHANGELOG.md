@@ -5,6 +5,14 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.48.1] - 2026-10-22
+
+### Added
+- The Incidents page explains the whole taxonomy of routing incidents of our survey of Internet routing security (Servillo et al., *IEEE Communications Surveys & Tutorials*, vol. 28, 2026, Sec. III): the four macro-categories (route manipulation, routing consistency, policy violation, session-based), their micro-categories and types with the acronyms of the survey (PRH, ASM, VOL, DEG, RLK, POL, ATR), the documented incidents it cites, and a table of what each detector of the project sees and what an ASPA can say about it.
+
+### Changed
+- The types in the table of the Incidents page have the names of the survey (*Routing leak*, *Prefix hijack*, *Prefix deaggregation*, *State volatility*, *Attribute-based session reset*), with how the detector sees them in brackets.
+
 ## [1.48.0] - 2026-10-22
 
 ### Added

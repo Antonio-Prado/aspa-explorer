@@ -23,16 +23,16 @@
 <meta name="twitter:card" content="summary_large_image">
 <meta name="color-scheme" content="light dark">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
-<link rel="stylesheet" href="/style.css?v=1.48.0">
-<script src="/incidents.js?v=1.48.0" defer></script>
-<script src="/status-checks.js?v=1.48.0" defer></script>
-<script src="/footer.js?v=1.48.0" defer></script>
+<link rel="stylesheet" href="/style.css?v=1.48.1">
+<script src="/incidents.js?v=1.48.1" defer></script>
+<script src="/status-checks.js?v=1.48.1" defer></script>
+<script src="/footer.js?v=1.48.1" defer></script>
 </head>
 <body>
 <a class="skip" href="#main">Skip to main content</a>
 <header class="wrap masthead">
   <div class="top">
-    <p class="back"><a class="brandlink" href="/" title="Back to ASPA Explorer"><img class="brand" src="/img/logo-mark.svg?v=1.48.0" alt="" width="40" height="40"><span>ASPA Explorer</span></a></p>
+    <p class="back"><a class="brandlink" href="/" title="Back to ASPA Explorer"><img class="brand" src="/img/logo-mark.svg?v=1.48.1" alt="" width="40" height="40"><span>ASPA Explorer</span></a></p>
     <nav class="topnav" aria-label="Main"><a href="/">Home</a><a href="/statistics.html">Statistics</a><a href="/incidents.html" aria-current="page">Incidents</a><a href="/examples.html">Examples</a><a href="/api.html">API</a><a href="/guide.html">Guide</a><a href="/status.html">Status</a></nav>
   </div>
   <h1>Incidents</h1>
@@ -69,6 +69,95 @@
     <ul class="legend" id="inc-legend"></ul>
     <div class="linechart" id="inc-chart"></div>
     <p class="hint" id="inc-curve-note"></p>
+  </section>
+
+  <section aria-labelledby="inc-tax-title">
+    <h2 id="inc-tax-title" class="subhead">The taxonomy of routing incidents</h2>
+    <p class="hint">The types in the table follow the taxonomy of our survey of Internet routing security (Servillo et al., <em>IEEE Communications Surveys &amp; Tutorials</em>, vol. 28, 2026, Sec. III: <a href="https://doi.org/10.1109/COMST.2026.3714569">doi:10.1109/COMST.2026.3714569</a>). This is its explanation, with the acronyms that the survey uses.</p>
+    <p>The reliability of what BGP carries depends entirely on the trustworthiness of the peering networks, and BGP has no built-in way to check, while the routes are exchanged, that the information is accurate. Both accidental misconfigurations and malicious actors can compromise inter-AS routing, and such incidents can only be detected afterwards, by other means. The survey harmonises the categories that earlier surveys and RFCs treat either at a very high level or only for a sector of the problem. It distinguishes four <strong>macro-categories</strong> (route manipulation, routing consistency, policy violation, session-based), each refined into <strong>micro-categories</strong> and, for some of them, into <strong>types</strong>, with the same acronyms throughout.</p>
+
+    <h3 class="subhead">1. Route manipulation</h3>
+    <p>Unauthorised modifications of the path or prefix information of BGP, by altering the <code>AS_PATH</code> or by advertising prefixes. They can hijack traffic, impersonate legitimate routes or inject false prefixes, and may lead to interception, blackholing or other security problems.</p>
+    <p><strong>Prefix Hijack (PRH).</strong> An AS advertises, intentionally or through malfeasance, one or more prefixes that belong to another AS, so that traffic is redirected to the wrong network, with serious consequences for the security and the availability of services. Its types:</p>
+    <ul class="notes">
+      <li><strong>Complete Hijack (PRH-CH):</strong> the attacker announces exactly the prefix of the legitimate AS.</li>
+      <li><strong>Incomplete Hijack (PRH-IH):</strong> the attacker announces a more specific prefix than the legitimate ones; BGP selects the longest prefix match, so the traffic to that sub-prefix goes to the hijacker.</li>
+      <li><strong>Interception Hijack (PRH-MIT):</strong> the attacker announces a prefix to attract traffic, inspects it and forwards it to the legitimate destination, acting as a man in the middle without visibly disrupting the service.</li>
+      <li><strong>Abusive Hijack (PRH-AB):</strong> the attacker announces a prefix that its rightful owner does not currently advertise, often unassigned or unannounced address space. There is no conflicting announcement, so it is harder to detect and can go unnoticed for a long time.</li>
+    </ul>
+    <p>The subdivision follows the usual hijack classes (exact-prefix, sub-prefix and interception). Documented cases include the 2022 announcement of a prefix of a social network by a Russian provider, and the 2020 announcement of many prefixes of other networks by another Russian provider (survey incidents A1 and A2).</p>
+    <p><strong>AS Path Manipulation (ASM).</strong> The attacker modifies the <code>AS_PATH</code> of an UPDATE. Its types:</p>
+    <ul class="notes">
+      <li><strong>AS Path poisoning (ASM-PE):</strong> fake ASNs are inserted on purpose. An AS that finds its own number in the path discards the route to avoid a loop, so the attacker can make chosen networks drop a route and move the traffic to another path. It is also used legitimately, for traffic engineering, to avoid an unwanted path.</li>
+      <li><strong>Forged origin Injection (ASM-FI):</strong> the path is made to look as if the attacker were directly connected to the target AS, when it is not. Neighbours may prefer the shorter path and send the traffic to the attacker, who can intercept, edit or drop it before forwarding it.</li>
+      <li><strong>Path Shortening (ASM-PS):</strong> legitimate ASNs are removed from the path, to make it look shorter and more attractive, and to attract traffic.</li>
+      <li><strong>path EXtension evasion (ASM-EX):</strong> the path is inflated with extra ASNs, sometimes fake or private, to penalise a route or make it less likely to be selected, for example to steer the return traffic away from an AS.</li>
+    </ul>
+
+    <h3 class="subhead">2. Routing consistency</h3>
+    <p>Attacks on the stability and the integrity of routing, by destabilising the routing tables or exploiting inconsistencies in the information. They cause frequent changes of the routing state, instability, congestion and delayed delivery. The survey places here two well-known operational causes of instability, to connect them to threats and mitigations.</p>
+    <p><strong>State Volatility (VOL).</strong> When UPDATE messages become unpredictable they can trigger widespread disruptions. The common example is route flapping, a router that advertises and withdraws the same routes again and again, which makes the neighbours reconfigure their tables. It can come from hardware or software instability, from misconfiguration, or from links that go up and down. Its types:</p>
+    <ul class="notes">
+      <li><strong>Flooding Through Oscillation (VOL-FO):</strong> the instability of a physical or logical link triggers a wave of updates and unnecessary churn.</li>
+      <li><strong>Disruptive Flapping (VOL-DF):</strong> an attacker induces flapping on purpose, as a denial-of-service vector: the routers recompute routes continuously, consuming CPU and memory, up to congestion or blocking.</li>
+      <li><strong>Amplified Churn Injection (VOL-AC):</strong> a local instability leads to widespread updates across the global system: more changes in the tables, more control-plane traffic, instability.</li>
+      <li><strong>Delayed Convergence (VOL-DC):</strong> the routing system takes much longer to reach a stable state because of persistent fluctuations, with latency spikes, packet loss and degraded service.</li>
+    </ul>
+    <p><strong>Prefix Deaggregation (DEG).</strong> An AS advertises more specific prefixes instead of aggregated ones. It can be a legitimate operational strategy (finer traffic engineering, different exit points, load balancing), and becomes a problem when abused, intentionally or through negligence, to gain an advantage or to cause harm. Its types:</p>
+    <ul class="notes">
+      <li><strong>Malicious Deaggregation (DEG-MA):</strong> the deliberate announcement of excessively specific prefixes to attract traffic or to stress the routing system.</li>
+      <li><strong>Careless Deaggregation (DEG-CA):</strong> overly granular prefixes advertised by operational error or lack of expertise, without malice, which still adds to the instability.</li>
+      <li><strong>Exploitative Deaggregation (DEG-EX):</strong> more specific prefixes used for a tactical, if questionable, purpose. For example an ISP with an IPv6 /29 announces up to eight /32 instead of the single route.</li>
+      <li><strong>Fragmentation Flood (DEG-FF):</strong> the large-scale version, aimed at exhausting the memory and the processing of the routers. A single /29 can be split into up to 524,288 /48, the smallest commonly accepted IPv6 prefix, against about 219,000 entries in the whole IPv6 table at the time of the survey.</li>
+    </ul>
+
+    <h3 class="subhead">3. Policy violation</h3>
+    <p>Attacks that break the routing policies agreed between networks: the unauthorised propagation of routes between ASes that are not meant to exchange them, or the violation of local agreements. They can cause unintended leaks of traffic, misrouting, and the exposure of sensitive information of the network.</p>
+    <p><strong>Routing Leaks (RLK).</strong> An AS propagates routing advertisements in violation of the intended policies of the sender, of the receiver or of any AS along the path (RFC 7908). Accidental or deliberate, it breaks core principles such as valley-free routing (an AS does not forward the traffic of one peer or provider to another peer or provider). It can cause suboptimal routing, higher latency, congestion, and interception or manipulation of data. A customer must advertise all its networks to its provider, including those of its customers, but not those learned from peers and other providers; a peer must announce only its networks and those of its customers. Its types:</p>
+    <ul class="notes">
+      <li><strong>Upward Leak (RLK-UL):</strong> a customer announces to its peers or providers the routes it learned through transit.</li>
+      <li><strong>Lateral Leak (RLK-LL):</strong> a peer propagates routes received from other peers or providers.</li>
+      <li><strong>Downward Leak (RLK-DL):</strong> a provider advertises to a customer the routes learned from another provider or peer, which gives the customer unintended transit and makes it a transit between two higher-tier ASes. The survey notes that no well-documented public incident is explicitly classified as RLK-DL, which does not mean that they do not happen.</li>
+      <li><strong>Full Propagation (RLK-FP):</strong> the more severe variant: an AS propagates the routes learned from one neighbour to all the others, whatever their role. Documented cases include a 2019 leak of more than 70,000 routes by a Swiss colocation provider to a Chinese carrier, which propagated them across the Internet (A9), and, as an upward leak, a 2025 leak of more than 20,000 routes by an American technology company that lasted about 15 minutes (A10): a longer path can still be preferred, because the path length is only one factor of the selection.</li>
+    </ul>
+    <p><strong>Policy Manipulation (POL).</strong> It exploits the flexibility of the routing policies that each AS defines from local preferences and business relationships: enforced locally, they have global effects on propagation and selection. Its types:</p>
+    <ul class="notes">
+      <li><strong>AS Path Length Manipulation (POL-PL):</strong> announcements that are technically valid but built to make the path look shorter or more attractive, so that others prefer a suboptimal route.</li>
+      <li><strong>Local Preference Manipulation (POL-LP):</strong> the attribute that ranks competing routes inside an AS is manipulated, directly or through a misconfiguration in a partner AS, to direct the traffic through a chosen path.</li>
+      <li><strong>MED Abuse (POL-MD):</strong> the Multi-Exit Discriminator, which influences the exit chosen between two ASes with several connection points, is altered to influence the inbound traffic, causing congestion or redirection.</li>
+      <li><strong>Selective Propagation (POL-SP):</strong> specific prefixes are announced only to a subset of the neighbours, which can attract flows through chosen links or keep routes invisible to monitoring. A reported case uses BGP communities to propagate hijacked routes only to selected upstream providers, to intercept the traffic of targeted regions without widespread visibility (A11).</li>
+    </ul>
+
+    <h3 class="subhead">4. Session-based</h3>
+    <p>Attacks on the BGP session itself, the channel through which the messages are exchanged: they can disrupt the normal operation, cause session resets or inject false updates, with loss of routing information and unauthorised changes of behaviour.</p>
+    <p><strong>Attribute-Based Session Reset (ATR).</strong> They exploit the handling of attributes, when malformed or improperly processed attributes disturb the routing system. The class is linked to the long-discussed error handling of UPDATE messages (RFC 7606) and is presented as a family of its own because of recent large incidents. Its types:</p>
+    <ul class="notes">
+      <li><strong>Error Handling Policy Abuse (ATR-EH):</strong> inconsistent or lax error handling escalates into widespread disruption.</li>
+      <li><strong>Malformed Optional Transitive Attribute Injection (ATR-MA):</strong> a malformed attribute is injected and relayed through the network, also by route servers of exchange points that apply no attribute filtering.</li>
+      <li><strong>Vendor-Specific Attribute Exploitation (ATR-VE):</strong> the implementations of different vendors react differently to the same attribute: some ignore it as the RFC says, one passes it on, and another resets the sessions instead of discarding the update.</li>
+    </ul>
+    <p>The documented case is that of 20 May 2025 (A12): an UPDATE with a corrupted Prefix-SID attribute, originated by an AS of the Asia-Pacific region, was handled in different ways by the routers of different vendors and by route servers of exchange points; more than 150,000 updates in 10 seconds followed, with session flaps and instability in several networks. The vendor concerned changed its software to discard such attributes instead of ending the sessions, but the broader challenge of malformed or experimental attributes, especially in shared infrastructure, remains.</p>
+
+    <h3 class="subhead">Two families, and who deals with them</h3>
+    <p>The survey also distinguishes <strong>structural or inter-domain policy attacks</strong> (PRH, RLK, POL and part of ASM), whose mitigation needs new validation frameworks, shared semantics and coordinated adoption across many networks, from <strong>implementation or operational robustness attacks</strong> (ATR, VOL, DEG and part of ASM), whose mitigation depends on software robustness, configuration hygiene, monitoring and operational hardening. Academia tends to work first on the former, industry operators on the latter, and institutions become relevant when the countermeasures are mature and the challenge is the coordinated adoption.</p>
+
+    <h3 class="subhead">What our detectors see, and what an ASPA can say</h3>
+    <section class="card table-wrap" tabindex="0" aria-label="Table of the types of the taxonomy, how the detectors see them and what an ASPA can say">
+      <table class="checks live">
+        <caption class="sr-only">Types of the taxonomy that the detectors of the project look for, what they observe, and what an ASPA can say about it</caption>
+        <thead><tr><th scope="col">Type</th><th scope="col">What the detector looks at</th><th scope="col">What an ASPA can say</th></tr></thead>
+        <tbody>
+          <tr><th scope="row"><span class="chip">RLK</span> Routing leak</th><td>A hop that learned the route from a provider or a peer and sent it to a provider or a peer, by the relationships of CAIDA (a valley in the path).</td><td>This is what the verification proves: a path with a valley is Invalid.</td></tr>
+          <tr><th scope="row"><span class="chip">PRH</span> Prefix hijack</th><td>A prefix covered by ROAs that none of them authorises, for the origin (the closest types are PRH-CH, PRH-MIT and PRH-AB) or for the length (PRH-IH).</td><td>Little: an ASPA judges the AS path, and the origin is a matter of the ROAs.</td></tr>
+          <tr><th scope="row"><span class="chip">DEG</span> Prefix deaggregation</th><td>A more specific prefix whose origin is not the one of the aggregate. It is often legitimate, so it is a candidate and not a verdict.</td><td>Nothing: the path of a more specific can be perfectly valid.</td></tr>
+          <tr><th scope="row"><span class="chip">VOL</span> State volatility</th><td>Five or more announcements and withdrawals of a prefix from one peer within five minutes.</td><td>Nothing to say about the flapping; the paths of its announcements are judged like any other.</td></tr>
+          <tr><th scope="row"><span class="chip">ATR</span> Attribute-based session reset</th><td>Only its effect: a mass of withdrawals from one peer within seconds, which is also what the reset of an ordinary session looks like. The malformed attribute itself is not seen.</td><td>Nothing.</td></tr>
+          <tr><th scope="row"><span class="chip">ASM</span> AS path manipulation</th><td>Not detected yet.</td><td>Some of the types (a forged origin, a shortened path) show as hops that the ASPAs do not attest.</td></tr>
+          <tr><th scope="row"><span class="chip">POL</span> Policy manipulation</th><td>Not detected: it cannot be inferred from the updates of a collector, or it would be prone to false positives.</td><td>Nothing.</td></tr>
+        </tbody>
+      </table>
+    </section>
+    <p class="hint">Source of the taxonomy: S. Servillo, P. Spadaccino, M. Centenaro, A. Prado, M. Rossi, F. Luciani, M. Scannapieco and F. Cuomo, “Survey on Internet Routing Security: Stakeholder Interests, Current, and Future Research Directions”, <em>IEEE Communications Surveys &amp; Tutorials</em>, vol. 28, 2026, Sec. III. The text here follows the survey; for the full definitions, the incidents cited (A1 to A12) and the defences, read it.</p>
   </section>
 
   <section aria-labelledby="inc-how-title">

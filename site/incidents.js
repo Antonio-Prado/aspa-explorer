@@ -6,8 +6,8 @@
   const $ = (id) => document.getElementById(id);
   const fmt = new Intl.NumberFormat('en-US');
   const NAMES = {
-    RLK: 'Valley in the path', PRH: 'Origin that no ROA authorises', DEG: 'More specific with another origin',
-    VOL: 'Flapping', ATR: 'Mass withdrawal', ASM: 'Path manipulation', other: 'Other',
+    RLK: 'Routing leak (valley in the path)', PRH: 'Prefix hijack (origin that no ROA authorises)', DEG: 'Prefix deaggregation (more specific, another origin)',
+    VOL: 'State volatility (flapping)', ATR: 'Attribute-based session reset (mass withdrawal)', ASM: 'AS path manipulation', other: 'Other',
   };
   const ORDER = ['RLK', 'PRH', 'DEG', 'VOL', 'ATR', 'ASM', 'other'];
 
