@@ -686,5 +686,5 @@ button.tile[aria-expanded="true"] { box-shadow: inset 0 0 0 2px currentColor; }
 .notes { margin: 0.4rem 0 0; padding-left: 1.2rem; max-width: 46rem; color: var(--ink-2); font-size: 0.9rem; }
 .notes li + li { margin-top: 0.45rem; }
 table.live th.grp { text-align: center; }
-.checks th[scope="rowgroup"] { text-align: left; font-size: 0.85rem; font-weight: 600; text-transform: none; letter-spacing: 0; background: var(--chip); }
+.checks th[scope="rowgroup"] { text-align: left; font-size: 0.85rem; font-weight: 600; text-transform: none; letter-spacing: 0; color: var(--ink); background: var(--chip); }
 .checks td .badge { white-space: nowrap; }
