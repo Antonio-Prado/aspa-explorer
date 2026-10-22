@@ -23,16 +23,16 @@
 <meta name="twitter:card" content="summary_large_image">
 <meta name="color-scheme" content="light dark">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
-<link rel="stylesheet" href="/style.css?v=1.50.2">
-<script src="/examples.js?v=1.50.2" defer></script>
-<script src="/status-checks.js?v=1.50.2" defer></script>
-<script src="/footer.js?v=1.50.2" defer></script>
+<link rel="stylesheet" href="/style.css?v=1.50.3">
+<script src="/examples.js?v=1.50.3" defer></script>
+<script src="/status-checks.js?v=1.50.3" defer></script>
+<script src="/footer.js?v=1.50.3" defer></script>
 </head>
 <body>
 <a class="skip" href="#main">Skip to main content</a>
 <header class="wrap masthead">
   <div class="top">
-    <p class="back"><a class="brandlink" href="/" title="Back to ASPA Explorer"><img class="brand" src="/img/logo-mark.svg?v=1.50.2" alt="" width="40" height="40"><span>ASPA Explorer</span></a></p>
+    <p class="back"><a class="brandlink" href="/" title="Back to ASPA Explorer"><img class="brand" src="/img/logo-mark.svg?v=1.50.3" alt="" width="40" height="40"><span>ASPA Explorer</span></a></p>
     <nav class="topnav" aria-label="Main"><a href="/">Home</a><a href="/statistics.html">Statistics</a><a href="/incidents.html">Incidents</a><a href="/examples.html" aria-current="page">Examples</a><a href="/api.html">API</a><a href="/guide.html">Guide</a><a href="/status.html">Status</a></nav>
   </div>
   <h1>Writing your ASPA</h1>
@@ -54,7 +54,7 @@
     <h2 id="rules">The rules in short</h2>
     <p>An ASPA is a signed statement by the holder of an AS number, the <strong>customer</strong>, naming the ASes that are allowed to be its <strong>providers</strong>: the networks it buys transit from, to which it sends its routes and the routes of its own customers so that they are announced to the world. Routers that check ASPAs use it to refuse a route that went from a customer up to a provider that the customer never named.</p>
     <ul>
-      <li><strong>List every provider you have, the backup ones too.</strong> A route that reaches the world through an unlisted provider is judged invalid by those who check.</li>
+      <li><strong>List every provider you have, the backup ones too, and a DDoS scrubbing center that announces your routes</strong> (see the case below). A route that reaches the world through an unlisted provider is judged invalid by those who check.</li>
       <li><strong>List providers only.</strong> Not your peers, not your customers, not an IXP or its route server. The ASPA says who sits above you, nothing else.</li>
       <li><strong>One ASPA per AS number.</strong> When you add or drop a provider, change it. Add the new provider to the ASPA <em>before</em> you start sending routes through it.</li>
       <li><strong>A network that buys transit from nobody</strong> publishes <code>AS0</code> alone (an <em>AS0 ASPA</em>: it has no transit providers; it can still have peers). Never <code>AS0</code> together with other providers.</li>
@@ -91,6 +91,12 @@ providers AS0</code></pre>
     <pre tabindex="0"><code>customer AS64501
 providers AS64510, AS64511, AS64512      (not AS64600, not AS64530)</code></pre>
     <p>An exchange point's route server does not put its own AS number in the paths it passes on, so it is not part of the question. If the AS of the route server has no transit provider, <code>AS0</code> describes it correctly.</p>
+
+    <h3>A DDoS scrubbing center</h3>
+    <p>AS64502 buys protection against DDoS attacks from a scrubbing center, AS64540. During an attack, or all the time in an always-on service, AS64502 sends its prefixes to AS64540 over BGP, and AS64540 announces them to the world, filters the traffic and returns the clean part through a tunnel or a private link. In the paths that the world sees, AS64540 stands <em>above</em> AS64502, where a transit provider would: for a router that checks ASPAs it is a hop from a customer to a provider. It belongs in the ASPA with the other providers, whether it carries the traffic every day or only on the day of the attack.</p>
+    <pre tabindex="0"><code>customer AS64502
+providers AS64510, AS64511, AS64540      (the scrubbing center is one of them)</code></pre>
+    <p>Add it <em>before</em> the first diversion, as for any new provider: in the middle of an attack there is no time to wait for a new ASPA, and until it is published the diverted routes look like a leak to those who check. Some centers announce your prefixes with <em>their own</em> AS number as the origin instead, and you only authorise them in a ROA. Then the center is the origin and not a provider, and your ASPA does not name it. Ask the center which of the two it does.</p>
   </section>
 
   <section aria-labelledby="mistakes">
@@ -99,7 +105,7 @@ providers AS64510, AS64511, AS64512      (not AS64600, not AS64530)</code></pre>
       <dt>Listing a peer or a customer</dt>
       <dd>It lets routes in that should be refused, and it weakens the check for everybody. The <a href="/guide.html#quality">quality checks</a> of this site flag an ASPA in which two networks list each other.</dd>
       <dt>Forgetting a provider</dt>
-      <dd>The routes that your customers or you announce through it become invalid for the networks that check. The routes seen in BGP, in the check on the home page, show the neighbours next to your AS and whether your ASPA lists them.</dd>
+      <dd>The routes that your customers or you announce through it become invalid for the networks that check; an on-demand scrubbing center is easy to forget, because nothing goes through it until the attack. The routes seen in BGP, in the check on the home page, show the neighbours next to your AS and whether your ASPA lists them.</dd>
       <dt>AS0 together with real providers</dt>
       <dd>It contradicts itself: AS0 means no transit provider. Use AS0 alone or the real providers alone.</dd>
       <dt>Your own number, or a private or reserved one</dt>

@@ -5,6 +5,11 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.50.3] - 2026-10-22
+
+### Added
+- The Examples page has the case of a **DDoS scrubbing center**: when it announces your routes with your AS number behind its own, it stands above you in the paths and belongs in the ASPA with the other providers (also when it is used only on demand, and before the first diversion); when it announces your prefixes with its own AS number as the origin (you authorise it in a ROA), it is the origin and not a provider. The first rule of the page and the mistake *Forgetting a provider* mention it.
+
 ## [1.50.2] - 2026-10-22
 
 ### Changed
