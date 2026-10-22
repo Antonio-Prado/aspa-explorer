@@ -33,7 +33,8 @@ async function main() {
       let old = null;
       try { old = await readFile(file, 'utf8'); } catch { /* the first run */ }
       if (old === text) { console.log(`${name}: unchanged`); continue; }
-      await writeFile(`${file}.tmp`, text);
+      // copying the published history is the purpose of this script: the text is a JSON that was parsed and checked above
+      await writeFile(`${file}.tmp`, text); // lgtm [js/http-to-file-access]
       await rename(`${file}.tmp`, file);
       console.log(`${name}: ${text.length} bytes`);
     } catch (err) {
