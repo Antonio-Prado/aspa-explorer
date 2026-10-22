@@ -68,6 +68,24 @@ test('an AS with ordinary lines and a via line keeps its role and is also an int
   assert.deepEqual(compare([200], r).onlyAspaIsVia, [200]);
 });
 
+test('without sections, ANY in and a set out is a probable provider, unless it is a known exchange-point AS', () => {
+  const lines = attrs('import: from AS100 accept ANY', 'export: to AS100 announce AS5:AS-X', 'import: from AS200 accept ANY', 'export: to AS200 announce AS5:AS-X',
+    'import: from AS300 accept AS300', 'export: to AS300 announce ANY');
+  const r = roles(lines, new Set([200, 999]));
+  assert.deepEqual(r.probable, [100]);
+  assert.deepEqual(r.candidate, [100]);
+  assert.deepEqual(r.ixp, [200]);                       // the route server of an exchange point looks the same, and is left out
+  assert.deepEqual(r.transit, []);
+  const c = compare([100, 400], r);
+  assert.equal(c.comparable, true);
+  assert.deepEqual(c.both, [100]);
+  assert.equal(say(r, 100), 'probably a transit provider (accepted from ANY, not announced ANY to)');
+  const tw = threeWay([400], r, [100, 400]);             // CAIDA says AS100 too, the ASPA does not list it
+  assert.equal(tw.rows.find((x) => x.as === 100).irr, 'probable transit');
+  assert.deepEqual(tw.aspaMissesWhatTheOthersSay, [100]);
+  assert.deepEqual(roles(lines).probable, []);          // without the list of the exchange points it stays a candidate
+});
+
 test('without sections, "accept ANY" is only a candidate', () => {
   const r = roles(attrs('import: from AS100 accept ANY', 'export: to AS100 announce AS5:AS-X', 'import: from AS200 accept AS200', 'export: to AS200 announce AS5:AS-X',
     'import: from AS300 accept AS300', 'export: to AS300 announce ANY'));

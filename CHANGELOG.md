@@ -5,6 +5,11 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.50.2] - 2026-10-22
+
+### Changed
+- The routing registry (IRR) reading no longer needs a remark to see a provider. A neighbour that the object accepts ANY from and announces only a set of prefixes to (not ANY) is now shown as a **probable transit provider**, even with no part called transit, upstream or provider: that is how the policy of an upstream looks. An exchange-point route server looks the same, so the exchange-point ASes of CAIDA are left out (and are shown as intermediaries); without that list the neighbour stays a candidate as before. The probable providers take part in the comparison with the ASPA and in the three sources side by side (named as probable, and a declared one stays stronger), and the page says why. An object with a section called transit, upstream or provider is read as before.
+
 ## [1.50.1] - 2026-10-22
 
 ### Changed

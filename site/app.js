@@ -652,7 +652,7 @@ async function valleyWhy(g, box) {
     Promise.all(customers.map((n) => getJson(`https://stat.ripe.net/data/asn-neighbours/data.json?resource=AS${n}`).then((d) => d.data.neighbours).catch(() => null))),
   ]);
   const irr = new Map();
-  ases.forEach((n, i) => { if (irrs[i] === undefined) return; const roles = irrs[i] ? AspaIrr.roles(irrs[i].attrs) : null; irr.set(n, roles && roles.rules ? roles : null); });
+  ases.forEach((n, i) => { if (irrs[i] === undefined) return; const roles = irrs[i] ? AspaIrr.roles(irrs[i].attrs, ixpSet.size ? ixpSet : null) : null; irr.set(n, roles && roles.rules ? roles : null); });
   const observed = new Map();
   customers.forEach((n, i) => { if (nbs[i]) observed.set(n, nbs[i]); });
   const ctx = { irr, caida: rel && rel.providers ? rel.providers : null, observed };
@@ -1176,7 +1176,7 @@ function registryButton(origin, shown, listed, evOf, tds) {
     btn.disabled = true; out.replaceChildren(el('span', { class: 'busy', text: 'Asking the RIPE database' }));
     try {
       const [o, rel] = await Promise.all([fetchIrr(origin).catch(() => undefined), getRelations()]);
-      const roles = o === undefined ? undefined : (o ? AspaIrr.roles(o.attrs) : null);
+      const roles = o === undefined ? undefined : (o ? AspaIrr.roles(o.attrs, ixpSet.size ? ixpSet : null) : null);
       const r = roles && roles.rules ? roles : (roles === undefined ? undefined : null);
       const caida = rel && rel.providers ? (rel.providers[origin] || []) : null;
       const missing = [];
@@ -1571,7 +1571,7 @@ function irrBlock(as) {
   const chips = (list) => (list.length ? chipList(list.map((x) => 'AS' + x), 40) : el('span', { class: 'muted', text: 'none' }));
   const line = (label, list, note) => el('div', { class: 'irr-line' }, el('strong', { text: label }), ' ', chips(list), note ? el('p', { class: 'hint', text: note }) : null);
   const render = (o, rel) => {
-    const roles = AspaIrr.roles(o.attrs);
+    const roles = AspaIrr.roles(o.attrs, ixpSet.size ? ixpSet : null);
     const aspa = own ? own.providers.map((p) => Number(p.slice(2))) : [];
     const kids = [el('p', { class: 'hint' }, `The aut-num of ${as} in ${o.source}${o.modified ? `, last changed ${o.modified.slice(0, 10)}` : ''}: ${fmt.format(roles.rules)} import and export lines.`)];
     if (!roles.rules) {
@@ -1580,15 +1580,16 @@ function irrBlock(as) {
     }
     const c = AspaIrr.compare(aspa, roles);
     kids.push(line('Transit providers, as the object says', roles.transit));
+    if (roles.probable.length) kids.push(line('Probable transit providers', roles.probable, 'The object accepts ANY from these and announces only a set of prefixes to them, which is what the policy of an upstream looks like, but it has no part called transit, upstream or provider to say so. An exchange-point route server would look the same: the exchange-point ASes of CAIDA are left out.'));
     if (roles.ixp.length) kids.push(line('Intermediaries (import-via), in practice route servers of exchange points', roles.ixp));
-    kids.push(el('p', { class: 'hint', text: `${fmt.format(roles.customer.length)} customers are declared as well, and ${fmt.format(roles.peer.length)} neighbours with sets of prefixes only (peering, private links or services such as DDoS scrubbing: the object cannot tell them apart)${roles.candidate.length ? `, and ${roles.candidate.length} neighbour${roles.candidate.length === 1 ? ' is' : 's are'} accepted from ANY without saying what ${roles.candidate.length === 1 ? 'it is' : 'they are'}` : ''}.` }));
+    kids.push(el('p', { class: 'hint', text: `${fmt.format(roles.customer.length)} customers are declared as well, and ${fmt.format(roles.peer.length)} neighbours with sets of prefixes only (peering, private links or services such as DDoS scrubbing: the object cannot tell them apart)${roles.candidate.length ? `, and ${roles.candidate.length} neighbour${roles.candidate.length === 1 ? ' is' : 's are'} accepted from ANY without saying what ${roles.candidate.length === 1 ? 'it is' : 'they are'}${roles.probable.length ? ' (probable transit providers, above)' : ''}` : ''}.` }));
     if (!c.comparable) {
-      kids.push(el('p', { text: 'The object has no part called transit, upstream or provider with a neighbour accepted from ANY, so it cannot be compared with the ASPA.' }));
+      kids.push(el('p', { text: 'The object has no part called transit, upstream or provider with a neighbour accepted from ANY, and no neighbour that looks like a provider, so it cannot be compared with the ASPA.' }));
       if (roles.candidate.length) kids.push(line('Accepted from ANY, not said what they are', roles.candidate));
     } else {
       if (!own) kids.push(el('p', { text: `${as} publishes no ASPA. The transit providers above are the ones that it would list.` }));
       else {
-        if (c.onlyIrr.length) kids.push(line('In the IRR as transit, not in the ASPA', c.onlyIrr, 'The ASPA may miss a provider: routes that reach the collectors through it come out as valleys.'));
+        if (c.onlyIrr.length) kids.push(line('In the IRR as transit, not in the ASPA', c.onlyIrr, `The ASPA may miss a provider: routes that reach the collectors through it come out as valleys.${c.onlyIrrProbable.length ? ` ${c.onlyIrrProbable.map((x) => 'AS' + x).join(', ')} ${c.onlyIrrProbable.length === 1 ? 'is' : 'are'} only a probable transit provider in the object.` : ''}`));
         if (c.onlyAspa.length) kids.push(line('In the ASPA, not said to be transit in the IRR', c.onlyAspa, [c.onlyAspaIsPeerOrIxp.length && `${c.onlyAspaIsPeerOrIxp.map((x) => 'AS' + x).join(', ')} ${c.onlyAspaIsPeerOrIxp.length === 1 ? 'is' : 'are'} declared with sets of prefixes only or as an intermediary in the object, which does not make ${c.onlyAspaIsPeerOrIxp.length === 1 ? 'it' : 'them'} a peer for sure: it can be a private link or a service.`, c.onlyAspaIsCustomer.length && `${c.onlyAspaIsCustomer.map((x) => 'AS' + x).join(', ')} ${c.onlyAspaIsCustomer.length === 1 ? 'is' : 'are'} customers in the object.`, 'Either the object is not up to date or the ASPA lists more than it should.'].filter(Boolean).join(' ')));
         if (c.both.length) kids.push(line('In both', c.both));
         if (!c.onlyIrr.length && !c.onlyAspa.length) kids.push(el('p', { class: 'verdict v-valid' }, el('strong', { text: 'Consistent' }), ' The transit providers of the IRR object and the providers of the ASPA are the same.'));
@@ -1599,7 +1600,7 @@ function irrBlock(as) {
     const tw = AspaIrr.threeWay(aspa, roles, caida);
     if (tw.rows.length) {
       const yes = (v) => (v === null ? 'no data' : v ? 'provider' : 'no');
-      const rowOf = (x) => el('tr', {}, el('th', { scope: 'row' }, asChip('AS' + x.as)), el('td', { text: x.irr === 'transit' ? 'transit provider' : (x.irr || 'not named') }), el('td', { class: 'nowrap', text: yes(x.caida) }), el('td', { class: 'nowrap', text: yes(x.aspa) }), el('td', { text: x.reading }));
+      const rowOf = (x) => el('tr', {}, el('th', { scope: 'row' }, asChip('AS' + x.as)), el('td', { text: x.irr === 'transit' ? 'transit provider' : x.irr === 'probable transit' ? 'probably a transit provider' : (x.irr || 'not named') }), el('td', { class: 'nowrap', text: yes(x.caida) }), el('td', { class: 'nowrap', text: yes(x.aspa) }), el('td', { text: x.reading }));
       const head = el('thead', {}, el('tr', {}, ['AS', 'IRR object', 'CAIDA', 'ASPA', 'Reading'].map((t) => el('th', { scope: 'col', text: t }))));
       const table = el('table', { class: 'checks live' }, el('caption', { class: 'sr-only', text: 'Each AS that the IRR object, CAIDA or the ASPA calls a provider, and what each source says' }), head, el('tbody', {}, tw.rows.map(rowOf)));
       kids.push(el('h5', { class: 'irr-h', text: 'The three sources side by side' }),
