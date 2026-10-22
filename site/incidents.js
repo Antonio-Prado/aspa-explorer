@@ -60,7 +60,7 @@
       line(el('th', { scope: 'row' }, el('span', { class: 'chip', text: k }), ' ', NAMES[k] || k), d.by_type[k]),
       ...Object.keys(SUBNAMES).filter((t) => t.startsWith(`${k}-`) && subs[t]).map((t) => line(el('th', { scope: 'row', class: 'sub' }, el('span', { class: 'chip', text: t }), ' ', SUBNAMES[t]), subs[t])),
     ]));
-    $('inc-note').textContent = 'The percentages are of the incidents with a path: flapping and mass withdrawals mostly have none. A type with no path shows a dash. The lines under a type are those of its types in the survey that the detector tells apart; each incident is in one of them at most, and the ones that no type fits are only in the line of the class. ASM is made of candidates: a link that CAIDA does not know may be a real one.';
+    $('inc-note').textContent = 'Percentages are of the incidents with a path (flapping and mass withdrawals mostly have none: a dash). The lines under a class are the types of the survey that the detector tells apart; an incident is in one of them at most, and the ones that fit none are only in the line of the class. ASM is made of candidates: a link that CAIDA does not know may be a real one.';
   }
 
   // The curve: the share of the incidents with a path that would be Invalid, for 0 to 100% of the networks publishing.
@@ -121,7 +121,7 @@
     tiles(d);
     rows(d);
     curve(d);
-    $('inc-sources').textContent = `ASPAs: ${d.aspas}. Relationships: ${d.relationships}. The incidents come from the update messages of one RIPE RIS collector (rrc00), classified by the detectors of the research project (data_scripts).`;
+    $('inc-sources').textContent = `ASPAs: ${d.aspas}. Relationships: ${d.relationships}. Detectors: the research project (data_scripts).`;
   }
 
   main();

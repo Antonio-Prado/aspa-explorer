@@ -5,6 +5,11 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.49.1] - 2026-10-22
+
+### Changed
+- The text of the Incidents page, without repetitions. The two tables of the detectors are one: in the table of coverage each class says what an ASPA can say about it (the table by class is gone). *How to read this* comes before the taxonomy, and says each thing once: what an incident is and what the counts are, the verdicts (and that an ASPA judges the path), the complete ASPAs, the time frame; what the chart does is in the text above it. The note under the table, the introduction of the taxonomy and the line of the sources are shorter, and the DOI of the survey is in its reference.
+
 ## [1.49.0] - 2026-10-22
 
 ### Added
