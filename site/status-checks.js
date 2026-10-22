@@ -5,8 +5,8 @@
 // the checks are green, red when all are red and orange in between (a late check counts as not green).
 // scripts/build-status.mjs runs the same checks on the server every 15 minutes and keeps their states (the chart of the status page).
 (function (root) {
-  const HISTORY = 'https://gitlab.dei.unipd.it/api/v4/projects/5246/repository/files/history.json/raw?ref=history';
-  const VISIBILITY = 'https://gitlab.dei.unipd.it/api/v4/projects/5246/repository/files/visibility.json/raw?ref=history';
+  const HISTORY = '/api/v1/archive/history.json';
+  const VISIBILITY = '/api/v1/archive/visibility.json';
   const MIN = 60e3, HOUR = 3600e3, DAY = 86400e3;
 
   // state from an age in ms and the two limits

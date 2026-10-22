@@ -4,8 +4,8 @@
 const DATA_ASPAS = '/data/aspas.json';
 const DATA_STATUS = '/data/status.json';
 // Daily history of the ASPA counts: the `history` branch of the public project, through the GitLab API (CORS open).
-const DATA_VISIBILITY = 'https://gitlab.dei.unipd.it/api/v4/projects/5246/repository/files/visibility.json/raw?ref=history';
-const DATA_EVENTS = 'https://gitlab.dei.unipd.it/api/v4/projects/5246/repository/files/events.json/raw?ref=history';
+const DATA_VISIBILITY = '/api/v1/archive/visibility.json';
+const DATA_EVENTS = '/api/v1/archive/events.json';
 const RIR_NAMES = { afrinic: 'AFRINIC', apnic: 'APNIC', arin: 'ARIN', lacnic: 'LACNIC', ripe: 'RIPE NCC' };
 
 const $ = (id) => document.getElementById(id);

@@ -24,6 +24,8 @@ const TYPES = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; ch
 const FIXTURE_OF = (p) => {
   if (p === '/data/aspas.json' || p === '/data/status.json') return p.slice(1);
   if (/^\/api\/v1\/(adoption|leaks|validators|meta|leaks-history|status-history|trends|resources|invalid|status-months|relations)\.json$/.test(p)) return p.slice(1);
+  const archive = /^\/api\/v1\/archive\/(events|history|visibility)\.json$/.exec(p);
+  if (archive) return `gitlab/${archive[1]}.json`;
   if (/^\/api\/v1\/as\/\d+$/.test(p)) return 'api/v1/as.json';
   if (/^\/api\/v1\/reports\/[0-9a-f]{12}$/.test(p)) return 'api/v1/report.json';
   if (p === '/api/v1/subscriptions/health') return 'api/v1/health.json';

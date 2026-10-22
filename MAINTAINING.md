@@ -26,6 +26,8 @@ Whoever has access to the private project: create a branch from `main`, keep one
 
 Besides the static page, the host that serves it runs three things that the CI does not deploy: the builder of the per-AS API, badges and feeds (`scripts/build-api.mjs`, every 15 minutes), the builder of the adoption numbers and of the AS registry (`scripts/build-adoption.mjs`, once a day) and the notifier service (`notifier/`, started by `deploy/freebsd/aspa_notify`). They run as unprivileged users from `cron` and `rc`; the wiki page *Deployment* describes how to set them up. After changing a file that they use (`build-api.mjs`, `build-adoption.mjs`, `site/history.js`, `site/quality.js`, `notifier/*`) copy it to the host and, for the notifier, restart the service.
 
+The pages read the history of the ASPAs (`history.json`, `events.json`, `visibility.json`) from `/api/v1/archive/`, not from GitLab, which is not reachable from the Internet: `scripts/fetch-archive.mjs` copies the three files from the `history` branch every ten minutes (cron, as `aspagen`, into `/var/db/aspa-gen/archive`), and nginx serves them. If the history stops, look at `/var/db/aspa-gen/archive.log` first.
+
 When a page asset changes (script, style), change its `?v=` as well: the CDN in front of the site keeps assets by address, so the same address keeps serving the old file.
 
 ## Scheduled jobs

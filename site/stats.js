@@ -4,7 +4,7 @@
 // providers). The data are the same as on the home page: the validator's ASPAs through the same-origin
 // proxy, and the daily history from the `history` branch of the public project.
 const DATA_ASPAS = '/data/aspas.json';
-const DATA_HISTORY = 'https://gitlab.dei.unipd.it/api/v4/projects/5246/repository/files/history.json/raw?ref=history';
+const DATA_HISTORY = '/api/v1/archive/history.json';
 const RIR_NAMES = { afrinic: 'AFRINIC', apnic: 'APNIC', arin: 'ARIN', lacnic: 'LACNIC', ripe: 'RIPE NCC' };
 const RIR_ORDER = ['afrinic', 'apnic', 'arin', 'lacnic', 'ripe'];
 

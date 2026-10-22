@@ -5,6 +5,11 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.47.12] - 2026-10-22
+
+### Fixed
+- The history of the ASPAs (the chart *ASPAs over time*, the recent changes, the quality checks, and the status page) was read from the GitLab of the Department in the browser of the visitor, and that GitLab is not reachable from the Internet: for visitors outside the University the chart and the changes came out empty and the status page said that *Daily history and changes* and *BGP visibility* were Down. The host now copies the three files (`history.json`, `events.json`, `visibility.json`) every ten minutes (`scripts/fetch-archive.mjs`) and serves them as `/api/v1/archive/<name>.json`; the pages read them from there. The builders, which run on the host, still read GitLab.
+
 ## [1.47.11] - 2026-10-22
 
 ### Changed
