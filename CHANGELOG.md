@@ -5,6 +5,11 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.48.3] - 2026-10-22
+
+### Added
+- The Incidents page has a table of coverage that goes through the 27 types of the taxonomy of the survey and says, for each, whether the detectors of the project observe it: 5 are detected (PRH-CH, PRH-IH, VOL-FO, RLK-UL, RLK-LL), 5 only partly (PRH-AB, DEG-MA, ATR-EH, ATR-MA, ATR-VE), 11 are observable but not implemented (the four ASM types, VOL-AC, VOL-DC, DEG-CA, DEG-EX, DEG-FF, RLK-DL, RLK-FP) and 6 cannot be observed from the updates of a collector (PRH-MIT, VOL-DF and the four POL types). Under the table, the limits of one window on the Internet (a single collector, updates only, prefixes with ROAs only) and what the counts of the page do and do not measure.
+
 ## [1.48.2] - 2026-10-22
 
 ### Changed
