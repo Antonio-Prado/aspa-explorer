@@ -5,6 +5,11 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.50.5] - 2026-10-23
+
+### Changed
+- The Examples page explains the **route server of an exchange point**: what it does, and that what counts for ASPA is whether it puts its own AS number in the paths. A transparent one (RFC 7947, what most exchanges do) is not in the question and is never listed; a non-transparent one stands above its clients in the paths, and the verification draft (section 4) asks every client to list it together with its providers, or the routes sent through it come out Invalid with no leak anywhere; a client of a non-transparent route server cannot publish AS0; a bilateral peer at the exchange is never listed; the route server itself publishes AS0. The rules, the AS0 case and the mistake *Forgetting a provider* say it in one line each, and the note of the path check for an exchange-point AS in an Invalid path says the same instead of calling it a hop that nobody declared.
+
 ## [1.50.4] - 2026-10-22
 
 ### Added

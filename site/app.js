@@ -280,7 +280,7 @@ function ixpNote(v) {
     el('strong', { text: `${names} ${found.length === 1 ? 'is' : 'are'} in the list of exchange-point ASes` }), ' (from the CAIDA data). ',
     'A route server of an exchange point should not put its own AS number in the AS path: ',
     el('a', { href: 'https://www.rfc-editor.org/rfc/rfc7947#section-2.2.2.1', target: '_blank', rel: 'noopener' }, 'RFC 7947, section 2.2.2.1', el('span', { class: 'sr-only', text: ' (opens in a new tab)' })),
-    ' says it SHOULD NOT prepend it, a recommendation kept only for compatibility with old route server clients, so that the members see the path as if they peered directly. Where it does, the ASPA verification meets a hop that nobody declared and the path comes out Invalid without any leak. The same AS number can also belong to a real network that peers and sells transit (NetIX is both): then the valley may be real. Check who it is, and where the route was learned, before blaming anybody.')];
+    ' says it SHOULD NOT prepend it, a recommendation kept only for compatibility with old route server clients, so that the members see the path as if they peered directly. Where it does, the ASPA verification treats it as a provider of its members, who must list it in their ASPAs (see the examples page): a member that has not gets its paths judged Invalid without any leak anywhere. The same AS number can also belong to a real network that peers and sells transit (NetIX is both): then the valley may be real. Check who it is, and where the route was learned, before blaming anybody.')];
 }
 
 function pathVerdict(v, missing) {

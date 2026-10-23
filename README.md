@@ -175,7 +175,7 @@ The validator is a [Routinator](https://github.com/NLnetLabs/routinator) instanc
 
   Evidence and tromboning are readings, with their limits stated in the page, not verdicts.
 - **Live and graph:** under the routes of an AS, the updates that RIPE RIS Live hands out as they arrive, each one checked with the ASPAs (a leak shows up here while it happens); in the lookup, the neighbourhood of an AS drawn as a graph (`site/graph.js`).
-- **Writing your ASPA:** an examples page with the rules, five cases, the common mistakes and a checker that reviews a list of providers and compares it with the published ASPA.
+- **Writing your ASPA:** an examples page with the rules, six cases, the common mistakes and a checker that reviews a list of providers and compares it with the published ASPA.
 
 **Follow**
 
