@@ -33,3 +33,24 @@ cd "$tmp/wiki"
 echo "wiki: $(git log --oneline | wc -l | tr -d ' ') commits, $(git ls-files '*.md' | wc -l | tr -d ' ') pages"
 masked "$MIRROR_TOKEN" git_as oauth2 "$MIRROR_TOKEN" push --force --quiet "https://${host}/${public}.wiki.git" HEAD:main
 echo "published to ${public}.wiki"
+
+# The same pages on the wiki of the copy on GitHub (the links of the README point there, since the GitLab of the department is
+# not reachable from outside), with the deploy key of that repository (GITHUB_DEPLOY_KEY, as in mirror-github.sh). The image
+# sizes written the GitLab way ({height=N}) are removed first: GitHub shows them as text.
+if [ -n "${GITHUB_DEPLOY_KEY:-}" ]; then
+  gh_repo=${GITHUB_REPO:-Antonio-Prado/aspa-explorer}
+  fingerprint='SHA256:+DiY3wvvV6TuJJhbpZisF/zLDA0zPMSvHdkr4UvCOqU'    # the Ed25519 host key that GitHub publishes
+  cp "$GITHUB_DEPLOY_KEY" "$tmp/key"
+  chmod 600 "$tmp/key"
+  ssh-keyscan -t ed25519 github.com > "$tmp/known_hosts" 2>/dev/null
+  seen=$(ssh-keygen -lf "$tmp/known_hosts" | awk '{print $2}')
+  [ "$seen" = "$fingerprint" ] || { echo "unexpected host key of github.com: $seen" >&2; exit 1; }
+  git checkout --quiet -b github
+  for f in *.md; do
+    sed -e 's/{height=[0-9]*}//g' -e 's/{width=[0-9]*}//g' "$f" > "$f.tmp" && mv "$f.tmp" "$f"
+  done
+  git -c user.name='Antonio Prado' -c user.email=antonio.prado@dei.unipd.it commit --quiet -am "The pages as GitHub shows them" || true
+  GIT_SSH_COMMAND="ssh -i $tmp/key -o IdentitiesOnly=yes -o UserKnownHostsFile=$tmp/known_hosts -o StrictHostKeyChecking=yes -o BatchMode=yes" \
+    git push --force --quiet "git@github.com:${gh_repo}.wiki.git" HEAD:master
+  echo "published to github.com/${gh_repo}/wiki"
+fi

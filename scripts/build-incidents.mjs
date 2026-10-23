@@ -24,8 +24,14 @@ const History = createRequire(import.meta.url)('../site/history.js');
 const UA = 'aspa-explorer (https://aspa.ping6.it; antonio.prado@dei.unipd.it)';
 
 export const TYPES = ['RLK', 'PRH', 'DEG', 'VOL', 'ATR', 'ASM'];
-// A leaking AS that sends the leak to this many different neighbours in the period is taken as a full propagation (RLK-FP).
-export const FP_MIN_NEIGHBOURS = 3;
+// A leaking AS that sends leaks to this many different neighbours within FP_WINDOW_SECONDS is taken as a full propagation
+// (RLK-FP): an event, as the known cases were. With 3 over the whole period, 82% of the leaks of the first day were FP.
+export const FP_MIN_NEIGHBOURS = 10;
+export const FP_WINDOW_SECONDS = 3600;
+// A leaking AS with leak incidents beginning in this many different hours (UTC) of the period is in the valley all day:
+// a relationship that CAIDA gets wrong (an open peering policy read as peers), not a leak. Its incidents are a line of
+// their own (RLK-PV) and not UL, LL or FP. On the first day one such AS was 40,598 of the 60,345 leaks.
+export const PERSISTENT_MIN_HOURS = 12;
 export const LEVELS = [0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100];
 const MAX_BYTES = 1 << 30;
 
@@ -118,15 +124,17 @@ const limited = (ideal, rank, cut) => ({ get: (as) => (rank.get(as) < cut ? idea
 
 const empty = () => ({ incidents: 0, with_path: 0, real: [0, 0, 0], ideal: [0, 0, 0] });
 // The type of the survey that an incident has, when the detector says (extra_detectors.py of the copy of the scripts):
-// RLK-UL, RLK-LL (the leak type that incident.py records), RLK-FP (the same AS leaks to FP_MIN_NEIGHBOURS neighbours or more:
-// it takes the place of UL and LL), PRH-AB, ASM-FI, ASM-PS, ASM-PE, ASM-EX, VOL-FO, VOL-DC, VOL-AC, DEG-MA (another origin than
-// the aggregate), DEG-XS (excessive: careless, exploitative or malicious, the intent is not visible; a jump counts here), DEG-FF,
-// ATR-EH and ATR-MA (a session ended by an UPDATE message error). `receivers`: Map leaking AS -> Set of the ASes that it leaked to.
-export function subtypeOf(inc, receivers) {
+// RLK-UL, RLK-LL (the leak type that incident.py records), RLK-FP (the same AS leaks to FP_MIN_NEIGHBOURS neighbours or more
+// within an hour: it takes the place of UL and LL), RLK-PV (a persistent valley, see leakers()), PRH-AB, ASM-FI, ASM-PS, ASM-PE,
+// ASM-EX, VOL-FO, VOL-DC, VOL-AC, DEG-MA (another origin than the aggregate), DEG-XS (excessive: careless, exploitative or
+// malicious, the intent is not visible; a jump counts here), DEG-FF, ATR-EH and ATR-MA (a session ended by an UPDATE message
+// error). `leakers`: what leakers() computed over all the incidents.
+export function subtypeOf(inc, leakers) {
   const d = inc.details || {};
   switch (inc.incident_type) {
     case 'RLK':
-      if (receivers.get(d.by)?.size >= FP_MIN_NEIGHBOURS) return 'RLK-FP';
+      if (leakers.persistent.has(d.by)) return 'RLK-PV';
+      if (leakers.fp.has(d.by)) return 'RLK-FP';
       return d.rlk_type === 'UL' || d.rlk_type === 'LL' ? `RLK-${d.rlk_type}` : null;
     case 'PRH': return d.prh_type === 'AB' ? 'PRH-AB' : null;
     case 'ASM': return ['FI', 'PS', 'PE', 'EX'].includes(d.asm_type) ? `ASM-${d.asm_type}` : null;
@@ -144,17 +152,41 @@ export function subtypeOf(inc, receivers) {
 }
 
 const day = (start) => (/^\d{4}-\d{2}-\d{2}/.test(start || '') ? start.slice(0, 10) : null);
+const epoch = (t) => { const ms = Date.parse(`${(t || '').slice(0, 19).replace(' ', 'T')}Z`); return Number.isNaN(ms) ? null : ms / 1000; };
+
+// The leaking ASes of the incidents (details.by of a RLK): `fp`, the ones that leaked to FP_MIN_NEIGHBOURS different
+// neighbours or more within FP_WINDOW_SECONDS; `persistent`, the ones with leaks beginning in PERSISTENT_MIN_HOURS different
+// hours or more (persistent wins over fp).
+export function leakers(incidents) {
+  const byAs = new Map();
+  for (const inc of incidents) {
+    const d = inc.details || {};
+    if (inc.incident_type !== 'RLK' || d.by === undefined || d.to === undefined) continue;
+    if (!byAs.has(d.by)) byAs.set(d.by, []);
+    byAs.get(d.by).push({ t: epoch(inc.start), to: d.to });
+  }
+  const fp = new Set(), persistent = new Set();
+  for (const [as, list] of byAs) {
+    const hours = new Set(list.filter((x) => x.t !== null).map((x) => Math.floor(x.t / 3600)));
+    if (hours.size >= PERSISTENT_MIN_HOURS) { persistent.add(as); continue; }
+    const timed = list.filter((x) => x.t !== null).sort((a, b) => a.t - b.t);
+    const untimed = new Set(list.filter((x) => x.t === null).map((x) => x.to));
+    for (let i = 0; i < timed.length; i++) {
+      const seen = new Set(untimed);
+      for (let j = i; j < timed.length && timed[j].t - timed[i].t <= FP_WINDOW_SECONDS; j++) seen.add(timed[j].to);
+      if (seen.size >= FP_MIN_NEIGHBOURS) { fp.add(as); break; }
+    }
+    if (!timed.length && untimed.size >= FP_MIN_NEIGHBOURS) fp.add(as);
+  }
+  return { fp, persistent };
+}
 const stamp = (t) => (/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}/.test(t || '') ? t.slice(0, 19) : null);
 
 // incidents: parsed; aspasOf(day): the ASPA lookup of a day (Map AS number -> Set of providers); ideal, degree: complete ASPAs
 export function analyse(incidents, aspasOf, ideal, degree, detail = null) {
   const ord = orders(ideal, degree);
   const byType = {}, bySub = {}, adoption = { random: {}, largest: {} };
-  const receivers = new Map();
-  for (const inc of incidents) {
-    const d = inc.details || {};
-    if (inc.incident_type === 'RLK' && d.by !== undefined && d.to !== undefined) { if (!receivers.has(d.by)) receivers.set(d.by, new Set()); receivers.get(d.by).add(d.to); }
-  }
+  const lk = leakers(incidents);
   const bucket = (t) => (byType[t] ||= empty());
   const curve = (o, t) => (adoption[o][t] ||= new Array(LEVELS.length).fill(0));
   const total = empty();
@@ -162,7 +194,7 @@ export function analyse(incidents, aspasOf, ideal, degree, detail = null) {
   for (const inc of incidents) {
     const t = TYPES.includes(inc.incident_type) ? inc.incident_type : 'other';
     const b = bucket(t);
-    const sub = subtypeOf(inc, receivers);
+    const sub = subtypeOf(inc, lk);
     const sb = sub ? (bySub[sub] ||= empty()) : null;
     const all = sb ? [b, total, sb] : [b, total];
     for (const x of all) x.incidents++;

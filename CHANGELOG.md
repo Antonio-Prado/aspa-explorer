@@ -5,6 +5,16 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.51.0] - 2026-10-23
+
+### Changed
+- The thresholds of the incident detectors, after the first full day of data (534,660 incidents in twelve hours, most of them noise):
+  - **flapping (VOL-FO)**: one incident for the prefix instead of one for each peer that sees it, ten flaps in five minutes instead of five, and three peers or more flapping it in the same window (a prefix that flaps for one peer alone is that peer's session). It was 379,000 incidents from 48 peers.
+  - **full propagation (RLK-FP)**: ten different neighbours within one hour instead of three in the whole period, and a new line **RLK-PV, persistent valley**, for an AS whose leaks begin in twelve different hours or more of the period: a relationship that CAIDA gets wrong, not a leak, kept out of UL, LL and FP. One such AS was 40,598 of the 60,345 leaks.
+  - **forged links (ASM-FI, ASM-PS)**: a link that was in the routing table of the collector at the start of the day is not a candidate, whether CAIDA knows it or not. `scripts/rib-links.mjs` writes the links of the table dump that the valley job keeps, `run-incidents.sh` runs it, `extra_detectors.load_links` reads them (`INCIDENTS_LINKS`, default `links/*.txt`). 89% of the FI candidates and 48% of the PS candidates of the first day were such links.
+  - **deaggregation with another origin (DEG-MA)**: not a candidate when a ROA authorises the origin of the more specific, or when CAIDA knows a link between the two origins (a customer announcing its part of the provider's block). Three quarters of the first day.
+  The coverage table and the lines of the table by type say the new rules. Every threshold is still a constant at the top of `incident.py` (`VOL_FO_*`), `extra_detectors.py` and `build-incidents.mjs` (`FP_*`, `PERSISTENT_MIN_HOURS`).
+
 ## [1.50.7] - 2026-10-23
 
 ### Fixed

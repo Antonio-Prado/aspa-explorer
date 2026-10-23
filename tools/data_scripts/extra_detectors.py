@@ -61,8 +61,26 @@ def rlk_type(in_rel, out_rel):
     return "UL" if out_rel == "c2p" else "LL"
 
 
-def check_forged_link(rec, rel):
-    """Candidate of AS path manipulation: a link of the path that the CAIDA relationships do not know.
+def load_links(pattern):
+    """X-11: the links (pairs of adjacent ASes) that the table of the collector had at the start of the day, one for each
+    line, as scripts/rib-links.mjs of ASPA Explorer writes them from the table dump. A link that is in the table is not forged,
+    whether CAIDA knows it or not: on the first day 89% of the FI candidates and 48% of the PS candidates were such links.
+    Without the files every missing link is a candidate, as before."""
+    links = set()
+    for f in sorted(glob.glob(pattern)):
+        with open(f) as fh:
+            for line in fh:
+                p = line.split()
+                if len(p) == 2 and p[0].isdigit() and p[1].isdigit():
+                    a, b = int(p[0]), int(p[1])
+                    links.add((a, b))
+                    links.add((b, a))
+    return links
+
+
+def check_forged_link(rec, rel, known=frozenset()):
+    """Candidate of AS path manipulation: a link of the path that the CAIDA relationships do not know, nor the table of the
+    collector at the start of the day (`known`, X-11).
 
     FI (forged origin injection): the link between the last AS and the origin, as if the announcer were connected to the
     prefix owner. PS (path shortening): another link, as if ASes in between had been removed. A candidate only: CAIDA
@@ -74,7 +92,7 @@ def check_forged_link(rec, rel):
     first = None
     for i in range(len(path) - 1):
         a, b = path[i], path[i + 1]
-        if (a, b) not in rel:
+        if (a, b) not in rel and (a, b) not in known:
             if i == len(path) - 2:
                 return True, _forged(rec, path, "FI", a, b)
             if first is None:

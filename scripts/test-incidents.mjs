@@ -1,6 +1,6 @@
 // Unit tests for scripts/build-incidents.mjs (no dependencies). Run with: node scripts/test-incidents.mjs
 import assert from 'node:assert/strict';
-import { relationSets, parseIncidents, pathsOf, verdictOf, orders, analyse, subtypeOf, LEVELS, FP_MIN_NEIGHBOURS } from './build-incidents.mjs';
+import { relationSets, parseIncidents, pathsOf, verdictOf, orders, analyse, subtypeOf, leakers, LEVELS, FP_MIN_NEIGHBOURS, PERSISTENT_MIN_HOURS } from './build-incidents.mjs';
 
 let passed = 0;
 const test = async (name, fn) => { await fn(); passed++; console.log('ok  ', name); };
@@ -82,21 +82,29 @@ await test('analyse: counts by type, real and complete ASPAs, the curve of adopt
 });
 
 await test('subtypes: UL and LL as the detector recorded them, FP when one AS leaks to enough neighbours, ASM-FI and ASM-PS', () => {
-  const rlk = (by, to, rlk_type) => inc('RLK', { details: { by, to, rlk_type, path: [to, by, 1, 100] }, messages: [ann([to, by, 1, 100])] });
+  const at = (m) => `2026-10-22 ${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}:00`;
+  const rlk = (by, to, rlk_type, minute = 0) => inc('RLK', { start: at(minute), details: { by, to, rlk_type, path: [to, by, 1, 100] }, messages: [ann([to, by, 1, 100])] });
   const list = [rlk(2, 3, 'UL'), rlk(7, 3, 'UL'), rlk(7, 5, 'LL')];
-  for (let to = 10; to < 10 + FP_MIN_NEIGHBOURS; to++) list.push(rlk(9, to, 'UL'));
+  for (let to = 10; to < 10 + FP_MIN_NEIGHBOURS; to++) list.push(rlk(9, to, 'UL', to));            // within one hour: FP
+  for (let to = 10; to < 10 + FP_MIN_NEIGHBOURS; to++) list.push(rlk(11, to, 'UL', to * 90));      // spread over a day: not FP
+  for (let h = 0; h < PERSISTENT_MIN_HOURS; h++) list.push(rlk(12, 3, 'LL', h * 60 + 5));           // every hour: persistent
   list.push(inc('ASM', { details: { asm_type: 'FI', path: [4, 1, 666] }, messages: [ann([4, 1, 666])] }), inc('ASM', { details: { asm_type: 'PS' } }), inc('ASM', { details: {} }), rlk(8, 3, undefined));
   const res = analyse(list, () => NO_ASPAS, IDEAL, DEGREE);
-  assert.equal(res.subtypes['RLK-UL'].incidents, 2);        // AS2 and AS7 leak to one or two neighbours
+  assert.equal(res.subtypes['RLK-UL'].incidents, 2 + FP_MIN_NEIGHBOURS);        // AS2 and AS7 leak to one or two neighbours, AS11 to many but slowly
   assert.equal(res.subtypes['RLK-LL'].incidents, 1);
   assert.equal(res.subtypes['RLK-FP'].incidents, FP_MIN_NEIGHBOURS);
+  assert.equal(res.subtypes['RLK-PV'].incidents, PERSISTENT_MIN_HOURS);
+  const lk = leakers(list);
+  assert.deepEqual([...lk.fp], [9]);
+  assert.deepEqual([...lk.persistent], [12]);
   assert.equal(res.subtypes['ASM-FI'].incidents, 1);
   assert.equal(res.subtypes['ASM-FI'].with_path, 1);
   assert.equal(res.subtypes['ASM-PS'].incidents, 1);
   assert.equal(res.by_type.ASM.incidents, 3);                // the one with no type is only in its type
   assert.equal(res.by_type.RLK.incidents, list.filter((i) => i.incident_type === 'RLK').length);
-  assert.equal(subtypeOf(inc('VOL', {}), new Map()), null);
-  const sub = (type, details) => subtypeOf(inc(type, { details }), new Map());
+  const none = { fp: new Set(), persistent: new Set() };
+  assert.equal(subtypeOf(inc('VOL', {}), none), null);
+  const sub = (type, details) => subtypeOf(inc(type, { details }), none);
   assert.equal(sub('PRH', { prh_type: 'AB' }), 'PRH-AB');
   assert.equal(sub('PRH', { anomaly: 'Invalid_Origin (Prefix Hijack)' }), null);
   assert.deepEqual(['PE', 'EX', 'FI', 'PS'].map((t) => sub('ASM', { asm_type: t })), ['ASM-PE', 'ASM-EX', 'ASM-FI', 'ASM-PS']);

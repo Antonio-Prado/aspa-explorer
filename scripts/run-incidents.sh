@@ -20,7 +20,7 @@ ROAS_URL=${INCIDENTS_ROAS_URL:-https://rpki.ping6.it/json}
 KEEP_DAYS=${INCIDENTS_KEEP_DAYS:-3}
 KEEP_INCIDENT_DAYS=${INCIDENTS_KEEP_INCIDENT_DAYS:-30}
 
-mkdir -p "$BASE/incoming" "$BASE/work/data" "$BASE/work/roas" "$BASE/work/delegations"
+mkdir -p "$BASE/incoming" "$BASE/work/data" "$BASE/work/roas" "$BASE/work/delegations" "$BASE/work/links"
 cd "$BASE/work"
 
 # 1. the files that are closed: all but the newest of incoming/ (the names have the epoch of the opening)
@@ -43,6 +43,13 @@ caida=$(ls -1 "$GEN"/cache/as-rel2-*.bz2 2>/dev/null | sort | tail -n 1 || true)
 
 # the delegation files of the five RIRs (the cache of the adoption job): extra_detectors.py reads delegations/delegated-*
 for f in "$GEN"/cache/delegated-*; do [ -f "$f" ] && ln -sf "$f" delegations/; done
+
+# the links of the table of the collector at the start of the day (the dump that the valley job keeps in its cache), for the
+# forged-link detector: extra_detectors.py reads links/*.txt; without the file every link that CAIDA lacks is a candidate
+mkdir -p links
+if [ -f "$GEN/cache/dump-rrc00.gz" ]; then
+  "$NODE" "$SCRIPTS/rib-links.mjs" "$GEN/cache/dump-rrc00.gz" links/rrc00.txt || echo "the links of the table could not be read: every missing link is a candidate" >&2
+fi
 
 # 3. the incidents
 if ls data/records_*.jsonl.gz >/dev/null 2>&1; then

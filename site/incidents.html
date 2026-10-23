@@ -23,16 +23,16 @@
 <meta name="twitter:card" content="summary_large_image">
 <meta name="color-scheme" content="light dark">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
-<link rel="stylesheet" href="/style.css?v=1.50.7">
-<script src="/incidents.js?v=1.50.7" defer></script>
-<script src="/status-checks.js?v=1.50.7" defer></script>
-<script src="/footer.js?v=1.50.7" defer></script>
+<link rel="stylesheet" href="/style.css?v=1.51.0">
+<script src="/incidents.js?v=1.51.0" defer></script>
+<script src="/status-checks.js?v=1.51.0" defer></script>
+<script src="/footer.js?v=1.51.0" defer></script>
 </head>
 <body>
 <a class="skip" href="#main">Skip to main content</a>
 <header class="wrap masthead">
   <div class="top">
-    <p class="back"><a class="brandlink" href="/" title="Back to ASPA Explorer"><img class="brand" src="/img/logo-mark.svg?v=1.50.7" alt="" width="40" height="40"><span>ASPA Explorer</span></a></p>
+    <p class="back"><a class="brandlink" href="/" title="Back to ASPA Explorer"><img class="brand" src="/img/logo-mark.svg?v=1.51.0" alt="" width="40" height="40"><span>ASPA Explorer</span></a></p>
     <nav class="topnav" aria-label="Main"><a href="/">Home</a><a href="/statistics.html">Statistics</a><a href="/incidents.html" aria-current="page">Incidents</a><a href="/examples.html">Examples</a><a href="/api.html">API</a><a href="/guide.html">Guide</a><a href="/status.html">Status</a></nav>
   </div>
   <h1>Incidents</h1>
@@ -168,20 +168,20 @@
         <tbody>
           <tr><th scope="rowgroup"><span class="chip">ASM</span> AS path manipulation</th><td colspan="2" class="gnote"><em>An ASPA can expose some of the types: a forged origin or a shortened path shows as a hop that the ASPAs do not attest.</em></td></tr>
           <tr><th scope="row"><span class="chip">ASM-PE</span> AS Path poisoning</th><td><span class="badge v-unknown">Partly</span></td><td>A candidate: an AS that comes back in the path after another one (the shape of poisoning, which routers also drop as a loop), or an AS number that no registry has allocated. Poisoning that does not repeat the announcer is not seen.</td></tr>
-          <tr><th scope="row"><span class="chip">ASM-FI</span> Forged origin Injection</th><td><span class="badge v-unknown">Partly</span></td><td>A candidate: the link between the last AS and the origin is not in the relationships of CAIDA, as if the announcer were next to the prefix owner. CAIDA lacks real links too: in a first sample of 23 minutes there were more than two thousand, far more than real attacks, so most are links that CAIDA does not know. The ASPA verdict of the incident is what tells them apart.</td></tr>
-          <tr><th scope="row"><span class="chip">ASM-PS</span> Path Shortening</th><td><span class="badge v-unknown">Partly</span></td><td>A candidate: another link of the path that CAIDA does not know, as if ASes in between had been removed. Same limit as ASM-FI: most are real links that CAIDA lacks (469 in the same sample).</td></tr>
+          <tr><th scope="row"><span class="chip">ASM-FI</span> Forged origin Injection</th><td><span class="badge v-unknown">Partly</span></td><td>A candidate: the link between the last AS and the origin is not in the relationships of CAIDA, as if the announcer were next to the prefix owner, and was not in the routing table of the collector at the start of the day either (a link that is already in the table is not forged, whether CAIDA knows it or not: on the first day of data 89% of the candidates were such links). CAIDA lacks real links too, so a candidate is still more often a link that CAIDA does not know than an attack. The ASPA verdict of the incident is what tells them apart.</td></tr>
+          <tr><th scope="row"><span class="chip">ASM-PS</span> Path Shortening</th><td><span class="badge v-unknown">Partly</span></td><td>A candidate: another link of the path that CAIDA does not know and that was not in the table of the collector at the start of the day, as if ASes in between had been removed. Same limit as ASM-FI: most are real links that CAIDA lacks (the table filter took out half of them on the first day).</td></tr>
           <tr><th scope="row"><span class="chip">ASM-EX</span> path EXtension evasion</th><td><span class="badge v-unknown">Partly</span></td><td>A candidate: a private AS number in the path, which should have been removed at the border. Prepending is not flagged: it is ordinary traffic engineering.</td></tr>
         </tbody>
         <tbody>
           <tr><th scope="rowgroup"><span class="chip">VOL</span> State volatility</th><td colspan="2" class="gnote"><em>An ASPA says nothing of the flapping; the paths of its announcements are judged like any other.</em></td></tr>
-          <tr><th scope="row"><span class="chip">VOL-FO</span> Flooding Through Oscillation</th><td><span class="badge v-valid">Detected</span></td><td>Five or more announcements and withdrawals of a prefix from one peer within five minutes. The cause of the oscillation is not visible.</td></tr>
+          <tr><th scope="row"><span class="chip">VOL-FO</span> Flooding Through Oscillation</th><td><span class="badge v-valid">Detected</span></td><td>Ten or more announcements and withdrawals of a prefix from one peer within five minutes, seen by three peers of the collector or more in the same window: one incident for the prefix, whatever the number of peers. A prefix that flaps for one peer alone is that peer's session, not the prefix (on the first day, with five flaps and one incident per peer, flapping was 379,000 of 535,000 incidents). The cause of the oscillation is not visible.</td></tr>
           <tr><th scope="row"><span class="chip">VOL-DF</span> Disruptive Flapping</th><td><span class="badge nb-no-ASPA">Not observable here</span></td><td>The difference from VOL-FO is the intent of an attacker, which the updates do not carry.</td></tr>
           <tr><th scope="row"><span class="chip">VOL-AC</span> Amplified Churn Injection</th><td><span class="badge v-unknown">Partly</span></td><td>A candidate: one origin with 3,000 updates in five minutes, for 300 prefixes or more, seen from 8 peers or more. The thresholds are first guesses.</td></tr>
           <tr><th scope="row"><span class="chip">VOL-DC</span> Delayed Convergence</th><td><span class="badge v-unknown">Partly</span></td><td>A candidate: a prefix that keeps receiving updates from any peer, with no pause of a minute, for ten minutes or more and 100 updates or more.</td></tr>
         </tbody>
         <tbody>
           <tr><th scope="rowgroup"><span class="chip">DEG</span> Prefix deaggregation</th><td colspan="2" class="gnote"><em>An ASPA says nothing: the path of a more specific can be perfectly valid.</em></td></tr>
-          <tr><th scope="row"><span class="chip">DEG-MA</span> Malicious Deaggregation</th><td><span class="badge v-unknown">Partly</span></td><td>Seen only when the more specific has another origin than the aggregate; the intent is not visible.</td></tr>
+          <tr><th scope="row"><span class="chip">DEG-MA</span> Malicious Deaggregation</th><td><span class="badge v-unknown">Partly</span></td><td>Seen only when the more specific has another origin than the aggregate, and no ROA authorises that origin for it, and CAIDA knows no link between the two origins: a customer announcing its part of the provider's block is the ordinary use of address space, not a candidate (on the first day, three quarters of them). The intent is not visible.</td></tr>
           <tr><th scope="row"><span class="chip">DEG-CA</span> Careless Deaggregation</th><td><span class="badge v-unknown">Partly</span></td><td>Seen as excessive deaggregation: 32 or more more specifics of one origin under a /16 (IPv4) or a /32 (IPv6) in a day, from 2 peers or more, or a jump of an origin against its days before. The intent is not visible, so DEG-CA, DEG-EX and DEG-MA share the same line.</td></tr>
           <tr><th scope="row"><span class="chip">DEG-EX</span> Exploitative Deaggregation</th><td><span class="badge v-unknown">Partly</span></td><td>The same line as DEG-CA: the count of the more specifics tells how many, not why.</td></tr>
           <tr><th scope="row"><span class="chip">DEG-FF</span> Fragmentation Flood</th><td><span class="badge v-unknown">Partly</span></td><td>A candidate: 1,024 more specifics or more under a /32 (IPv6), or 1,000 IPv4 more specifics of one origin, in a day. The thresholds are first guesses.</td></tr>
@@ -191,7 +191,7 @@
           <tr><th scope="row"><span class="chip">RLK-UL</span> Upward Leak</th><td><span class="badge v-valid">Detected</span></td><td>A hop that learned the route from a provider or a peer and sent it to a provider, by the relationships of CAIDA. The incident records the type (incident.py, <code>rlk_type</code>).</td></tr>
           <tr><th scope="row"><span class="chip">RLK-LL</span> Lateral Leak</th><td><span class="badge v-valid">Detected</span></td><td>The same detector, when the route is sent to a peer: our reading of the survey is that an upward leak goes to a provider and a lateral one to a peer.</td></tr>
           <tr><th scope="row"><span class="chip">RLK-DL</span> Downward Leak</th><td><span class="badge nb-no-ASPA">Not observable here</span></td><td>A leak towards a customer shows in the path as an upward leak of that customer, so the detector flags the valley and cannot tell which of the two it is: that needs the policy of the sender.</td></tr>
-          <tr><th scope="row"><span class="chip">RLK-FP</span> Full Propagation</th><td><span class="badge v-unknown">Partly</span></td><td>A proxy: one AS that leaks to three or more different neighbours in the period. The survey means all the neighbours, whatever their role, which needs the policy of that AS; the proxy is set when the page is built, over all the incidents.</td></tr>
+          <tr><th scope="row"><span class="chip">RLK-FP</span> Full Propagation</th><td><span class="badge v-unknown">Partly</span></td><td>A proxy: one AS that leaks to ten or more different neighbours within one hour, an event, as the known cases were. The survey means all the neighbours, whatever their role, which needs the policy of that AS; the proxy is set when the page is built, over all the incidents. An AS whose leaks begin in twelve different hours or more of the period is in the valley all day: that is a relationship CAIDA gets wrong (an open peering policy read as peering), not a leak, and its incidents are a line of their own, <em>persistent valley</em>, outside the three types.</td></tr>
         </tbody>
         <tbody>
           <tr><th scope="rowgroup"><span class="chip">POL</span> Policy manipulation</th><td colspan="2" class="gnote"><em>An ASPA says nothing.</em></td></tr>

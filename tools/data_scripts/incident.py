@@ -21,6 +21,10 @@ ROA_FILE = "roas/*.xz"
 DELEGATIONS = os.environ.get("INCIDENTS_DELEGATIONS", "delegations/delegated-*")   # the files of the five RIRs (extra_detectors.py)
 STATE_FILE = "active_state.pkl"
 TIMEOUT_SECONDS = 900  # 15 minutes
+VOL_FO_FLAPS = 10          # X-9: announcements and withdrawals of a prefix from one peer within VOL_FO_WINDOW seconds that make it flap (was 5)
+VOL_FO_WINDOW = 300
+VOL_FO_MIN_PEERS = 3       # X-9: one incident for the prefix, when this many peers see it flap within the window (one peer alone is its session)
+LINKS = os.environ.get("INCIDENTS_LINKS", "links/*.txt")               # X-11: the links of the table of the collector (extra_detectors.py)
 GC_INTERVAL_SECONDS = 600  # run garbage collection every 10 minutes of bgp time
 BASELINE_TTL_SECONDS = 2592000  # 30 days ttl for baselines
 
@@ -218,7 +222,7 @@ def _check_prefix_hijack(rec, roas, state, current_epoch):
     return False, {}"""
 
 
-def check_deaggregation(rec, rel, state, current_epoch):
+def check_deaggregation(rec, rel, roas, state, current_epoch):
     prefix_str = rec.get("prefix")
     origin = rec.get("origin")
     
@@ -241,7 +245,7 @@ def check_deaggregation(rec, rel, state, current_epoch):
                 if supernet in deg_state:
                     parent_origin = deg_state[supernet]["origin"]
                     # only flag if origins diverge (fixes normal multi-homing flood)
-                    if parent_origin != origin:
+                    if parent_origin != origin and not deaggregation_is_ordinary(prefix_str, origin, parent_origin, rel, roas):
                         return True, {
                             "anomaly": "Cross-Origin Deaggregation", 
                             "parent_aggregate": supernet, 
@@ -264,7 +268,7 @@ def check_deaggregation(rec, rel, state, current_epoch):
                 specifics = [(sp, so, ts) for (sp, so), ts in pending_specs.pop(str(net)).items()]
                 
                 # check specifics against newly arrived parent
-                flagged_specifics = [s for s in specifics if s[1] != origin]
+                flagged_specifics = [s for s in specifics if s[1] != origin and not deaggregation_is_ordinary(s[0], s[1], origin, rel, roas)]
                 if flagged_specifics:
                     return True, {
                         "anomaly": "Cross-Origin Deaggregation (Retroactive)", 
@@ -280,7 +284,7 @@ def check_deaggregation(rec, rel, state, current_epoch):
                 supernet = str(net.supernet(new_prefix=i))
                 if supernet in deg_state:
                     parent_origin = deg_state[supernet]["origin"]
-                    if parent_origin != origin:
+                    if parent_origin != origin and not deaggregation_is_ordinary(prefix_str, origin, parent_origin, rel, roas):
                         return True, {
                             "anomaly": "Cross-Origin Deaggregation", 
                             "parent_aggregate": supernet, 
@@ -301,7 +305,7 @@ def check_deaggregation(rec, rel, state, current_epoch):
             if str(net) in pending_specs:
                 specifics = [(sp, so, ts) for (sp, so), ts in pending_specs.pop(str(net)).items()]
                 
-                flagged_specifics = [s for s in specifics if s[1] != origin]
+                flagged_specifics = [s for s in specifics if s[1] != origin and not deaggregation_is_ordinary(s[0], s[1], origin, rel, roas)]
                 if flagged_specifics:
                     return True, {
                         "anomaly": "Cross-Origin Deaggregation (Retroactive)", 
@@ -328,14 +332,52 @@ def check_state_volatility(rec, state, current_epoch):
     if not isinstance(history, deque):
         history = vol_state[key] = deque(history or ())
     history.append((current_epoch, rec.get("type")))
-    while current_epoch - history[0][0] > 300:
+    while current_epoch - history[0][0] > VOL_FO_WINDOW:
         history.popleft()
 
-    if len(history) >= 5:
+    if len(history) >= VOL_FO_FLAPS:
         if any(x[1] == "A" for x in history) and any(x[1] == "W" for x in history):
-            return True, {"flap_count": len(history), "window_seconds": 300, "vol_type": "FO"}
+            return True, {"flap_count": len(history), "window_seconds": VOL_FO_WINDOW, "vol_type": "FO"}
 
     return False, {}
+
+
+def flapping_prefix(state, prefix, peer, current_epoch, details):
+    """X-9: one incident for a prefix that flaps, not one for each peer that sees it flap. The peers that flap it within
+    VOL_FO_WINDOW seconds are counted, and the incident (actor VOL_<prefix>) opens at VOL_FO_MIN_PEERS of them: a prefix that
+    flaps for one peer alone is that peer's session, not the prefix. Returns the actor key, or None while the peers are too few."""
+    peers = state.setdefault("vol_peers", {}).setdefault(prefix, {})
+    peers[peer] = current_epoch
+    for p in [p for p, t in peers.items() if current_epoch - t > VOL_FO_WINDOW]:
+        del peers[p]
+    if len(peers) < VOL_FO_MIN_PEERS:
+        return None, details
+    return f"VOL_{prefix}", dict(details, peers=len(peers))
+
+
+def roa_authorises(net, origin, roas):
+    """Whether a ROA covers the prefix with this origin and a maxLength that allows it."""
+    if not roas:
+        return False
+    min_len = 8 if net.version == 4 else 16
+    for i in range(net.prefixlen, min_len - 1, -1):
+        for roa_asn, roa_max_len in roas.get(str(net.supernet(new_prefix=i)), ()):
+            if roa_asn == origin and net.prefixlen <= roa_max_len:
+                return True
+    return False
+
+
+def deaggregation_is_ordinary(sub_prefix, sub_origin, parent_origin, rel, roas):
+    """X-10: a more specific with another origin than its aggregate is not a candidate when the ROAs authorise that origin
+    for it (the holder of the space said so) or when CAIDA knows a link between the two origins (a customer announcing its
+    part of the provider's block, or the other way round): that is the ordinary way address space is used, and it was three
+    quarters of the candidates of the first day."""
+    if rel and ((parent_origin, sub_origin) in rel or (sub_origin, parent_origin) in rel):
+        return True
+    try:
+        return roa_authorises(ipaddress.ip_network(sub_prefix, strict=False), sub_origin, roas)
+    except ValueError:
+        return False
 
 
 # --- CORE LOGIC ---
@@ -416,9 +458,14 @@ def check_timeouts(active_incidents, current_epoch, timeout_seconds, out_f, stat
 
 def garbage_collect_state(state, current_epoch):
     if "vol_flaps" in state:
-        stale = [k for k, v in state["vol_flaps"].items() if not v or (current_epoch - v[-1][0]) > 300]
+        stale = [k for k, v in state["vol_flaps"].items() if not v or (current_epoch - v[-1][0]) > VOL_FO_WINDOW]
         for k in stale: 
             del state["vol_flaps"][k]
+
+    if "vol_peers" in state:
+        stale = [k for k, v in state["vol_peers"].items() if not v or current_epoch - max(v.values()) > VOL_FO_WINDOW]
+        for k in stale:
+            del state["vol_peers"][k]
             
     if "peer_withdrawals" in state:
         stale = [k for k, v in state["peer_withdrawals"].items() if not v or (current_epoch - v[-1]) > 10]
@@ -475,7 +522,7 @@ def add_message(inc, rec, ts_str, current_epoch):
         inc["messages"][3] = rec
 
 
-def process_record(rec, rel, roas, active_incidents, timeout_seconds, out_f, state, reg=None):
+def process_record(rec, rel, roas, active_incidents, timeout_seconds, out_f, state, reg=None, links=frozenset()):
     msg_type = rec.get("type")
     prefix = rec.get("prefix")
     peer = rec.get("peer")
@@ -542,14 +589,17 @@ def process_record(rec, rel, roas, active_incidents, timeout_seconds, out_f, sta
 
         is_vol, vol_details = check_state_volatility(rec, state, current_epoch)
         if is_vol:
-            vol_key = f"VOL_{prefix}_{peer}"
-            if vol_key not in active_incidents:
+            vol_key, vol_details = flapping_prefix(state, prefix, peer, current_epoch, vol_details)
+            if vol_key and vol_key not in active_incidents:
                 # the flaps that triggered the detection are already part of the incident
                 active_incidents[vol_key] = new_incident(
                     "VOL", vol_key, prefix, peer, ts_str, current_epoch, vol_details, rec,
                     total_updates=vol_details["flap_count"])
-            else:
-                add_message(active_incidents[vol_key], rec, ts_str, current_epoch)
+            elif vol_key:
+                inc = active_incidents[vol_key]
+                inc["peers"].add(peer)
+                inc["details"]["peers"] = max(inc["details"].get("peers", 0), vol_details["peers"])
+                add_message(inc, rec, ts_str, current_epoch)
 
         # a withdrawal belongs to an incident only if the peer that sends it announced the anomaly
         keys_to_resolve = []
@@ -568,9 +618,12 @@ def process_record(rec, rel, roas, active_incidents, timeout_seconds, out_f, sta
     if msg_type == "A":
         is_vol, vol_details = check_state_volatility(rec, state, current_epoch)
         if is_vol:
-            vol_key = f"VOL_{prefix}_{peer}"
-            if vol_key in active_incidents:
-                add_message(active_incidents[vol_key], rec, ts_str, current_epoch)
+            vol_key, vol_details = flapping_prefix(state, prefix, peer, current_epoch, vol_details)
+            if vol_key and vol_key in active_incidents:
+                inc = active_incidents[vol_key]
+                inc["peers"].add(peer)
+                inc["details"]["peers"] = max(inc["details"].get("peers", 0), vol_details["peers"])
+                add_message(inc, rec, ts_str, current_epoch)
 
         anomalies = []
         is_rlk, rlk_det = check_route_leak(rec, rel, state, current_epoch)
@@ -590,10 +643,10 @@ def process_record(rec, rel, roas, active_incidents, timeout_seconds, out_f, sta
         if is_asm:
             anomalies.append(("ASM", f"ASM_{asm_det['asm_type']}_{asm_det['asn']}", asm_det))
         else:
-            is_asm, asm_det = extra_detectors.check_forged_link(rec, rel)
+            is_asm, asm_det = extra_detectors.check_forged_link(rec, rel, links)
             if is_asm: anomalies.append(("ASM", f"ASM_{asm_det['asm_type']}_{asm_det['link'][0]}_{asm_det['link'][1]}", asm_det))
         
-        is_deg, deg_det = check_deaggregation(rec, rel, state, current_epoch)
+        is_deg, deg_det = check_deaggregation(rec, rel, roas, state, current_epoch)
         if is_deg: anomalies.append(("DEG", f"DEG_{origin}", deg_det))
 
         for deg_det in extra_detectors.check_deaggregation_scale(rec, state, current_epoch):
@@ -659,6 +712,8 @@ def main():
     roas = load_roas(ROA_FILE)
     reg = extra_detectors.load_delegations(DELEGATIONS)
     print(f"loaded {sum(len(v[0]) for v in reg.values())} ranges that the registries list as available or reserved.", flush=True)
+    links = extra_detectors.load_links(LINKS)
+    print(f"loaded {len(links) // 2} links of the table of the collector (a link that is in the table is not forged).", flush=True)
 
     file_list = sorted({f for pattern in DATA_PATHS for f in glob.glob(pattern)})
     if not file_list:
@@ -721,7 +776,7 @@ def main():
                     except json.JSONDecodeError:
                         continue
 
-                    process_record(rec, rel, roas, active_incidents, TIMEOUT_SECONDS, out_f, state, reg)
+                    process_record(rec, rel, roas, active_incidents, TIMEOUT_SECONDS, out_f, state, reg, links)
                     total_processed += 1
                     
                     if total_processed % 50000 == 0:

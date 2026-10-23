@@ -20,7 +20,7 @@
   <a href="https://aspa.ping6.it/api.html" target="_blank" rel="noopener">API</a> ·
   <a href="https://aspa.ping6.it/statistics.html" target="_blank" rel="noopener">Statistics</a> ·
   <a href="https://aspa.ping6.it/status.html" target="_blank" rel="noopener">Status</a> ·
-  <a href="https://gitlab.dei.unipd.it/Antonio-Prado/aspa-explorer/-/wikis/home#" target="_blank" rel="noopener">Wiki</a> ·
+  <a href="https://github.com/Antonio-Prado/aspa-explorer/wiki/Home#" target="_blank" rel="noopener">Wiki</a> ·
   <a href="CHANGELOG.md" target="_blank" rel="noopener">Changelog</a> ·
   <a href="CONTRIBUTING.md" target="_blank" rel="noopener">Contributing</a> ·
   <a href="https://www.unipd.it/en/privacy" target="_blank" rel="noopener">Privacy</a>
@@ -265,7 +265,7 @@ sequenceDiagram
     end
 ```
 
-The diagram above is a UML sequence diagram of the data of the home page: the visitor's browser gets the static page from nginx and then the data, which nginx serves from its 2-minute cache or fetches from Routinator, while Routinator validates the RPKI repositories on its own schedule. Mermaid does not make the parts of a sequence diagram clickable, so here are their links: the browser is described in [Features](https://gitlab.dei.unipd.it/Antonio-Prado/aspa-explorer#features) and the [User guide](https://gitlab.dei.unipd.it/Antonio-Prado/aspa-explorer/-/wikis/User-guide), nginx and its 2-minute cache in [Deployment](https://gitlab.dei.unipd.it/Antonio-Prado/aspa-explorer/-/wikis/Deployment#what-the-nginx-configuration-does), Routinator at [rpki.ping6.it](https://rpki.ping6.it/) and in the [NLnet Labs documentation](https://routinator.docs.nlnetlabs.nl/), and the RPKI repositories in [Where the data comes from](https://gitlab.dei.unipd.it/Antonio-Prado/aspa-explorer/-/wikis/User-guide#where-the-data-comes-from). Around it there are a few more pieces, which the wiki describes in *Deployment*; in the next diagram the boxes are links:
+The diagram above is a UML sequence diagram of the data of the home page: the visitor's browser gets the static page from nginx and then the data, which nginx serves from its 2-minute cache or fetches from Routinator, while Routinator validates the RPKI repositories on its own schedule. Mermaid does not make the parts of a sequence diagram clickable, so here are their links: the browser is described in [Features](https://github.com/Antonio-Prado/aspa-explorer#features) and the [User guide](https://github.com/Antonio-Prado/aspa-explorer/wiki/User-guide), nginx and its 2-minute cache in [Deployment](https://github.com/Antonio-Prado/aspa-explorer/wiki/Deployment#what-the-nginx-configuration-does), Routinator at [rpki.ping6.it](https://rpki.ping6.it/) and in the [NLnet Labs documentation](https://routinator.docs.nlnetlabs.nl/), and the RPKI repositories in [Where the data comes from](https://github.com/Antonio-Prado/aspa-explorer/wiki/User-guide#where-the-data-comes-from). Around it there are a few more pieces, which the wiki describes in *Deployment*; in the next diagram the boxes are links:
 
 ```mermaid
 flowchart LR
@@ -277,26 +277,26 @@ flowchart LR
     R -.->|"fetch, validate"| T["RPKI repositories<br>of the five RIRs"]
     V -->|"routes"| P["RIPEstat"]
     V -->|"history, events"| H["history branch<br>of the public project"]
-    click V "https://gitlab.dei.unipd.it/Antonio-Prado/aspa-explorer#features"
-    click N "https://gitlab.dei.unipd.it/Antonio-Prado/aspa-explorer/-/wikis/Deployment#what-the-nginx-configuration-does"
+    click V "https://github.com/Antonio-Prado/aspa-explorer#features"
+    click N "https://github.com/Antonio-Prado/aspa-explorer/wiki/Deployment#what-the-nginx-configuration-does"
     click F "https://aspa.ping6.it/api.html"
-    click S "https://gitlab.dei.unipd.it/Antonio-Prado/aspa-explorer/-/wikis/Deployment#notifications-optional"
-    click H "https://gitlab.dei.unipd.it/Antonio-Prado/aspa-explorer/-/wikis/Deployment#rebuilding-the-history"
+    click S "https://github.com/Antonio-Prado/aspa-explorer/wiki/Deployment#notifications-optional"
+    click H "https://github.com/Antonio-Prado/aspa-explorer/wiki/Deployment#rebuilding-the-history"
 ```
 
 In a browser that allows it (GitLab does) the boxes of the diagram are links to the part of this README or of the wiki that explains them; the table below has the same links for everywhere else.
 
 | Part | Where it is explained |
 |---|---|
-| The page, the lookup, the path check, the routes, the leaks | [Features](https://gitlab.dei.unipd.it/Antonio-Prado/aspa-explorer#features) here, and the [User guide](https://gitlab.dei.unipd.it/Antonio-Prado/aspa-explorer/-/wikis/User-guide) of the wiki |
-| nginx: cache, headers, proxy | [Deployment, what the nginx configuration does](https://gitlab.dei.unipd.it/Antonio-Prado/aspa-explorer/-/wikis/Deployment#what-the-nginx-configuration-does) |
-| `build-api` (per-AS files, badges, feeds) | [Deployment, the per-AS API](https://gitlab.dei.unipd.it/Antonio-Prado/aspa-explorer/-/wikis/Deployment#the-per-as-api-badges-and-feeds) |
-| `build-adoption` | [Deployment, the adoption numbers](https://gitlab.dei.unipd.it/Antonio-Prado/aspa-explorer/-/wikis/Deployment#the-adoption-numbers) |
-| `build-leaks`, `build-validators` | [Deployment, the valley and validator builders](https://gitlab.dei.unipd.it/Antonio-Prado/aspa-explorer/-/wikis/Deployment#the-valley-and-validator-builders) |
-| `build-status` and the chart of the status page | [Deployment, the status history](https://gitlab.dei.unipd.it/Antonio-Prado/aspa-explorer/-/wikis/Deployment#the-status-history) and [User guide, Status](https://gitlab.dei.unipd.it/Antonio-Prado/aspa-explorer/-/wikis/User-guide#status) |
-| The notifier | [Deployment, notifications](https://gitlab.dei.unipd.it/Antonio-Prado/aspa-explorer/-/wikis/Deployment#notifications-optional) and [User guide](https://gitlab.dei.unipd.it/Antonio-Prado/aspa-explorer/-/wikis/User-guide#notifications-by-e-mail-and-webhook) |
-| The history branch and the daily job | [Deployment, rebuilding the history](https://gitlab.dei.unipd.it/Antonio-Prado/aspa-explorer/-/wikis/Deployment#rebuilding-the-history) and [scheduled jobs](https://gitlab.dei.unipd.it/Antonio-Prado/aspa-explorer/-/wikis/Deployment#scheduled-jobs) |
-| Behind Cloudflare or another proxy | [Deployment](https://gitlab.dei.unipd.it/Antonio-Prado/aspa-explorer/-/wikis/Deployment#behind-a-reverse-proxy-or-a-cdn) |
+| The page, the lookup, the path check, the routes, the leaks | [Features](https://github.com/Antonio-Prado/aspa-explorer#features) here, and the [User guide](https://github.com/Antonio-Prado/aspa-explorer/wiki/User-guide) of the wiki |
+| nginx: cache, headers, proxy | [Deployment, what the nginx configuration does](https://github.com/Antonio-Prado/aspa-explorer/wiki/Deployment#what-the-nginx-configuration-does) |
+| `build-api` (per-AS files, badges, feeds) | [Deployment, the per-AS API](https://github.com/Antonio-Prado/aspa-explorer/wiki/Deployment#the-per-as-api-badges-and-feeds) |
+| `build-adoption` | [Deployment, the adoption numbers](https://github.com/Antonio-Prado/aspa-explorer/wiki/Deployment#the-adoption-numbers) |
+| `build-leaks`, `build-validators` | [Deployment, the valley and validator builders](https://github.com/Antonio-Prado/aspa-explorer/wiki/Deployment#the-valley-and-validator-builders) |
+| `build-status` and the chart of the status page | [Deployment, the status history](https://github.com/Antonio-Prado/aspa-explorer/wiki/Deployment#the-status-history) and [User guide, Status](https://github.com/Antonio-Prado/aspa-explorer/wiki/User-guide#status) |
+| The notifier | [Deployment, notifications](https://github.com/Antonio-Prado/aspa-explorer/wiki/Deployment#notifications-optional) and [User guide](https://github.com/Antonio-Prado/aspa-explorer/wiki/User-guide#notifications-by-e-mail-and-webhook) |
+| The history branch and the daily job | [Deployment, rebuilding the history](https://github.com/Antonio-Prado/aspa-explorer/wiki/Deployment#rebuilding-the-history) and [scheduled jobs](https://github.com/Antonio-Prado/aspa-explorer/wiki/Deployment#scheduled-jobs) |
+| Behind Cloudflare or another proxy | [Deployment](https://github.com/Antonio-Prado/aspa-explorer/wiki/Deployment#behind-a-reverse-proxy-or-a-cdn) |
 
 The same-origin endpoints:
 
@@ -310,7 +310,7 @@ The same-origin endpoints:
 | `/api/v1/subscriptions…` | subscriptions, confirmations, unsubscribe and health, served by the notifier |
 | `/changes.atom` | the Atom feed of the changes, proxied from the history branch |
 
-More diagrams are in the wiki: the [jobs that build the files](https://gitlab.dei.unipd.it/Antonio-Prado/aspa-explorer/-/wikis/Deployment#the-jobs-at-a-glance), with their sources; the [notifier](https://gitlab.dei.unipd.it/Antonio-Prado/aspa-explorer/-/wikis/Deployment#notifications-optional), as a sequence diagram of a subscription and of the announcement of a change; and the [status history](https://gitlab.dei.unipd.it/Antonio-Prado/aspa-explorer/-/wikis/User-guide#status), as a sequence diagram of the job and of the chart. (GitLab draws the first few thousand characters of diagrams on a page and asks for a click before drawing more, which is why they are not all here.)
+More diagrams are in the wiki: the [jobs that build the files](https://github.com/Antonio-Prado/aspa-explorer/wiki/Deployment#the-jobs-at-a-glance), with their sources; the [notifier](https://github.com/Antonio-Prado/aspa-explorer/wiki/Deployment#notifications-optional), as a sequence diagram of a subscription and of the announcement of a change; and the [status history](https://github.com/Antonio-Prado/aspa-explorer/wiki/User-guide#status), as a sequence diagram of the job and of the chart. (GitLab draws the first few thousand characters of diagrams on a page and asks for a click before drawing more, which is why they are not all here.)
 
 ## Repository layout
 
@@ -357,7 +357,7 @@ Releases follow [Semantic Versioning](https://semver.org/); the version shown in
 | <a href="CODE_OF_CONDUCT.md" target="_blank" rel="noopener">CODE_OF_CONDUCT.md</a> | how we expect people to behave |
 | <a href="docs/validation-known-incidents.md" target="_blank" rel="noopener">docs/validation-known-incidents.md</a> | the incident detectors run over four known incidents (A9, A1, A2, A12): what they find, the noise, how to repeat it |
 | <a href="MAINTAINING.md" target="_blank" rel="noopener">MAINTAINING.md</a> | for the maintainers: the copies of the repository, applying a pull request, the services and the scheduled jobs |
-| <a href="https://gitlab.dei.unipd.it/Antonio-Prado/aspa-explorer/-/wikis/home#" target="_blank" rel="noopener">Wiki</a> | user guide, accessibility, deployment |
+| <a href="https://github.com/Antonio-Prado/aspa-explorer/wiki/Home#" target="_blank" rel="noopener">Wiki</a> | user guide, accessibility, deployment |
 | <a href="LICENSE" target="_blank" rel="noopener">LICENSE</a> | MIT |
 
 ## Citation
