@@ -148,7 +148,7 @@
     <td colspan="2" align="center"><sub>Tromboning, IPv4 and IPv6 on the same probes: the reading of each family first, the comparison after</sub></td>
   </tr>
   <tr>
-    <td width="50%"><img src="assets/screenshots/incidents-dark.jpg" alt="The Incidents page: 534,660 incidents of one day of rrc00, the four tiles (Invalid with the ASPAs of the day 0.6%, Unknown 96%, Invalid with complete ASPAs 34%) and the table by type, with the types of the survey under each class"></td>
+    <td width="50%"><img src="assets/screenshots/incidents-dark.jpg" alt="The Incidents page: 534,660 incidents of one day of rrc00, the tiles (Invalid with the ASPAs of the day 0.6%, Unknown 96%) and the table by type, with the types of the survey under each class"></td>
     <td width="50%"><img src="assets/screenshots/incidents-chart-dark.jpg" alt="The chart of the Incidents page: the share of the incidents that would be Invalid against the share of the networks that publish an ASPA, the biggest networks first or in random order"></td>
   </tr>
   <tr>

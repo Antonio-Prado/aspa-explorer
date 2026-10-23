@@ -49,7 +49,6 @@
       tile('Incidents', fmt.format(t.incidents), `${fmt.format(t.with_path)} with an AS path`),
       tile('Invalid, ASPAs of the day', pct(t.real[2], t.with_path), `${fmt.format(t.real[2])} of ${fmt.format(t.with_path)}`, 'v-invalid'),
       tile('Unknown, ASPAs of the day', pct(t.real[1], t.with_path), 'no ASPA to say', 'v-unknown'),
-      tile('Invalid, complete ASPAs', pct(t.ideal[2], t.with_path), 'the best case'),
     );
   }
 
