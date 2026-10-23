@@ -5,6 +5,11 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.51.2] - 2026-10-23
+
+### Changed
+- A9 and A12 were replayed with the thresholds of 1.51.0 and the links of the table of the collector before each event: A9 goes from 128,290 incidents to 65,157 and A12 from 110,351 to 18,508, the real case of A9 is still the first of its type by updates (and opens a minute earlier), and A12 shows the same five mass withdrawals. The section *Checked against four known incidents* and `docs/validation-known-incidents.md` say it, with the numbers side by side; `tools/replay/run_event.sh` takes the links file and the `PYTHON` interpreter, and `events.json` names the `bview` of each event.
+
 ## [1.51.1] - 2026-10-23
 
 ### Changed

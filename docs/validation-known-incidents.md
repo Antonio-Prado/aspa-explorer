@@ -1,6 +1,6 @@
 # The detectors against four known incidents
 
-`tools/data_scripts/incident.py` (with `extra_detectors.py`) was run over the BGP updates that RIPE RIS `rrc00` recorded during four documented incidents, to see what it finds and how much noise comes with it. The incidents are four of the cases that the survey of our group cites (Servillo et al., *IEEE Communications Surveys & Tutorials*, vol. 28, 2026, Sec. III, doi:10.1109/COMST.2026.3714569). The run was made on 2026-10-22.
+`tools/data_scripts/incident.py` (with `extra_detectors.py`) was run over the BGP updates that RIPE RIS `rrc00` recorded during four documented incidents, to see what it finds and how much noise comes with it. The incidents are four of the cases that the survey of our group cites (Servillo et al., *IEEE Communications Surveys & Tutorials*, vol. 28, 2026, Sec. III, doi:10.1109/COMST.2026.3714569). The run was made on 2026-10-22, and repeated for A9 and A12 on 2026-10-23 with the thresholds of 1.51.0 (the section before last).
 
 ## Method
 
@@ -28,6 +28,22 @@
 - **There is much noise.** 110,000 to 346,000 incidents in an hour and a half to two hours, most of them flapping (VOL-FO); and in A9, 9,731 valleys, of which 6,286 for one AS (AS6939), probably relationships that CAIDA infers in a way that does not describe the routing policy. A valley detector that relies on inferred relationships gives few real cases among many.
 - **A single collector is a thin window.** The Twitter hijack is one update.
 
+## The same two windows with the thresholds of 1.51.0
+
+On 2026-10-23, after the first full day of data, the thresholds of the detectors were changed (see the changelog of 1.51.0: flapping counted once for a prefix and only when three peers see it, a more specific left out when a ROA or a CAIDA link explains it, a link left out when the table of the collector already had it). A9 and A12 were replayed with them, with the links of the `bview` of `rrc00` before each event (`bview.20190606.0800.gz` and `bview.20250520.0000.gz`, read with `scripts/rib-links.mjs`: 169,914 and 231,629 links). The ROAs and registries are again those of the day of the run.
+
+| | A9, first guesses | A9, 1.51.0 | A12, first guesses | A12, 1.51.0 |
+|---|---|---|---|---|
+| Incidents | 128,290 | 65,157 | 110,351 | 18,508 |
+| VOL-FO (flapping) | 46,488 | 1,388 | 82,089 | 4,245 |
+| ASM-FI | 5,122 | 762 | 12,816 | 1,066 |
+| ASM-PS | 1,539 | 524 | 1,307 | 590 |
+| DEG, another origin | 19,313 | 6,612 | 1,824 | 283 |
+| RLK, PRH, ATR, VOL-AC, VOL-DC | unchanged | | unchanged | |
+
+- **A9**: the candidate on the link AS4134–AS21217 is still there, and opens earlier, at 09:43:48 instead of 09:44:33, with 6,611 prefixes and 326,520 updates: the link that the detector reported first in some paths was one that the table already had, so it is now skipped and this one is seen. It is the first of 10,435 ASM candidates by updates (of 15,802 before), the second of all the incidents. The link was not in the table at 08:00, which is what the filter is for.
+- **A12**: the same five mass withdrawals and the same five amplified-churn incidents at 07:01 to 07:02, and the same volume; what changed is only the noise around them.
+
 ## What is not shown
 
 Four incidents are not an estimate of how many real incidents the detectors miss, nor of the false positives. It would take many cases with a known ground truth, other collectors (RouteViews, other `rrc`), the ROAs and registries of the time, and the ASPAs of the day when they exist.
@@ -39,8 +55,12 @@ python3 -m venv venv && venv/bin/pip install mrtparse            # the parser of
 python3 tools/replay/fetch.py A9 data/A9                          # the update files of the window (A9, A2, A1 or A12)
 venv/bin/python -I tools/replay/mrt2records.py A9.jsonl.gz data/A9/updates.*.gz
 curl -O https://publicdata.caida.org/datasets/as-relationships/serial-2/20190601.as-rel2.txt.bz2
-tools/replay/run_event.sh A9.jsonl.gz 20190601.as-rel2.txt.bz2 roas.json.xz delegations/ run/A9
+curl -O https://data.ris.ripe.net/rrc00/2019.06/bview.20190606.0800.gz   # the table before the event (events.json, `bview`)
+node scripts/rib-links.mjs bview.20190606.0800.gz links-A9.txt            # its links, for the forged-link detector
+tools/replay/run_event.sh A9.jsonl.gz 20190601.as-rel2.txt.bz2 roas.json.xz delegations/ run/A9 links-A9.txt
 python3 tools/replay/analyse.py A9 run/A9 A9.jsonl.gz
 ```
+
+`run_event.sh` runs `python3`; set `PYTHON` to another interpreter (`PYTHON=python3.12`). Without the links file every link that CAIDA lacks is a candidate, as in the first run.
 
 The downloaded files come from outside: keep them in a directory of their own, apart from the code, and read them with `python -I`. The four windows are about 370 MB of update files (A9 63 MB, A2 142 MB, A1 65 MB, A12 103 MB); `incident.py` took from half an hour to over an hour for each on a laptop, with four running together.
