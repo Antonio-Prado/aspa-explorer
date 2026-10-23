@@ -1,6 +1,6 @@
-> **Corrected copy of the scripts of the research project.** These are `record.py`, `stream.py` and `incident.py` of the project `internet_routing_sec/data_scripts` (written by Yunus Atçeken), with the corrections of the cross-check of 2026-10-22 already made (source: branch `cross-check-2026-10-22`, commit `e50d7e2`; what was changed and why is in `CROSS-CHECK.md` there). ASPA Explorer uses the incident files that `incident.py` writes: `scripts/build-incidents.mjs` reads them and adds the verdict of the ASPAs (the **Incidents** page). Keep this copy in step with the project: the terms of the code are those of `data_scripts`.
+> **Corrected copy of the scripts of the research project.** These are `record.py`, `stream.py` and `incident.py` of the project `internet_routing_sec/data_scripts` (written by Yunus Atçeken), with the corrections of the cross-check of 2026-10-22 already made (source: branch `cross-check-2026-10-22`, merge request !2; what was changed and why is in `CROSS-CHECK.md` there). ASPA Explorer uses the incident files that `incident.py` writes: `scripts/build-incidents.mjs` reads them and adds the verdict of the ASPAs (the **Incidents** page). Keep this copy in step with the project: the terms of the code are those of `data_scripts`.
 >
-> **Extensions of this copy** (not in the project): `extra_detectors.py` adds to `incident.py` the type of the route leaks (upward, lateral), candidates of AS path manipulation (a link that the CAIDA relationships do not know, a private or unallocated AS number, an AS that comes back in the path), the prefixes in space that the RIRs list as available or reserved, deaggregation by scale (excessive, flood, jump), delayed convergence and amplified churn, and the sessions that end with an UPDATE message error; `stream.py` also records the NOTIFICATION and the change of state of the sessions of the peers (records of type `N` and `S`, which `incident.py` of the project ignores). Every threshold is a constant at the top of `extra_detectors.py`. They are listed in `CROSS-CHECK.md` of the project as items X-1 to X-6, with the status EXTENDED: Yunus's repository does not have them. The full propagation of a leaker (RLK-FP) is decided when the page is built (`scripts/build-incidents.mjs`). The registry files are read from `delegations/delegated-*` (`INCIDENTS_DELEGATIONS` changes it).
+> **Extensions of this copy** (not in the project): `extra_detectors.py` adds to `incident.py` the type of the route leaks (upward, lateral), candidates of AS path manipulation (a link that the CAIDA relationships do not know, a private or unallocated AS number, an AS that comes back in the path), the prefixes in space that the RIRs list as available or reserved, deaggregation by scale (excessive, flood, jump), delayed convergence and amplified churn, and the sessions that end with an UPDATE message error; `stream.py` also records the NOTIFICATION and the change of state of the sessions of the peers (records of type `N` and `S`, which `incident.py` of the project ignores). Every threshold is a constant at the top of `extra_detectors.py`. They are listed in `CROSS-CHECK.md` of the project as items X-1 to X-11, with the status EXTENDED: Yunus's repository does not have them, and its README describes them in the section on this copy. The full propagation of a leaker (RLK-FP) is decided when the page is built (`scripts/build-incidents.mjs`). The registry files are read from `delegations/delegated-*` (`INCIDENTS_DELEGATIONS` changes it).
 >
 > Run the tests with `cd tools/data_scripts && python3 -m unittest discover -s tests`.
 
@@ -8,12 +8,35 @@
 
 Scripts to collect BGP updates and to detect and classify routing incidents. They produce the dataset of the project: the updates seen by the route collectors, and the incidents found in them.
 
-```text
-RIPE RIS Live ──► stream.py ──► records_<epoch>.jsonl.gz ─┐
-RIPE RIS MRT  ──► record.py ──► records_<MM-DD>.jsonl.gz ─┼─► incident.py ──► incidents_<file>.jsonl
-                                                          │        ▲            summary_<file>.txt
-                                  CAIDA AS relationships ─┘        │            active_state.pkl
-                                  ROAs (roas/*.xz) ────────────────┘
+```mermaid
+sequenceDiagram
+    autonumber
+    participant RIS as RIPE RIS
+    participant S as stream.py
+    participant R as record.py
+    participant D as records_*.jsonl.gz
+    participant I as incident.py + extra_detectors.py
+    participant O as incidents_*.jsonl
+
+    loop while it runs
+        RIS-->>S: UPDATE, NOTIFICATION, state of a peer (RIS Live, rrc00)
+        S->>D: one record, in the file of the UTC day
+    end
+    S->>D: close the file when the day ends
+
+    opt the past
+        R->>RIS: the MRT files of a window
+        R->>D: the same records
+    end
+
+    Note over I,O: loads the CAIDA relationships, the ROAs, the links of the bview, the delegated files, active_state.pkl
+    loop for each closed file, in order
+        D-->>I: records
+        I->>I: RLK, PRH, DEG, VOL, ATR, and the extensions X-1 to X-11
+        I->>O: an incident silent for 15 minutes, and summary_<file>.txt
+    end
+    Note over I,O: saves active_state.pkl (--flush-open: the open incidents too)
+    Note over O: read by scripts/build-incidents.mjs, with the ASPAs of the day, for the Incidents page
 ```
 
 ## Requirements
