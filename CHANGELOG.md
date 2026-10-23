@@ -5,6 +5,14 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.50.7] - 2026-10-23
+
+### Fixed
+- In the table of the Incidents page a number could break in two lines in a narrow column (27,157 came out as 27,15 and 7): the numbers never wrap now, only the percentage under them is a line of its own.
+
+### Changed
+- The README and the wiki have two screenshots of the Incidents page, with the first full day of data: the tiles and the table by type, and the chart of adoption.
+
 ## [1.50.6] - 2026-10-23
 
 ### Fixed

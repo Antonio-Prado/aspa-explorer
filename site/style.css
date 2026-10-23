@@ -380,6 +380,7 @@ span.hint.block { display: block; margin-top: 0.2rem; white-space: normal; }
 .v-unknown { background: var(--warn-bg); color: var(--warn-ink); }
 .v-invalid { background: var(--bad-bg); color: var(--bad-ink); }
 .checks th, .checks td { overflow-wrap: anywhere; }
+.checks td.num { overflow-wrap: normal; white-space: nowrap; }     /* a number never breaks in two lines; its percentage is a block of its own */
 .checks th[scope="row"] { font-family: var(--mono); font-size: 0.85rem; font-weight: 500; }
 .checks { width: 100%; }
 .checks td.hop.yes::before { content: "✓ "; }
