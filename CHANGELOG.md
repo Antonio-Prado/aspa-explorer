@@ -5,6 +5,11 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.50.6] - 2026-10-23
+
+### Fixed
+- The daily job of the Incidents page stopped at its last step on the first full day of data: `build-incidents.mjs` spread the incidents of a file into one call (`push(...)`), which overflows the call stack above a hundred thousand or so, and a day has half a million of them (the files are a quarter of a gigabyte each). The builder now reads the files line by line, plain or gzipped, and keeps of each incident only what the analysis reads (type, actor, times, details, the paths): a day of incidents takes 11 seconds and 1.1 GB of memory. The page of 23 October 2026 was rebuilt by hand.
+
 ## [1.50.5] - 2026-10-23
 
 ### Changed

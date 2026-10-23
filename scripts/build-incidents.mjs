@@ -11,8 +11,10 @@
 //   INCIDENTS_EVENTS   URL or file of the history of changes (the events.json of the history branch), default as build-leaks.mjs
 //   ASPA_DATA          URL or file of today's ASPAs, used for a day that the history does not cover
 import { readFile, writeFile, rename, readdir, stat } from 'node:fs/promises';
+import { createReadStream } from 'node:fs';
+import { createInterface } from 'node:readline';
 import { join, dirname } from 'node:path';
-import { gunzipSync } from 'node:zlib';
+import { createGunzip } from 'node:zlib';
 import { createRequire } from 'node:module';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
@@ -47,8 +49,28 @@ export function relationSets(text) {
 export function parseIncidents(text) {
   const out = [];
   for (const line of text.split('\n')) {
-    if (!line.trim()) continue;
-    try { const o = JSON.parse(line); if (o && typeof o === 'object' && o.incident_type) out.push(o); } catch { /* a cut line */ }
+    const o = parseLine(line);
+    if (o) out.push(o);
+  }
+  return out;
+}
+function parseLine(line) {
+  if (!line.trim()) return null;
+  try { const o = JSON.parse(line); return o && typeof o === 'object' && o.incident_type ? o : null; } catch { return null; /* a cut line */ }
+}
+
+// What the analysis keeps of an incident: the fields it reads and the paths, not the prefixes and the messages (a day of
+// incidents is hundreds of thousands of them, in a file of hundreds of megabytes).
+export const slim = (o) => ({ incident_type: o.incident_type, actor_key: o.actor_key, start: o.start, end: o.end, end_reason: o.end_reason, details: o.details, paths: pathsOf(o) });
+
+// The incidents of a file (plain or gzipped), read line by line, each reduced by `slim`.
+export async function readIncidents(file) {
+  const out = [];
+  let input = createReadStream(file);
+  if (file.endsWith('.gz')) input = input.pipe(createGunzip());
+  for await (const line of createInterface({ input, crlfDelay: Infinity })) {
+    const o = parseLine(line);
+    if (o) out.push(slim(o));
   }
   return out;
 }
@@ -56,6 +78,7 @@ export function parseIncidents(text) {
 // The paths that an incident carries, origin first and without prepending, as the ASPA procedure wants them: the path of the
 // valley (RLK) and the ones of the announcements it kept. incident.py has them neighbour first.
 export function pathsOf(inc) {
+  if (Array.isArray(inc.paths)) return inc.paths;
   const raw = [];
   if (inc.details && Array.isArray(inc.details.path)) raw.push(inc.details.path);
   for (const m of inc.messages || []) if (m && m.type === 'A' && Array.isArray(m.compressed_path)) raw.push(m.compressed_path);
@@ -172,7 +195,6 @@ async function files(args) {
   }
   return out;
 }
-const readText = async (f) => (f.endsWith('.gz') ? gunzipSync(await readFile(f)).toString('utf8') : readFile(f, 'utf8'));
 const readJson = async (src) => (/^https?:/.test(src)
   ? await (await fetch(src, { headers: { 'User-Agent': UA } })).json() : JSON.parse(await readFile(src, 'utf8')));
 
@@ -192,7 +214,7 @@ async function main() {
   if (!outFile || !inputs.length) { console.error('usage: build-incidents.mjs OUT_FILE FILE_OR_DIR ... [--detail=FILE] [--caida=FILE] [--cache=DIR]'); process.exit(2); }
   const list = await files(inputs);
   const incidents = [];
-  for (const f of list) incidents.push(...parseIncidents(await readText(f)));
+  for (const f of list) for (const inc of await readIncidents(f)) incidents.push(inc);
   if (!incidents.length) throw new Error('no incident in the input: not publishing');
 
   const cache = flag('cache') || join(dirname(outFile), 'cache');
