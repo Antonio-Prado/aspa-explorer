@@ -5,6 +5,11 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.51.1] - 2026-10-23
+
+### Changed
+- The chart *If more networks published an ASPA* leaves out the persistent valleys (RLK-PV): with the first full day rebuilt, 51,753 of the 60,345 leak incidents were persistent (69 ASes in the valley all day, one of them 40,598 times), and the line *the biggest networks publish first* jumped to 58% at 10% only because complete ASPAs built from CAIDA prove a CAIDA error Invalid by construction. `incidents.json` has `adoption.base`, the incidents with a path that each curve is a share of; the table still counts the persistent valleys, under RLK.
+
 ## [1.51.0] - 2026-10-23
 
 ### Changed

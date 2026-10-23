@@ -73,7 +73,7 @@
   const SERIES = [{ key: 'largest', label: 'The biggest networks publish first', cls: 's1' }, { key: 'random', label: 'Networks publish in random order', cls: 's2' }];
 
   function points(d, type) {
-    const base = type === 'total' ? d.total.with_path : d.by_type[type].with_path;
+    const base = d.adoption.base && d.adoption.base[type] !== undefined ? d.adoption.base[type] : (type === 'total' ? d.total.with_path : d.by_type[type].with_path);    // without the persistent valleys
     return SERIES.map((s) => ({ ...s, values: ((d.adoption[s.key] || {})[type] || []).map((n) => (base ? (100 * n) / base : 0)) }));
   }
 
@@ -107,7 +107,7 @@
       $('inc-legend').replaceChildren(...series.map((s) => el('li', {}, el('span', { class: `sw ${s.cls}`, 'aria-hidden': 'true' }), el('span', { class: 'lg', text: s.label }), ' ', el('span', { class: 'lv', text: `${s.values[i10].toFixed(0)}% Invalid when 10% publish` }))));
       const [largest, random] = series, i50 = d.adoption.levels.indexOf(50), leaks = type === 'RLK';
       const pc = (v) => `${v.toFixed(0)}%`;
-      $('inc-curve-note').textContent = `How to read it: if only the biggest 10% of the ${fmt.format(d.adoption.ases)} networks of the dataset published an ASPA, ${pc(largest.values[i10])} of these incidents would be Invalid; if 10% of the networks did it in random order, ${pc(random.values[i10])}. With half of the networks, ${pc(largest.values[i50])} and ${pc(random.values[i50])}. The dots are the points that were computed (every 10%); the lines between them only join them.${leaks ? ' For a valley the right end is always 100%, because the detector and the ASPAs use the same CAIDA relationships: look at the shape of the lines, not at the end.' : ''}`;
+      $('inc-curve-note').textContent = `How to read it: if only the biggest 10% of the ${fmt.format(d.adoption.ases)} networks of the dataset published an ASPA, ${pc(largest.values[i10])} of these incidents would be Invalid; if 10% of the networks did it in random order, ${pc(random.values[i10])}. With half of the networks, ${pc(largest.values[i50])} and ${pc(random.values[i50])}. The dots are the points that were computed (every 10%); the lines between them only join them.${leaks ? ' For a valley the right end is always 100%, because the detector and the ASPAs use the same CAIDA relationships: look at the shape of the lines, not at the end. The persistent valleys (RLK-PV) are not in this chart.' : ''}`;
     };
     select.addEventListener('change', show);
     show();

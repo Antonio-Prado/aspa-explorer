@@ -189,6 +189,7 @@ export function analyse(incidents, aspasOf, ideal, degree, detail = null) {
   const lk = leakers(incidents);
   const bucket = (t) => (byType[t] ||= empty());
   const curve = (o, t) => (adoption[o][t] ||= new Array(LEVELS.length).fill(0));
+  const base = {};     // the incidents with a path that the curves of adoption are a share of: the persistent valleys (RLK-PV) are left out, they would be Invalid by construction
   const total = empty();
   let from = null, to = null;
   for (const inc of incidents) {
@@ -206,16 +207,20 @@ export function analyse(incidents, aspasOf, ideal, degree, detail = null) {
     if (!paths.length) { detail?.push({ type: t, subtype: sub, actor: inc.actor_key, start: inc.start, end: inc.end, end_reason: inc.end_reason, paths: 0 }); continue; }
     const real = verdictOf(aspasOf(s), paths), full = verdictOf(ideal, paths);
     for (const x of all) { x.with_path++; x.real[real]++; x.ideal[full]++; }
-    for (const o of ['random', 'largest']) {
-      LEVELS.forEach((level, i) => {
-        if (verdictOf(limited(ideal, ord[o], Math.round((ord.n * level) / 100)), paths) === 2) { curve(o, t)[i]++; curve(o, 'total')[i]++; }
-      });
+    if (sub !== 'RLK-PV') {
+      base[t] = (base[t] || 0) + 1;
+      base.total = (base.total || 0) + 1;
+      for (const o of ['random', 'largest']) {
+        LEVELS.forEach((level, i) => {
+          if (verdictOf(limited(ideal, ord[o], Math.round((ord.n * level) / 100)), paths) === 2) { curve(o, t)[i]++; curve(o, 'total')[i]++; }
+        });
+      }
     }
     detail?.push({ type: t, subtype: sub, actor: inc.actor_key, start: inc.start, end: inc.end, end_reason: inc.end_reason, paths: paths.length,
       real: ['valid', 'unknown', 'invalid'][real], complete: ['valid', 'unknown', 'invalid'][full] });
   }
   for (const o of ['random', 'largest']) for (const t of [...Object.keys(byType), 'total']) curve(o, t);
-  return { period: { from, to }, total, by_type: byType, subtypes: bySub, adoption: { levels: LEVELS, ases: ord.n, ...adoption } };
+  return { period: { from, to }, total, by_type: byType, subtypes: bySub, adoption: { levels: LEVELS, ases: ord.n, base, ...adoption } };
 }
 
 async function files(args) {

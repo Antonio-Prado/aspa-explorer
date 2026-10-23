@@ -95,6 +95,8 @@ await test('subtypes: UL and LL as the detector recorded them, FP when one AS le
   assert.equal(res.subtypes['RLK-FP'].incidents, FP_MIN_NEIGHBOURS);
   assert.equal(res.subtypes['RLK-PV'].incidents, PERSISTENT_MIN_HOURS);
   const lk = leakers(list);
+  assert.equal(res.adoption.base.RLK, res.by_type.RLK.with_path - PERSISTENT_MIN_HOURS);   // the persistent valleys are not in the curves
+  assert.equal(res.adoption.base.total, res.total.with_path - PERSISTENT_MIN_HOURS);
   assert.deepEqual([...lk.fp], [9]);
   assert.deepEqual([...lk.persistent], [12]);
   assert.equal(res.subtypes['ASM-FI'].incidents, 1);

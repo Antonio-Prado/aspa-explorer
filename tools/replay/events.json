@@ -1,6 +1,6 @@
 {
-  "A9":  {"what": "Safe Host (AS21217) leaks more than 70,000 routes to China Telecom (AS4134)", "start": "2019-06-06 09:43", "window": ["2019-06-06 09:00", "2019-06-06 12:25"], "caida": "20190601"},
-  "A2":  {"what": "Rostelecom (AS12389) announces prefixes of Akamai, Cloudflare, Amazon and others", "start": "2020-04-01 19:28", "window": ["2020-04-01 19:00", "2020-04-01 20:40"], "caida": "20200401"},
-  "A1":  {"what": "RTComm (AS8342) announces a prefix of Twitter, 104.244.42.0/24", "start": "2022-03-28 12:06", "window": ["2022-03-28 11:45", "2022-03-28 13:10"], "caida": "20220301"},
-  "A12": {"what": "an UPDATE with a corrupted Prefix-SID attribute makes sessions reset on several vendors", "start": "2025-05-20 07:00", "window": ["2025-05-20 06:45", "2025-05-20 07:30"], "caida": "20250501"}
+  "A9":  {"what": "Safe Host (AS21217) leaks more than 70,000 routes to China Telecom (AS4134)", "start": "2019-06-06 09:43", "window": ["2019-06-06 09:00", "2019-06-06 12:25"], "caida": "20190601", "bview": "rrc00/2019.06/bview.20190606.0800.gz"},
+  "A2":  {"what": "Rostelecom (AS12389) announces prefixes of Akamai, Cloudflare, Amazon and others", "start": "2020-04-01 19:28", "window": ["2020-04-01 19:00", "2020-04-01 20:40"], "caida": "20200401", "bview": "rrc00/2020.04/bview.20200401.1600.gz"},
+  "A1":  {"what": "RTComm (AS8342) announces a prefix of Twitter, 104.244.42.0/24", "start": "2022-03-28 12:06", "window": ["2022-03-28 11:45", "2022-03-28 13:10"], "caida": "20220301", "bview": "rrc00/2022.03/bview.20220328.0800.gz"},
+  "A12": {"what": "an UPDATE with a corrupted Prefix-SID attribute makes sessions reset on several vendors", "start": "2025-05-20 07:00", "window": ["2025-05-20 06:45", "2025-05-20 07:30"], "caida": "20250501", "bview": "rrc00/2025.05/bview.20250520.0000.gz"}
 }
