@@ -1,6 +1,6 @@
 # The detectors against four known incidents
 
-`tools/data_scripts/incident.py` (with `extra_detectors.py`) was run over the BGP updates that RIPE RIS `rrc00` recorded during four documented incidents, to see what it finds and how much noise comes with it. The incidents are four of the cases that the survey of our group cites (Servillo et al., *IEEE Communications Surveys & Tutorials*, vol. 28, 2026, Sec. III, doi:10.1109/COMST.2026.3714569). The run was made on 2026-10-22, and repeated for A9 and A12 on 2026-10-23 with the thresholds of 1.51.0 (the section before last).
+`tools/data_scripts/incident.py` (with `extra_detectors.py`) was run over the BGP updates that RIPE RIS `rrc00` recorded during four documented incidents, to see what it finds and how much noise comes with it. The incidents are four of the cases that the survey of our group cites (Servillo et al., *IEEE Communications Surveys & Tutorials*, vol. 28, 2026, Sec. III, doi:10.1109/COMST.2026.3714569). The run was made on 2026-10-22, and repeated for A9 and A12 on 2026-10-23 with the thresholds of 1.51.0 (the section *The same two windows with the thresholds of 1.51.0*).
 
 ## Method
 

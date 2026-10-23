@@ -23,15 +23,15 @@
 <meta name="twitter:card" content="summary_large_image">
 <meta name="color-scheme" content="light dark">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
-<link rel="stylesheet" href="/style.css?v=1.51.3">
-<script src="/status-checks.js?v=1.51.3" defer></script>
-<script src="/footer.js?v=1.51.3" defer></script>
+<link rel="stylesheet" href="/style.css?v=1.51.4">
+<script src="/status-checks.js?v=1.51.4" defer></script>
+<script src="/footer.js?v=1.51.4" defer></script>
 </head>
 <body>
 <a class="skip" href="#main">Skip to main content</a>
 <header class="wrap masthead">
   <div class="top">
-    <p class="back"><a class="brandlink" href="/" title="Back to ASPA Explorer"><img class="brand" src="/img/logo-mark.svg?v=1.51.3" alt="" width="40" height="40"><span>ASPA Explorer</span></a></p>
+    <p class="back"><a class="brandlink" href="/" title="Back to ASPA Explorer"><img class="brand" src="/img/logo-mark.svg?v=1.51.4" alt="" width="40" height="40"><span>ASPA Explorer</span></a></p>
     <nav class="topnav" aria-label="Main"><a href="/">Home</a><a href="/statistics.html">Statistics</a><a href="/incidents.html">Incidents</a><a href="/examples.html">Examples</a><a href="/api.html">API</a><a href="/guide.html" aria-current="page">Guide</a><a href="/status.html">Status</a></nav>
   </div>
   <h1>Guide</h1>
@@ -241,7 +241,7 @@
 
   <section aria-labelledby="status">
     <h2 id="status">Status</h2>
-    <p>The <a href="/status.html">status page</a> (the last item of the menu at the top) shows when each part was last updated: the validator, the per-AS files of the API, the daily history, the BGP visibility file used by the quality checks, the adoption numbers, the route leaks and the notification service. A part is <em>late</em> when it is older than expected and <em>down</em> when it is much older or does not answer. The page checks from your browser, so it shows what you would get, and refreshes every minute. The same checks give the <strong>dot next to <em>Status</em> in the menu</strong> of every page: green when all the checks are green, red when all are red, orange otherwise (a late check counts as not green). The result is kept for a minute, so moving between pages does not repeat the checks.</p>
+    <p>The <a href="/status.html">status page</a> (the last item of the menu at the top) shows when each part was last updated: the validator, the per-AS files of the API, the daily history, the BGP visibility file used by the quality checks, the adoption numbers, the route leaks, the comparison of the validators and the notification service. A part is <em>late</em> when it is older than expected and <em>down</em> when it is much older or does not answer. The page checks from your browser, so it shows what you would get, and refreshes every minute. The same checks give the <strong>dot next to <em>Status</em> in the menu</strong> of every page: green when all the checks are green, red when all are red, orange otherwise (a late check counts as not green). The result is kept for a minute, so moving between pages does not repeat the checks.</p>
     <p>Under the table, <strong>Over time</strong> shows the state of each part in the last 24 hours, 7, 30 or 90 days, one strip for each part: a server-side job runs the same checks every 15 minutes and keeps the result, and each cell of a strip shows the worst state in its stretch of time (green OK, orange late, red down, grey no sample, for instance while the job did not run). Next to each strip is the share of the checks that found the part OK; hover a strip, or focus it and use the left and right arrows, to read a cell. Below are the last problems with their start and length, and a table with the same figures. The history is also a file, <code>/api/v1/status-history.json</code>: a list of checks and, for each moment, one letter per check (<code>o</code> OK, <code>l</code> late, <code>d</code> down).</p>
 
     <p><strong>Availability by month</strong> sums it up: for each month the share of the checks that found each part OK, kept for good (the chart above keeps 90 days), with the number of checks recorded and what share of a full month that is, so that a month with gaps is not mistaken for a perfect one. The numbers are in <a href="/api/v1/status-months.json">/api/v1/status-months.json</a>.</p>

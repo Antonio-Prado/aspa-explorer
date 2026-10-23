@@ -23,16 +23,16 @@
 <meta name="twitter:card" content="summary_large_image">
 <meta name="color-scheme" content="light dark">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
-<link rel="stylesheet" href="/style.css?v=1.51.3">
-<script src="/examples.js?v=1.51.3" defer></script>
-<script src="/status-checks.js?v=1.51.3" defer></script>
-<script src="/footer.js?v=1.51.3" defer></script>
+<link rel="stylesheet" href="/style.css?v=1.51.4">
+<script src="/examples.js?v=1.51.4" defer></script>
+<script src="/status-checks.js?v=1.51.4" defer></script>
+<script src="/footer.js?v=1.51.4" defer></script>
 </head>
 <body>
 <a class="skip" href="#main">Skip to main content</a>
 <header class="wrap masthead">
   <div class="top">
-    <p class="back"><a class="brandlink" href="/" title="Back to ASPA Explorer"><img class="brand" src="/img/logo-mark.svg?v=1.51.3" alt="" width="40" height="40"><span>ASPA Explorer</span></a></p>
+    <p class="back"><a class="brandlink" href="/" title="Back to ASPA Explorer"><img class="brand" src="/img/logo-mark.svg?v=1.51.4" alt="" width="40" height="40"><span>ASPA Explorer</span></a></p>
     <nav class="topnav" aria-label="Main"><a href="/">Home</a><a href="/statistics.html">Statistics</a><a href="/incidents.html">Incidents</a><a href="/examples.html" aria-current="page">Examples</a><a href="/api.html">API</a><a href="/guide.html">Guide</a><a href="/status.html">Status</a></nav>
   </div>
   <h1>Writing your ASPA</h1>
@@ -92,7 +92,7 @@ providers AS0</code></pre>
     <p><strong>A transparent route server</strong> does not: AS64530 receives the routes of AS64501 with the path <code>AS64501</code>, as if the two peered directly. This is what the route server specification asks for (<a href="https://www.rfc-editor.org/rfc/rfc7947#section-2.2.2.1" target="_blank" rel="noopener">RFC 7947, section 2.2.2.1<span class="sr-only"> (opens in a new tab)</span></a>) and what most exchanges do. The route server is then out of the question: the members check each other's routes as routes from a peer, and the rule that the AS added last to the path must be the neighbour is waived for routes that come through the exchange. The ASPA of AS64501 stays as in the case with the backup provider.</p>
     <pre tabindex="0"><code>customer AS64501
 providers AS64510, AS64511, AS64512      (not AS64600, not AS64530)</code></pre>
-    <p><strong>A non-transparent route server</strong> puts its AS number in the path, usually for the sake of old members whose routers refuse a path that does not begin with the neighbour: AS64530 receives <code>AS64601 AS64501</code>. In the paths, AS64601 now stands above AS64501, where a provider would, and the ASPA verification treats it so: an AS <strong>must</strong> list the non-transparent route servers it is a client of together with its providers (<a href="https://datatracker.ietf.org/doc/draft-ietf-sidrops-aspa-verification/" target="_blank" rel="noopener">draft-ietf-sidrops-aspa-verification<span class="sr-only"> (opens in a new tab)</span></a>, section 4). A member that does not gets every route it sends through that route server judged invalid by the members that check, with no leak anywhere. If AS64501 is a client of such a route server, AS64601, at a second exchange:</p>
+    <p><strong>A non-transparent route server</strong> puts its AS number in the path, usually for the sake of old members whose routers refuse a path that does not begin with the neighbour. Say AS64501 is also a client of such a route server, AS64601, at a second exchange: the members there receive <code>AS64601 AS64501</code>. In the paths, AS64601 now stands above AS64501, where a provider would, and the ASPA verification treats it so: an AS <strong>must</strong> list the non-transparent route servers it is a client of together with its providers (<a href="https://datatracker.ietf.org/doc/draft-ietf-sidrops-aspa-verification/" target="_blank" rel="noopener">draft-ietf-sidrops-aspa-verification<span class="sr-only"> (opens in a new tab)</span></a>, section 4). A member that does not gets every route it sends through that route server judged invalid by the members that check, with no leak anywhere. So the ASPA of AS64501 becomes:</p>
     <pre tabindex="0"><code>customer AS64501
 providers AS64510, AS64511, AS64512, AS64601      (the route server that is in the paths)</code></pre>
     <p>Two consequences of the same rule. A network that buys transit from nobody but is a client of a non-transparent route server cannot publish <code>AS0</code>: it lists the route server instead. And the bilateral peer AS64530 is never listed, whichever kind of route server the exchange runs.</p>

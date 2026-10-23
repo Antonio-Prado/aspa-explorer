@@ -315,17 +315,21 @@ More diagrams are in the wiki: the [jobs that build the files](https://github.co
 ## Repository layout
 
 ```
-site/                          the web root: the pages (index, guide, api, statistics, examples, status,
-                               subscription), their scripts and style.css, version.json, api/openapi.json,
-                               paper/ and img/
+site/                          the web root: the pages (index, guide, examples, incidents, api, statistics,
+                               status, report, subscription, embed), their scripts and style.css, version.json,
+                               api/openapi.json, paper/ and img/
 notifier/                      the notification service (subscriptions, mail with DKIM, webhooks)
 scripts/                       the builders of the per-AS API (build-api.mjs) and of the adoption numbers
                                (build-adoption.mjs), the daily snapshot, release and wiki publishing, the CI
                                helpers and the unit tests (test-*.mjs)
-tools/                         backfill-history.py rebuilds the history from the RIPE NCC RPKI archive
+tools/                         backfill-history.py rebuilds the history from the RIPE NCC RPKI archive;
+                               data_scripts/ is the corrected copy of the research scripts of the Incidents
+                               page (with extra_detectors.py and tests); replay/ runs them over past windows
+docs/                          validation-known-incidents.md, the detectors over four known incidents
 deploy/nginx/                  server blocks and proxy cache zone (aspa.conf), the proxy settings shared by
                                the data endpoints (rpki-proxy.conf) and the security headers
-deploy/freebsd/                rc script of the notifier, daily refresh of the pkg vulnerability database
+deploy/freebsd/                rc scripts of the notifier and of the stream of the Incidents page, daily
+                               refresh of the pkg vulnerability database, newsyslog rules for nginx
 assets/                        logo, screenshots and credit logos used in this README
 .gitlab/, .gitlab-ci.yml       issue and merge request templates, and the CI pipeline
 eslint.config.mjs              security rules for the browser code (no innerHTML, eval, ...)

@@ -1,6 +1,6 @@
 > **Corrected copy of the scripts of the research project.** These are `record.py`, `stream.py` and `incident.py` of the project `internet_routing_sec/data_scripts` (written by Yunus Atçeken), with the corrections of the cross-check of 2026-10-22 already made (source: branch `cross-check-2026-10-22`, merge request !2; what was changed and why is in `CROSS-CHECK.md` there). ASPA Explorer uses the incident files that `incident.py` writes: `scripts/build-incidents.mjs` reads them and adds the verdict of the ASPAs (the **Incidents** page). Keep this copy in step with the project: the terms of the code are those of `data_scripts`.
 >
-> **Extensions of this copy** (not in the project): `extra_detectors.py` adds to `incident.py` the type of the route leaks (upward, lateral), candidates of AS path manipulation (a link that the CAIDA relationships do not know, a private or unallocated AS number, an AS that comes back in the path), the prefixes in space that the RIRs list as available or reserved, deaggregation by scale (excessive, flood, jump), delayed convergence and amplified churn, and the sessions that end with an UPDATE message error; `stream.py` also records the NOTIFICATION and the change of state of the sessions of the peers (records of type `N` and `S`, which `incident.py` of the project ignores). Every threshold is a constant at the top of `extra_detectors.py`. They are listed in `CROSS-CHECK.md` of the project as items X-1 to X-11, with the status EXTENDED: Yunus's repository does not have them, and its README describes them in the section on this copy. The full propagation of a leaker (RLK-FP) is decided when the page is built (`scripts/build-incidents.mjs`). The registry files are read from `delegations/delegated-*` (`INCIDENTS_DELEGATIONS` changes it).
+> **Extensions of this copy** (not in the project): `extra_detectors.py` adds to `incident.py` the type of the route leaks (upward, lateral), candidates of AS path manipulation (a link that the CAIDA relationships do not know, a private or unallocated AS number, an AS that comes back in the path), the prefixes in space that the RIRs list as available or reserved, deaggregation by scale (excessive and flood; a jump of an origin against its days before counts as excessive), delayed convergence and amplified churn, and the sessions that end with an UPDATE message error; `stream.py` also records the NOTIFICATION and the change of state of the sessions of the peers (records of type `N` and `S`, which `incident.py` of the project ignores). Every threshold is a constant at the top of the file that applies it: `extra_detectors.py` for the extensions, `incident.py` for the flapping (`VOL_FO_*`, one incident for the prefix when 3 peers see it flap), `scripts/build-incidents.mjs` for the full propagation of a leaker (RLK-FP) and the persistent valleys (RLK-PV, a relationship that CAIDA gets wrong, told apart from the leaks). They are listed in `CROSS-CHECK.md` of the project as items X-1 to X-11, with the status EXTENDED: Yunus's repository does not have them, and its README describes them in the section on this copy. The registry files are read from `delegations/delegated-*` (`INCIDENTS_DELEGATIONS` changes it) and the links of the table of the collector at the start of the day from `links/*.txt` (`INCIDENTS_LINKS`; `scripts/rib-links.mjs` writes them from the `bview`): a link that the table already had is not a candidate of path manipulation.
 >
 > Run the tests with `cd tools/data_scripts && python3 -m unittest discover -s tests`.
 
@@ -33,7 +33,7 @@ sequenceDiagram
     loop for each closed file, in order
         D-->>I: records
         I->>I: RLK, PRH, DEG, VOL, ATR, and the extensions X-1 to X-11
-        I->>O: an incident silent for 15 minutes, and summary_<file>.txt
+        I->>O: an incident silent for 15 minutes, and the summary file
     end
     Note over I,O: saves active_state.pkl (--flush-open: the open incidents too)
     Note over O: read by scripts/build-incidents.mjs, with the ASPAs of the day, for the Incidents page
@@ -62,7 +62,7 @@ sequenceDiagram
 | `peer` | the ASN of the peer that feeds the collector (an integer) |
 | `origin`, `flag`, `compressed_path` | for `A` only. The path has the repetitions of prepending removed (`compressed_path`), `flag` is 1 if there were any. Paths with AS-sets or confederation segments are dropped. For `W` they are `null` |
 
-The copy of ASPA Explorer also writes two records of the session, with no prefix (`incident.py` skips what has no prefix): `{"type": "N", "collector": "rrc00", "timestamp": "...", "peer": 34854, "code": 6, "subcode": 5}` for a BGP NOTIFICATION that a peer sends, and `{"type": "S", ..., "peer": 34854, "state": "down"}` for a change of state of the session. They are a few an hour.
+The copy of ASPA Explorer also writes two records of the session, with no prefix (`incident.py` of the project skips what has no prefix; this copy opens the ATR incidents of the sessions from them): `{"type": "N", "collector": "rrc00", "timestamp": "...", "peer": 34854, "code": 6, "subcode": 5}` for a BGP NOTIFICATION that a peer sends, and `{"type": "S", ..., "peer": 34854, "state": "down"}` for a change of state of the session. They are a few an hour.
 
 ## stream.py
 
@@ -96,6 +96,7 @@ Inputs in the current directory (a missing one disables its detector and says so
 
 - `20260901.as-rel.txt.bz2` (`CAIDA_FILE` at the top of the script): the [CAIDA AS relationships](https://www.caida.org/catalog/datasets/as-relationships/) (`as1|as2|-1` as1 is a provider of as2, `|0` peers). **Detects RLK.** The use of the dataset has to be reported to CAIDA after the publication.
 - `roas/*.xz`: ROAs as `{"roas": [{"prefix": "...", "asn": "AS64500", "maxLength": 24}]}` compressed with xz (the format of the `jsonext` export of Routinator). **Detects PRH.**
+- In this copy also `delegations/delegated-*` (the files of the RIRs, for the space and the AS numbers that are not allocated) and `links/*.txt` (the links of the table of the collector, see above); `run-incidents.sh` puts both in place.
 
 Detectors:
 
@@ -103,11 +104,11 @@ Detectors:
 | :-- | :-- | :-- |
 | `RLK` | a hop that learned the route from a provider or a peer and sends it to a provider or a peer (valley-free violation) | `RLK_<from>_<by>_<to>` |
 | `PRH` | the prefix has covering ROAs and none matches the origin (`Invalid_Origin`) or the length (`Invalid_Length`) | `PRH_<origin>` |
-| `DEG` | a more specific (IPv4 /24 or longer, IPv6 /48 or longer) of an aggregate (IPv4 up to /22, IPv6 up to /32) that has a different origin | `DEG_<origin>` |
-| `VOL` | at least 5 announcements and withdrawals of the same prefix from the same peer in 300 s | `VOL_<prefix>_<peer>` |
+| `DEG` | a more specific (IPv4 /24 or longer, IPv6 /48 or longer) of an aggregate (IPv4 up to /22, IPv6 up to /32) that has a different origin, unless a ROA authorises that origin for it or CAIDA knows a link between the two origins (this copy, X-10) | `DEG_<origin>` |
+| `VOL` | a prefix that flaps: at least 10 announcements and withdrawals from one peer in 300 s, seen by 3 peers or more (this copy, X-9; the project has 5, one peer, and one incident for each peer) | `VOL_<prefix>` |
 | `ATR` | more than 500 withdrawals from one peer in 10 s | `ATR_<peer>` |
 
-`ASM` (path manipulation) is commented out until the classification is decided.
+`ASM` (path manipulation) is commented out in the project until the classification is decided; this copy has candidates of its own (a link that CAIDA does not know, a private or unallocated AS number, an AS that comes back in the path: X-3, X-4, X-11).
 
 An incident stays open while updates of the same key arrive, and is written when it has been silent for 15 minutes (10 for `VOL`) of the time of the data. It keeps at most 4 messages: the first, one in the middle that moves (powers of two), the last but one and the last. `total_updates` counts all the updates of the incident. A withdrawal counts for an incident only if the peer that sends it announced the anomaly, and for the prefixes of the incident.
 
@@ -130,7 +131,7 @@ They use synthetic data and the standard library only (`websocket` is replaced b
 
 ## Cross-check of 2026-10-22
 
-All the comments on the code and the proposed changes are in [CROSS-CHECK.md](CROSS-CHECK.md). In short:
+All the comments on the code and the proposed changes are in `CROSS-CHECK.md` of the project `data_scripts` (not copied here). In short:
 
 The scripts were run: `stream.py` on the live stream (27,168 updates in 25 s), `incident.py` on that file (without the CAIDA and ROA files, so only `DEG`, `VOL` and `ATR` were exercised on real data) and on synthetic cases (all the detectors). What was found and what was done:
 
@@ -149,7 +150,7 @@ Open points, **not changed**, to be decided:
 
 - **Relationships and ROAs have no date.** The CAIDA file is fixed (`20260901`) and the ROAs are those on disk: for the past the ones of the day of the incident are needed.
 - **RLK** looks at CAIDA only: no handling of siblings or of the route servers of IXPs, which do not add their AS to the path. It reports the first violation of a path.
-- **DEG** flags every more specific with a different origin, which is often legitimate (address space of a provider given to a customer, DDoS scrubbing, anycast). The retroactive case (the aggregate arrives after the specific) uses the origin of the aggregate as the actor and the other the origin of the specific, so the same event appears under two keys (`DEG_8151` and `DEG_7399` in the test). The lengths in between are never looked at (IPv4 /23, IPv6 /33 to /47).
+- **DEG** in the project flags every more specific with a different origin, which is often legitimate (this copy leaves out the ones that a ROA or a CAIDA link explains, X-10) (address space of a provider given to a customer, DDoS scrubbing, anycast). The retroactive case (the aggregate arrives after the specific) uses the origin of the aggregate as the actor and the other the origin of the specific, so the same event appears under two keys (`DEG_8151` and `DEG_7399` in the test). The lengths in between are never looked at (IPv4 /23, IPv6 /33 to /47).
 - **PRH** only for prefixes that a ROA covers; a prefix with no ROA is not looked at.
 - **End of an incident** is always `timeout`: a withdrawal does not close it.
 - **Order of time.** The live stream is not in strict order (59 records out of 27,168 go back in time in 25 s); the times of the timeouts are those of the data.

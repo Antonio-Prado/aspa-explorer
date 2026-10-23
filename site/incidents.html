@@ -23,16 +23,16 @@
 <meta name="twitter:card" content="summary_large_image">
 <meta name="color-scheme" content="light dark">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
-<link rel="stylesheet" href="/style.css?v=1.51.3">
-<script src="/incidents.js?v=1.51.3" defer></script>
-<script src="/status-checks.js?v=1.51.3" defer></script>
-<script src="/footer.js?v=1.51.3" defer></script>
+<link rel="stylesheet" href="/style.css?v=1.51.4">
+<script src="/incidents.js?v=1.51.4" defer></script>
+<script src="/status-checks.js?v=1.51.4" defer></script>
+<script src="/footer.js?v=1.51.4" defer></script>
 </head>
 <body>
 <a class="skip" href="#main">Skip to main content</a>
 <header class="wrap masthead">
   <div class="top">
-    <p class="back"><a class="brandlink" href="/" title="Back to ASPA Explorer"><img class="brand" src="/img/logo-mark.svg?v=1.51.3" alt="" width="40" height="40"><span>ASPA Explorer</span></a></p>
+    <p class="back"><a class="brandlink" href="/" title="Back to ASPA Explorer"><img class="brand" src="/img/logo-mark.svg?v=1.51.4" alt="" width="40" height="40"><span>ASPA Explorer</span></a></p>
     <nav class="topnav" aria-label="Main"><a href="/">Home</a><a href="/statistics.html">Statistics</a><a href="/incidents.html" aria-current="page">Incidents</a><a href="/examples.html">Examples</a><a href="/api.html">API</a><a href="/guide.html">Guide</a><a href="/status.html">Status</a></nav>
   </div>
   <h1>Incidents</h1>
@@ -182,8 +182,8 @@
         <tbody>
           <tr><th scope="rowgroup"><span class="chip">DEG</span> Prefix deaggregation</th><td colspan="2" class="gnote"><em>An ASPA says nothing: the path of a more specific can be perfectly valid.</em></td></tr>
           <tr><th scope="row"><span class="chip">DEG-MA</span> Malicious Deaggregation</th><td><span class="badge v-unknown">Partly</span></td><td>Seen only when the more specific has another origin than the aggregate, and no ROA authorises that origin for it, and CAIDA knows no link between the two origins: a customer announcing its part of the provider's block is the ordinary use of address space, not a candidate (on the first day, three quarters of them). The intent is not visible.</td></tr>
-          <tr><th scope="row"><span class="chip">DEG-CA</span> Careless Deaggregation</th><td><span class="badge v-unknown">Partly</span></td><td>Seen as excessive deaggregation: 32 or more more specifics of one origin under a /16 (IPv4) or a /32 (IPv6) in a day, from 2 peers or more, or a jump of an origin against its days before. The intent is not visible, so DEG-CA, DEG-EX and DEG-MA share the same line.</td></tr>
-          <tr><th scope="row"><span class="chip">DEG-EX</span> Exploitative Deaggregation</th><td><span class="badge v-unknown">Partly</span></td><td>The same line as DEG-CA: the count of the more specifics tells how many, not why.</td></tr>
+          <tr><th scope="row"><span class="chip">DEG-CA</span> Careless Deaggregation</th><td><span class="badge v-unknown">Partly</span></td><td>Seen as excessive deaggregation, the line DEG-XS of the table by type: 32 or more more specifics of one origin under a /16 (IPv4) or a /32 (IPv6) in a day, from 2 peers or more, or a jump of an origin against its days before. The intent is not visible, so DEG-CA and DEG-EX share that line.</td></tr>
+          <tr><th scope="row"><span class="chip">DEG-EX</span> Exploitative Deaggregation</th><td><span class="badge v-unknown">Partly</span></td><td>The same line as DEG-CA, DEG-XS: the count of the more specifics tells how many, not why.</td></tr>
           <tr><th scope="row"><span class="chip">DEG-FF</span> Fragmentation Flood</th><td><span class="badge v-unknown">Partly</span></td><td>A candidate: 1,024 more specifics or more under a /32 (IPv6), or 1,000 IPv4 more specifics of one origin, in a day. The thresholds are first guesses.</td></tr>
         </tbody>
         <tbody>

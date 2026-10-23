@@ -5,6 +5,11 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.51.4] - 2026-10-23
+
+### Fixed
+- Documentation brought in step after a review of all of it: the route-server example named the wrong receiver of the path through a second exchange; the Incidents page did not name the line DEG-XS that DEG-CA and DEG-EX share, and said DEG-MA shared it too; the guide's list of the status checks lacked the comparison of the validators; the contents of the API page lacked *Shared results* and *Dated snapshots*; the README's repository layout lacked `tools/data_scripts`, `tools/replay`, `docs/` and the Incidents page; MAINTAINING and the copy of the scripts' README said that every threshold was in `extra_detectors.py` (the flapping ones are in `incident.py`, the propagation ones in `build-incidents.mjs`); that README also kept the project's rules for VOL, DEG and ASM instead of the copy's, did not list the delegation and link files among the inputs, linked a `CROSS-CHECK.md` that is not in the copy, and listed a "jump" beside excessive and flood (it counts as DEG-XS). The wiki (user guide, deployment, home) was the furthest behind: five cases instead of six, the detectors of 1.47, the history read from GitLab instead of `/api/v1/archive/`, no mention of the GitHub mirror, links to the Department's GitLab, which is not reachable from outside.
+
 ## [1.51.3] - 2026-10-23
 
 ### Removed
