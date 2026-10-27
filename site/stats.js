@@ -37,9 +37,19 @@ async function getJson(url) {
 
 /* ---------- tooltip ---------- */
 const tip = () => $('tip');
+let tipOn = null;            // the element the tooltip is about, for a name that arrives later
+const tipWaits = new Set();  // the ASes whose name is on its way
 function showTip(target, value, label, ev) {
   const t = tip();
-  t.replaceChildren(el('strong', { text: value }), el('span', { text: label }));
+  // a bar of an AS also gives its name (asnames.js): at once when it is known, else when it arrives
+  const names = window.AspaNames, asn = names && names.asnOf(target.getAttribute('href'));
+  const name = asn ? names.known(asn) : undefined;
+  if (asn && name === undefined && !tipWaits.has(asn)) {
+    tipWaits.add(asn);
+    names.nameOf(asn).then(() => { tipWaits.delete(asn); if (tipOn === target && !t.hidden) showTip(target, value, label, ev); });
+  }
+  tipOn = target;
+  t.replaceChildren(el('strong', { text: value }), el('span', { text: label }), ...(name ? [el('span', { class: 'trow', text: names.nameText(asn, name) })] : []));
   t.hidden = false;
   let x, y;
   if (ev && ev.clientX !== undefined && ev.type.startsWith('pointer')) { x = ev.clientX; y = ev.clientY; }
@@ -48,8 +58,9 @@ function showTip(target, value, label, ev) {
   t.style.left = Math.max(8, Math.min(window.innerWidth - w - 8, x + 12)) + 'px';
   t.style.top = Math.max(8, y - h - 12) + 'px';
 }
-function hideTip() { tip().hidden = true; }
+function hideTip() { tipOn = null; tip().hidden = true; }
 function withTip(node, value, label) {
+  node.setAttribute('data-own-tip', '');     // asnames.js leaves the name to this tooltip
   node.addEventListener('pointermove', (e) => showTip(node, value, label, e));
   node.addEventListener('pointerleave', hideTip);
   node.addEventListener('focus', (e) => showTip(node, value, label, e));

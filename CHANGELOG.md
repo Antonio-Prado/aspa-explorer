@@ -5,6 +5,11 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.52.1] - 2026-10-27
+
+### Fixed
+- The name of an AS came late: it was the title of the element, and the browser shows a title only after a second or more, and not at all when it is set while the pointer is already resting (the name arrives from RIPEstat after the pointer stops). It is now a small box of the page under the AS number, shown after a tenth of a second (at once for a name already asked), with the number while the name is on its way, also inside the summary of an AS and on the keyboard; Escape, a scroll or leaving the element close it. On the bars of the charts of the statistics, which have a tooltip of their own, the name is a third line of it instead of a second box. A title or an SVG title that a page sets itself is kept, and nothing is shown on touch screens. The place of the box, under the element or over it and inside the window, and the name without the number are tested in `scripts/test-asnames.mjs`.
+
 ## [1.52.0] - 2026-10-27
 
 ### Added

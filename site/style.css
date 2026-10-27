@@ -273,6 +273,23 @@ figcaption .s { display: block; color: var(--muted); font-size: 0.8125rem; }
 }
 .tip strong { display: block; font-size: 0.95rem; font-variant-numeric: tabular-nums; }
 .tip span { color: var(--ink-2); }
+/* the name of an AS under the pointer (asnames.js); in a modal dialog it is placed inside it */
+.as-tip {
+  position: fixed;
+  z-index: 30;
+  pointer-events: none;
+  background: var(--surface);
+  color: var(--ink);
+  box-shadow: 0 0 0 1px var(--ring), 0 4px 16px rgba(0, 0, 0, 0.12);
+  border-radius: 6px;
+  padding: 0.3rem 0.55rem;
+  font-size: 0.8125rem;
+  line-height: 1.35;
+  max-width: min(24rem, calc(100vw - 16px));
+  overflow-wrap: anywhere;
+}
+.as-tip[hidden] { display: none; }
+@media print { .as-tip { display: none; } }
 
 /* table */
 .filters { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-bottom: 12px; }
