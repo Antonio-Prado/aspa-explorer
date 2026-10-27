@@ -5,6 +5,11 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.53.1] - 2026-10-27
+
+### Fixed
+- The check of the probes asked PeeringDB for its five tables at every page load, and PeeringDB throttles an address that asks for them often (an hour of wait). The list of the exchanges, once made, is kept in the browser of the visitor for a day (about 190 kB), and when PeeringDB does not answer the result says that it limits how often an address can ask.
+
 ## [1.53.0] - 2026-10-27
 
 ### Added

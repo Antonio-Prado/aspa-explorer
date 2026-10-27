@@ -725,14 +725,23 @@ async function asnOfIp(ip) {
 }
 
 // The LANs of the exchange points and their sites, to check where each probe is (traceroute.js, placeCheck): five tables asked
-// of PeeringDB from the browser at the first measurement, while the probes run (the data are not copied anywhere). Without them
-// (null) the probes are not checked, and the result says so.
+// of PeeringDB from the browser at the first measurement, while the probes run (the data are not copied to this site), and kept
+// in this browser for a day, because PeeringDB limits how often an address can ask for them. Without them (null) the probes are
+// not checked, and the result says so.
 const PEERINGDB = 'https://www.peeringdb.com/api';
 const PEERINGDB_TABLES = { ixpfx: 'ixlan_id,prefix', ixlan: 'id,ix_id', ix: 'id,name,city,country,status', ixfac: 'ix_id,fac_id', fac: 'id,latitude,longitude,status' };
+const IXPS_STORE = 'aspa-ixps', IXPS_KEEP_MS = 24 * 3600 * 1000;
 let ixpIndexAsked = null;
-const ixpIndexOnce = () => (ixpIndexAsked ||= Promise.all(Object.entries(PEERINGDB_TABLES).map(([name, fields]) => getJson(`${PEERINGDB}/${name}?depth=0&fields=${fields}`).then((d) => [name, d.data])))
-  .then((tables) => AspaTraceroute.ixpIndex(AspaTraceroute.ixpsFrom(Object.fromEntries(tables))))
-  .catch(() => { ixpIndexAsked = null; return null; }));
+const ixpIndexOnce = () => (ixpIndexAsked ||= (async () => {
+  try {
+    const kept = JSON.parse(localStorage.getItem(IXPS_STORE) || 'null');
+    if (kept && Array.isArray(kept.ixps) && Date.now() - kept.at < IXPS_KEEP_MS) return AspaTraceroute.ixpIndex(kept.ixps);
+  } catch { /* no storage: ask again */ }
+  const tables = await Promise.all(Object.entries(PEERINGDB_TABLES).map(([name, fields]) => getJson(`${PEERINGDB}/${name}?depth=0&fields=${fields}`).then((d) => [name, d.data])));
+  const ixps = AspaTraceroute.ixpsFrom(Object.fromEntries(tables));
+  try { localStorage.setItem(IXPS_STORE, JSON.stringify({ at: Date.now(), ixps })); } catch { /* full or blocked */ }
+  return AspaTraceroute.ixpIndex(ixps);
+})().catch(() => { ixpIndexAsked = null; return null; }));
 
 // A summary of each result of a measurement, with the check of the place of its probe.
 const summariesOf = (m, idx) => m.results.map((x) => {
@@ -743,7 +752,7 @@ const summariesOf = (m, idx) => m.results.map((x) => {
 
 // What the check of the places says, for the result: how many probes could be checked, which are elsewhere.
 function placeNote(summaries, idx) {
-  if (!idx) return 'The place of the probes could not be checked: the list of the exchange points did not load.';
+  if (!idx) return 'The place of the probes could not be checked: PeeringDB did not give the list of the exchange points (it limits how often an address can ask for it; the page keeps the list for a day once it has it).';
   const checked = summaries.filter((s) => s.place.checked).length, out = summaries.filter((s) => s.place.misplaced).length;
   const how = 'where the path crosses an exchange point, whose sites are known (PeeringDB): a round trip to it shorter than light in fibre allows from the place of the probe means that the probe is elsewhere';
   if (!checked) return `The place of the probes is checked ${how}; no path of this measurement crosses one.`;
