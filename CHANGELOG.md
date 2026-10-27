@@ -5,6 +5,11 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.52.0] - 2026-10-27
+
+### Added
+- The name of an AS as a tooltip: when the pointer rests on an AS number (a chip, a link in a table or a path, a node of the graph, a bar of a chart) or the keyboard reaches it, the name that the registry of its RIR gives shows as its tooltip, for instance *AS41327: FIBERTELECOM-AS Fiber Telecom S.p.A.* The name is the `holder` of RIPEstat's as-overview, asked only for the ASes looked at (after a quarter of a second, so that moving the pointer across a table asks for nothing) and kept for the visit; the guide says that this sends the AS number to RIPEstat. A title that a page sets itself is kept. On the pages with AS numbers: home, statistics, examples, shared results, guide and API. `site/asnames.js`, with tests in `scripts/test-asnames.mjs`. Suggested by Leo Vegoda of PeeringDB: thank you.
+
 ## [1.51.5] - 2026-10-27
 
 ### Fixed

@@ -23,15 +23,16 @@
 <meta name="twitter:card" content="summary_large_image">
 <meta name="color-scheme" content="light dark">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
-<link rel="stylesheet" href="/style.css?v=1.51.5">
-<script src="/status-checks.js?v=1.51.5" defer></script>
-<script src="/footer.js?v=1.51.5" defer></script>
+<link rel="stylesheet" href="/style.css?v=1.52.0">
+<script src="/status-checks.js?v=1.52.0" defer></script>
+<script src="/asnames.js?v=1.52.0" defer></script>
+<script src="/footer.js?v=1.52.0" defer></script>
 </head>
 <body>
 <a class="skip" href="#main">Skip to main content</a>
 <header class="wrap masthead">
   <div class="top">
-    <p class="back"><a class="brandlink" href="/" title="Back to ASPA Explorer"><img class="brand" src="/img/logo-mark.svg?v=1.51.5" alt="" width="40" height="40"><span>ASPA Explorer</span></a></p>
+    <p class="back"><a class="brandlink" href="/" title="Back to ASPA Explorer"><img class="brand" src="/img/logo-mark.svg?v=1.52.0" alt="" width="40" height="40"><span>ASPA Explorer</span></a></p>
     <nav class="topnav" aria-label="Main"><a href="/">Home</a><a href="/statistics.html">Statistics</a><a href="/incidents.html">Incidents</a><a href="/examples.html">Examples</a><a href="/api.html">API</a><a href="/guide.html" aria-current="page">Guide</a><a href="/status.html">Status</a></nav>
   </div>
   <h1>Guide</h1>
@@ -286,6 +287,7 @@
     <p><strong>Back to the top.</strong> On a long page, once you have scrolled down a screen, a round button with an up arrow appears at the bottom right. It takes you back to the top of the page and puts the keyboard focus there, so the next <kbd>Tab</kbd> reaches the skip link and the menu. It scrolls without animation if your system asks for less motion, and it is not printed.</p>
 
     <p><strong>A quick look at any AS.</strong> A click on the name of an AS, in a table, a list of providers or a path, opens a small window with what the site knows about it: whether it publishes an ASPA and with which providers, how many ASPAs name it as a provider, whether the route collectors see it, the findings on its ASPA and its last change, with a link to its page. The names in the window open the next one. Escape closes it; a click with Ctrl, Cmd or Shift goes straight to the page of the AS, as before. The window asks this site for one small file (<code>/api/v1/as/&lt;number&gt;</code>) and nothing else.</p>
+    <p><strong>The name of an AS.</strong> Rest the pointer on an AS number, or reach it with the keyboard, and its name in the registry of its RIR shows as a tooltip (for instance <em>AS41327: FIBERTELECOM-AS Fiber Telecom S.p.A.</em>). The name comes from RIPEstat: the page asks for it only for the ASes you look at, once in a visit, and this sends the AS number to RIPEstat. Thanks to Leo Vegoda of PeeringDB for suggesting it.</p>
   </section>
 
   <section aria-labelledby="data">
