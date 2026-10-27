@@ -23,16 +23,16 @@
 <meta name="twitter:card" content="summary_large_image">
 <meta name="color-scheme" content="light dark">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
-<link rel="stylesheet" href="/style.css?v=1.52.1">
-<script src="/incidents.js?v=1.52.1" defer></script>
-<script src="/status-checks.js?v=1.52.1" defer></script>
-<script src="/footer.js?v=1.52.1" defer></script>
+<link rel="stylesheet" href="/style.css?v=1.52.2">
+<script src="/incidents.js?v=1.52.2" defer></script>
+<script src="/status-checks.js?v=1.52.2" defer></script>
+<script src="/footer.js?v=1.52.2" defer></script>
 </head>
 <body>
 <a class="skip" href="#main">Skip to main content</a>
 <header class="wrap masthead">
   <div class="top">
-    <p class="back"><a class="brandlink" href="/" title="Back to ASPA Explorer"><img class="brand" src="/img/logo-mark.svg?v=1.52.1" alt="" width="40" height="40"><span>ASPA Explorer</span></a></p>
+    <p class="back"><a class="brandlink" href="/" title="Back to ASPA Explorer"><img class="brand" src="/img/logo-mark.svg?v=1.52.2" alt="" width="40" height="40"><span>ASPA Explorer</span></a></p>
     <nav class="topnav" aria-label="Main"><a href="/">Home</a><a href="/statistics.html">Statistics</a><a href="/incidents.html" aria-current="page">Incidents</a><a href="/examples.html">Examples</a><a href="/api.html">API</a><a href="/guide.html">Guide</a><a href="/status.html">Status</a></nav>
   </div>
   <h1>Incidents</h1>
@@ -216,24 +216,25 @@
   </section>
 
   <section aria-labelledby="inc-known-title">
-    <h2 id="inc-known-title" class="subhead">Checked against four known incidents</h2>
-    <p class="hint">The detectors were run over the updates that <code>rrc00</code> recorded during four incidents that the survey cites, with the CAIDA relationships of the time (the ROAs and the registries are today's, and the ASPAs of the day do not exist before 2023).</p>
-    <section class="card table-wrap" tabindex="0" aria-label="What the detectors found in four known incidents">
+    <h2 id="inc-known-title" class="subhead">Checked against five known incidents</h2>
+    <p class="hint">The detectors were run over the updates that <code>rrc00</code> recorded during five incidents that the survey cites, with the CAIDA relationships of the time (the ROAs and the registries are today's, and the ASPAs of the day do not exist before 2023).</p>
+    <section class="card table-wrap" tabindex="0" aria-label="What the detectors found in five known incidents">
       <table class="checks live">
-        <caption class="sr-only">Four known incidents, when they began, and what the detectors saw in the updates of one collector</caption>
+        <caption class="sr-only">Five known incidents, when they began, and what the detectors saw in the updates of one collector</caption>
         <thead><tr><th scope="col">Incident</th><th scope="col">Start (UTC)</th><th scope="col">What the detectors saw</th></tr></thead>
         <tbody>
           <tr><th scope="row"><span class="chip">A9</span> Safe Host leaks to China Telecom</th><td>6 Jun 2019, 09:43</td><td>A path-shortening candidate on the link AS4134–AS21217, which neither CAIDA nor the table of the collector at 08:00 knows, opened at 09:43:48: 6,611 prefixes, the first of 10,435 ASM candidates by updates. No valley incident: CAIDA has no relationship between the two ASes.</td></tr>
           <tr><th scope="row"><span class="chip">A2</span> Rostelecom announces other networks' prefixes</th><td>1 Apr 2020, 19:28</td><td>An origin that the ROAs refuse, with 8,200 prefixes, but one incident for the whole origin that starts at 19:01. The event shows in the volume: from about 150 to 315,574 announcements of that origin a minute at 19:27.</td></tr>
           <tr><th scope="row"><span class="chip">A1</span> RTComm announces a prefix of Twitter</th><td>28 Mar 2022, about 12:06</td><td>An origin that the ROA does not authorise for 104.244.42.0/24 at 12:06:40, from a single update: the collector saw it once.</td></tr>
+          <tr><th scope="row"><span class="chip">A10</span> UPX leaks the routes of a provider through a sibling</th><td>11 Feb 2025, 18:16</td><td>A valley at AS52863, from AS7195 to AS400282, opened at 18:16:02 with the first leaked update: 10,087 prefixes, the first of all the 27,766 candidates by updates. The collector saw 10,090 of the 21,119 leaked routes, from 46 peers, most of them gone by 18:31. CAIDA calls the provider a peer and the sibling a provider, and the leaking AS is found all the same.</td></tr>
           <tr><th scope="row"><span class="chip">A12</span> A corrupted Prefix-SID attribute resets sessions</th><td>20 May 2025, about 07:00</td><td>Volume, not the cause: updates from at most 160,000 to 558,000 a minute at 07:02, five mass withdrawals of peers and five amplified-churn incidents, the same with either set of thresholds. The attribute is not in the records.</td></tr>
         </tbody>
       </table>
     </section>
     <ul class="notes">
-      <li><strong>The types complete each other.</strong> A9 is missed by the valley detector and found by the link detector; A2 is found by the origin detector, but its start says nothing, and the volume says when.</li>
+      <li><strong>The types complete each other.</strong> A9 is missed by the valley detector and found by the link detector; A2 is found by the origin detector, but its start says nothing, and the volume says when; A10 is found by the valley detector at the second it begins, while the volume stays within that of the half hour before but for one minute.</li>
       <li><strong>There is noise, less with the thresholds of 1.51.0.</strong> With the first guesses, from 110,000 to 346,000 incidents in each window of an hour and a half or two, most of them flapping; replayed with the thresholds set after the first full day of data (and the links of the table of the collector at the start of the day), A9 went from 128,290 incidents to 65,157 and A12 from 110,351 to 18,508, and the real case of A9 stayed first of its type. Ordering the candidates of a type by prefixes and updates put it first in both runs.</li>
-      <li><strong>Four cases are not a measure.</strong> They do not say how many real incidents are missed, or how many candidates are false. The method, the numbers and how to repeat it are in <a href="https://github.com/Antonio-Prado/aspa-explorer/blob/main/docs/validation-known-incidents.md">docs/validation-known-incidents.md</a>.</li>
+      <li><strong>Five cases are not a measure.</strong> They do not say how many real incidents are missed, or how many candidates are false. The method, the numbers and how to repeat it are in <a href="https://github.com/Antonio-Prado/aspa-explorer/blob/main/docs/validation-known-incidents.md">docs/validation-known-incidents.md</a>.</li>
     </ul>
   </section>
 

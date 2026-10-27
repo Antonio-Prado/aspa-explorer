@@ -5,6 +5,11 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.52.2] - 2026-10-27
+
+### Added
+- A10 of the survey replayed: on 11 February 2025 UPX Technologies (AS52863) leaked the routes of its provider EdgeUno (AS7195) through its sibling AS400282 to its US providers. The valley detector opens a candidate on AS7195–AS52863–AS400282 at 18:16:02, with the first leaked update: 10,087 prefixes, the first of all the 27,766 incidents of the window by updates, although CAIDA of the month calls the provider a peer and the sibling a provider. `rrc00` saw 10,090 of the 21,119 leaked routes that Kentik reports, from 46 peers, most of them gone by 18:31; the volume is above that of the half hour before in one minute only. The Incidents page (*Checked against five known incidents*), the README and `docs/validation-known-incidents.md` say it; `tools/replay/events.json` has the event and `analyse.py` the time profile of the routes through the leak.
+
 ## [1.52.1] - 2026-10-27
 
 ### Fixed

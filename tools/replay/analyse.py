@@ -70,6 +70,42 @@ elif EV == "A2":
     print("announcements with origin AS12389, by minute:")
     for k in sorted(c):
         print(f"  {k}  {c[k]['A']:>8}  new prefixes {c[k]['new']:>6}")
+elif EV == "A10":
+    o = next((o for o in inc if o["actor_key"] == "RLK_7195_52863_400282"), None)
+    if o:
+        rlk = [x for x in inc if x["incident_type"] == "RLK"]
+        print(f"valley AS7195-AS52863-AS400282: start {o['start']}, {len(o['prefixes'])} prefixes, {o['total_updates']} updates; "
+              f"rank by updates {rank(inc, o, lambda x: x['total_updates'])} of {len(inc)} incidents, by prefixes {rank(rlk, o, lambda x: len(x['prefixes']))} "
+              f"of {len(rlk)} RLK (those above open at the start of the data: valleys that were already there)")
+    links = {tuple(sorted(x["actor_key"].split("_")[2:])) for x in inc
+             if x["incident_type"] == "ASM" and "7195" in x["actor_key"].split("_")[2:] and x["start"] >= meta["start"]}
+    print(f"links of AS7195 that the link detector reports after the start: {len(links)}")
+    # the routes of the peers that go through the leak (AS7195 AS52863 AS400282), at the end of each minute, and all the updates
+    leak, through, seen, by_min, last = ("400282", "52863", "7195"), set(), set(), {}, None
+    with gzip.open(REC, "rt") as f:
+        for l in f:
+            r = json.loads(l)
+            if r["type"] not in ("A", "W"):
+                continue
+            m = r["timestamp"][11:16]
+            if m != last:
+                if last:
+                    by_min[last][1:] = [len(through), len({p for _, p in through})]
+                by_min.setdefault(m, [0, 0, 0]); last = m
+            by_min[m][0] += 1
+            p = [str(x) for x in r.get("compressed_path") or []]
+            k = (r["peer"], r["prefix"])
+            if r["type"] == "A" and any(tuple(p[i:i + 3]) == leak for i in range(len(p) - 2)):
+                through.add(k); seen.add(r["prefix"])
+            else:
+                through.discard(k)
+    by_min[last][1:] = [len(through), len({p for _, p in through})]
+    before = [v[0] for k, v in by_min.items() if k < meta["start"][11:16]][-30:]
+    print(f"prefixes seen through the leak: {len(seen)}; updates a minute in the half hour before: {min(before)} to {max(before)}")
+    print("minute, updates, routes through the leak, their prefixes:")
+    for k in sorted(by_min):
+        if meta["start"][11:16] <= k <= "18:40":
+            print(f"  {k}  {by_min[k][0]:>8} {by_min[k][1]:>7} {by_min[k][2]:>6}")
 elif EV == "A12":
     c = per_minute(None, 8)
     print("records by minute (A, W, state changes):")

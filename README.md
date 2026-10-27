@@ -325,7 +325,7 @@ scripts/                       the builders of the per-AS API (build-api.mjs) an
 tools/                         backfill-history.py rebuilds the history from the RIPE NCC RPKI archive;
                                data_scripts/ is the corrected copy of the research scripts of the Incidents
                                page (with extra_detectors.py and tests); replay/ runs them over past windows
-docs/                          validation-known-incidents.md, the detectors over four known incidents
+docs/                          validation-known-incidents.md, the detectors over five known incidents
 deploy/nginx/                  server blocks and proxy cache zone (aspa.conf), the proxy settings shared by
                                the data endpoints (rpki-proxy.conf) and the security headers
 deploy/freebsd/                rc scripts of the notifier and of the stream of the Incidents page, daily
@@ -359,7 +359,7 @@ Releases follow [Semantic Versioning](https://semver.org/); the version shown in
 | <a href="CONTRIBUTING.md" target="_blank" rel="noopener">CONTRIBUTING.md</a> | how to contribute |
 | <a href="SECURITY.md" target="_blank" rel="noopener">SECURITY.md</a> | how to report a vulnerability (also `/.well-known/security.txt`) |
 | <a href="CODE_OF_CONDUCT.md" target="_blank" rel="noopener">CODE_OF_CONDUCT.md</a> | how we expect people to behave |
-| <a href="docs/validation-known-incidents.md" target="_blank" rel="noopener">docs/validation-known-incidents.md</a> | the incident detectors run over four known incidents (A9, A1, A2, A12): what they find, the noise, how to repeat it |
+| <a href="docs/validation-known-incidents.md" target="_blank" rel="noopener">docs/validation-known-incidents.md</a> | the incident detectors run over five known incidents (A9, A1, A2, A10, A12): what they find, the noise, how to repeat it |
 | <a href="MAINTAINING.md" target="_blank" rel="noopener">MAINTAINING.md</a> | for the maintainers: the copies of the repository, applying a pull request, the services and the scheduled jobs |
 | <a href="https://github.com/Antonio-Prado/aspa-explorer/wiki/Home#" target="_blank" rel="noopener">Wiki</a> | user guide, accessibility, deployment |
 | <a href="LICENSE" target="_blank" rel="noopener">LICENSE</a> | MIT |
