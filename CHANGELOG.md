@@ -5,6 +5,11 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.52.3] - 2026-10-27
+
+### Added
+- The guide says where the probes of the tromboning test come from and why that matters: Globalping places a probe by the address it connects from, with five geolocation sources (ipinfo, IP2Location, MaxMind, RIPE IPmap and Fastly), and for RIPE Atlas Izhikevich and others (IMC 2026, doi:10.1145/3777912.3839804) found with the round trips to the DNS root servers that 2.4% of the probes could not be where they were said to be, about half of them more than 1,000 km away. A probe that is not in the country makes a trombone that is not there, so a long delay from one probe only is a lead to check against the others.
+
 ## [1.52.2] - 2026-10-27
 
 ### Added
