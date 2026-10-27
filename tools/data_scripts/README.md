@@ -112,7 +112,7 @@ Detectors:
 
 An incident stays open while updates of the same key arrive, and is written when it has been silent for 15 minutes (10 for `VOL`) of the time of the data. It keeps at most 4 messages: the first, one in the middle that moves (powers of two), the last but one and the last. `total_updates` counts all the updates of the incident. A withdrawal counts for an incident only if the peer that sends it announced the anomaly, and for the prefixes of the incident.
 
-The state (open incidents, the aggregates seen in the last 30 days, the files done) is in `active_state.pkl`, so that the files can be given one at a time and in several runs. **The incidents that are still open at the end of the last file are not written**: they stay in the state until they time out in a later file. `--flush-open` writes them to `incidents_open.jsonl` with `end_reason: dataset_end` and empties them from the state.
+The state (open incidents, the aggregates seen in the last 30 days, the more specifics that wait a day for their aggregate, the files done) is in `active_state.pkl`, so that the files can be given one at a time and in several runs. **The incidents that are still open at the end of the last file are not written**: they stay in the state until they time out in a later file. `--flush-open` writes them to `incidents_open.jsonl` with `end_reason: dataset_end` and empties them from the state.
 
 ```json
 {"incident_type": "RLK", "actor_key": "RLK_1_2_3", "prefixes": ["10.1.0.0/16"],

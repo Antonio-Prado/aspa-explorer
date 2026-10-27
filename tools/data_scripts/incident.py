@@ -7,7 +7,7 @@ import os
 import signal
 import pickle
 import ipaddress
-import copy
+import functools
 from datetime import datetime, timezone
 import argparse
 from collections import Counter, defaultdict, deque
@@ -27,6 +27,7 @@ VOL_FO_MIN_PEERS = 3       # X-9: one incident for the prefix, when this many pe
 LINKS = os.environ.get("INCIDENTS_LINKS", "links/*.txt")               # X-11: the links of the table of the collector (extra_detectors.py)
 GC_INTERVAL_SECONDS = 600  # run garbage collection every 10 minutes of bgp time
 BASELINE_TTL_SECONDS = 2592000  # 30 days ttl for baselines
+PENDING_TTL_SECONDS = 86400  # a day for the more specifics that wait for their aggregate (with 30 days they were millions of entries)
 
 stop_requested = False
 
@@ -222,97 +223,65 @@ def _check_prefix_hijack(rec, roas, state, current_epoch):
     return False, {}"""
 
 
-def check_deaggregation(rec, rel, roas, state, current_epoch):
-    prefix_str = rec.get("prefix")
-    origin = rec.get("origin")
-    
-    if not prefix_str or origin is None:
-        return False, {}
-
+@functools.lru_cache(maxsize=1_000_000)
+def _supernets(prefix_str):
+    """(version, length, canonical prefix, the covering prefixes from /16 (IPv4) or /32 (IPv6) up), or None."""
     try:
         net = ipaddress.ip_network(prefix_str, strict=False)
     except (ValueError, IndexError):
+        return None
+    lo = 16 if net.version == 4 else 32
+    return net.version, net.prefixlen, str(net), tuple(str(net.supernet(new_prefix=i)) for i in range(lo, net.prefixlen))
+
+
+def check_deaggregation(rec, rel, roas, state, current_epoch):
+    prefix_str = rec.get("prefix")
+    origin = rec.get("origin")
+
+    if not prefix_str or origin is None:
         return False, {}
+
+    info = _supernets(prefix_str)
+    if info is None:
+        return False, {}
+    version, plen, canonical, supernets = info
 
     deg_state = state.setdefault("prefix_history", {})
     pending_specs = state.setdefault("pending_specifics", {})
 
-    if net.version == 4:
-        if net.prefixlen >= 24:
-            found_parent = False
-            for i in range(16, net.prefixlen):
-                supernet = str(net.supernet(new_prefix=i))
-                if supernet in deg_state:
-                    parent_origin = deg_state[supernet]["origin"]
-                    # only flag if origins diverge (fixes normal multi-homing flood)
-                    if parent_origin != origin and not deaggregation_is_ordinary(prefix_str, origin, parent_origin, rel, roas):
-                        return True, {
-                            "anomaly": "Cross-Origin Deaggregation", 
-                            "parent_aggregate": supernet, 
-                            "parent_origin": parent_origin,
-                            "sub_prefix": prefix_str, 
-                            "sub_origin": origin
-                        }
-                    found_parent = True
-                    break
-                    
-            if not found_parent:
-                # add timestamp to pending specifically to prevent memory leak
-                for i in range(16, net.prefixlen):
-                    supernet = str(net.supernet(new_prefix=i))
-                    pending_specs.setdefault(supernet, {})[(prefix_str, origin)] = current_epoch
-                    
-        elif net.prefixlen <= 22:
-            deg_state[str(net)] = {"origin": origin, "ts": current_epoch}
-            if str(net) in pending_specs:
-                specifics = [(sp, so, ts) for (sp, so), ts in pending_specs.pop(str(net)).items()]
-                
-                # check specifics against newly arrived parent
-                flagged_specifics = [s for s in specifics if s[1] != origin and not deaggregation_is_ordinary(s[0], s[1], origin, rel, roas)]
-                if flagged_specifics:
+    specific_min, aggregate_max = (24, 22) if version == 4 else (48, 32)
+    if plen >= specific_min:
+        for supernet in supernets:
+            if supernet in deg_state:
+                parent_origin = deg_state[supernet]["origin"]
+                # only flag if origins diverge (fixes normal multi-homing flood)
+                if parent_origin != origin and not deaggregation_is_ordinary(prefix_str, origin, parent_origin, rel, roas):
                     return True, {
-                        "anomaly": "Cross-Origin Deaggregation (Retroactive)", 
-                        "parent_aggregate": str(net), 
-                        "parent_origin": origin, 
-                        "covered_specifics": flagged_specifics[:5]
+                        "anomaly": "Cross-Origin Deaggregation",
+                        "parent_aggregate": supernet,
+                        "parent_origin": parent_origin,
+                        "sub_prefix": prefix_str,
+                        "sub_origin": origin
                     }
-                
-    elif net.version == 6:
-        if net.prefixlen >= 48:
-            found_parent = False
-            for i in range(32, net.prefixlen):
-                supernet = str(net.supernet(new_prefix=i))
-                if supernet in deg_state:
-                    parent_origin = deg_state[supernet]["origin"]
-                    if parent_origin != origin and not deaggregation_is_ordinary(prefix_str, origin, parent_origin, rel, roas):
-                        return True, {
-                            "anomaly": "Cross-Origin Deaggregation", 
-                            "parent_aggregate": supernet, 
-                            "parent_origin": parent_origin,
-                            "sub_prefix": prefix_str, 
-                            "sub_origin": origin
-                        }
-                    found_parent = True
-                    break
-                    
-            if not found_parent:
-                for i in range(32, net.prefixlen):
-                    supernet = str(net.supernet(new_prefix=i))
-                    pending_specs.setdefault(supernet, {})[(prefix_str, origin)] = current_epoch
-                    
-        elif net.prefixlen <= 32:
-            deg_state[str(net)] = {"origin": origin, "ts": current_epoch}
-            if str(net) in pending_specs:
-                specifics = [(sp, so, ts) for (sp, so), ts in pending_specs.pop(str(net)).items()]
-                
-                flagged_specifics = [s for s in specifics if s[1] != origin and not deaggregation_is_ordinary(s[0], s[1], origin, rel, roas)]
-                if flagged_specifics:
-                    return True, {
-                        "anomaly": "Cross-Origin Deaggregation (Retroactive)", 
-                        "parent_aggregate": str(net), 
-                        "parent_origin": origin, 
-                        "covered_specifics": flagged_specifics[:5]
-                    }
+                return False, {}
+        # add timestamp to pending specifically to prevent memory leak
+        for supernet in supernets:
+            pending_specs.setdefault(supernet, {})[(prefix_str, origin)] = current_epoch
+
+    elif plen <= aggregate_max:
+        deg_state[canonical] = {"origin": origin, "ts": current_epoch}
+        if canonical in pending_specs:
+            specifics = [(sp, so, ts) for (sp, so), ts in pending_specs.pop(canonical).items()]
+
+            # check specifics against newly arrived parent
+            flagged_specifics = [s for s in specifics if s[1] != origin and not deaggregation_is_ordinary(s[0], s[1], origin, rel, roas)]
+            if flagged_specifics:
+                return True, {
+                    "anomaly": "Cross-Origin Deaggregation (Retroactive)",
+                    "parent_aggregate": canonical,
+                    "parent_origin": origin,
+                    "covered_specifics": flagged_specifics[:5]
+                }
 
     return False, {}
 
@@ -468,7 +437,8 @@ def garbage_collect_state(state, current_epoch):
             del state["vol_peers"][k]
             
     if "peer_withdrawals" in state:
-        stale = [k for k, v in state["peer_withdrawals"].items() if not v or (current_epoch - v[-1]) > 10]
+        stale = [k for k, v in state["peer_withdrawals"].items()
+                 if not v or (current_epoch - (v["last"] if isinstance(v, dict) else v[-1])) > 10]
         for k in stale:
             del state["peer_withdrawals"][k]
 
@@ -485,10 +455,16 @@ def garbage_collect_state(state, current_epoch):
             # keep items newer than ttl
             state["pending_specifics"][k] = {
                 key: ts for key, ts in state["pending_specifics"][k].items()
-                if current_epoch - ts <= BASELINE_TTL_SECONDS
+                if current_epoch - ts <= PENDING_TTL_SECONDS
             }
             if not state["pending_specifics"][k]:
                 del state["pending_specifics"][k]
+
+
+def withdrawal_window(epochs=None):
+    """The withdrawals of a peer counted by second; built from the list of epochs of a state saved by an older version."""
+    epochs = list(epochs or ())
+    return {"by_second": dict(Counter(epochs)), "count": len(epochs), "last": epochs[-1] if epochs else 0}
 
 
 def new_incident(incident_type, actor_key, prefix, peer, ts_str, current_epoch, details, rec, total_updates=1):
@@ -570,17 +546,26 @@ def process_record(rec, rel, roas, active_incidents, timeout_seconds, out_f, sta
     if msg_type == "W":
         if current_epoch > 0:
             atr_state = state.setdefault("peer_withdrawals", {})
-            history = atr_state.get(peer, [])
-            history.append(current_epoch)
-            history = [x for x in history if current_epoch - x <= 10]
-            atr_state[peer] = history
+            # the withdrawals of the peer in the last 10 s, counted by second: a list rebuilt at every withdrawal made a
+            # session reset of a full table (hundreds of thousands of withdrawals within 10 s) quadratic. The count is the
+            # same as the list's, also when the timestamps of a peer are not in order.
+            window = atr_state.get(peer)
+            if not isinstance(window, dict):
+                window = atr_state[peer] = withdrawal_window(window)
+            by_second = window["by_second"]
+            by_second[current_epoch] = by_second.get(current_epoch, 0) + 1
+            window["count"] += 1
+            window["last"] = current_epoch
+            for second in [s for s in by_second if current_epoch - s > 10]:
+                window["count"] -= by_second.pop(second)
+            withdrawals = window["count"]
 
-            if len(history) > 500:
+            if withdrawals > 500:
                 atr_key = f"ATR_{peer}"
                 if atr_key not in active_incidents:
                     active_incidents[atr_key] = new_incident(
                         "ATR", atr_key, prefix, peer, ts_str, current_epoch,
-                        dict({"dropping_peer": peer, "withdrawal_count": len(history)},
+                        dict({"dropping_peer": peer, "withdrawal_count": withdrawals},
                              **({"session_event": note} if (note := extra_detectors.session_note(state, peer, current_epoch)) else {})), rec)
                 else:
                     inc = active_incidents[atr_key]
@@ -729,9 +714,9 @@ def main():
         try:
             with open(STATE_FILE, "rb") as f:
                 saved_data = pickle.load(f)
-                active_incidents = copy.deepcopy(saved_data.get("incidents", {}))
-                processed_files = copy.deepcopy(saved_data.get("processed_files", set()))
-                state = copy.deepcopy(saved_data.get("state", {}))
+                active_incidents = saved_data.get("incidents", {})
+                processed_files = saved_data.get("processed_files", set())
+                state = saved_data.get("state", {})
                 # a state saved before the dedup keeps the specifics as a set of (prefix, origin, epoch)
                 for k, v in state.get("pending_specifics", {}).items():
                     if isinstance(v, set):

@@ -30,6 +30,17 @@ REL = {(1, 100): "p2c", (100, 1): "c2p", (1, 2): "p2c", (2, 1): "c2p", (3, 2): "
 ROAS = {"20.0.0.0/16": {(100, 16)}}
 
 
+def flaps(prefix, peers, start=0):
+    """Ten announcements and withdrawals of the prefix for each peer, one a second, one peer after the other."""
+    records, s = [], start
+    for peer in peers:
+        for i in range(10):
+            ts = f"2026-10-22 10:00:{s:02d}"
+            records.append(withdraw(ts, prefix, peer) if i % 2 else announce(ts, prefix, peer, [peer, 100]))
+            s += 1
+    return records
+
+
 def run(records, rel=REL, roas=ROAS, reg=None):
     state, active, out = {}, {}, io.StringIO()
     for rec in records:
@@ -181,9 +192,12 @@ class Volatility(unittest.TestCase):
             extra_detectors.VOL_AC_UPDATES, extra_detectors.VOL_AC_PREFIXES, extra_detectors.VOL_AC_PEERS = saved
 
     def test_flapping_has_its_type(self):
-        records = [withdraw(f"2026-10-22 10:00:{i:02d}", "20.5.0.0/24", 7) if i % 2 else announce(f"2026-10-22 10:00:{i:02d}", "20.5.0.0/24", 7, [7, 100]) for i in range(6)]
-        active, _ = run(records, rel={}, roas={})
-        self.assertEqual(active["VOL_20.5.0.0/24_7"]["details"]["vol_type"], "FO")
+        # X-9: one incident for the prefix, once three peers each see it flap ten times within the window
+        active, _ = run(flaps("20.5.0.0/24", [7, 8, 9]), rel={}, roas={})
+        self.assertEqual(active["VOL_20.5.0.0/24"]["details"]["vol_type"], "FO")
+        self.assertEqual(active["VOL_20.5.0.0/24"]["details"]["peers"], 3)
+        active, _ = run(flaps("20.5.0.0/24", [7, 8]), rel={}, roas={})              # two peers are not enough
+        self.assertEqual(active, {})
 
 
 class Session(unittest.TestCase):
@@ -224,19 +238,63 @@ class Buffers(unittest.TestCase):
         self.assertNotIn("20.1.0.0/16", state["_idx"])
 
     def test_volatility_counts_the_flaps_and_keeps_four_messages(self):
-        records = []
-        for i in range(12):
-            ts = f"2026-10-22 10:00:{i:02d}"
-            records.append(withdraw(ts, "20.5.0.0/24", 7) if i % 2 else announce(ts, "20.5.0.0/24", 7, [7, 100]))
+        records = flaps("20.5.0.0/24", [7, 8, 9])
+        for s in range(30, 34):
+            ts = f"2026-10-22 10:00:{s:02d}"
+            records.append(withdraw(ts, "20.5.0.0/24", 9) if s % 2 else announce(ts, "20.5.0.0/24", 9, [9, 100]))
         active, _ = run(records, rel={}, roas={})
-        vol = active["VOL_20.5.0.0/24_7"]
-        self.assertEqual(vol["total_updates"], 12)      # every event of the flapping, the ones that triggered the detection included
+        vol = active["VOL_20.5.0.0/24"]
+        self.assertEqual(vol["total_updates"], 14)      # the ten flaps that triggered the detection, and the four after
         self.assertEqual(len(vol["messages"]), 4)
 
     def test_pending_specifics_has_one_entry_for_each_prefix_and_origin(self):
         records = [announce(f"2026-10-22 10:00:{i:02d}", "192.0.2.0/24", 9, [9, 64500]) for i in range(30)]
         _, state = run(records, rel={}, roas={})
         self.assertEqual(sum(len(v) for v in state["pending_specifics"].values()), len(state["pending_specifics"]))
+
+
+class Withdrawals(unittest.TestCase):
+    """The withdrawals of a peer in the last 10 s (ATR): counted by second, with the same count as the list of epochs."""
+
+    def test_the_count_is_the_one_of_the_list_also_out_of_order(self):
+        import random
+        rnd = random.Random(7)
+        state, reference = {}, []
+        epoch = 1_792_000_000
+        for _ in range(3000):
+            epoch += rnd.choice([0, 0, 0, 1, 2, 15])
+            t = epoch - rnd.choice([0, 0, 0, 0, 3, 11])                               # some timestamps come late
+            reference.append(t)
+            reference = [x for x in reference if t - x <= 10]                        # what the list did
+            incident.process_record(withdraw(incident.datetime.fromtimestamp(t, incident.timezone.utc).strftime("%Y-%m-%d %H:%M:%S"),
+                                             "20.0.0.0/16", 7), {}, {}, {}, incident.TIMEOUT_SECONDS, io.StringIO(), state)
+            window = state["peer_withdrawals"][7]
+            self.assertEqual(window["count"], len(reference))
+            self.assertEqual(window["by_second"], {s: reference.count(s) for s in set(reference)})
+
+    def test_a_session_reset_of_a_large_table_takes_linear_time(self):
+        import time
+        records = [withdraw("2026-10-25 12:34:15", f"{10 + i // 65536}.{i // 256 % 256}.{i % 256}.0/24", 34800) for i in range(100_000)]
+        start = time.monotonic()
+        active, _ = run(records, rel={}, roas={})
+        self.assertLess(time.monotonic() - start, 30)     # the list rebuilt at every withdrawal took minutes
+        self.assertEqual(active["ATR_34800"]["details"]["withdrawal_count"], 501)
+        self.assertEqual(len(active["ATR_34800"]["prefixes"]), 100_000 - 500)
+
+    def test_a_state_saved_with_lists_is_converted(self):
+        state = {"peer_withdrawals": {7: [1_792_000_000, 1_792_000_001, 1_792_000_001]}}
+        incident.process_record(withdraw("2026-10-28 00:00:00", "20.0.0.0/16", 7), {}, {}, {}, incident.TIMEOUT_SECONDS, io.StringIO(), state)
+        self.assertIsInstance(state["peer_withdrawals"][7], dict)
+
+
+class Pending(unittest.TestCase):
+    def test_more_specifics_wait_a_day_for_their_aggregate(self):
+        _, state = run([announce("2026-10-22 10:00:00", "192.0.2.0/24", 9, [9, 64500])], rel={}, roas={})
+        self.assertIn("192.0.0.0/16", state["pending_specifics"])
+        incident.garbage_collect_state(state, incident.parse_timestamp("2026-10-23 09:59:59"))
+        self.assertIn("192.0.0.0/16", state["pending_specifics"])
+        incident.garbage_collect_state(state, incident.parse_timestamp("2026-10-23 10:00:01"))
+        self.assertNotIn("192.0.0.0/16", state["pending_specifics"])
 
 
 class Files(unittest.TestCase):

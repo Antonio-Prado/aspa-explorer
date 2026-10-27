@@ -5,6 +5,15 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.51.5] - 2026-10-27
+
+### Fixed
+- `incident.py` stopped on a session reset: on 25 October at 12:34 UTC one peer of `rrc00` withdrew about 98,000 prefixes in two seconds, and the withdrawals of a peer in the last 10 s (the ATR count) were a list rebuilt at every withdrawal, so the cost grew with the square of the burst. The daily job of 26 October ran for more than a day without getting past it, and the next one did not start. The withdrawals are now counted by second, with the same count as the list also when the timestamps of a peer come out of order (a state saved with lists is converted): on those 150,000 updates the run takes 26 s instead of 328 s, with the same incidents and the same state.
+- The saved state is no longer deep-copied when it is loaded (it doubled the memory and took more than a minute), and the deaggregation check keeps the covering prefixes of each prefix instead of computing them with `ipaddress` at every announcement (44% of the time of a run). On 1.5 million updates of the same day, with the state of the host: 149 s instead of 344 s, with the same 774 incidents.
+- The more specifics that wait for their aggregate (`pending_specifics`, for DEG-MA) are kept for a day instead of 30: after three days of data they were 5.7 million entries, and with 30 days the state would not fit in the memory of the host. A more specific is compared with an aggregate that arrives up to a day later.
+- The cron line of `run-incidents.sh` opens the log inside `lockf`: a run that found the lock taken emptied the log of the run that held it.
+- Two tests of `tools/data_scripts` still expected one flapping incident for each peer, as before X-9; new tests for the count of the withdrawals, a reset of 100,000 prefixes and the day of the more specifics.
+
 ## [1.51.4] - 2026-10-23
 
 ### Fixed
