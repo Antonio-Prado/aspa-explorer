@@ -1,7 +1,8 @@
 // What the ASPAs say about the routing incidents that the project's detectors found (data_scripts, incident.py).
 // For each incident (the files incidents_*.jsonl[.gz] written by incident.py) the AS paths it kept (the path of the valley, the
 // paths of its messages) are checked with the downstream procedure, in three ways:
-//   - with the ASPAs that were published on the day the incident began (replayed from the history of changes);
+//   - with the ASPAs as they were at the start of the day the incident began (the last state of the day before, replayed
+//     from the history of changes: the state of the day itself can hold ASPAs published after the incident);
 //   - with complete ASPAs: every AS publishes the providers that CAIDA infers for it (the best case, and not independent of CAIDA);
 //   - with a part of the ASes publishing those complete ASPAs, from 0 to 100%, in a random order and the largest networks first.
 // The result is an aggregate (no AS number; `period` is the time, in UTC, of the first incident and of the last), served as /api/v1/incidents.json; with --detail the verdict of each incident goes to a
@@ -258,14 +259,14 @@ async function main() {
   const rel = await caidaText(flag('caida'), cache);
   const { providers: ideal, degree } = relationSets(rel.text);
 
-  // the ASPAs of each day on which an incident began; a day that the history does not cover has today's
+  // the ASPAs at the start of each day on which an incident began; a day that the history does not cover has today's
   let events = null;
   try { events = await readJson(process.env.INCIDENTS_EVENTS || EVENTS); } catch (err) { console.error(`history not available (${err.message}): today's ASPAs are used`); }
   const cacheDays = new Map();
   let today = null, fallbacks = 0;
   const aspasOf = (d) => {
     if (cacheDays.has(d)) return cacheDays.get(d);
-    let m = events && d ? aspaMap([...History.replay(events, d)].map(([customer, providers]) => ({ customer, providers }))) : null;
+    let m = events && d ? aspaMap([...History.replayBefore(events, d)].map(([customer, providers]) => ({ customer, providers }))) : null;
     if (!m || !m.size) { m = today; fallbacks++; }
     cacheDays.set(d, m);
     return m;

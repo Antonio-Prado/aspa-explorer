@@ -29,6 +29,10 @@
     return state;
   }
 
+  // State at the start of the day `day`, that is the last state of the day before. The history keeps the last state of
+  // each day, so the state of the day itself can hold ASPAs published after a table dump of 00:00 UTC or an incident.
+  const replayBefore = (events, day) => replay(events.filter((e) => e[0] < day));
+
   const same = (a, b) => a.length === b.length && a.every((x, i) => x === b[i]);
 
   // Events that turn the state prev into the state cur on the given day.
@@ -87,7 +91,7 @@
     return { added: pb.filter((p) => !ka.has(key(p))), gone: pa.filter((p) => !kb.has(key(p))), kept: pb.filter((p) => ka.has(key(p))).length };
   }
 
-  const api = { stateOf, replay, diff, applyDay, classify, sortProviders, compareAs, comparePlaces };
+  const api = { stateOf, replay, replayBefore, diff, applyDay, classify, sortProviders, compareAs, comparePlaces };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.AspaHistory = api;
 })(typeof self !== 'undefined' ? self : this);

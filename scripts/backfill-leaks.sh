@@ -1,6 +1,6 @@
 #!/bin/sh
 # Fill the history of the leaks backwards: one run of build-leaks.mjs for each of the last DAYS days that has no file yet
-# (the table dumps of 00:00 UTC of the day, the ASPAs as they were that day). Slow: about ten minutes a day.
+# (the table dumps of 00:00 UTC of the day, the ASPAs as they were at its start). Slow: about ten minutes a day.
 #   scripts/backfill-leaks.sh DAYS OUT_FILE [CACHE_DIR]
 # With FORCE=1 the days that already have a file are built again (after a change of the collectors, for instance).
 set -eu

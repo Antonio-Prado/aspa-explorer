@@ -111,7 +111,7 @@ test('parsePath rejects junk and flags AS_SETs', () => {
 
 
 // ---- site/history.js: events, replay and daily diff ----
-const { stateOf, replay, diff, applyDay, classify } = require('../site/history.js');
+const { stateOf, replay, replayBefore, diff, applyDay, classify } = require('../site/history.js');
 const st = (obj) => new Map(Object.entries(obj));
 
 test('stateOf merges the objects of one customer and sorts providers numerically', () => {
@@ -132,6 +132,14 @@ test('replay rebuilds the state of a day from the events', () => {
   assert.deepEqual([...replay(ev, '2026-01-01')], [['AS1', ['AS2']]]);
   assert.deepEqual([...replay(ev, '2026-01-02')], [['AS1', ['AS2', 'AS3']], ['AS4', ['AS0']]]);
   assert.deepEqual([...replay(ev)], [['AS4', ['AS0']]]);
+});
+
+test('replayBefore gives the state at the start of a day: the changes of that day are not in it', () => {
+  const ev = [['2026-01-01', 'AS1', ['AS2']], ['2026-01-02', 'AS1', ['AS2', 'AS3']], ['2026-01-02', 'AS4', ['AS0']], ['2026-01-03', 'AS1', null]];
+  assert.deepEqual([...replayBefore(ev, '2026-01-01')], []);
+  assert.deepEqual([...replayBefore(ev, '2026-01-02')], [['AS1', ['AS2']]]);
+  assert.deepEqual([...replayBefore(ev, '2026-01-03')], [...replay(ev, '2026-01-02')]);
+  assert.deepEqual([...replayBefore(ev, '2026-01-05')], [...replay(ev)]);
 });
 
 test('applyDay is idempotent: a rerun on the same day replaces that day', () => {

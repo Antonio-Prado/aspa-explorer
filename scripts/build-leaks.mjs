@@ -4,9 +4,10 @@
 //
 //   node scripts/build-leaks.mjs OUT_FILE [CACHE_DIR] [--day=YYYYMMDD]
 //
-// With --day the table dumps of that day (the ones of 00:00 UTC) and the ASPAs as they were that day (replayed from the
-// history of changes) are used, and only the by-AS file of that day and the line of the history are written: this is how
-// the history of the leaks is filled in backwards.
+// With --day the table dumps of that day (the ones of 00:00 UTC) and the ASPAs as they were at its start (the last state
+// of the day before, replayed from the history of changes) are used, and only the by-AS file of that day, the line of the
+// history and the whole document of the day (leaks-full/YYYYMMDD.json, for the study of a period) are written: this is
+// how the history of the leaks is filled in backwards.
 //
 // Inputs (environment, with defaults for the production host):
 //   ASPA_DATA        URL or file of Routinator's jsonext     http://127.0.0.1:8080/data/aspas.json
@@ -43,6 +44,14 @@ export const dumpUrl = (collector, day) => {
   }
   if (!day) throw new Error('the latest RouteViews dump has to be looked up: use latestDumpUrl');
   return `${RV}/${rvBase(collector)}/${day.slice(0, 4)}.${day.slice(4, 6)}/RIBS/rib.${day}.0000.bz2`;
+};
+// The dumps of 00:00 UTC of a day to try in turn: for RouteViews also the one named after the minute before
+// (rib.YYYYMMDD.2359 of the day before), as route-views.eqix wrote it on 6 September 2026.
+export const previousDay = (day) => new Date(Date.UTC(+day.slice(0, 4), +day.slice(4, 6) - 1, +day.slice(6) - 1)).toISOString().slice(0, 10).replaceAll('-', '');
+export const dayDumpUrls = (collector, day) => {
+  if (isRis(collector)) return [dumpUrl(collector, day)];
+  const p = previousDay(day);
+  return [dumpUrl(collector, day), `${RV}/${rvBase(collector)}/${p.slice(0, 4)}.${p.slice(4, 6)}/RIBS/rib.${p}.2359.bz2`];
 };
 // The newest rib file named in the listing of a month (an HTML page), or null.
 export const pickLatestRib = (html) => {
@@ -293,6 +302,16 @@ export async function withRetry(fn, tries = 4, pauseMs = 5000, log = (m) => cons
   }
 }
 
+async function downloadDay(collector, day, path) {
+  const urls = dayDumpUrls(collector, day);
+  for (const [i, url] of urls.entries()) {
+    try { return await download(url, path); } catch (err) {
+      if (i === urls.length - 1 || !/HTTP 404/.test(err.message)) throw err;
+      console.error(`${url}: not there, trying ${urls[i + 1]}`);
+    }
+  }
+}
+
 async function download(url, path) {
   const tmp = `${path}.tmp`;
   await withRetry(async () => {
@@ -328,7 +347,7 @@ async function main() {
   let aspas;
   if (dayIso) {
     const events = await readJson(process.env.LEAKS_EVENTS || EVENTS);
-    aspas = [...History.replay(events, dayIso)].map(([customer, providers]) => ({ customer, providers }));
+    aspas = [...History.replayBefore(events, dayIso)].map(([customer, providers]) => ({ customer, providers }));
   } else {
     aspas = (await readJson(process.env.ASPA_DATA || 'http://127.0.0.1:8080/data/aspas.json')).aspas;
   }
@@ -342,7 +361,7 @@ async function main() {
   for (const c of collectors) {
     const ext = isRis(c) ? 'gz' : 'bz2';
     const file = join(cache, dayIso ? `dump-${c}-${dayFlag}.${ext}` : `dump-${c}.${ext}`);
-    if (dayIso || !(await fresh(file, 4 * 3600e3))) await download(dayIso ? dumpUrl(c, dayFlag) : await withRetry(() => latestDumpUrl(c)), file);
+    if (dayIso || !(await fresh(file, 4 * 3600e3))) await (dayIso ? downloadDay(c, dayFlag, file) : download(await withRetry(() => latestDumpUrl(c)), file));
     const t0 = Date.now();
     const stats = await readRib(openDump(file), (peerAs, path, n, plen, v6) => leaks.add(peerAs, c, Array.from(path.subarray(0, n)), plen, v6));
     used.push({ collector: c, routes: stats.entries, built: new Date((await stat(file)).mtimeMs).toISOString().replace(/\.\d+Z$/, 'Z') });
@@ -360,6 +379,10 @@ async function main() {
   if (!dayIso) {
     await write(outFile, doc);
     await write(join(dir, 'leaks-by-as.json'), perAs);
+  }
+  if (dayIso) {
+    await mkdir(join(dir, 'leaks-full'), { recursive: true });
+    await write(join(dir, 'leaks-full', `${day.replaceAll('-', '')}.json`), doc);
   }
   let rows = [];
   try { rows = JSON.parse(await readFile(join(dir, 'leaks-history.json'), 'utf8')); } catch { /* the first run */ }

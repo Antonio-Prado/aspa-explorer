@@ -5,6 +5,15 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.53.2] - 2026-10-27
+
+### Fixed
+- A day of the past was checked with the ASPAs as they were at the end of that day: the history keeps the last state of each day (the hourly job rewrites the changes of the day), so the table dumps of 00:00 UTC rebuilt with `build-leaks.mjs --day`, and the incidents of a day in `build-incidents.mjs`, were checked with ASPAs published up to a day after them. Both now take the state at the start of the day, the last one of the day before (`replayBefore` in `site/history.js`, with a test). The days of the chart of the places of valley that were rebuilt before this version were checked the old way.
+- `build-leaks.mjs --day` failed on a day whose RouteViews dump of midnight is named after the minute before: route-views.eqix wrote the one of 6 September 2026 as `rib.20260905.2359.bz2`. When the dump of 00:00 is not there, the one of 23:59 of the day before is used (`dayDumpUrls`, with tests).
+
+### Added
+- `build-leaks.mjs --day` also keeps the whole document of the day in `leaks-full/YYYYMMDD.json` next to the output, for the study of a period (the figures of each collector and the comparison of RIS and RouteViews that the by-AS file does not have).
+
 ## [1.53.1] - 2026-10-27
 
 ### Fixed

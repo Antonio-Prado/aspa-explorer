@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { Readable } from 'node:stream';
 import { readRib, readAsPath } from './mrt.mjs';
 import { createRequire as cr } from 'node:module';
-import { Leaks, classify, spanOf, aspaMap, relations, byAs, addHistory, withRetry, dumpUrl, pickLatestRib, rvListing, isRis, COLLECTORS } from './build-leaks.mjs';
+import { Leaks, classify, spanOf, aspaMap, relations, byAs, addHistory, withRetry, dumpUrl, dayDumpUrls, previousDay, pickLatestRib, rvListing, isRis, COLLECTORS } from './build-leaks.mjs';
 
 let passed = 0;
 const test = async (name, fn) => { await fn(); passed++; console.log('ok  ', name); };
@@ -125,6 +125,18 @@ await test('the table dump of a collector: the latest, or the one of a day', () 
   assert.equal(dumpUrl('route-views.sg', '20261010'), 'https://archive.routeviews.org/route-views.sg/bgpdata/2026.10/RIBS/rib.20261010.0000.bz2');
   assert.equal(rvListing('route-views3', '2026.10'), 'https://archive.routeviews.org/route-views3/bgpdata/2026.10/RIBS/');
   assert.throws(() => dumpUrl('route-views2'));
+});
+
+await test('the dumps of 00:00 UTC of a day: RouteViews also named after the minute before', () => {
+  assert.equal(previousDay('20261001'), '20260930');
+  assert.equal(previousDay('20260301'), '20260228');
+  assert.equal(previousDay('20260101'), '20251231');
+  assert.deepEqual(dayDumpUrls('rrc00', '20260906'), ['https://data.ris.ripe.net/rrc00/2026.09/bview.20260906.0000.gz']);
+  assert.deepEqual(dayDumpUrls('route-views.eqix', '20260906'), [
+    'https://archive.routeviews.org/route-views.eqix/bgpdata/2026.09/RIBS/rib.20260906.0000.bz2',
+    'https://archive.routeviews.org/route-views.eqix/bgpdata/2026.09/RIBS/rib.20260905.2359.bz2',
+  ]);
+  assert.equal(dayDumpUrls('route-views2', '20261001')[1], 'https://archive.routeviews.org/bgpdata/2026.09/RIBS/rib.20260930.2359.bz2');
 });
 
 await test('the newest RouteViews RIB of a listing', () => {
