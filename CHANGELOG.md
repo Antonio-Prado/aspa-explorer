@@ -5,6 +5,14 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.53.0] - 2026-10-27
+
+### Added
+- The tromboning test checks where each probe is. Globalping places a probe by the address it connects from, and a probe that is not in the country makes a trombone that is not there. A traceroute has its own reference points: a hop that answers from the LAN of an exchange point is on the other side of its switch, so the packet went at least to the nearest site of that exchange and came back. The page asks PeeringDB, from the browser and while the probes run, for the prefixes of the LANs and the coordinates of the facilities of the exchanges (the data are not copied to this site), and a probe whose round trip to such a hop is shorter than light in fibre (2/3 of c) allows from its place, with a margin of 100 km, is elsewhere: it is left out of the reading and marked in the table, with the figures under its row, over one family and in the comparison of IPv4 and IPv6. The same test as Izhikevich and others (IMC 2026) with the DNS root servers, which Globalping cannot ask which instance answers. The result says how many probes could be checked. `site/traceroute.js` (`ixpsFrom`, `ixpIndex`, `ixpOf`, `placeCheck`), with tests in `scripts/test-traceroute.mjs`; the content security policy lets the page ask `www.peeringdb.com`, and the guide says that PeeringDB sees the address of the visitor.
+
+### Fixed
+- `incident.py` counted the withdrawals, the flaps and the resets of a peer by its AS number alone, so a stream with several collectors (the Parquet files of RIS) would add up the sessions of one AS at two collectors (X-12). A peer is now a session, the collector and the peer AS: the mass withdrawals, the flaps of a session, the state of a session and the withdrawals that belong to an incident are by session, and the key of an ATR incident names the collector (`ATR_rrc00_34800`, with `collector` in its details); what counts independent views (the peers that see a prefix flap, the more specifics that two peers have, the churn seen from many peers) stays by AS. A state saved before is read as the sessions of `rrc00`. On 15 minutes of `rrc00` the incidents are the same, one for one; tests for two collectors and for the saved state.
+
 ## [1.52.3] - 2026-10-27
 
 ### Added

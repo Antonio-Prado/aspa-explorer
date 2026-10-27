@@ -31,10 +31,41 @@ VOL_AC_PREFIXES = 300                   # ... for this many different prefixes, 
 VOL_AC_PEERS = 8                        # ... seen from this many peers: churn that goes far beyond one prefix
 ATR_ATTRIBUTE_SUBCODES = {1, 4, 5, 9}   # UPDATE message error (code 3): attribute list, flags, length, optional attribute
 SESSION_EVENT_SECONDS = 120             # a change of state of the session this close before a mass withdrawal is noted
+LEGACY_COLLECTOR = "rrc00"              # X-12: the collector of a state saved before X-12 (the stream of rrc00 is the only one)
 
 # AS numbers that are not for the public Internet: IANA special-purpose and private (RFC 6996, 5398, 7300, 6793)
 PRIVATE_ASN = ((64512, 65534), (4200000000, 4294967294))
 RESERVED_ASN = ((0, 0), (23456, 23456), (64496, 64511), (65535, 65551), (65552, 131071), (4294967295, 4294967295))
+
+
+# --- X-12: the session of a record ---
+
+def session_of(rec):
+    """X-12: the session that a record comes from, as (collector, peer AS), or None when the record has no peer. The same AS
+    feeds several collectors, and the Parquet files of RIS put all of them in one stream: each feed is a session of its own,
+    with its own withdrawals, flaps and resets, and counting them by the AS alone would add up the resets of two collectors.
+    What counts independent views stays by AS (the peers that see a prefix flap, the more specifics that two peers have, the
+    churn seen from many peers): one AS at three collectors is one view, not three."""
+    peer = rec.get("peer")
+    return (rec.get("collector"), peer) if peer else None
+
+
+def session_tag(rec):
+    """The session in an actor key: `rrc00_34800`, or the AS alone when the record does not say its collector."""
+    return f"{rec['collector']}_{rec.get('peer')}" if rec.get("collector") else str(rec.get("peer"))
+
+
+def upgrade_sessions(incidents, state):
+    """X-12: a state saved before X-12 keeps the sessions as AS numbers; they become sessions of LEGACY_COLLECTOR."""
+    s = lambda p: p if not p or isinstance(p, tuple) else (LEGACY_COLLECTOR, p)
+    for inc in incidents.values():
+        if "peers" in inc:
+            inc["peers"] = {s(p) for p in inc["peers"]}
+    for name in ("peer_withdrawals", "peer_state"):
+        if name in state:
+            state[name] = {s(k): v for k, v in state[name].items()}
+    if "vol_flaps" in state:
+        state["vol_flaps"] = {(k[0], s(k[1])): v for k, v in state["vol_flaps"].items()}
 
 
 @lru_cache(maxsize=1 << 18)
@@ -331,17 +362,17 @@ def atr_type(code, subcode):
 def session_event(rec, state, epoch):
     """A record of the session (type N: NOTIFICATION, type S: change of state of the peer). -> details of an ATR incident or None."""
     if rec.get("type") == "S":
-        state.setdefault("peer_state", {})[rec.get("peer")] = (epoch, rec.get("state"))
+        state.setdefault("peer_state", {})[session_of(rec)] = (epoch, rec.get("state"))
         return None
     kind = atr_type(rec.get("code"), rec.get("subcode"))
     if not kind:
         return None
     return {"anomaly": "Session ended by an UPDATE message error", "atr_type": kind, "peer": rec.get("peer"),
-            "code": rec.get("code"), "subcode": rec.get("subcode")}
+            "collector": rec.get("collector"), "code": rec.get("code"), "subcode": rec.get("subcode")}
 
 
-def session_note(state, peer, epoch):
-    """The change of state of the session of this peer in the last SESSION_EVENT_SECONDS, if any (a mass withdrawal that follows
-    it is an ordinary reset of the session)."""
-    v = state.get("peer_state", {}).get(peer)
+def session_note(state, session, epoch):
+    """The change of state of this session (session_of) in the last SESSION_EVENT_SECONDS, if any (a mass withdrawal that
+    follows it is an ordinary reset of the session)."""
+    v = state.get("peer_state", {}).get(session)
     return v[1] if v and 0 <= epoch - v[0] <= SESSION_EVENT_SECONDS else None

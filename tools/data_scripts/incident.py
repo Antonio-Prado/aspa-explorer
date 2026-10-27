@@ -288,7 +288,7 @@ def check_deaggregation(rec, rel, roas, state, current_epoch):
 
 def check_state_volatility(rec, state, current_epoch):
     prefix = rec.get("prefix")
-    peer = rec.get("peer")
+    peer = extra_detectors.session_of(rec)        # X-12: the flaps of a session, not of an AS that feeds several collectors
     if not prefix or not peer or current_epoch == 0:
         return False, {}
 
@@ -314,7 +314,8 @@ def check_state_volatility(rec, state, current_epoch):
 def flapping_prefix(state, prefix, peer, current_epoch, details):
     """X-9: one incident for a prefix that flaps, not one for each peer that sees it flap. The peers that flap it within
     VOL_FO_WINDOW seconds are counted, and the incident (actor VOL_<prefix>) opens at VOL_FO_MIN_PEERS of them: a prefix that
-    flaps for one peer alone is that peer's session, not the prefix. Returns the actor key, or None while the peers are too few."""
+    flaps for one peer alone is that peer's session, not the prefix. `peer` is the peer AS (X-12: one AS at several collectors
+    is one view). Returns the actor key, or None while the peers are too few."""
     peers = state.setdefault("vol_peers", {}).setdefault(prefix, {})
     peers[peer] = current_epoch
     for p in [p for p, t in peers.items() if current_epoch - t > VOL_FO_WINDOW]:
@@ -501,7 +502,8 @@ def add_message(inc, rec, ts_str, current_epoch):
 def process_record(rec, rel, roas, active_incidents, timeout_seconds, out_f, state, reg=None, links=frozenset()):
     msg_type = rec.get("type")
     prefix = rec.get("prefix")
-    peer = rec.get("peer")
+    # X-12: the peer as a session (collector, peer AS): the same AS at two collectors is two sessions
+    peer = extra_detectors.session_of(rec)
     ts_str = rec.get("timestamp")
     origin = rec.get("origin")
 
@@ -511,7 +513,7 @@ def process_record(rec, rel, roas, active_incidents, timeout_seconds, out_f, sta
             epoch = parse_timestamp(ts_str)
             details = extra_detectors.session_event(rec, state, epoch)
             if details:
-                key = f"ATR_{details['atr_type']}_{peer}"
+                key = f"ATR_{details['atr_type']}_{extra_detectors.session_tag(rec)}"
                 if key not in active_incidents:
                     active_incidents[key] = new_incident("ATR", key, "", peer, ts_str, epoch, details, rec)
                     active_incidents[key]["prefixes"] = set()
@@ -561,11 +563,11 @@ def process_record(rec, rel, roas, active_incidents, timeout_seconds, out_f, sta
             withdrawals = window["count"]
 
             if withdrawals > 500:
-                atr_key = f"ATR_{peer}"
+                atr_key = f"ATR_{extra_detectors.session_tag(rec)}"
                 if atr_key not in active_incidents:
                     active_incidents[atr_key] = new_incident(
                         "ATR", atr_key, prefix, peer, ts_str, current_epoch,
-                        dict({"dropping_peer": peer, "withdrawal_count": withdrawals},
+                        dict({"dropping_peer": rec.get("peer"), "collector": rec.get("collector"), "withdrawal_count": withdrawals},
                              **({"session_event": note} if (note := extra_detectors.session_note(state, peer, current_epoch)) else {})), rec)
                 else:
                     inc = active_incidents[atr_key]
@@ -574,7 +576,7 @@ def process_record(rec, rel, roas, active_incidents, timeout_seconds, out_f, sta
 
         is_vol, vol_details = check_state_volatility(rec, state, current_epoch)
         if is_vol:
-            vol_key, vol_details = flapping_prefix(state, prefix, peer, current_epoch, vol_details)
+            vol_key, vol_details = flapping_prefix(state, prefix, rec.get("peer"), current_epoch, vol_details)
             if vol_key and vol_key not in active_incidents:
                 # the flaps that triggered the detection are already part of the incident
                 active_incidents[vol_key] = new_incident(
@@ -603,7 +605,7 @@ def process_record(rec, rel, roas, active_incidents, timeout_seconds, out_f, sta
     if msg_type == "A":
         is_vol, vol_details = check_state_volatility(rec, state, current_epoch)
         if is_vol:
-            vol_key, vol_details = flapping_prefix(state, prefix, peer, current_epoch, vol_details)
+            vol_key, vol_details = flapping_prefix(state, prefix, rec.get("peer"), current_epoch, vol_details)
             if vol_key and vol_key in active_incidents:
                 inc = active_incidents[vol_key]
                 inc["peers"].add(peer)
@@ -721,6 +723,8 @@ def main():
                 for k, v in state.get("pending_specifics", {}).items():
                     if isinstance(v, set):
                         state["pending_specifics"][k] = {(sp, so): ts for sp, so, ts in v}
+                # and one saved before X-12 keeps the peers as AS numbers
+                extra_detectors.upgrade_sessions(active_incidents, state)
         except Exception as e:
             print(f"could not load state: {e}. starting fresh.")
 

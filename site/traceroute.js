@@ -113,7 +113,8 @@
     for (const h of hops) if (h.asn && path[path.length - 1] !== h.asn) path.push(h.asn);
     const lastRtt = last && last.rtt !== null ? last.rtt : null;
     return {
-      probe: { city: result.probe.city, country: result.probe.country, asn: result.probe.asn, network: result.probe.network },
+      probe: { city: result.probe.city, country: result.probe.country, asn: result.probe.asn, network: result.probe.network,
+        latitude: result.probe.latitude, longitude: result.probe.longitude },
       status: result.result.status, hops, path, jump, lastRtt, reachedAddress: last ? last.ip : null,
       access, net: lastRtt === null ? null : Math.max(0, lastRtt - access),
       // from the first public address to the end, supposing that the target is in the country of the probe
@@ -173,7 +174,110 @@
     };
   }
 
-  const api = { hostIn, targetOf, parseIp, contains, prefixesOf, isPrivate, summarise, aggregate, pairProbes, comparePairs, LONG_DELAY_MS, TROMBONE_MS, JUMP_MS };
+  // Where a probe is. Globalping places a probe by the address it connects from (geolocation databases), and a probe that is
+  // not in the country makes a trombone that is not there. Izhikevich and others (IMC 2026) test the place of RIPE Atlas probes
+  // with the round trips to the DNS root servers: a round trip shorter than light in fibre allows from the declared place proves
+  // that the probe is elsewhere. Globalping cannot ask a root server which of its instances answers, but a traceroute has its own
+  // reference points: a hop that answers from the LAN of an exchange point is on the other side of that exchange's switch, so
+  // the packet went at least to the nearest site of the exchange and came back. Queues, slow answers and tunnels only add time,
+  // so they never make a probe look misplaced; the margin covers places that are cities and not points.
+  const FIBRE_KM_PER_MS = (299792.458 * 2) / 3 / 1000;    // light in fibre, 2/3 of c: about 200 km in a millisecond
+  const PLACE_MARGIN_KM = 100;
+
+  // The distance on the Earth between two [latitude, longitude], in km.
+  function distanceKm(a, b) {
+    const rad = Math.PI / 180, dLat = (b[0] - a[0]) * rad, dLon = (b[1] - a[1]) * rad;
+    const h = Math.sin(dLat / 2) ** 2 + Math.cos(a[0] * rad) * Math.cos(b[0] * rad) * Math.sin(dLon / 2) ** 2;
+    return 2 * 6371.0088 * Math.asin(Math.min(1, Math.sqrt(h)));
+  }
+
+  // A prefix of a LAN as it can be used: IPv4 from /16 to /30, IPv6 from /32 to /126, in lower case; null for anything else.
+  function lanPrefix(text) {
+    const m = /^([0-9a-f.:]+)\/(\d{1,3})$/i.exec(String(text || '').trim());
+    const net = m && parseIp(m[1]), len = m ? Number(m[2]) : 0;
+    if (!net || (net.family === 6 ? len < 32 || len > 126 : len < 16 || len > 30)) return null;
+    return `${m[1].toLowerCase()}/${len}`;
+  }
+
+  // The exchanges from the tables of PeeringDB (ixpfx, ixlan, ix, ixfac, fac, as the API gives them with depth=0): those with a
+  // usable prefix and a facility with coordinates. A site is [latitude, longitude] rounded to three decimals (about 100 m),
+  // once for each place. The page asks PeeringDB for them from the browser: the data are not copied anywhere.
+  function ixpsFrom({ ixpfx = [], ixlan = [], ix = [], ixfac = [], fac = [] }) {
+    const ixOfLan = new Map(ixlan.map((l) => [l.id, l.ix_id]));
+    const place = new Map();
+    for (const f of fac) {
+      const lat = Number(f.latitude), lon = Number(f.longitude);
+      if (f.status !== 'ok' || f.latitude === null || f.longitude === null || !Number.isFinite(lat) || !Number.isFinite(lon)) continue;
+      if (Math.abs(lat) > 90 || Math.abs(lon) > 180 || (lat === 0 && lon === 0)) continue;
+      place.set(f.id, [Math.round(lat * 1000) / 1000, Math.round(lon * 1000) / 1000]);
+    }
+    const prefixes = new Map(), sites = new Map();
+    for (const p of ixpfx) {
+      const id = ixOfLan.get(p.ixlan_id), pfx = lanPrefix(p.prefix);
+      if (id === undefined || !pfx) continue;
+      if (!prefixes.has(id)) prefixes.set(id, new Set());
+      prefixes.get(id).add(pfx);
+    }
+    for (const l of ixfac) {
+      const s = place.get(l.fac_id);
+      if (!s) continue;
+      if (!sites.has(l.ix_id)) sites.set(l.ix_id, new Map());
+      sites.get(l.ix_id).set(s.join(','), s);
+    }
+    return ix.filter((x) => x.status === 'ok' && prefixes.has(x.id) && sites.has(x.id))
+      .sort((a, b) => a.id - b.id)
+      .map((x) => ({ id: x.id, name: x.name, city: x.city, country: x.country, prefixes: [...prefixes.get(x.id)].sort(), sites: [...sites.get(x.id).values()] }));
+  }
+
+  // The LANs of the exchanges (ixpsFrom) as an index for the addresses of the hops: one table for each length of prefix,
+  // the longest first.
+  function ixpIndex(ixps) {
+    const groups = new Map();
+    for (const x of ixps || []) {
+      for (const p of x.prefixes || []) {
+        const m = /^([0-9a-f.:]+)\/(\d{1,3})$/i.exec(p), net = m && parseIp(m[1]);
+        if (!net || Number(m[2]) > net.bits) continue;
+        const key = `${net.family}/${m[2]}`;
+        if (!groups.has(key)) groups.set(key, { family: net.family, len: Number(m[2]), shift: BigInt(net.bits - Number(m[2])), nets: new Map() });
+        const g = groups.get(key);
+        g.nets.set(String(net.n >> g.shift), x);
+      }
+    }
+    return [...groups.values()].sort((a, b) => b.len - a.len);
+  }
+
+  // The exchange whose LAN has the address, or null.
+  function ixpOf(index, address) {
+    const ip = parseIp(address);
+    if (!ip) return null;
+    for (const g of index) if (g.family === ip.family) { const x = g.nets.get(String(ip.n >> g.shift)); if (x) return x; }
+    return null;
+  }
+
+  // The check of a probe (a summary, with the latitude and longitude that Globalping gives it): how many of its hops answer from
+  // the LAN of an exchange with known sites, and the first one whose round trip is too short for the declared place, with the
+  // figures that prove it (null when there is none).
+  function placeCheck(summary, index) {
+    const p = summary.probe;
+    if (!index || typeof p.latitude !== 'number' || typeof p.longitude !== 'number') return { checked: 0, misplaced: null };
+    let checked = 0;
+    for (const h of summary.hops) {
+      if (!h.ip || h.rtt === null || isPrivate(h.ip)) continue;
+      const x = ixpOf(index, h.ip);
+      if (!x || !x.sites || !x.sites.length) continue;
+      checked++;
+      const km = Math.min(...x.sites.map((s) => distanceKm([p.latitude, p.longitude], s)));
+      const atLeast = (2 * Math.max(0, km - PLACE_MARGIN_KM)) / FIBRE_KM_PER_MS;
+      if (h.rtt < atLeast) {
+        return { checked, misplaced: { hop: h.n, ip: h.ip, ixp: x.name, city: x.city, country: x.country, km: Math.round(km), rtt: h.rtt,
+          atLeast: Math.round(atLeast * 10) / 10, within: Math.round(PLACE_MARGIN_KM + (h.rtt / 2) * FIBRE_KM_PER_MS) } };
+      }
+    }
+    return { checked, misplaced: null };
+  }
+
+  const api = { hostIn, targetOf, parseIp, contains, prefixesOf, isPrivate, summarise, aggregate, pairProbes, comparePairs, distanceKm, lanPrefix, ixpsFrom, ixpIndex, ixpOf, placeCheck,
+    LONG_DELAY_MS, TROMBONE_MS, JUMP_MS, FIBRE_KM_PER_MS, PLACE_MARGIN_KM };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.AspaTraceroute = api;
 })(typeof self !== 'undefined' ? self : this);

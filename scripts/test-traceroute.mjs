@@ -2,7 +2,7 @@
 import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
 
-const { hostIn, targetOf, parseIp, contains, prefixesOf, isPrivate, summarise, aggregate, pairProbes, comparePairs } = createRequire(import.meta.url)('../site/traceroute.js');
+const { hostIn, targetOf, parseIp, contains, prefixesOf, isPrivate, summarise, aggregate, pairProbes, comparePairs, distanceKm, lanPrefix, ixpsFrom, ixpIndex, ixpOf, placeCheck, FIBRE_KM_PER_MS } = createRequire(import.meta.url)('../site/traceroute.js');
 let passed = 0;
 const test = (name, fn) => { fn(); passed++; console.log('ok  ', name); };
 
@@ -152,6 +152,74 @@ test('addresses and prefixes: an address is inside a prefix or it is not', () =>
   assert.equal(contains('10.0.0.0/33', '10.0.0.1'), false);
   assert.equal(contains('0.0.0.0/0', '8.8.8.8'), true);
   assert.deepEqual(prefixesOf([{ path: [1, 9], target_prefix: '193.0.0.0/21' }, { path: [1, 8], target_prefix: '8.0.0.0/8' }, { path: [2, 9], target_prefix: '2001:DB8::/32' }], 9).sort(), ['193.0.0.0/21', '2001:db8::/32']);
+});
+
+// Where a probe is: the exchange points of a traceroute as reference points (Izhikevich and others, IMC 2026, with the DNS roots)
+const IXPS = [
+  { id: 31, name: 'DE-CIX Frankfurt', city: 'Frankfurt', country: 'DE', prefixes: ['80.81.192.0/21', '2001:7f8::/64'], sites: [[50.119, 8.735], [50.1, 8.63]] },
+  { id: 54, name: 'MIX-IT', city: 'Milan', country: 'IT', prefixes: ['217.29.66.0/23'], sites: [[45.475, 9.105]] },
+  { id: 99, name: 'A wide LAN', city: 'Frankfurt', country: 'DE', prefixes: ['80.81.0.0/16'], sites: [[48.137, 11.575]] },
+];
+const probeAt = (lat, lon, hops) => ({ probe: { city: 'Milan', country: 'IT', latitude: lat, longitude: lon }, hops: hops.map(([ip, rtt], i) => ({ n: i + 1, ip, rtt })) });
+
+test('the prefixes of a LAN that can be used', () => {
+  assert.equal(lanPrefix('80.81.192.0/21'), '80.81.192.0/21');
+  assert.equal(lanPrefix('2001:7F8::/64'), '2001:7f8::/64');
+  for (const bad of ['', null, '80.81.192.0', '10.0.0.0/8', '80.81.192.0/31', '2001:7f8::/16', '2001:7f8::/127', '300.1.1.0/24', 'x/24']) assert.equal(lanPrefix(bad), null, String(bad));
+});
+
+test('the exchanges of PeeringDB with a prefix and a site, the sites once each, in order of id', () => {
+  const t = {
+    ixpfx: [{ ixlan_id: 10, prefix: '80.81.192.0/21' }, { ixlan_id: 10, prefix: '2001:7f8::/64' }, { ixlan_id: 20, prefix: '217.29.66.0/23' },
+      { ixlan_id: 30, prefix: '10.0.0.0/8' }, { ixlan_id: 99, prefix: '192.0.2.0/24' }],
+    ixlan: [{ id: 10, ix_id: 31 }, { id: 20, ix_id: 54 }, { id: 30, ix_id: 77 }, { id: 40, ix_id: 88 }],
+    ix: [{ id: 54, name: 'MIX-IT', city: 'Milan', country: 'IT', status: 'ok' }, { id: 31, name: 'DE-CIX Frankfurt', city: 'Frankfurt', country: 'DE', status: 'ok' },
+      { id: 77, name: 'Bad prefix', city: 'X', country: 'XX', status: 'ok' }, { id: 88, name: 'No prefix', city: 'Y', country: 'YY', status: 'ok' }],
+    ixfac: [{ ix_id: 31, fac_id: 1 }, { ix_id: 31, fac_id: 2 }, { ix_id: 31, fac_id: 3 }, { ix_id: 54, fac_id: 4 }, { ix_id: 54, fac_id: 5 }, { ix_id: 77, fac_id: 1 }],
+    fac: [{ id: 1, latitude: 50.11925, longitude: 8.735199, status: 'ok' }, { id: 2, latitude: 50.1192, longitude: 8.7352, status: 'ok' },
+      { id: 3, latitude: null, longitude: null, status: 'ok' }, { id: 4, latitude: 0, longitude: 0, status: 'ok' }, { id: 5, latitude: 45.47, longitude: 9.1, status: 'deleted' }],
+  };
+  assert.deepEqual(ixpsFrom(t), [
+    { id: 31, name: 'DE-CIX Frankfurt', city: 'Frankfurt', country: 'DE', prefixes: ['2001:7f8::/64', '80.81.192.0/21'], sites: [[50.119, 8.735]] },
+  ]);
+  assert.deepEqual(ixpsFrom({}), []);
+});
+
+test('distances on the Earth', () => {
+  assert.ok(Math.abs(distanceKm([41.9, 12.5], [45.46, 9.19]) - 477) < 5);        // Rome to Milan
+  assert.ok(Math.abs(distanceKm([50.11, 8.68], [52.37, 4.9]) - 364) < 5);        // Frankfurt to Amsterdam
+  assert.equal(distanceKm([45, 9], [45, 9]), 0);
+  assert.ok(Math.abs(FIBRE_KM_PER_MS - 199.86) < 0.01);
+});
+
+test('the exchange of an address: the longest prefix, both families, nothing outside', () => {
+  const idx = ixpIndex(IXPS);
+  assert.equal(ixpOf(idx, '80.81.196.146').name, 'DE-CIX Frankfurt');           // in the /21 and in the /16: the /21
+  assert.equal(ixpOf(idx, '80.81.10.1').name, 'A wide LAN');
+  assert.equal(ixpOf(idx, '2001:7f8::a16f:0:1').name, 'DE-CIX Frankfurt');
+  assert.equal(ixpOf(idx, '217.29.67.200').name, 'MIX-IT');
+  assert.equal(ixpOf(idx, '193.0.0.1'), null);
+  assert.equal(ixpOf(idx, 'not an address'), null);
+  assert.deepEqual(ixpIndex(null), []);
+});
+
+test('a probe said to be in Milan that answers from Frankfurt in 1.5 ms is not in Milan', () => {
+  const r = placeCheck(probeAt(45.464, 9.19, [['192.168.1.1', 0.4], ['195.0.0.1', 1], ['80.81.196.146', 1.5], ['193.0.0.1', 9]]), ixpIndex(IXPS));
+  assert.equal(r.checked, 1);
+  assert.equal(r.misplaced.ixp, 'DE-CIX Frankfurt');
+  assert.equal(r.misplaced.hop, 3);
+  assert.ok(r.misplaced.km > 500 && r.misplaced.km < 530);
+  assert.ok(r.misplaced.atLeast > 4 && r.misplaced.atLeast < 4.5);              // 2 x (km - 100) at 200 km a millisecond
+  assert.ok(r.misplaced.within > 240 && r.misplaced.within < 260);              // where it can be: 100 km + 1.5 ms / 2 of fibre
+});
+
+test('a round trip long enough for the distance, a nearby site of the exchange, no coordinates: nothing to say', () => {
+  const idx = ixpIndex(IXPS);
+  assert.equal(placeCheck(probeAt(45.464, 9.19, [['80.81.196.146', 6]]), idx).misplaced, null);               // 6 ms covers 520 km
+  assert.equal(placeCheck(probeAt(45.464, 9.19, [['217.29.66.10', 0.3]]), idx).misplaced, null);              // MIX is in Milan
+  assert.equal(placeCheck(probeAt(50.0, 8.7, [['80.81.196.146', 0.5]]), idx).misplaced, null);                // a probe in Frankfurt
+  assert.deepEqual(placeCheck({ probe: { city: 'Milan' }, hops: [{ n: 1, ip: '80.81.196.146', rtt: 0.5 }] }, idx), { checked: 0, misplaced: null });
+  assert.deepEqual(placeCheck(probeAt(45.464, 9.19, [['80.81.196.146', null], ['193.0.0.1', 0.5]]), idx), { checked: 0, misplaced: null });
 });
 
 console.log(`${passed} tests passed`);

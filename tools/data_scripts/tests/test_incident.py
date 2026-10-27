@@ -206,15 +206,15 @@ class Session(unittest.TestCase):
 
     def test_update_message_errors_are_atr_and_other_notifications_are_not(self):
         active, _ = run([self.note("2026-10-22 10:00:00", 7, 3, 9), self.note("2026-10-22 10:00:01", 8, 3, 11), self.note("2026-10-22 10:00:02", 9, 6, 5)])
-        self.assertEqual(sorted(active), ["ATR_EH_8", "ATR_MA_7"])
-        self.assertEqual(active["ATR_MA_7"]["details"]["subcode"], 9)
-        self.assertEqual(active["ATR_MA_7"]["prefixes"], set())
+        self.assertEqual(sorted(active), ["ATR_EH_rrc00_8", "ATR_MA_rrc00_7"])
+        self.assertEqual(active["ATR_MA_rrc00_7"]["details"]["subcode"], 9)
+        self.assertEqual(active["ATR_MA_rrc00_7"]["prefixes"], set())
 
     def test_the_state_of_a_session_is_noted_on_a_mass_withdrawal(self):
         records = [{"type": "S", "collector": "rrc00", "timestamp": "2026-10-22 10:00:00", "peer": 7, "state": "down"}]
         records += [withdraw("2026-10-22 10:00:05", f"20.{i // 250}.{i % 250}.0/24", 7) for i in range(600)]
         active, _ = run(records, rel={}, roas={})
-        self.assertEqual(active["ATR_7"]["details"]["session_event"], "down")
+        self.assertEqual(active["ATR_rrc00_7"]["details"]["session_event"], "down")
 
 
 class Buffers(unittest.TestCase):
@@ -268,7 +268,7 @@ class Withdrawals(unittest.TestCase):
             reference = [x for x in reference if t - x <= 10]                        # what the list did
             incident.process_record(withdraw(incident.datetime.fromtimestamp(t, incident.timezone.utc).strftime("%Y-%m-%d %H:%M:%S"),
                                              "20.0.0.0/16", 7), {}, {}, {}, incident.TIMEOUT_SECONDS, io.StringIO(), state)
-            window = state["peer_withdrawals"][7]
+            window = state["peer_withdrawals"][("rrc00", 7)]
             self.assertEqual(window["count"], len(reference))
             self.assertEqual(window["by_second"], {s: reference.count(s) for s in set(reference)})
 
@@ -278,13 +278,56 @@ class Withdrawals(unittest.TestCase):
         start = time.monotonic()
         active, _ = run(records, rel={}, roas={})
         self.assertLess(time.monotonic() - start, 30)     # the list rebuilt at every withdrawal took minutes
-        self.assertEqual(active["ATR_34800"]["details"]["withdrawal_count"], 501)
-        self.assertEqual(len(active["ATR_34800"]["prefixes"]), 100_000 - 500)
+        self.assertEqual(active["ATR_rrc00_34800"]["details"]["withdrawal_count"], 501)
+        self.assertEqual(len(active["ATR_rrc00_34800"]["prefixes"]), 100_000 - 500)
 
     def test_a_state_saved_with_lists_is_converted(self):
         state = {"peer_withdrawals": {7: [1_792_000_000, 1_792_000_001, 1_792_000_001]}}
+        extra_detectors.upgrade_sessions({}, state)          # as the run does when it loads a saved state
         incident.process_record(withdraw("2026-10-28 00:00:00", "20.0.0.0/16", 7), {}, {}, {}, incident.TIMEOUT_SECONDS, io.StringIO(), state)
-        self.assertIsInstance(state["peer_withdrawals"][7], dict)
+        self.assertIsInstance(state["peer_withdrawals"][("rrc00", 7)], dict)
+
+
+class Sessions(unittest.TestCase):
+    """X-12: a peer is a session, the collector and the peer AS; what counts independent views stays by AS."""
+
+    @staticmethod
+    def at(rec, collector):
+        return dict(rec, collector=collector)
+
+    def test_the_same_as_at_two_collectors_is_two_sessions(self):
+        prefixes = [f"{10 + i // 65536}.{i // 256 % 256}.{i % 256}.0/24" for i in range(900)]
+        records = [self.at(withdraw("2026-10-25 12:34:15", p, 34800), "rrc00") for p in prefixes[:300]]
+        records += [self.at(withdraw("2026-10-25 12:34:16", p, 34800), "rrc01") for p in prefixes[300:600]]
+        active, _ = run(records, rel={}, roas={})
+        self.assertEqual(active, {})                          # 600 withdrawals of AS34800, but 300 for each session
+        records += [self.at(withdraw("2026-10-25 12:34:17", p, 34800), "rrc01") for p in prefixes[600:]]
+        active, _ = run(records, rel={}, roas={})
+        self.assertEqual(sorted(active), ["ATR_rrc01_34800"])
+        self.assertEqual(active["ATR_rrc01_34800"]["details"]["collector"], "rrc01")
+        self.assertEqual(active["ATR_rrc01_34800"]["details"]["dropping_peer"], 34800)
+
+    def test_a_withdrawal_belongs_to_the_session_that_announced(self):
+        active, _ = run([self.at(announce("2026-10-22 10:00:00", "20.0.0.0/16", 4, [4, 1, 666]), "rrc00"),
+                         self.at(withdraw("2026-10-22 10:00:30", "20.0.0.0/16", 4), "rrc01"),      # the same AS, another collector
+                         self.at(withdraw("2026-10-22 10:01:00", "20.0.0.0/16", 4), "rrc00")])
+        self.assertEqual(active["PRH_666"]["total_updates"], 2)
+
+    def test_one_as_at_three_collectors_is_one_view_of_a_flapping_prefix(self):
+        records = [self.at(r, c) for c in ("rrc00", "rrc01", "rrc03") for r in flaps("20.5.0.0/24", [7])]
+        active, _ = run(sorted(records, key=lambda r: r["timestamp"]), rel={}, roas={})
+        self.assertNotIn("VOL_20.5.0.0/24", active)
+
+    def test_a_saved_state_with_as_numbers_becomes_sessions_of_rrc00(self):
+        incidents = {"PRH_666": {"peers": {4}}}
+        state = {"peer_withdrawals": {4: {"by_second": {}, "count": 0, "last": 0}}, "peer_state": {4: (0, "down")},
+                 "vol_flaps": {("20.0.0.0/16", 4): []}, "vol_peers": {"20.0.0.0/16": {4: 0}}}
+        extra_detectors.upgrade_sessions(incidents, state)
+        self.assertEqual(incidents["PRH_666"]["peers"], {("rrc00", 4)})
+        self.assertEqual(list(state["peer_withdrawals"]), [("rrc00", 4)])
+        self.assertEqual(list(state["peer_state"]), [("rrc00", 4)])
+        self.assertEqual(list(state["vol_flaps"]), [("20.0.0.0/16", ("rrc00", 4))])
+        self.assertEqual(state["vol_peers"], {"20.0.0.0/16": {4: 0}})            # views stay by AS
 
 
 class Pending(unittest.TestCase):
