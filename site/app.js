@@ -1692,7 +1692,7 @@ function renderLookup(as) {
   const head = el('div', { class: 'res-head' },
     el('h3', { text: as }),
     el('span', { class: 'links' },
-      el('a', { href: `https://bgp.tools/as/${n}`, rel: 'noopener', target: '_blank' }, 'bgp.tools', el('span', { class: 'sr-only', text: ' (opens in a new tab)' })), ' · ',
+      el('a', { href: `https://bgpthingy.xindi.eu/asn/${n}`, rel: 'noopener', target: '_blank' }, 'bgpthingy', el('span', { class: 'sr-only', text: ' (opens in a new tab)' })), ' · ',
       el('a', { href: `https://stat.ripe.net/app/launchpad/AS${n}`, rel: 'noopener', target: '_blank' }, 'RIPEstat', el('span', { class: 'sr-only', text: ' (opens in a new tab)' }))));
 
   const left = el('div', {}, el('h4', { text: 'Its own ASPA' }));
