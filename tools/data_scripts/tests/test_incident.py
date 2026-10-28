@@ -253,6 +253,40 @@ class Buffers(unittest.TestCase):
         self.assertEqual(sum(len(v) for v in state["pending_specifics"].values()), len(state["pending_specifics"]))
 
 
+class Order(unittest.TestCase):
+    """The updates of a file are not always in time order: an incident starts at the earliest and ends at the latest."""
+
+    def test_a_late_update_moves_the_start_back_and_not_the_end(self):
+        active, _ = run([announce("2026-10-26 10:16:40", "20.1.0.0/16", 3, [3, 2, 1, 100]),
+                         announce("2026-10-26 10:18:20", "20.1.0.0/16", 3, [3, 2, 1, 100]),
+                         announce("2026-10-26 10:15:00", "20.1.0.0/16", 3, [3, 2, 1, 100])])     # read last, sent first
+        inc = active["RLK_1_2_3"]
+        self.assertEqual((inc["start_time"], inc["last_time"]), ("2026-10-26 10:15:00", "2026-10-26 10:18:20"))
+        self.assertEqual(inc["last_epoch"] - inc["start_epoch"], 200)
+        self.assertEqual(inc["total_updates"], 3)
+
+    def test_the_end_is_never_before_the_start(self):
+        state, active, out = {}, {}, io.StringIO()
+        for ts in ["2026-10-26 10:18:20", "2026-10-26 10:16:40"]:
+            incident.process_record(announce(ts, "20.1.0.0/16", 3, [3, 2, 1, 100]), REL, ROAS, active, incident.TIMEOUT_SECONDS, out, state)
+        incident.check_timeouts(active, incident.parse_timestamp("2026-10-26 10:40:00"), incident.TIMEOUT_SECONDS, out, state)
+        row = json.loads(out.getvalue().splitlines()[0])
+        self.assertEqual((row["start"], row["end"]), ("2026-10-26 10:16:40", "2026-10-26 10:18:20"))
+
+    def test_a_late_update_does_not_bring_the_timeout_closer(self):
+        active, _ = run([announce("2026-10-26 10:00:00", "20.1.0.0/16", 3, [3, 2, 1, 100]),
+                         announce("2026-10-26 10:09:00", "20.1.0.0/16", 3, [3, 2, 1, 100]),
+                         announce("2026-10-26 10:00:30", "20.1.0.0/16", 3, [3, 2, 1, 100]),     # late
+                         announce("2026-10-26 10:15:40", "20.2.0.0/16", 4, [4, 1, 100])])       # timeouts checked: 6 min after the last
+        self.assertIn("RLK_1_2_3", active)
+
+    def test_an_incident_of_a_state_saved_without_start_epoch(self):
+        active, _ = run([announce("2026-10-26 10:16:40", "20.1.0.0/16", 3, [3, 2, 1, 100])])
+        del active["RLK_1_2_3"]["start_epoch"]
+        incident.add_message(active["RLK_1_2_3"], {}, "2026-10-26 10:15:00", incident.parse_timestamp("2026-10-26 10:15:00"))
+        self.assertEqual(active["RLK_1_2_3"]["start_time"], "2026-10-26 10:15:00")
+
+
 class Withdrawals(unittest.TestCase):
     """The withdrawals of a peer in the last 10 s (ATR): counted by second, with the same count as the list of epochs."""
 

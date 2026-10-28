@@ -475,6 +475,7 @@ def new_incident(incident_type, actor_key, prefix, peer, ts_str, current_epoch, 
         "prefixes": {prefix},
         "peers": {peer},
         "start_time": ts_str,
+        "start_epoch": current_epoch,
         "last_time": ts_str,
         "last_epoch": current_epoch,
         "total_updates": total_updates,
@@ -485,8 +486,17 @@ def new_incident(incident_type, actor_key, prefix, peer, ts_str, current_epoch, 
 
 def add_message(inc, rec, ts_str, current_epoch):
     inc["total_updates"] += 1
-    inc["last_time"] = ts_str
-    inc["last_epoch"] = current_epoch
+    # the updates of a file are not always in time order: the incident starts at the earliest one and ends at the latest,
+    # so a late update neither ends it before its start nor brings its timeout closer
+    if current_epoch >= inc["last_epoch"]:
+        inc["last_time"] = ts_str
+        inc["last_epoch"] = current_epoch
+    start = inc.get("start_epoch")
+    if start is None:                                    # an incident of a state saved before start_epoch existed
+        start = inc["start_epoch"] = parse_timestamp(inc["start_time"])
+    if 0 < current_epoch < start:
+        inc["start_time"] = ts_str
+        inc["start_epoch"] = current_epoch
 
     if len(inc["messages"]) < 4:
         inc["messages"].append(rec)
@@ -557,7 +567,7 @@ def process_record(rec, rel, roas, active_incidents, timeout_seconds, out_f, sta
             by_second = window["by_second"]
             by_second[current_epoch] = by_second.get(current_epoch, 0) + 1
             window["count"] += 1
-            window["last"] = current_epoch
+            window["last"] = max(window["last"], current_epoch)
             for second in [s for s in by_second if current_epoch - s > 10]:
                 window["count"] -= by_second.pop(second)
             withdrawals = window["count"]

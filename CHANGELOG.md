@@ -5,6 +5,11 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.53.6] - 2026-10-28
+
+### Fixed
+- Incident detector (`tools/data_scripts/incident.py`): the start and the end of an incident now follow the time of the updates, not the order in which they are read. The updates of a file are not always in time order, and an update read late moved the end of its incident back, up to before the start (493 of the 584,868 route-leak candidates from 22 to 27 October, by up to 100 seconds), and brought its timeout closer. An incident now starts at its earliest update and ends at its latest; a late update still counts, but no longer moves the end back. Outputs written before this version may contain incidents whose end precedes their start. The window of the withdrawals of a peer keeps its latest second in the same way.
+
 ## [1.53.5] - 2026-10-28
 
 ### Changed
