@@ -5,6 +5,11 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.53.3] - 2026-10-28
+
+### Changed
+- The chart of the places of valley over time starts on 1 September 2026 instead of 2 October: the days from 1 September to 16 October were rebuilt again with `build-leaks.mjs --day` of 1.53.2, that is with the ASPAs at the start of each day and the CAIDA relationships of its month, and the by-AS files of those days were replaced too. The guide says so.
+
 ## [1.53.2] - 2026-10-27
 
 ### Fixed
