@@ -946,7 +946,8 @@ function measureBlock(origin, tr, routes) {
   return el('div', { class: 'measure' },
     el('p', { class: 'field' }, el('label', { for: select.id, class: 'inline', text: 'Probes in ' }), select, ' ', btn),
     el('p', {}, bothLabel), addrBox,
-    el('p', { class: 'hint', text: `It runs a traceroute towards ${target.address} (in ${target.prefix}) from up to ${PROBES} probes in the country that you choose, through Globalping (globalping.io), and asks RIPEstat which network each hop belongs to. They both see your address and what is asked, and the test uses ${PROBES} of the 250 measurements an hour that Globalping allows to an address (${2 * PROBES} when it compares IPv4 and IPv6). To check where each probe is, the page also asks PeeringDB, which sees your address too, for the exchange points and their sites.` }),
+    el('p', { class: 'hint' }, `It runs a traceroute towards ${target.address} (in ${target.prefix}) from up to ${PROBES} probes in the country that you choose, through Globalping (globalping.io), and asks RIPEstat which network each hop belongs to. They both see your address and what is asked, and the test uses ${PROBES} of the 250 measurements an hour that Globalping allows to an address (${2 * PROBES} when it compares IPv4 and IPv6). To check where each probe is, the page also asks PeeringDB, which sees your address too, for the exchange points and their sites, once a day. How the check works: `,
+      el('a', { href: '/guide.html#probe-place', text: 'the guide' }), '.'),
     status, out);
 }
 
