@@ -30,7 +30,7 @@
 
 <table>
   <tr>
-    <td width="50%"><img src="assets/screenshots/lookup-light.jpg" alt="Looking up AS680: its own ASPA and the ASPAs that name it as a provider, with its history and the AS path check below"></td>
+    <td width="50%"><img src="assets/screenshots/lookup-light.jpg" alt="Looking up AS680: its own ASPA and the ASPAs that name it as a provider, with its history"></td>
     <td width="50%"><img src="assets/screenshots/statistics-dark.jpg" alt="The statistics page in the dark theme: ASPAs over time, stacked by RIR, and the other charts"></td>
   </tr>
   <tr>
@@ -136,10 +136,10 @@
     <td colspan="2" align="center"><sub>Availability by month and the alerts on the status page</sub></td>
   </tr>
   <tr>
-    <td colspan="2" align="center"><img src="assets/screenshots/tromboning-dark.jpg" width="60%" alt="Tromboning of AS41327: the reading first (no trombone seen), then a row for each of twelve probes in Italy with the networks on the way and the round trip"></td>
+    <td colspan="2" align="center"><img src="assets/screenshots/tromboning-dark.jpg" width="60%" alt="Tromboning of AS41327: the reading first (no trombone seen, one probe not where it is said to be), then a row for each probe of Globalping and RIPE Atlas in Italy with the networks on the way and the round trip"></td>
   </tr>
   <tr>
-    <td colspan="2" align="center"><sub>Tromboning, measured: twelve probes in the country, the reading first</sub></td>
+    <td colspan="2" align="center"><sub>Tromboning, measured: probes of Globalping and RIPE Atlas in the country, each checked for its place, the reading first</sub></td>
   </tr>
   <tr>
     <td colspan="2" align="center"><img src="assets/screenshots/tromboning-pair-dark.jpg" width="70%" alt="Tromboning of AS41327 over IPv4 and IPv6 on the same probes: the reading of each family first (no trombone seen), the comparison of the two and a row for each probe"></td>
@@ -148,8 +148,8 @@
     <td colspan="2" align="center"><sub>Tromboning, IPv4 and IPv6 on the same probes: the reading of each family first, the comparison after</sub></td>
   </tr>
   <tr>
-    <td width="50%"><img src="assets/screenshots/incidents-dark.jpg" alt="The Incidents page: 534,660 incidents of one day of rrc00, the tiles (Invalid with the ASPAs of the day 0.6%, Unknown 96%) and the table by type, with the types of the survey under each class"></td>
-    <td width="50%"><img src="assets/screenshots/incidents-chart-dark.jpg" alt="The chart of the Incidents page: the share of the incidents that would be Invalid against the share of the networks that publish an ASPA, the biggest networks first or in random order"></td>
+    <td width="50%"><img src="assets/screenshots/incidents-dark.jpg" alt="The Incidents page: 1,136,208 incidents in seven days of rrc00, the tiles (Invalid with the ASPAs of the day 0.6%, Unknown 95%) and the table by type, with the types of the survey under each class"></td>
+    <td width="50%"><img src="assets/screenshots/incidents-chart-dark.jpg" alt="The chart of the Incidents page: the share of the incidents that would be Invalid against the share of the networks that publish an ASPA, the networks with the most customers first or in random order, without the persistent valleys"></td>
   </tr>
   <tr>
     <td align="center"><sub>Incidents: the verdicts of the ASPAs by type of incident</sub></td>
