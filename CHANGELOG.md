@@ -5,6 +5,12 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.55.0] - 2026-10-29
+
+### Added
+- Incidents: the code of each type of incident in the table (RLK, RLK-UL, PRH-AB, DEG-MA and the others) has a tooltip that says what it stands for in the taxonomy of Servillo and others (IEEE COMST 2026) and what the detectors look for. RLK-PV says that it is not a type of the taxonomy, and DEG-XS that it is one line for two types (careless and exploitative deaggregation). The codes are buttons, so the tooltip opens on hover, on keyboard focus and on a tap.
+- `site/asnames.js`: an element with `data-tip` shows that text in the same box as the names of the ASes; the Incidents page loads it, so the AS numbers there get their names too.
+
 ## [1.54.1] - 2026-10-29
 
 ### Fixed

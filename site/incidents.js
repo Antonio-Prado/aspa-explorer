@@ -20,6 +20,36 @@
     'DEG-MA': 'Deaggregation with another origin (no ROA for it, no link between the two origins)', 'DEG-XS': 'Excessive deaggregation (the intent is not visible)', 'DEG-FF': 'Fragmentation flood',
     'ATR-EH': 'Session ended by an update error', 'ATR-MA': 'Session ended by a malformed attribute',
   };
+  // What each code stands for, in the taxonomy of Servillo and others (IEEE COMST 2026), and what the detectors look for: the tooltip of the code.
+  const TIPS = {
+    RLK: 'RLK, routing leak: a route passed on beyond what the relationships of the ASes allow (RFC 7908). The detectors look for a valley in the AS path, with the relationships of CAIDA.',
+    PRH: 'PRH, prefix hijack: a prefix announced by an origin that is not entitled to it. The detectors look for an origin that no ROA authorises.',
+    DEG: 'DEG, prefix deaggregation: more specifics of a prefix, announced by another origin or in excess.',
+    VOL: 'VOL, state volatility: routes that keep changing, by flapping, slow convergence or bursts of updates.',
+    ATR: 'ATR, attribute-based session reset: an update whose attributes make a router close the BGP session, with the withdrawal of all its routes.',
+    ASM: 'ASM, AS path manipulation: an AS path altered on purpose, by poisoning, a forged origin, shortening or extension.',
+    'RLK-UL': 'UL, upward leak: a route learned from a provider or a peer and passed on to a provider.',
+    'RLK-LL': 'LL, lateral leak: a route learned from a provider or a peer and passed on to a peer.',
+    'RLK-FP': 'FP, full propagation: a leak passed on to all the neighbours. A proxy here: one AS that leaks to 10 or more neighbours within an hour.',
+    'RLK-PV': 'PV, persistent valley: not a type of the taxonomy. The leak candidates of an AS that begin in 12 or more different hours of the window: most likely a relationship that CAIDA gets wrong, rarely a recurring leak.',
+    'PRH-CH': 'CH, complete hijack: an origin that no covering ROA authorises.',
+    'PRH-IH': 'IH, incomplete hijack: a more specific beyond the maximum length of the ROA, or another origin.',
+    'PRH-AB': 'AB, abusive hijack: a prefix in space that is not for public use, or not allocated.',
+    'ASM-PE': 'PE, AS path poisoning: an AS put into the path on purpose. Seen here as an AS that comes back after another, or an AS number that is not allocated.',
+    'ASM-EX': 'EX, path extension evasion: an AS path made longer to evade checks. Seen here as a private AS number in the path.',
+    'ASM-FI': 'FI, forged origin injection: a fake link to the real origin, which passes route origin validation. Seen here as a last link that CAIDA does not know and the table of the collector does not have.',
+    'ASM-PS': 'PS, path shortening: a path without some of the ASes it crosses. Seen here as another link that CAIDA does not know and the table of the collector does not have.',
+    'VOL-FO': 'FO, flooding through oscillation: a prefix that flaps, seen by 3 peers or more within a window.',
+    'VOL-DC': 'DC, delayed convergence: a prefix that keeps receiving updates without a pause for a long time.',
+    'VOL-AC': 'AC, amplified churn injection: a burst of updates for one origin, from many peers.',
+    'DEG-MA': 'MA, malicious deaggregation: a more specific with another origin, no ROA for it and no link between the two origins in CAIDA.',
+    'DEG-XS': 'XS, excessive deaggregation: one line for two types of the taxonomy, careless (CA) and exploitative (EX) deaggregation, whose intent the updates do not show.',
+    'DEG-FF': 'FF, fragmentation flood: a very large number of more specifics in a day.',
+    'ATR-EH': 'EH, error handling policy abuse: a NOTIFICATION for an error in an UPDATE, with the withdrawal of the routes of the session.',
+    'ATR-MA': 'MA, malformed attribute injection: a NOTIFICATION caused by an attribute in error.',
+  };
+  // a code as a button with its tooltip (asnames.js shows data-tip on hover, focus and tap)
+  const codeChip = (k) => (TIPS[k] ? el('button', { type: 'button', class: 'chip tipchip', 'data-tip': TIPS[k] }, k) : el('span', { class: 'chip', text: k }));
   function el(tag, attrs, ...kids) {
     const n = document.createElement(tag);
     for (const [k, v] of Object.entries(attrs || {})) {
@@ -60,8 +90,8 @@
       cell(b.ideal[2], b.with_path), cell(b.ideal[1], b.with_path), cell(b.ideal[0], b.with_path));
     const subs = d.subtypes || {};
     $('inc-rows').replaceChildren(...typesOf(d).flatMap((k) => [
-      line(el('th', { scope: 'row' }, el('span', { class: 'chip', text: k }), ' ', NAMES[k] || k), d.by_type[k]),
-      ...Object.keys(SUBNAMES).filter((t) => t.startsWith(`${k}-`) && subs[t]).map((t) => line(el('th', { scope: 'row', class: 'sub' }, el('span', { class: 'chip', text: t }), ' ', SUBNAMES[t]), subs[t])),
+      line(el('th', { scope: 'row' }, codeChip(k), ' ', NAMES[k] || k), d.by_type[k]),
+      ...Object.keys(SUBNAMES).filter((t) => t.startsWith(`${k}-`) && subs[t]).map((t) => line(el('th', { scope: 'row', class: 'sub' }, codeChip(t), ' ', SUBNAMES[t]), subs[t])),
     ]));
     $('inc-note').textContent = 'Percentages are of the incidents with a path (flapping and mass withdrawals mostly have none: a dash). The lines under a class are the types of the survey that the detector tells apart; an incident is in one of them at most, and the ones that fit none are only in the line of the class. ASM is made of candidates: a link that CAIDA does not know may be a real one.';
   }

@@ -74,7 +74,10 @@
   // The element that stands for an AS, and its number: a link to an AS (HTML or SVG) or an element with data-asn.
   // An element whose page set a title or a tooltip of its own (a title attribute, a <title> in SVG, data-own-tip)
   // keeps it, and gets no box.
+  // An element with data-tip (the code of a type of incident, for instance) shows that text in the same box.
   function target(node) {
+    const own = node && node.closest ? node.closest('[data-tip]') : null;
+    if (own) return { e: own, text: own.getAttribute('data-tip') };
     const e = node && node.closest ? node.closest('a, [data-asn]') : null;
     if (!e || e.hasAttribute('title') || e.hasAttribute('data-own-tip') || e.querySelector('title')) return null;
     const asn = asnOf(e.getAttribute('href') || e.getAttribute('xlink:href'), e.textContent, e.getAttribute('data-asn'));
@@ -125,6 +128,7 @@
   function show(t) {
     current = t;
     describe(t.e, true);
+    if (t.text) { render(t, t.text); return; }
     if (names.has(t.asn)) {
       const text = tooltipText(t.asn, names.get(t.asn));
       if (text) render(t, text); else hide();
@@ -144,7 +148,13 @@
     if (current && t && t.e === current.e) return;          // moving inside the same element
     clearTimeout(timer);
     if (!t) { if (current) hide(); return; }
-    timer = setTimeout(() => show(t), names.has(t.asn) ? 0 : SHOW_MS);
+    timer = setTimeout(() => show(t), t.text || !names.has(t.asn) ? SHOW_MS : 0);
+  });
+  // a tap (or a click) on an element with data-tip opens and closes its box: there is no pointer to rest on a touch screen
+  document.addEventListener('click', (ev) => {
+    const t = target(ev.target);
+    if (!t || !t.text) { if (current && current.text) hide(); return; }      // a tap elsewhere closes it
+    if (current && current.e === t.e && tip && !tip.hidden) hide(); else { clearTimeout(timer); show(t); }
   });
   document.addEventListener('pointerout', (ev) => {
     const leaving = target(ev.target);

@@ -160,6 +160,9 @@ button:hover { background: var(--btn-hover); }
   white-space: nowrap;
 }
 a.chip:hover { background: var(--chip-hover); }
+/* a code with a tooltip (the types of incident): a button that looks like a chip */
+button.tipchip { border-radius: 6px; padding: 0.15rem 0.45rem; background: var(--chip); color: var(--ink); font-weight: inherit; font-size: 0.8125rem; line-height: inherit; cursor: help; }
+button.tipchip:hover { background: var(--chip-hover); }
 .chip.zero { font-family: inherit; }
 .linkish { background: none; border: 0; padding: 0; color: var(--accent); font-weight: 400; text-decoration: underline; text-underline-offset: 2px; font-size: 0.875rem; }
 .linkish:hover { background: none; }
