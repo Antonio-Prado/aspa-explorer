@@ -38,7 +38,7 @@ html-validate:
   stage: lint
   image: node:22-alpine
   script:
-    - npx --yes html-validate@9 site/index.html site/guide.html site/api.html site/subscription.html site/statistics.html site/status.html site/examples.html site/embed.html site/report.html
+    - npx --yes html-validate@9 site/index.html site/guide.html site/api.html site/subscription.html site/statistics.html site/status.html site/examples.html site/embed.html site/report.html site/incidents.html
 
 nginx-config:
   extends: .regular
@@ -79,9 +79,6 @@ secret-detection:
   script:
     - gitleaks git --redact --no-banner .
 
-# Scheduled jobs. Pipeline schedules set the SCHEDULE variable; a pipeline started by
-# hand (web or API) with the same variable runs the same job.
-
 # Accessibility and layout of every page in a real browser (axe-core, light and dark, desktop and 320 px), on the runner of the
 # host, where a Chromium is installed (FreeBSD has no Playwright browser: pkg install chromium). It also runs on GitHub on every
 # push (.github/workflows/accessibility.yml, on the public copy). Without a Chromium it ends with status 3, a warning, and says so.
@@ -93,6 +90,9 @@ a11y:
     exit_codes: 3
   script:
     - sh scripts/run-a11y.sh
+
+# Scheduled jobs. Pipeline schedules set the SCHEDULE variable; a pipeline started by
+# hand (web or API) with the same variable runs the same job.
 
 # Weekly: known vulnerabilities in the packages of the host that runs the runner (nginx,
 # Node.js, the runner itself, the base system). Needs the runner of that host.
@@ -128,8 +128,9 @@ history-refresh:
   script:
     - node scripts/log-snapshot.mjs --history-only
 
-# Publication to the public mirror. The push mirror copies branches and tags; releases and
-# the wiki are published through the API of the public project (MIRROR_TOKEN).
+# Publication to the public mirror. The push mirror copies the protected branches and the tags; releases are
+# published through the API of the public project (MIRROR_TOKEN), the wiki by git push to the public project and
+# to the wiki of the GitHub copy.
 publish-release:
   stage: publish
   tags: [aspa]

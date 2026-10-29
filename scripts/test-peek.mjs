@@ -18,13 +18,13 @@ test('what the window says: no ASPA', () => {
   assert.deepEqual(l.map((x) => x.label), ['ASPA', 'Named as a provider', 'Seen in BGP']);
   assert.match(l[0].text, /Publishes no ASPA/);
   assert.equal(l[1].text, 'by no ASPA.');
-  assert.equal(l[2].text, 'Not known.');
+  assert.equal(l[2].text, 'Not checked (it is checked for the ASes that an ASPA names).');
 });
 
 test('what the window says: an ASPA with providers, named by others, a change, findings', () => {
   const many = Array.from({ length: 15 }, (_, i) => `AS${100 + i}`);
   const l = summary({ aspa: { published: true, providers: ['AS1299', 'AS3356'], no_providers: false }, provider_of: many, seen_in_bgp: true,
-    quality: [{ message: 'a provider is not allocated' }, { code: 'self' }, { message: 'third' }],
+    quality: [{ kind: 'provider-unallocated', severity: 'error', detail: 'names AS64999, which is not allocated' }, { kind: 'customer-unseen', severity: 'note', detail: 'is not seen in BGP' }, { kind: 'expires', severity: 'warning', detail: 'expires on 2026-11-20' }],
     history: [{ date: '2026-03-27', kind: 'new', added: ['AS1299'] }, { date: '2026-04-10', kind: 'changed', added: ['AS3356'], dropped: ['AS174'] }] });
   assert.equal(l[0].text, 'Publishes an ASPA with 2 providers:');
   assert.deepEqual(l[0].chips, ['AS1299', 'AS3356']);
@@ -32,7 +32,7 @@ test('what the window says: an ASPA with providers, named by others, a change, f
   assert.equal(l[1].chips.length, 12);
   assert.equal(l[1].more, 3);
   assert.match(l.find((x) => x.label === 'Seen in BGP').text, /^Yes/);
-  assert.equal(l.find((x) => x.label === 'Quality').text, '3 findings on its ASPA: a provider is not allocated; self…');
+  assert.equal(l.find((x) => x.label === 'Quality').text, '3 findings on its ASPA: names AS64999, which is not allocated; is not seen in BGP…');
   assert.equal(l.find((x) => x.label === 'Last change').text, '2026-04-10: the providers changed, added AS3356, dropped AS174.');
 });
 

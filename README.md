@@ -8,7 +8,7 @@
 </p>
 
 <p align="center">
-  <a href="https://gitlab.dei.unipd.it/Antonio-Prado/aspa-explorer/-/releases" target="_blank" rel="noopener"><img alt="latest release" src="https://gitlab.dei.unipd.it/Antonio-Prado/aspa-explorer/-/badges/release.svg"></a>
+  <a href="https://github.com/Antonio-Prado/aspa-explorer/releases" target="_blank" rel="noopener"><img alt="latest release" src="https://img.shields.io/github/v/release/Antonio-Prado/aspa-explorer"></a>
   <a href="https://doi.org/10.5281/zenodo.23450622" target="_blank" rel="noopener"><img alt="DOI" src="https://zenodo.org/badge/DOI/10.5281/zenodo.23450622.svg"></a>
   <a href="https://aspa.ping6.it/as/AS137" target="_blank" rel="noopener"><img alt="ASPA of AS137, from ASPA Explorer" src="https://aspa.ping6.it/badge/AS137.svg?v=2"></a>
 </p>
@@ -163,7 +163,7 @@ An **ASPA** (Autonomous System Provider Authorization) is a signed RPKI object i
 
 ASPA Explorer shows every ASPA that the validator currently considers valid, so you can search it, check AS paths and the routes seen in BGP against it, follow its changes and see the big picture. It runs at <https://aspa.ping6.it/> (Department of Information Engineering, University of Padova).
 
-<sub>In numbers, on 18 October 2026: 3,229 of 88,221 networks seen in BGP have an ASPA (3.66%); 607 M routes of 30 collectors are checked every day: 59 M valid (9.8%), 547 M with no ASPA to say about some hop and 691 k invalid; 10,011 places of valley, 17 days of history. The [statistics page](https://aspa.ping6.it/statistics.html) has the numbers of today.</sub>
+<sub>In numbers, on 29 October 2026: 3,519 of 88,495 networks seen in BGP have an ASPA (3.98%); 599 M routes of 30 collectors are checked every day: 59 M valid (9.9%), 539 M with no ASPA to say about some hop and 580 k invalid; 11,026 places of valley, with a daily history since 1 September 2026. The [statistics page](https://aspa.ping6.it/statistics.html) has the numbers of today.</sub>
 
 The validator is a [Routinator](https://github.com/NLnetLabs/routinator) instance run at **[rpki.ping6.it](https://rpki.ping6.it/)**, which also publishes its own web UI (<https://rpki.ping6.it/ui/>) and the raw ASPA data (<https://rpki.ping6.it/jsonext?exclude=routeOrigins,routerKeys>).
 
@@ -179,7 +179,7 @@ The validator is a [Routinator](https://github.com/NLnetLabs/routinator) instanc
   - *the AS paths* checked with the downstream procedure (valid, unknown, invalid);
   - *valleys*: the places that the ASPAs prove, grouped by place, with the feeders that see them, and a *why?* button that reads the IRR objects, CAIDA and RIPEstat for the hops that the ASPAs refuse and says whether the valley is probably a gap in an ASPA, with the evidence and who to ask (a reading, not a verdict);
   - *the neighbours of the origin*, with an evidence column that says which of them look like its providers because its routes go on through them to a Tier-1 network, and which of them its ASPA does not list; a button reads the IRR object of the origin and CAIDA and marks each neighbour as confirmed, probably or maybe missing from the ASPA, or declared as something else;
-  - *tromboning*: a traceroute from twelve probes in the country of the origin (Globalping), with the median round trip and a row for each probe, to tell a route that goes far away (100 ms or more inside a country) from a normal one. Each probe is checked where its path crosses an exchange point (the LANs and sites of PeeringDB, asked from the browser): a round trip shorter than light in fibre allows from where Globalping places the probe means that the probe is elsewhere, and it is left out of the reading.
+  - *tromboning*: a traceroute from probes in the country of the origin, of Globalping (up to twelve), of RIPE Atlas (up to eight, created by this site with its own account) or both, with the median round trip and a row for each probe, to tell a route that goes far away (100 ms or more inside a country) from a normal one, and the same probes over IPv4 and IPv6 side by side. Each probe is checked against points whose place is known: the exchange points its path crosses (the LANs and sites of PeeringDB, asked from the browser), the anchors of RIPE Atlas and, for the probes of RIPE Atlas, the instances of the DNS root servers that answer them. A round trip shorter than light in fibre allows from where the probe is said to be means that the probe is elsewhere, and it is left out of the reading.
 
   Evidence and tromboning are readings, with their limits stated in the page, not verdicts.
 - **Live and graph:** under the routes of an AS, the updates that RIPE RIS Live hands out as they arrive, each one checked with the ASPAs (a leak shows up here while it happens); in the lookup, the neighbourhood of an AS drawn as a graph (`site/graph.js`).
@@ -197,11 +197,11 @@ The validator is a [Routinator](https://github.com/NLnetLabs/routinator) instanc
 **Numbers**
 
 - **Overview:** summary tiles on the home page, with the coverage (the share of the ASes seen in BGP that have an ASPA).
-- **Statistics:** the charts of the ASPAs (over time since October 2023 by RIR, provider ASes, median providers, no-provider ASPAs or coverage, over any period, with a logarithmic scale and CSV/JSON download; per RIR; providers per ASPA; most-named providers) and the adoption: who has an ASPA by size of the network, RIR and country, and the 100 largest transit networks.
-- **Valleys today:** every route of 30 collectors, sixteen of RIPE RIS (rrc00, 01, 03, 04, 05, 06, 07, 10, 11, 12, 14, 15, 16, 19, 21 and 23) and fourteen of RouteViews (Oregon, route-views3 and 4, London, Palo Alto, Tokyo, New York, Perth, Atlanta, Singapore, Johannesburg, Sao Paulo, Sydney and Equinix), on five continents, checked with the downstream ASPA verification once a day (`scripts/build-leaks.mjs`, a small MRT reader in `scripts/mrt.mjs`), the places of valley grouped and told apart with the CAIDA relationships into possible leaks and ASPAs that seem to miss a provider, also as `/api/v1/leaks.json`.
+- **Statistics:** the charts of the ASPAs (over time since October 2023 by RIR, provider ASes, median providers, no-provider ASPAs or coverage, over the whole history, the last 12 months or the last 90 days, with a logarithmic scale and CSV/JSON download; per RIR; providers per ASPA; most-named providers) and the adoption: who has an ASPA by size of the network, RIR and country, and the 100 largest transit networks.
+- **Valleys today:** every route of 30 collectors, sixteen of RIPE RIS (rrc00, 01, 03, 04, 05, 06, 07, 10, 11, 12, 14, 15, 16, 19, 21 and 23) and fourteen of RouteViews (Oregon, route-views3 and 4, London, Palo Alto, Tokyo, New York, Perth, Atlanta, Singapore, Johannesburg, São Paulo, Sydney and Equinix), on five continents, checked with the downstream ASPA verification once a day (`scripts/build-leaks.mjs`, a small MRT reader in `scripts/mrt.mjs`), the places of valley grouped and told apart with the CAIDA relationships into possible leaks and ASPAs that seem to miss a provider, also as `/api/v1/leaks.json`.
 - **Incidents:** a page in the menu that puts the ASPAs next to the routing incidents that the detectors of the research project (`data_scripts`, with the extensions of `tools/data_scripts/extra_detectors.py`) find in the updates of a RIPE RIS collector. For each incident the AS paths it kept are checked with the ASPAs of the day it began, with complete ASPAs (the providers CAIDA infers) and with a part of the networks publishing, at random or the largest first. It has a table by type (with the leak types of the survey, upward, lateral and full propagation, and the other candidates, such as forged origin, poisoning, deaggregation by scale or a session ended by an update error, under their class), a chart, the whole taxonomy of the survey, and a table that says which of its 27 types the detectors observe; aggregates only (`scripts/build-incidents.mjs`, `/api/v1/incidents.json`).
 - **Collectors compared:** a bar for each of the 30 collectors (places of valley seen, places that only it sees, invalid routes, feeders, routes read) and the same places told apart by who sees them, RIPE RIS only, both projects or RouteViews only (`comparison` and the figures of each collector in `/api/v1/leaks.json`).
-- **Leaks over time, alerts and comparison:** the daily totals of the leaks (`/api/v1/leaks-history.json`, a chart on the statistics page), the places of valley that involve each AS (`/api/v1/leaks-by-as.json`, and one file for each of the last 60 days), an opt-in alert for the new places that involve a subscribed AS, and *Compare two dates* on the page of an AS (providers added and dropped, the ASPAs that began or stopped naming it, its places of valley).
+- **Valleys over time, alerts and comparison:** the daily totals of the places of valley since 1 September 2026 (`/api/v1/leaks-history.json`, a chart on the statistics page), the places of valley that involve each AS (`/api/v1/leaks-by-as.json`, and one file for each of the last 60 days), an opt-in alert for the new places that involve a subscribed AS, and *Compare two dates* on the page of an AS (providers added and dropped, the ASPAs that began or stopped naming it, its places of valley).
 - **A starting point for an ASPA:** from the evidence about the neighbours of an origin, the providers to list, the ones already declared and the weak leads, with a list ready to copy.
 - **Validators compared:** the ASPAs of this site's Routinator and of two rpki-client validators (the project's console and Cloudflare's), side by side every hour (`scripts/build-validators.mjs`), with the ASPAs on which they differ, also as `/api/v1/validators.json`.
 - **Quality:** checks on every ASPA (AS0 mixed with other providers, a private or reserved provider, two ASes listing each other, providers no collector sees in BGP, expiring objects, very large provider sets) with counts and lists, a *Quality* block in the lookup and a *check now* link on the ASes that list each other.
@@ -211,18 +211,18 @@ The validator is a [Routinator](https://github.com/NLnetLabs/routinator) instanc
 - **Valid routes by address space, IPv6 against IPv4:** the verdicts of the routes of 30 collectors weighted by the addresses they cover, by length of the AS path and by family, in a table with the ratio IPv6 / IPv4 (the `families` of `/api/v1/leaks.json`).
 - **Invalid announcements, as they happen:** a sample of the RIPE RIS Live stream checked with ASPA, by hour, origin AS and prefix for 14 days, with the origins and prefixes that have most (`scripts/watch-invalid.mjs`, `/api/v1/invalid.json`).
 - **Dated snapshots for research:** once a month a `.tar.gz` of the ASPAs, history, events, adoption, trends, leaks and validators with a manifest of SHA-256 sums (`scripts/build-dataset.mjs`, `/datasets/index.json`, CC BY 4.0); `.zenodo.json` has the metadata of the archive on Zenodo ([10.5281/zenodo.23450622](https://doi.org/10.5281/zenodo.23450622), always the latest version; every release of the GitHub copy gets its own DOI).
-- **Status:** a page and a dot in the menu that say how fresh each piece of data is (validator, API files, daily history, BGP visibility, adoption numbers, notifications), a chart of the state of each part over the last 24 hours to 90 days, the availability of each part by month, kept for good, and alerts by e-mail or webhook when a part becomes late or down (`scripts/build-status.mjs` runs the checks every 15 minutes; the file is `/api/v1/status-history.json`).
+- **Status:** a page and a dot in the menu that say how fresh each piece of data is (validator, API files, history, BGP visibility, adoption numbers, valleys of the day, validators compared, notifications), a chart of the state of each part over the last 24 hours to 90 days, the availability of each part by month, kept for good, and alerts by e-mail or webhook when a part becomes late or down (`scripts/build-status.mjs` runs the checks every 15 minutes; the file is `/api/v1/status-history.json`).
 - **Download:** the whole list of ASPAs as CSV or JSON, for one RIR or all.
 
 **Open data**
 
-- **Public API:** `/api/v1/as/3333` returns the ASPA, the ASPAs that name it, BGP visibility, quality findings and history as JSON (CORS open), next to `/api/v1/adoption.json`, `/api/v1/asn-registry.json`, `/api/v1/aspas.csv` and `/api/v1/aspas.json`; see `site/api.html` and the OpenAPI description in `site/api/openapi.json`.
+- **Public API:** `/api/v1/as/3333` returns the ASPA, the ASPAs that name it, BGP visibility, quality findings and history as JSON (CORS open), next to `/api/v1/aspas.csv`, `/api/v1/aspas.json` and the files of the statistics page (adoption, valleys, validators, incidents, trends, resources, invalid announcements, status); see `site/api.html`, which lists them all, and the OpenAPI description in `site/api/openapi.json`.
 
 **The project**
 
 - **Built-in guide** (<a href="https://aspa.ping6.it/guide.html" target="_blank" rel="noopener">guide</a>), with an accessibility statement: <a href="https://aspa.ping6.it/guide.html" target="_blank" rel="noopener">read it on the site</a> (source: <a href="site/guide.html" target="_blank" rel="noopener"><code>site/guide.html</code></a>).
-- **Accessible:** keyboard operable (tabs included), visible focus, skip link, light and dark themes, reduced-motion aware. Checked with axe-core in both themes (WCAG 2.2 AA rules) with no issues reported.
-- **Plain code, no dependencies, no cookies.** The page is static JavaScript with no build step; the services behind the API, the adoption numbers and the notifications are small Node.js programs that use no package. Strict Content-Security-Policy; remote data goes into the page only through `textContent`.
+- **Accessible:** keyboard operable (tabs included), visible focus, skip link, light and dark themes, reduced-motion aware. Checked with axe-core in both themes (the rules of WCAG 2.0 and 2.1 at levels A and AA, and best practices) with no issues reported.
+- **Plain code, no dependencies, no cookies.** The page is static JavaScript with no build step; the jobs that build the data and the services behind the notifications, the shared results and the tests on RIPE Atlas are small Node.js programs that use no npm package, and the recorder of the Incidents page is a small Python program. Strict Content-Security-Policy; remote data goes into the page only through `textContent`.
 
 ## How it works
 
@@ -276,7 +276,7 @@ flowchart LR
     S -->|"mail, webhooks"| U["subscribers"]
     R -.->|"fetch, validate"| T["RPKI repositories<br>of the five RIRs"]
     V -->|"routes"| P["RIPEstat"]
-    V -->|"history, events"| H["history branch<br>of the public project"]
+    N -->|"/api/v1/archive/*"| H["history branch,<br>copied every 10 minutes"]
     click V "https://github.com/Antonio-Prado/aspa-explorer#features"
     click N "https://github.com/Antonio-Prado/aspa-explorer/wiki/Deployment#what-the-nginx-configuration-does"
     click F "https://aspa.ping6.it/api.html"
@@ -298,7 +298,7 @@ In a browser that allows it (GitLab does) the boxes of the diagram are links to 
 | The history branch and the daily job | [Deployment, rebuilding the history](https://github.com/Antonio-Prado/aspa-explorer/wiki/Deployment#rebuilding-the-history) and [scheduled jobs](https://github.com/Antonio-Prado/aspa-explorer/wiki/Deployment#scheduled-jobs) |
 | Behind Cloudflare or another proxy | [Deployment](https://github.com/Antonio-Prado/aspa-explorer/wiki/Deployment#behind-a-reverse-proxy-or-a-cdn) |
 
-The same-origin endpoints:
+The main same-origin endpoints (the [API page](https://aspa.ping6.it/api.html) lists every file):
 
 | Page path | What it is |
 |---|---|
@@ -306,8 +306,11 @@ The same-origin endpoints:
 | `/data/validity/AS<n>/<prefix>` | Routinator's origin validation of one route |
 | `/api/v1/as/<n>`, `/badge/AS<n>.svg`, `/feed/AS<n>.atom` | files built every 15 minutes for each AS; any other AS gets a generic answer |
 | `/api/v1/aspas.json`, `/api/v1/aspas.csv`, `/api/v1/meta.json` | the whole list, and when it was built |
-| `/api/v1/adoption.json`, `/api/v1/asn-registry.json` | numbers built once a day |
+| `/api/v1/adoption.json`, `/api/v1/asn-registry.json`, `/api/v1/leaks.json`, `/api/v1/resources.json`, … | numbers built once a day or every hour (the API page says which) |
+| `/api/v1/archive/history.json`, `events.json`, `visibility.json` | the history branch, copied every 10 minutes |
 | `/api/v1/subscriptions…` | subscriptions, confirmations, unsubscribe and health, served by the notifier |
+| `/api/v1/reports`, `/r/<id>` | shared results, kept 30 days, served by the notifier |
+| `/api/v1/atlas/…` | the tests of the tromboning box on RIPE Atlas, served by the Atlas service |
 | `/changes.atom` | the Atom feed of the changes, proxied from the history branch |
 
 More diagrams are in the wiki: the [jobs that build the files](https://github.com/Antonio-Prado/aspa-explorer/wiki/Deployment#the-jobs-at-a-glance), with their sources; the [notifier](https://github.com/Antonio-Prado/aspa-explorer/wiki/Deployment#notifications-optional), as a sequence diagram of a subscription and of the announcement of a change; and the [status history](https://github.com/Antonio-Prado/aspa-explorer/wiki/User-guide#status), as a sequence diagram of the job and of the chart. (GitLab draws the first few thousand characters of diagrams on a page and asks for a click before drawing more, which is why they are not all here.)
@@ -318,9 +321,11 @@ More diagrams are in the wiki: the [jobs that build the files](https://github.co
 site/                          the web root: the pages (index, guide, examples, incidents, api, statistics,
                                status, report, subscription, embed), their scripts and style.css, version.json,
                                api/openapi.json, paper/ and img/
-notifier/                      the notification service (subscriptions, mail with DKIM, webhooks)
-scripts/                       the builders of the per-AS API (build-api.mjs) and of the adoption numbers
-                               (build-adoption.mjs), the daily snapshot, release and wiki publishing, the CI
+notifier/                      the notification service (subscriptions, mail with DKIM, webhooks) and the shared results
+atlas/                         the service that creates the tests of the tromboning box on RIPE Atlas
+scripts/                       the builders of the per-AS API (build-api.mjs), of the numbers of the statistics
+                               and incidents pages (build-*.mjs, with an MRT reader in mrt.mjs), the live watcher
+                               (watch-invalid.mjs), the daily snapshot, release and wiki publishing, the CI
                                helpers and the unit tests (test-*.mjs)
 tools/                         backfill-history.py rebuilds the history from the RIPE NCC RPKI archive;
                                data_scripts/ is the corrected copy of the research scripts of the Incidents
@@ -328,7 +333,7 @@ tools/                         backfill-history.py rebuilds the history from the
 docs/                          validation-known-incidents.md, the detectors over five known incidents
 deploy/nginx/                  server blocks and proxy cache zone (aspa.conf), the proxy settings shared by
                                the data endpoints (rpki-proxy.conf) and the security headers
-deploy/freebsd/                rc scripts of the notifier and of the stream of the Incidents page, daily
+deploy/freebsd/                rc scripts of the notifier, of the Atlas service and of the stream of the Incidents page, daily
                                refresh of the pkg vulnerability database, newsyslog rules for nginx
 assets/                        logo, screenshots and credit logos used in this README
 .gitlab/, .gitlab-ci.yml       issue and merge request templates, and the CI pipeline
@@ -341,13 +346,14 @@ eslint.config.mjs              security rules for the browser code (no innerHTML
 2. Copy `deploy/nginx/aspa.conf` into nginx's `conf.d/`, and `deploy/nginx/rpki-proxy.conf` and `deploy/nginx/security-headers.conf` next to `nginx.conf`. Adjust the listen IP, server name, TLS certificate paths and the Routinator host in `rpki-proxy.conf`.
 3. Write the build information shown in the footer next to `index.html`: `sh scripts/build-info.sh > build.json`.
 4. For the per-AS API, badges and feeds, run `node scripts/build-api.mjs /var/db/aspa-gen` (Node.js 18+, with `site/history.js` and `site/quality.js` next to its `../site`) every 15 minutes as an unprivileged user; it builds into a new directory and switches a `current` symlink that nginx serves. Without it the AS endpoints still answer, with "no ASPA".
-5. Notifications (optional): run `notifier/main.mjs` as an unprivileged user with the `deploy/freebsd/aspa_notify` rc script (Node.js 22 with `node:sqlite`; the environment variables are listed at the top of the file), route `/api/v1/subscriptions` to it as in `deploy/nginx/aspa.conf`, and publish SPF and DKIM records for the sending domain; see the wiki, Deployment.
-6. Adoption numbers (optional): run `node scripts/build-adoption.mjs /var/db/aspa-gen/adoption.json` once a day (Node.js 18+ and `bunzip2`; it downloads the RIR delegation files and the CAIDA relationships into a cache next to the output).
-7. Make sure the Routinator HTTP(S) port is reachable from the web server (it must expose `/jsonext`, `/api/v1/status` and `/api/v1/validity`), then `nginx -t && nginx -s reload`.
+5. Notifications and shared results (optional): run `notifier/main.mjs` as an unprivileged user with the `deploy/freebsd/aspa_notify` rc script (Node.js 22.13 or later, for `node:sqlite`; the environment variables are listed at the top of `notifier/main.mjs`, and `site/history.js` must be in its `../site`), route `/api/v1/subscriptions`, `/api/v1/reports` and `/r/` to it as in `deploy/nginx/aspa.conf`, and publish SPF and DKIM records for the sending domain; see the wiki, Deployment.
+6. Adoption numbers (optional): run `node scripts/build-adoption.mjs /var/db/aspa-gen/adoption.json` once a day (Node.js 18+ and `bunzip2`; it downloads the RIR delegation files and the CAIDA relationships into a cache next to the output). The other builders of the statistics page are described in the wiki, Deployment.
+7. Tromboning on RIPE Atlas (optional): run `atlas/main.mjs` as an unprivileged user with the `deploy/freebsd/aspa_atlas` rc script, with `site/traceroute.js` in its `../site` and the key of a RIPE Atlas account (permission to schedule measurements, which spend the credits of that account) in a file that only that user can read, and route `/api/v1/atlas/` to it as in `deploy/nginx/aspa.conf`. Without it the box uses Globalping only.
+8. Make sure the Routinator HTTP(S) port is reachable from the web server (it must expose `/jsonext`, `/api/v1/status` and `/api/v1/validity`), then `nginx -t && nginx -s reload`.
 
 ## Development
 
-No build step and no dependencies. `make check` runs the same checks as the CI pipeline: JavaScript syntax, HTML validation, nginx configuration test, version consistency, a security lint of the browser code and the unit tests (`make test`: the ASPA path verification, the API and adoption builders, the evidence and traceroute readings, the status checks and the notifier). The pipeline also scans the git history for secrets (`make secrets`). Scheduled jobs audit the packages of the host weekly, log a daily snapshot of the ASPA data to the project's *Model experiments* and copy the wiki to the public mirror; the builders and the notifier run on the host itself. See [CONTRIBUTING.md](CONTRIBUTING.md).
+No build step and no dependencies. `make check` runs the same checks as the CI pipeline: JavaScript syntax, HTML validation, nginx configuration test, version consistency, a security lint of the browser code and the unit tests (`make test`: the ASPA path verification, the API and adoption builders, the evidence and traceroute readings, the status checks and the notifier). The pipeline also scans the git history for secrets (`make secrets`). Scheduled jobs audit the packages of the host weekly, log a daily snapshot of the ASPA data to the project's *Model experiments*, refresh the history branch every hour and copy the wiki to the public GitLab project and to the GitHub wiki; the builders and the notifier run on the host itself. See [CONTRIBUTING.md](CONTRIBUTING.md).
 
 Releases follow [Semantic Versioning](https://semver.org/); the version shown in the footer lives in <a href="site/version.json" target="_blank" rel="noopener"><code>site/version.json</code></a> and must match the latest entry of the <a href="CHANGELOG.md" target="_blank" rel="noopener">changelog</a>.
 

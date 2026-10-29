@@ -38,7 +38,7 @@
       const t = Date.parse(m.generated);
       return { state: byAge(now - t, 45 * MIN, 3 * HOUR), at: t, extra: `${m.aspas.toLocaleString('en-US')} ASPAs, ${m.ases.toLocaleString('en-US')} ASes` };
     } },
-    { id: 'history', name: 'Daily history and changes', expected: 'once a day, about 06:30 UTC', run: async (now) => {
+    { id: 'history', name: 'Daily history and changes', expected: 'every hour (the row of a new day comes in its first hour, UTC)', run: async (now) => {
       const h = await get(HISTORY);
       const last = h[h.length - 1];
       return { state: byDay(last.date, now), at: Date.parse(last.date), day: true, extra: `${last.aspas.toLocaleString('en-US')} ASPAs on that day` };
@@ -52,7 +52,7 @@
       const t = Date.parse(a.generated);
       return { state: byAge(now - t, 36 * HOUR, 3 * DAY), at: t, extra: `${a.pct}% of the networks seen have an ASPA` };
     } },
-    { id: 'leaks', name: 'Route leaks (table dumps)', expected: 'once a day', run: async (now) => {
+    { id: 'leaks', name: 'Valleys of the day (table dumps)', expected: 'once a day', run: async (now) => {
       const l = await get('/api/v1/leaks.json');
       const t = Date.parse(l.generated);
       return { state: byAge(now - t, 36 * HOUR, 3 * DAY), at: t, extra: `${l.places.toLocaleString('en-US')} places of valley in ${Math.round(l.total.routes / 1e6)} million routes` };

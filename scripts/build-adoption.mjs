@@ -29,7 +29,7 @@ export const DELEGATED = {
   afrinic: 'https://ftp.afrinic.net/pub/stats/afrinic/delegated-afrinic-extended-latest',
 };
 export const TIERS = [
-  { key: 'stub', label: 'Stub (no customers)', min: 1 },
+  { key: 'stub', label: 'Stub (no customers, or not in the CAIDA data)', min: 1 },
   { key: 'small', label: 'Small (2 to 9 networks in its cone)', min: 2 },
   { key: 'medium', label: 'Medium (10 to 99)', min: 10 },
   { key: 'large', label: 'Large (100 to 999)', min: 100 },

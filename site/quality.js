@@ -9,10 +9,11 @@
 (function (root) {
   const asNum = (as) => Number(as.slice(2));
 
-  // AS numbers that are private, reserved or for documentation (RFC 5398, 6996, 7300, 7607) or AS_TRANS
+  // AS numbers that are private, reserved or for documentation (RFC 5398, 6996, 7300, 7607, and 65552-131071,
+  // which IANA keeps reserved) or AS_TRANS
   const reserved = (as) => {
     const n = asNum(as);
-    return n === 23456 || (n >= 64496 && n <= 65551) || n >= 4200000000;
+    return n === 23456 || (n >= 64496 && n <= 131071) || n >= 4200000000;
   };
 
   const KINDS = {
@@ -27,7 +28,7 @@
     'provider-unseen': { severity: 'warning', title: 'A provider not seen in BGP',
       why: 'The RIPE RIS collectors see no route that goes through this AS: a typo, a retired AS, or an AS that does not announce anything.' },
     expiring: { severity: 'warning', title: 'An ASPA that expires soon',
-      why: 'When the signed object expires the ASPA disappears and the routes of the AS go back to "unknown" until a new one is published.' },
+      why: 'When the signed object expires the ASPA disappears, and the hops from the AS can no longer be checked until a new one is published.' },
     'customer-unseen': { severity: 'note', title: 'A customer not seen in BGP',
       why: 'The RIPE RIS collectors see no route of this AS: it may announce only where they do not look, or have stopped.' },
     'large-set': { severity: 'note', title: 'A very large provider set',

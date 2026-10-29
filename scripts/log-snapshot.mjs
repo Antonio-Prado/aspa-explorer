@@ -10,9 +10,10 @@
 //                                               no model experiment run, no RIPEstat call; the coverage
 //                                               figures of the day's row are kept
 //
-// In CI the job token authenticates the calls (CI_JOB_TOKEN, CI_API_V4_URL,
-// CI_PROJECT_ID). Outside CI set MLFLOW_API (the .../ml/mlflow/api/2.0/mlflow URL)
-// and MLFLOW_TOKEN.
+// In CI the address comes from CI_API_V4_URL and CI_PROJECT_ID, and MLFLOW_TOKEN must hold a
+// project access token: the model experiments API does not accept the job token (CI_JOB_TOKEN, tried
+// only when MLFLOW_TOKEN is missing), and the job token cannot write the history branch either.
+// Outside CI set MLFLOW_API (the .../ml/mlflow/api/2.0/mlflow URL) and MLFLOW_TOKEN.
 
 import { createRequire } from 'node:module';
 import { atomFeed } from './feed.mjs';
@@ -121,8 +122,8 @@ if (DRY) process.exit(0);
 if (!TOKEN) throw new Error('no token: set CI_JOB_TOKEN or MLFLOW_TOKEN');
 if (!HISTORY_ONLY) await detectAuth();
 
-// The same snapshot goes to the `history` branch, which the page reads through the mirror on the public
-// project (see site/history.js for the events): the day's row in history.json, the day's changes in
+// The same snapshot goes to the `history` branch, which scripts/fetch-archive.mjs copies for the pages
+// (see site/history.js for the events): the day's row in history.json, the day's changes in
 // events.json and the Atom feed of the recent changes, in one commit. Needs a token that can write to
 // the repository: the project access token (MLFLOW_TOKEN) can, the job token cannot. A failure here
 // must not hide the model experiment run below, so it is reported at the end.

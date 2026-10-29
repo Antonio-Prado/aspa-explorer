@@ -1,5 +1,6 @@
 // From the allocation of an AS number to its ASPA: for each RIR and each economy how many AS numbers are allocated, how many are
-// advertised in BGP and how many have an ASPA, by the year of the allocation and the width of the number (16 or 32 bits), with the
+// advertised in BGP and how many have an ASPA (aspa: all of them; aspa_advertised: those advertised, the ones that the shares and the
+// figures per million users count), by the year of the allocation and the width of the number (16 or 32 bits), with the
 // figures per million Internet users, and the ASPAs that name AS numbers that should not be there (not allocated, reserved, private).
 // Written as one JSON file (served as /api/v1/resources.json).
 //
@@ -51,7 +52,7 @@ export function aggregateResources({ records, seen, aspa, bank = { users: new Ma
   const alloc = new Map();                                         // allocated AS number -> record (one entry per number)
   const regTotals = {};
   const lines = [...records].sort((a, b) => a.start - b.start);
-  const tot = (rir) => regTotals[rir] || (regTotals[rir] = { rir, allocated: 0, advertised: 0, aspa: 0, reserved: 0, available: 0 });
+  const tot = (rir) => regTotals[rir] || (regTotals[rir] = { rir, allocated: 0, advertised: 0, aspa: 0, aspa_advertised: 0, reserved: 0, available: 0 });
   const free = new Map();                                          // AS numbers that the files list as available or reserved: start -> {end, status}
   for (const r of lines) {
     const t = tot(r.rir);
@@ -62,45 +63,46 @@ export function aggregateResources({ records, seen, aspa, bank = { users: new Ma
         alloc.set(a, r);
         if (seen.has(a)) t.advertised++;
         if (aspa.has(a)) t.aspa++;
+        if (aspa.has(a) && seen.has(a)) t.aspa_advertised++;
       }
     } else if (r.status === 'reserved') { t.reserved += n; free.set(r.start, { end: r.end, status: 'reserved' }); }
     else if (r.status === 'available') { t.available += n; free.set(r.start, { end: r.end, status: 'available' }); }
   }
   const registries = Object.values(regTotals).sort((a, b) => b.allocated - a.allocated)
-    .map((t) => ({ ...t, unadvertised: t.allocated - t.advertised, pct_advertised: pct(t.advertised, t.allocated), pct_aspa_of_advertised: pct(t.aspa, t.advertised) }));
+    .map((t) => ({ ...t, unadvertised: t.allocated - t.advertised, pct_advertised: pct(t.advertised, t.allocated), pct_aspa_of_advertised: pct(t.aspa_advertised, t.advertised) }));
   // by economy
   const eco = new Map();
   for (const [a, r] of alloc) {
-    const e = eco.get(r.cc) || { cc: r.cc, allocated: 0, advertised: 0, aspa: 0 };
-    e.allocated++; if (seen.has(a)) e.advertised++; if (aspa.has(a)) e.aspa++;
+    const e = eco.get(r.cc) || { cc: r.cc, allocated: 0, advertised: 0, aspa: 0, aspa_advertised: 0 };
+    e.allocated++; if (seen.has(a)) e.advertised++; if (aspa.has(a)) e.aspa++; if (aspa.has(a) && seen.has(a)) e.aspa_advertised++;
     eco.set(r.cc, e);
   }
   const economies = [...eco.values()].map((e) => {
     const users = bank.users.get(e.cc) ?? null, population = bank.population.get(e.cc) ?? null;
     return {
-      ...e, pct_aspa_of_advertised: pct(e.aspa, e.advertised), region: bank.region.get(e.cc) || null, population, users: users === null ? null : Math.round(users),
-      aspa_per_million_users: users ? per(e.aspa, users / 1e6) : null, advertised_per_million_users: users ? per(e.advertised, users / 1e6) : null,
+      ...e, pct_aspa_of_advertised: pct(e.aspa_advertised, e.advertised), region: bank.region.get(e.cc) || null, population, users: users === null ? null : Math.round(users),
+      aspa_per_million_users: users ? per(e.aspa_advertised, users / 1e6) : null, advertised_per_million_users: users ? per(e.advertised, users / 1e6) : null,
     };
   }).sort((a, b) => b.allocated - a.allocated || (a.cc < b.cc ? -1 : 1));
   // by region (World Bank regions)
   const reg = new Map();
   for (const e of economies) {
     if (!e.region) continue;
-    const g = reg.get(e.region) || { region: e.region, allocated: 0, advertised: 0, aspa: 0, population: 0, users: 0 };
-    g.allocated += e.allocated; g.advertised += e.advertised; g.aspa += e.aspa; g.population += e.population || 0; g.users += e.users || 0;
+    const g = reg.get(e.region) || { region: e.region, allocated: 0, advertised: 0, aspa: 0, aspa_advertised: 0, population: 0, users: 0 };
+    g.allocated += e.allocated; g.advertised += e.advertised; g.aspa += e.aspa; g.aspa_advertised += e.aspa_advertised; g.population += e.population || 0; g.users += e.users || 0;
     reg.set(e.region, g);
   }
-  const regions = [...reg.values()].map((g) => ({ ...g, pct_aspa_of_advertised: pct(g.aspa, g.advertised), aspa_per_million_users: g.users ? per(g.aspa, g.users / 1e6) : null })).sort((a, b) => b.allocated - a.allocated);
+  const regions = [...reg.values()].map((g) => ({ ...g, pct_aspa_of_advertised: pct(g.aspa_advertised, g.advertised), aspa_per_million_users: g.users ? per(g.aspa_advertised, g.users / 1e6) : null })).sort((a, b) => b.allocated - a.allocated);
   // by year of the allocation, and by width of the number
   const yr = new Map();
-  const widths = { '16-bit': { allocated: 0, advertised: 0, aspa: 0 }, '32-bit': { allocated: 0, advertised: 0, aspa: 0 } };
+  const widths = { '16-bit': { allocated: 0, advertised: 0, aspa: 0, aspa_advertised: 0 }, '32-bit': { allocated: 0, advertised: 0, aspa: 0, aspa_advertised: 0 } };
   for (const [a, r] of alloc) {
-    if (r.year) { const y = yr.get(r.year) || { year: r.year, allocated: 0, advertised: 0, aspa: 0 }; y.allocated++; if (seen.has(a)) y.advertised++; if (aspa.has(a)) y.aspa++; yr.set(r.year, y); }
+    if (r.year) { const y = yr.get(r.year) || { year: r.year, allocated: 0, advertised: 0, aspa: 0, aspa_advertised: 0 }; y.allocated++; if (seen.has(a)) y.advertised++; if (aspa.has(a)) y.aspa++; if (aspa.has(a) && seen.has(a)) y.aspa_advertised++; yr.set(r.year, y); }
     const w = widths[a <= 65535 ? '16-bit' : '32-bit'];
-    w.allocated++; if (seen.has(a)) w.advertised++; if (aspa.has(a)) w.aspa++;
+    w.allocated++; if (seen.has(a)) w.advertised++; if (aspa.has(a)) w.aspa++; if (aspa.has(a) && seen.has(a)) w.aspa_advertised++;
   }
-  const by_year = [...yr.values()].sort((a, b) => a.year - b.year).map((y) => ({ ...y, pct_aspa_of_advertised: pct(y.aspa, y.advertised), pct_aspa_of_allocated: pct(y.aspa, y.allocated) }));
-  const by_width = Object.entries(widths).map(([width, w]) => ({ width, ...w, pct_aspa_of_advertised: pct(w.advertised ? w.aspa : 0, w.advertised) }));
+  const by_year = [...yr.values()].sort((a, b) => a.year - b.year).map((y) => ({ ...y, pct_aspa_of_advertised: pct(y.aspa_advertised, y.advertised), pct_aspa_of_allocated: pct(y.aspa, y.allocated) }));
+  const by_width = Object.entries(widths).map(([width, w]) => ({ width, ...w, pct_aspa_of_advertised: pct(w.aspa_advertised, w.advertised) }));
   // ASPAs that name AS numbers that should not be there
   const freeKind = (a) => { for (const [s, f] of free) if (a >= s && a <= f.end) return f.status; return null; };
   const why = (a) => reservedKind(a) || (alloc.has(a) ? null : freeKind(a) ? `listed as ${freeKind(a)} in a delegation file` : 'not in any delegation file');

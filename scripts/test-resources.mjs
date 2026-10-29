@@ -23,18 +23,20 @@ test('the AS numbers that are not for the Internet', () => {
 test('the funnel by RIR, economy, year and width, and the figures per million users', () => {
   const records = parseAsnRecords(ripe, 'ripe').concat(parseAsnRecords('arin|US|asn|70000|2|2012-1|allocated|x\narin|US|asn|70002|1|20200101|allocated|x', 'arin'));
   const seen = new Set([100, 200, 70000]);
-  const aspa = new Map([[100, [200]], [70000, [100, 999]], [64512, [100]], [301, [0]], [400, [100]]]);
+  const aspa = new Map([[100, [200]], [101, [200]], [70000, [100, 999]], [64512, [100]], [301, [0]], [400, [100]]]);   // 101: allocated, with an ASPA, not advertised
   const bank = { users: new Map([['IT', 2e6], ['US', 4e6]]), population: new Map([['IT', 3e6]]), region: new Map([['IT', 'Europe'], ['FR', 'Europe'], ['US', 'North America']]) };
   const r = aggregateResources({ records, seen, aspa, bank });
   const ripeRow = r.registries.find((x) => x.rir === 'ripe');
-  assert.deepEqual([ripeRow.allocated, ripeRow.advertised, ripeRow.aspa, ripeRow.available, ripeRow.reserved, ripeRow.unadvertised], [3, 2, 1, 1, 2, 1]);
+  assert.deepEqual([ripeRow.allocated, ripeRow.advertised, ripeRow.aspa, ripeRow.aspa_advertised, ripeRow.available, ripeRow.reserved, ripeRow.unadvertised], [3, 2, 2, 1, 1, 2, 1]);
+  assert.equal(ripeRow.pct_aspa_of_advertised, 50);                      // 1 of the 2 advertised, not 2 of 2
   const it = r.economies.find((e) => e.cc === 'IT');
-  assert.deepEqual([it.allocated, it.advertised, it.aspa, it.users, it.aspa_per_million_users, it.advertised_per_million_users], [2, 1, 1, 2000000, 0.5, 0.5]);
+  assert.deepEqual([it.allocated, it.advertised, it.aspa, it.aspa_advertised, it.users, it.aspa_per_million_users, it.advertised_per_million_users], [2, 1, 2, 1, 2000000, 0.5, 0.5]);
+  assert.equal(it.pct_aspa_of_advertised, 100);
   assert.equal(r.economies.find((e) => e.cc === 'FR').users, null);
   assert.equal(r.economies.find((e) => e.cc === 'FR').aspa_per_million_users, null);
-  assert.deepEqual(r.regions.map((g) => [g.region, g.allocated, g.aspa]).sort(), [['Europe', 3, 1], ['North America', 3, 1]]);
+  assert.deepEqual(r.regions.map((g) => [g.region, g.allocated, g.aspa, g.aspa_advertised]).sort(), [['Europe', 3, 2, 1], ['North America', 3, 1, 1]]);
   assert.deepEqual(r.by_year.map((y) => [y.year, y.allocated, y.advertised]), [[1999, 2, 1], [2015, 1, 1], [2020, 1, 0]]);
-  assert.deepEqual(r.by_width.map((w) => [w.width, w.allocated, w.advertised, w.aspa]), [['16-bit', 3, 2, 1], ['32-bit', 3, 1, 1]]);
+  assert.deepEqual(r.by_width.map((w) => [w.width, w.allocated, w.advertised, w.aspa, w.aspa_advertised]), [['16-bit', 3, 2, 2, 1], ['32-bit', 3, 1, 1, 1]]);
 });
 
 test('the ASPAs that should not be there: customers and providers that are not allocated, reserved or private', () => {

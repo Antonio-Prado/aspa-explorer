@@ -51,7 +51,10 @@ test('the series of a chart: all, a RIR or a country, and the top of its axis', 
   assert.deepEqual(seriesFor(doc, 'rir:afrinic'), [0, 0]);
   assert.deepEqual(seriesFor(doc, 'cc:IT'), [0, 2]);
   assert.equal(niceMax(0), 1);
-  assert.equal(niceMax(7), 7);
+  assert.equal(niceMax(3), 3);
+  assert.equal(niceMax(7), 8);
+  assert.equal(niceMax(85), 90);                 // 85 would put the middle line at 42.5
+  assert.equal(niceMax(13), 20);
   assert.equal(niceMax(10), 10);
   assert.equal(niceMax(1234), 1500);
   assert.equal(niceMax(3229), 3500);

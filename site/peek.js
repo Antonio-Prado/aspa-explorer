@@ -13,14 +13,14 @@
   function summary(d) {
     const lines = [];
     const a = d.aspa || {};
-    if (!a.published) lines.push({ label: 'ASPA', text: 'Publishes no ASPA: its routes can only come out unknown.' });
+    if (!a.published) lines.push({ label: 'ASPA', text: 'Publishes no ASPA: the hops from it cannot be checked, though its routes can still be Invalid where the ASPAs of other ASes prove a valley.' });
     else if (a.no_providers) lines.push({ label: 'ASPA', text: 'Publishes an ASPA that says it has no transit providers (AS0).' });
     else lines.push({ label: 'ASPA', text: `Publishes an ASPA with ${plural(a.providers.length, 'provider', 'providers')}:`, chips: a.providers.slice(0, 12), more: Math.max(0, a.providers.length - 12) });
     const p = d.provider_of || [];
     lines.push({ label: 'Named as a provider', text: p.length ? `by ${plural(p.length, 'ASPA', 'ASPAs')}${p.length > 12 ? ', for instance:' : ':'}` : 'by no ASPA.', chips: p.slice(0, 12), more: Math.max(0, p.length - 12) });
-    lines.push({ label: 'Seen in BGP', text: d.seen_in_bgp === true ? 'Yes, the route collectors see routes it originates.' : d.seen_in_bgp === false ? 'No: the route collectors see no route that it originates.' : 'Not known.' });
+    lines.push({ label: 'Seen in BGP', text: d.seen_in_bgp === true ? 'Yes, the RIPE RIS collectors see it in routes.' : d.seen_in_bgp === false ? 'No: the RIPE RIS collectors see it in no route.' : 'Not checked (it is checked for the ASes that an ASPA names).' });
     const q = d.quality || [];
-    if (a.published) lines.push({ label: 'Quality', text: q.length ? `${plural(q.length, 'finding', 'findings')} on its ASPA: ${q.slice(0, 2).map((x) => x.message || x.code || String(x)).join('; ')}${q.length > 2 ? '…' : ''}` : 'No finding on its ASPA.' });
+    if (a.published) lines.push({ label: 'Quality', text: q.length ? `${plural(q.length, 'finding', 'findings')} on its ASPA: ${q.slice(0, 2).map((x) => x.detail || x.kind || String(x)).join('; ')}${q.length > 2 ? '…' : ''}` : 'No finding on its ASPA.' });
     const h = (d.history || [])[(d.history || []).length - 1];
     if (h) lines.push({ label: 'Last change', text: `${h.date}: ${h.kind === 'new' ? 'the ASPA appeared' : h.kind === 'removed' ? 'the ASPA was removed' : 'the providers changed'}${h.added && h.added.length ? `, added ${h.added.join(', ')}` : ''}${h.dropped && h.dropped.length ? `, dropped ${h.dropped.join(', ')}` : ''}.` });
     return lines;

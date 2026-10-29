@@ -11,12 +11,15 @@
     const set = kind === 'rir' ? doc.rir : doc.country;
     return (set && set[id]) ? set[id].slice() : doc.points.map(() => 0);
   }
-  // a round number at or above the largest value, for the top of the axis
+  // a round number at or above the largest value, for the top of the axis; from 4 up its half is a whole number too, because the
+  // middle line of the axis is labelled with it
   function niceMax(v) {
     if (!(v > 0)) return 1;
-    if (v < 10) return Math.ceil(v);
+    if (v < 4) return Math.ceil(v);
+    if (v < 10) return Math.ceil(v / 2) * 2;
     const step = Math.pow(10, Math.floor(Math.log10(v))) / 2;
-    return Math.ceil(v / step) * step;
+    const top = Math.ceil(v / step) * step;
+    return (top / 2) % 1 ? top + step : top;
   }
 
   const api = { seriesFor, niceMax };
@@ -24,7 +27,7 @@
   root.AspaTrends = api;
 
   const fmt = new Intl.NumberFormat('en-US');
-  const RIRS = { ripe: 'RIPE NCC', apnic: 'APNIC', arin: 'ARIN', lacnic: 'LACNIC', afrinic: 'AFRINIC', unknown: 'Not in a delegation file' };
+  const RIRS = { ripe: 'RIPE NCC', apnic: 'APNIC', arin: 'ARIN', lacnic: 'LACNIC', afrinic: 'AFRINIC', unknown: 'Unknown registry' };
   let names = null;
   try { names = new Intl.DisplayNames(['en'], { type: 'region' }); } catch { /* the code is shown instead */ }
   const country = (cc) => { if (cc === 'ZZ') return 'Unknown'; try { return (names && names.of(cc)) || cc; } catch { return cc; } };
@@ -36,12 +39,15 @@
   // Draws the chart of one series into `box` and returns the text that says what it shows.
   function draw(box, doc, key) {
     const values = seriesFor(doc, key);
-    const W = 640, H = 240, m = { l: 48, r: 12, t: 12, b: 28 };
+    const W = 640, H = 240, m = { l: 64, r: 12, t: 12, b: 28 };
     const iw = W - m.l - m.r, ih = H - m.t - m.b;
     const top = niceMax(Math.max(...values));
     const x = (i) => m.l + (values.length === 1 ? iw : (i / (values.length - 1)) * iw);
     const y = (v) => m.t + ih - (v / top) * ih;
     const s = svg('svg', { viewBox: `0 0 ${W} ${H}`, 'aria-hidden': 'true' });
+    const title = svg('text', { class: 'axistitle', transform: `translate(13 ${m.t + ih / 2}) rotate(-90)`, 'text-anchor': 'middle' });
+    title.textContent = 'Networks with an ASPA';
+    s.append(title);
     for (const f of top < 4 ? [0, 1] : [0, 0.5, 1]) {
       s.append(svg('line', { x1: m.l, x2: W - m.r, y1: y(top * f), y2: y(top * f), class: f ? 'grid' : 'axisline' }));
       const t = svg('text', { x: m.l - 6, y: y(top * f) + 4, class: 'tick', 'text-anchor': 'end' });

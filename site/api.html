@@ -23,18 +23,18 @@
 <meta name="twitter:card" content="summary_large_image">
 <meta name="color-scheme" content="light dark">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
-<link rel="stylesheet" href="/style.css?v=1.55.0">
-<script src="/download.js?v=1.55.0" defer></script>
-<script src="/datasets.js?v=1.55.0" defer></script>
-<script src="/status-checks.js?v=1.55.0" defer></script>
-<script src="/asnames.js?v=1.55.0" defer></script>
-<script src="/footer.js?v=1.55.0" defer></script>
+<link rel="stylesheet" href="/style.css?v=1.56.0">
+<script src="/download.js?v=1.56.0" defer></script>
+<script src="/datasets.js?v=1.56.0" defer></script>
+<script src="/status-checks.js?v=1.56.0" defer></script>
+<script src="/asnames.js?v=1.56.0" defer></script>
+<script src="/footer.js?v=1.56.0" defer></script>
 </head>
 <body>
 <a class="skip" href="#main">Skip to main content</a>
 <header class="wrap masthead">
   <div class="top">
-    <p class="back"><a class="brandlink" href="/" title="Back to ASPA Explorer"><img class="brand" src="/img/logo-mark.svg?v=1.55.0" alt="" width="40" height="40"><span>ASPA Explorer</span></a></p>
+    <p class="back"><a class="brandlink" href="/" title="Back to ASPA Explorer"><img class="brand" src="/img/logo-mark.svg?v=1.56.0" alt="" width="40" height="40"><span>ASPA Explorer</span></a></p>
     <nav class="topnav" aria-label="Main"><a href="/">Home</a><a href="/statistics.html">Statistics</a><a href="/incidents.html">Incidents</a><a href="/examples.html">Examples</a><a href="/api.html" aria-current="page">API</a><a href="/guide.html">Guide</a><a href="/status.html">Status</a></nav>
   </div>
   <h1>API</h1>
@@ -65,13 +65,13 @@
       <thead><tr><th scope="col">Field</th><th scope="col">Meaning</th></tr></thead>
       <tbody>
         <tr><td><code>asn</code>, <code>number</code></td><td>The AS, as <code>AS8283</code> and as 8283.</td></tr>
-        <tr><td><code>generated</code></td><td>When the file was built (UTC), at most a few minutes ago.</td></tr>
+        <tr><td><code>generated</code></td><td>When the file was built (UTC). The files are rebuilt every 15 minutes.</td></tr>
         <tr><td><code>aspa.published</code></td><td>Whether a valid ASPA of this AS exists now.</td></tr>
-        <tr><td><code>aspa.providers</code></td><td>The providers it authorizes, by number; <code>["AS0"]</code> means it declares no transit provider.</td></tr>
+        <tr><td><code>aspa.providers</code></td><td>The providers it authorises, by number; <code>["AS0"]</code> means it declares no transit provider.</td></tr>
         <tr><td><code>aspa.no_providers</code></td><td><code>true</code> for an ASPA made of AS0 alone.</td></tr>
         <tr><td><code>aspa.sources</code></td><td>The signed objects: trust anchor, validity, rsync address.</td></tr>
         <tr><td><code>provider_of</code></td><td>The ASes whose ASPA names this AS as a provider.</td></tr>
-        <tr><td><code>seen_in_bgp</code></td><td>Whether the RIPE RIS collectors see the AS in routes (<code>null</code> when unknown).</td></tr>
+        <tr><td><code>seen_in_bgp</code></td><td>Whether the RIPE RIS collectors see the AS in routes. It is checked once a day for the ASes that a current ASPA names, as customer or provider; for the others it is <code>null</code>.</td></tr>
         <tr><td><code>quality</code></td><td>Findings about its ASPA, with a <code>kind</code>, a <code>severity</code> (<code>error</code>, <code>warning</code>, <code>note</code>) and a <code>detail</code>. The kinds are explained in the <a href="/guide.html#quality">guide</a>.</td></tr>
         <tr><td><code>history</code></td><td>Every change of its own ASPA since 12 October 2023: <code>date</code>, <code>kind</code> (<code>new</code>, <code>changed</code>, <code>removed</code>), the providers after the change and the ones <code>added</code> and <code>dropped</code>.</td></tr>
         <tr><td><code>named_as_provider_history</code></td><td>The changes of other ASPAs that added or dropped this AS as a provider.</td></tr>
@@ -83,7 +83,7 @@
 
   <section aria-labelledby="badge">
     <h2 id="badge">Badge</h2>
-    <p><code>GET https://aspa.ping6.it/badge/AS8283.svg</code> is a small image that says how many providers the AS has authorized (<em>ASPA AS8283: 5 providers</em>; the label says which AS it is about), or <em>not configured yet</em> (the AS has published no ASPA: the badge is there for any AS number), <em>no transit providers (AS0)</em>, or <em>published, with errors</em> when the quality checks find an error. Link it to the page of the AS:</p>
+    <p><code>GET https://aspa.ping6.it/badge/AS8283.svg</code> is a small image that says how many providers the AS has authorised (<em>ASPA AS8283: 5 providers</em>; the label says which AS it is about), or <em>not configured yet</em> (the AS has published no ASPA: the badge is there for any AS number), <em>no transit providers (AS0)</em>, or <em>published, with errors</em> when the quality checks find an error. Link it to the page of the AS:</p>
     <pre tabindex="0"><code>[![ASPA of AS8283](https://aspa.ping6.it/badge/AS8283.svg)](https://aspa.ping6.it/as/AS8283)</code></pre>
     <p>The same snippet, in Markdown and HTML, is under <em>Add the badge to your site</em> when you look up an AS. Browsers and proxies may keep a badge for ten minutes.</p>
   </section>
@@ -110,13 +110,13 @@ X-ASPA-Signature: sha256=…      HMAC-SHA256(secret, timestamp + "." + body), h
     <p>Add <code>"leaks": true</code> to the body to receive, once a day, the new places of valley that involve the AS as well (only <code>true</code> counts; it cannot be changed later, subscribe again). Such a delivery has <code>"type": "aspa.leak"</code>, the same signature and a <code>place</code> object: <code>{"role": "valley" | "gap", "kind": "leak" | "gap", "from": "AS…", "to": "AS…", "between": ["AS…"], "feeders": 5, "routes": 10}</code>. The data comes from <a href="/api/v1/leaks-by-as.json">/api/v1/leaks-by-as.json</a> (the places seen by at least three feeders, for each AS), the totals of each day from <a href="/api/v1/leaks-history.json">/api/v1/leaks-history.json</a> and the file of an earlier day (the last 60) from <code>/api/v1/leaks-by-as/YYYYMMDD.json</code>.</p>
     <p>Add <code>"invalid": N</code> (a whole number from 5 to 100000) to be told when the AS is the origin of at least N announcements that the ASPAs prove invalid in a ten-minute run of the watcher, at most once every six hours. Such a delivery has <code>"type": "aspa.invalid"</code>, the same signature and an <code>invalid</code> object: <code>{"announcements": 300, "invalid": 30, "prefixes": [{"prefix": "192.0.2.0/24", "invalid": 20}], "from": "2026-10-18T11:51:00Z", "to": "2026-10-18T12:00:00Z"}</code>. What the last run saw, for the origins with at least five invalid announcements, is in <a href="/api/v1/invalid-last.json">/api/v1/invalid-last.json</a>.</p>
     <p>Instead of <code>"asn"</code>, <code>"topic": "status"</code> subscribes to the state of the parts of the service (the checks of the <a href="/status.html">status page</a>), with the same confirmation. A part that changes state, confirmed by two checks 15 minutes apart, is delivered as <code>"type": "aspa.status"</code> with the same signature: <code>{"type": "aspa.status", "text": "…", "time": "…", "changes": [{"part": "leaks", "name": "…", "from": "o", "to": "d", "at": "2026-10-18T12:00:00.000Z"}], "page": "https://aspa.ping6.it/status.html", "unsubscribe": "…"}</code>; the states are <code>o</code> (OK), <code>l</code> (late) and <code>d</code> (down). The part <code>monitor</code> is down when no check has been recorded for 45 minutes. The history behind it is <a href="/api/v1/status-history.json">/api/v1/status-history.json</a>.</p>
-    <p><code>relation</code> is <code>own</code> for a change of the ASPA of the AS and <code>provider</code> when another ASPA adds or drops it; <code>kind</code> is <code>new</code>, <code>changed</code> or <code>removed</code>. Check the signature and reject a timestamp more than a few minutes old. <code>event_id</code> names the message and is the same in every attempt: a delivery that fails is tried again (after 10 minutes, then 30 minutes, 1, 2 and 4 hours, in order), and after a crash a message can come twice, so keep the ids you have handled and ignore a repeat. Five failures in a row switch the webhook off, and a message older than two days is dropped. To stop, send a <code>POST</code> to the <code>unsubscribe</code> address.</p>
-    <p>Webhook addresses must be <code>https</code> with a public host name; the service refuses names that resolve to private or local addresses, does not follow redirects and waits five seconds at most.</p>
+    <p><code>relation</code> is <code>own</code> for a change of the ASPA of the AS and <code>provider</code> when another ASPA adds or drops it; <code>kind</code> is <code>new</code>, <code>changed</code> or <code>removed</code>. Check the signature and reject a timestamp more than a few minutes old. <code>event_id</code> names the message and is the same in every attempt: a delivery that fails is tried again (after 10 minutes, then 30 minutes, 1 hour and 2 hours, in order), and after a crash a message can come twice, so keep the ids you have handled and ignore a repeat. The fifth failure in a row switches the webhook off, and a message older than two days is dropped. To stop, send a <code>POST</code> to the <code>unsubscribe</code> address.</p>
+    <p>Webhook addresses must be <code>https</code> with a public host name; the service refuses names that resolve to private or local addresses, does not follow redirects, and gives up when the connection is silent for five seconds or the whole exchange takes more than 15 seconds.</p>
   </section>
 
     <section aria-labelledby="reports">
     <h2 id="reports">Shared results</h2>
-    <p><code>POST https://aspa.ping6.it/api/v1/reports</code> with a JSON body freezes a result into a link, kept for 30 days: <code>{"kind": "path" | "bulk" | "routes" | "whatif" | "tromboning" | "other", "title": "…", "source": "/#path=3356+680&amp;from=up", "sections": [{"heading": "…", "text": "…", "table": {"columns": ["…"], "rows": [["…", ["…", "valid"]]]}}]}</code>. A cell is a string or <code>[string, class]</code> with a class of <code>valid</code>, <code>unknown</code>, <code>invalid</code>, <code>provider</code>, <code>not-provider</code> or <code>none</code>. Plain text only; at most 12 sections, 8 columns, 500 rows and 200 KB; 20 reports an hour from one address. The answer, <code>201</code>, has the <code>id</code> and the <code>url</code> (<code>/r/&lt;id&gt;</code>). <code>GET /api/v1/reports/&lt;id&gt;</code> returns the report with <code>created</code> and <code>expires</code>; a report that does not exist or has expired is a <code>404</code>.</p>
+    <p><code>POST https://aspa.ping6.it/api/v1/reports</code> with a JSON body freezes a result into a link, kept for 30 days: <code>{"kind": "path" | "bulk" | "routes" | "whatif" | "tromboning" | "other", "title": "…", "source": "/#path=3356+680&amp;from=up", "sections": [{"heading": "…", "text": "…", "table": {"columns": ["…"], "rows": [["…", ["…", "valid"]]]}}]}</code>. A cell is a string or <code>[string, class]</code> with a class of <code>valid</code>, <code>unknown</code>, <code>invalid</code>, <code>provider</code>, <code>not-provider</code> or <code>none</code>. Plain text only; at most 12 sections, 8 columns, 500 rows and 200 KB; 20 reports an hour and 100 a day from one address. The answer, <code>201</code>, has the <code>id</code> and the <code>url</code> (<code>/r/&lt;id&gt;</code>). <code>GET /api/v1/reports/&lt;id&gt;</code> returns the report with <code>created</code> and <code>expires</code>; a report that does not exist or has expired is a <code>404</code>.</p>
   </section>
 
   <section aria-labelledby="download">
@@ -133,7 +133,7 @@ X-ASPA-Signature: sha256=…      HMAC-SHA256(secret, timestamp + "." + body), h
 
   <section aria-labelledby="datasets">
     <h2 id="datasets">Dated snapshots, for research</h2>
-    <p>Once a month the site keeps a snapshot of its data in one <code>.tar.gz</code>: the ASPAs (CSV and JSON), the daily history and every change since 12 October 2023, the adoption numbers, the numbers over time by RIR and country, the route leaks and the comparison of validators, with a <code>MANIFEST.json</code> (size and SHA-256 of each file) and a README. A snapshot never changes, so a study can say which one it used. License: CC BY 4.0; cite the <a href="https://github.com/Antonio-Prado/aspa-explorer/blob/main/CITATION.cff" target="_blank" rel="noopener">paper<span class="sr-only"> (opens in a new tab)</span></a>.</p>
+    <p>Once a month the site keeps a snapshot of its data in one <code>.tar.gz</code>: the ASPAs (CSV and JSON), the daily history and every change since 12 October 2023, the ASes that the collectors do not see, the adoption numbers, the AS numbers from allocation to ASPA, the invalid announcements of the last 14 days, the numbers over time by RIR and country, the places of valley and the comparison of validators, with a <code>MANIFEST.json</code> (size and SHA-256 of each file) and a README. A snapshot never changes, so a study can say which one it used. Licence: CC BY 4.0. To cite the data, cite the <a href="https://github.com/Antonio-Prado/aspa-explorer/blob/main/CITATION.cff" target="_blank" rel="noopener">paper<span class="sr-only"> (opens in a new tab)</span></a>; to cite the software, use the DOI below.</p>
     <section class="card table-wrap" tabindex="0" aria-label="Snapshots">
       <table class="checks live">
         <caption class="sr-only">The snapshots, newest first, with size and SHA-256</caption>
@@ -155,6 +155,10 @@ X-ASPA-Signature: sha256=…      HMAC-SHA256(secret, timestamp + "." + body), h
       <li><a href="/api/v1/invalid.json">/api/v1/invalid.json</a>: the invalid announcements of the last 14 days as the collectors receive them (RIS Live): by hour, with the origins and prefixes that have most. Updated every ten minutes.</li>
       <li><a href="/api/v1/trends.json">/api/v1/trends.json</a>: the number of networks with an ASPA month by month, for all of them and for each RIR and country. Built once a day.</li>
       <li><a href="/api/v1/adoption.json">/api/v1/adoption.json</a>: the adoption numbers: networks seen in BGP and how many have an ASPA, by RIR, country and size, and the 100 largest networks. Built once a day; the sources are named in the file.</li>
+      <li><a href="/api/v1/leaks.json">/api/v1/leaks.json</a>: the places of valley of today in the routes of the 30 collectors, by collector, with the totals; <a href="/api/v1/leaks-history.json">/api/v1/leaks-history.json</a>, one row a day of the totals. Built once a day.</li>
+      <li><a href="/api/v1/validators.json">/api/v1/validators.json</a>: the ASPAs of three validators compared, every hour.</li>
+      <li><a href="/api/v1/relations.json">/api/v1/relations.json</a>: the providers that the CAIDA relationships infer for each AS, and <a href="/api/v1/asn-registry.json">/api/v1/asn-registry.json</a>, the registry and the country of each AS number. Built once a day.</li>
+      <li><a href="/api/v1/status-history.json">/api/v1/status-history.json</a> and <a href="/api/v1/status-months.json">/api/v1/status-months.json</a>: the checks of the status page, every 15 minutes, and their shares by month.</li>
       <li><a href="/api/v1/archive/history.json">/api/v1/archive/history.json</a>, <a href="/api/v1/archive/events.json">/api/v1/archive/events.json</a> and <a href="/api/v1/archive/visibility.json">/api/v1/archive/visibility.json</a>: the daily history (one row a day), the events (every change to an ASPA since 12 October 2023) and the BGP visibility. They are copied every ten minutes from the <code>history</code> branch of the project.</li>
     </ul>
   </section>

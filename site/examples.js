@@ -12,7 +12,7 @@
     return n;
   }
   const asNum = (t) => { const m = /^(?:AS)?(\d{1,10})$/i.exec(String(t).trim()); return m && Number(m[1]) <= MAX_AS ? Number(m[1]) : null; };
-  const reserved = (n) => n === 23456 || (n >= 64496 && n <= 65551) || n >= 4200000000;
+  const reserved = (n) => n === 23456 || (n >= 64496 && n <= 131071) || n >= 4200000000;   // 65552-131071: reserved by IANA
   const documentation = (n) => (n >= 64496 && n <= 64511) || (n >= 65536 && n <= 65551);
 
   // Findings about a list: {level: 'error' | 'warning' | 'note', text}

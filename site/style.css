@@ -655,6 +655,8 @@ ul.plain { list-style: none; margin: 0.4rem 0; padding: 0; display: grid; gap: 0
 details.tableview .table-wrap { max-width: 100%; overflow-x: auto; }
 .tiles .tile { min-width: 0; overflow-wrap: anywhere; }
 #res-region th[scope="row"] { min-width: 11rem; overflow-wrap: normal; word-break: normal; }
+/* the region of an economy wraps between words, not inside them */
+#eco-table td:nth-child(2) { min-width: 9rem; overflow-wrap: normal; word-break: normal; }
 
 /* many paths at once, shared results */
 #bulktext { width: 100%; box-sizing: border-box; padding: 0.55rem 0.65rem; border: 1px solid var(--grid); border-radius: 6px; background: var(--surface); color: var(--ink); font: 0.9rem ui-monospace, SFMono-Regular, Menlo, monospace; resize: vertical; }
@@ -712,5 +714,7 @@ table.live th.grp { text-align: center; }
 .checks th.sub, table.live tbody th.sub { padding-left: 1.6rem; font-weight: 400; }
 .checks td.gnote { background: var(--chip); color: var(--ink-2); font-size: 0.85rem; }
 .linechart .axistitle { fill: var(--ink-2); font-size: 12px; }
+/* the title of the vertical axis of the other charts drawn in SVG */
+svg .axistitle { fill: var(--ink-2); font-size: 12px; }
 .linechart .dot.s1 { fill: var(--s1); }
 .linechart .dot.s2 { fill: var(--s2); }

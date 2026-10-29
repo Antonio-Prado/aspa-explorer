@@ -23,6 +23,6 @@ jobs:
           version="${tag#v}"
           awk -v v="$version" '$0 ~ "^## \\[" v "\\]" {f=1; next} /^## \[/ {f=0} f' CHANGELOG.md > notes.md
           [ -s notes.md ] || echo "See CHANGELOG.md." > notes.md
-          gh release create "$tag" --verify-tag --title "$tag" --notes-file notes.md
+          gh release create "$tag" --verify-tag --title "ASPA Explorer $version" --notes-file notes.md
         env:
           GH_TOKEN: ${{ github.token }}

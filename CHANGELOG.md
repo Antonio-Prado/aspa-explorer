@@ -4,6 +4,33 @@ All notable changes to this project are documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+Each version is a tag, and its release, with these notes, is on [GitHub](https://github.com/Antonio-Prado/aspa-explorer/releases).
+A few numbers were deployed and folded into the next release without a tag of their own (1.13.0, 1.14.0, 1.16.0, 1.17.0, 1.18.3, 1.20.1, 1.20.2, 1.39.3 and 1.43.9, whose changes are in 1.43.10), and 1.23.2 was not used.
+
+## [Unreleased]
+
+## [1.56.0] - 2026-10-29
+
+A review of all the documentation (site, guide, README, wiki and the other documents of the repository) against the code and the data, with the defects it found in the code.
+
+### Fixed
+- *ASPA % of advertised* (From allocation to ASPA) counted the ASPAs of AS numbers that are not advertised: the share now has only advertised numbers with an ASPA on top (`aspa_advertised` in `/api/v1/resources.json`), so it matches the adoption numbers; the figures per million users keep all the ASPAs.
+- `seen_in_bgp` of `/api/v1/as/<n>` said `true` for ASes that were never checked: it is `null` outside the ASes of the current ASPAs, and the quick look says *not checked*. The quick look also printed `[object Object]` for the findings of an ASPA.
+- The neighbourhood graph: the boxes of a row no longer overlap (they are placed by their width), the line that says some ASes are left out counts the ASes that list each other, every AS box says to a screen reader what it is (a provider, a customer, seen in the routes), and the legend covers the neighbours with weak evidence.
+- Networks with an ASPA over time: the middle line of the axis was labelled with a rounded value (42.5 as 43); the top of the axis now has a whole half.
+- The quality check of the provider AS numbers, and the checker of the examples page, now know the range that IANA keeps reserved, 65552 to 131071.
+- *no ASPA from…*: for a route from a customer or a peer, the neighbour is no longer named, because its ASPA is not read.
+- The link of a prefix in *Invalid announcements* went nowhere; the shared result of a tromboning test now runs the test again; the caption of the routes table named the upstream procedure instead of the downstream one.
+- In another country, the tromboning box said that choosing the country of the target gives a reading; the reading is given only in the country where the AS is registered, and the box says so.
+
+### Changed
+- The path check calls its columns *Up-ramp check* and *Down-ramp check*, the words of the draft and of the line under the table.
+- Charts: axis titles on the time charts of the statistics and incidents pages, a note on the days missing from the history (13 and 28 June 2026), the colour key of the verdict bars and the note on the prefixes shorter than /8 and /16, a table under the chart of RIS and RouteViews that anybody can open, a note that the bar of a country is full at 50%, and titles that say what is counted (customer ASes, trust anchors, weekly coverage before 16 October 2026).
+- Texts of the site checked one by one: the stub tier includes the ASes not in the CAIDA data, the time of the table dumps is the time they were downloaded, the status check *Valleys of the day* (was *Route leaks*), the history check is hourly, an ASPA that disappears leaves the hops from its AS unchecked (not "its routes back to unknown"), the notification form says what the service keeps, AS0 next to other providers *contradicts itself* (it is not refused by every validator), spelling made British throughout.
+- The guide: privacy summaries that name every service the page asks, the IRR rule for customers, the webhook retries (10 minutes, 30 minutes, 1 and 2 hours; the fifth failure switches any subscription off), the files under `/api/v1/archive/` and the feed, the RIPE Atlas limits, the incident detectors since 1.51, the Invalid verdict of the downstream procedure, the chip click, the table of the neighbours and its place, the AS0 quote of the draft, a table of contents with every section; *Incidents and ASPA* is a section of its own.
+- The API page: the snapshot contents, the licence and the citation, the report limits, the webhook timeouts, and every file of *Everything at once*.
+- README, MAINTAINING, SECURITY, CONTRIBUTING, CITATION.cff and `.zenodo.json`: the RIPE Atlas service and the shared results, the endpoints, the services and jobs on the host, the scheduled jobs, the figures of 29 October 2026, Node.js 22.13 for `node:sqlite`, the WCAG rules that the test runs, the release badge and the repository on GitHub, the version and date of the release in `CITATION.cff` (checked by `scripts/check-version.sh`); the old link block of this changelog is gone.
+- The wiki on GitHub keeps the sizes of the logos and drops the GitLab table of contents; the GitHub releases are called *ASPA Explorer X.Y.Z*, as on GitLab; the GitHub accessibility test uses the same versions of Playwright and axe-core as the pipeline; the CI validates the Incidents page too.
 
 ## [1.55.0] - 2026-10-29
 
@@ -481,7 +508,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 - In the form to be notified, the line of the threshold of invalid announcements ("Also tell me when ASn is the origin of [10 or more] invalid announcements…") broke into three lines; it is one row now, that wraps between its parts only when it must.
 
-## [1.39.3] - 2026-10-18 (no tag: it went out with 1.39.4)
+## [1.39.3] - 2026-10-18
+
+Not tagged: it went out with 1.39.4.
 
 ### Fixed
 - The badge address in the README got a `?v=2`: Cloudflare, in front of the site, keeps the badges for a day for the browsers (a `max-age` of 86400, whatever the server says), so a badge that changed stayed old. The setting is in the Cloudflare dashboard (*Browser Cache TTL*: respect the existing headers).
@@ -1038,7 +1067,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [1.3.3] - 2026-10-16
 
 ### Changed
-- Development moved to a private project of the group `internet_routing_sec`; the public repository is a read-only push mirror of it. README and CONTRIBUTING describe the new workflow.
+- Development moved to a private project of the department; the public repository is a read-only push mirror of it. README and CONTRIBUTING describe the new workflow.
 
 ### Added
 - Jobs `publish-release` (releases of new tags, in both projects) and `mirror-wiki` (daily copy of the wiki to the public mirror).
@@ -1160,24 +1189,3 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Strict Content-Security-Policy and security headers; no external dependencies.
 - Project documentation, MIT license, contribution and security policies.
 - GitLab CI pipeline with JavaScript, HTML and nginx configuration checks.
-
-[Unreleased]: https://gitlab.dei.unipd.it/Antonio-Prado/aspa-explorer/-/compare/v1.4.3...main
-[1.4.3]: https://gitlab.dei.unipd.it/Antonio-Prado/aspa-explorer/-/compare/v1.4.2...v1.4.3
-[1.4.2]: https://gitlab.dei.unipd.it/Antonio-Prado/aspa-explorer/-/compare/v1.4.1...v1.4.2
-[1.4.1]: https://gitlab.dei.unipd.it/Antonio-Prado/aspa-explorer/-/compare/v1.4.0...v1.4.1
-[1.4.0]: https://gitlab.dei.unipd.it/Antonio-Prado/aspa-explorer/-/compare/v1.3.3...v1.4.0
-[1.3.3]: https://gitlab.dei.unipd.it/Antonio-Prado/aspa-explorer/-/compare/v1.3.2...v1.3.3
-[1.3.2]: https://gitlab.dei.unipd.it/Antonio-Prado/aspa-explorer/-/compare/v1.3.1...v1.3.2
-[1.3.1]: https://gitlab.dei.unipd.it/Antonio-Prado/aspa-explorer/-/compare/v1.3.0...v1.3.1
-[1.3.0]: https://gitlab.dei.unipd.it/Antonio-Prado/aspa-explorer/-/compare/v1.2.7...v1.3.0
-[1.2.7]: https://gitlab.dei.unipd.it/Antonio-Prado/aspa-explorer/-/compare/v1.2.6...v1.2.7
-[1.2.6]: https://gitlab.dei.unipd.it/Antonio-Prado/aspa-explorer/-/compare/v1.2.5...v1.2.6
-[1.2.5]: https://gitlab.dei.unipd.it/Antonio-Prado/aspa-explorer/-/compare/v1.2.4...v1.2.5
-[1.2.4]: https://gitlab.dei.unipd.it/Antonio-Prado/aspa-explorer/-/compare/v1.2.3...v1.2.4
-[1.2.3]: https://gitlab.dei.unipd.it/Antonio-Prado/aspa-explorer/-/compare/v1.2.2...v1.2.3
-[1.2.2]: https://gitlab.dei.unipd.it/Antonio-Prado/aspa-explorer/-/compare/v1.2.1...v1.2.2
-[1.2.1]: https://gitlab.dei.unipd.it/Antonio-Prado/aspa-explorer/-/compare/v1.2.0...v1.2.1
-[1.2.0]: https://gitlab.dei.unipd.it/Antonio-Prado/aspa-explorer/-/compare/v1.1.1...v1.2.0
-[1.1.1]: https://gitlab.dei.unipd.it/Antonio-Prado/aspa-explorer/-/compare/v1.1.0...v1.1.1
-[1.1.0]: https://gitlab.dei.unipd.it/Antonio-Prado/aspa-explorer/-/compare/v1.0.0...v1.1.0
-[1.0.0]: https://gitlab.dei.unipd.it/Antonio-Prado/aspa-explorer/-/tags/v1.0.0

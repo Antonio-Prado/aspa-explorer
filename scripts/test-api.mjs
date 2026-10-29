@@ -39,6 +39,10 @@ test('a provider knows its customers and the changes that name it', () => {
   assert.deepEqual(d.named_as_provider_history.map((e) => [e.customer, e.action]), [['AS10', 'added'], ['AS60', 'added'], ['AS60', 'dropped']]);
 });
 
+test('an AS that no current ASPA names: whether it is seen in BGP is not known', () => {
+  assert.equal(describe('AS60', ctx).seen_in_bgp, null);       // its ASPA was removed
+});
+
 test('AS0 is not a provider', () => {
   assert.deepEqual(describe('AS40', ctx).aspa.no_providers, true);
   assert.deepEqual(ctx.byProvider.has('AS0'), false);

@@ -35,8 +35,9 @@ masked "$MIRROR_TOKEN" git_as oauth2 "$MIRROR_TOKEN" push --force --quiet "https
 echo "published to ${public}.wiki"
 
 # The same pages on the wiki of the copy on GitHub (the links of the README point there, since the GitLab of the department is
-# not reachable from outside), with the deploy key of that repository (GITHUB_DEPLOY_KEY, as in mirror-github.sh). The image
-# sizes written the GitLab way ({height=N}) are removed first: GitHub shows them as text.
+# not reachable from outside), with the deploy key of that repository (GITHUB_DEPLOY_KEY, as in mirror-github.sh). GitHub shows
+# the image sizes written the GitLab way ({height=N}) as text, so an image with a height becomes an <img> with that height and the
+# other sizes are removed; GitHub has no [[_TOC_]] either, so that line goes.
 if [ -n "${GITHUB_DEPLOY_KEY:-}" ]; then
   gh_repo=${GITHUB_REPO:-Antonio-Prado/aspa-explorer}
   fingerprint='SHA256:+DiY3wvvV6TuJJhbpZisF/zLDA0zPMSvHdkr4UvCOqU'    # the Ed25519 host key that GitHub publishes
@@ -47,7 +48,8 @@ if [ -n "${GITHUB_DEPLOY_KEY:-}" ]; then
   [ "$seen" = "$fingerprint" ] || { echo "unexpected host key of github.com: $seen" >&2; exit 1; }
   git checkout --quiet -b github
   for f in *.md; do
-    sed -e 's/{height=[0-9]*}//g' -e 's/{width=[0-9]*}//g' "$f" > "$f.tmp" && mv "$f.tmp" "$f"
+    sed -E -e 's/!\[([^]]*)\]\(([^)]*)\)\{height=([0-9]+)\}/<img src="\2" alt="\1" height="\3">/g' \
+      -e 's/\{(height|width)=[0-9]*\}//g' -e '/^\[\[_TOC_\]\]$/d' "$f" > "$f.tmp" && mv "$f.tmp" "$f"
   done
   git -c user.name='Antonio Prado' -c user.email=antonio.prado@dei.unipd.it commit --quiet -am "The pages as GitHub shows them" || true
   GIT_SSH_COMMAND="ssh -i $tmp/key -o IdentitiesOnly=yes -o UserKnownHostsFile=$tmp/known_hosts -o StrictHostKeyChecking=yes -o BatchMode=yes" \

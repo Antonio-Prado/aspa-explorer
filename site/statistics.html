@@ -23,26 +23,26 @@
 <meta name="twitter:card" content="summary_large_image">
 <meta name="color-scheme" content="light dark">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
-<link rel="stylesheet" href="/style.css?v=1.55.0">
-<script src="/stats.js?v=1.55.0" defer></script>
-<script src="/adoption.js?v=1.55.0" defer></script>
-<script src="/trends.js?v=1.55.0" defer></script>
-<script src="/ui.js?v=1.55.0" defer></script>
-<script src="/resources.js?v=1.55.0" defer></script>
-<script src="/coverage.js?v=1.55.0" defer></script>
-<script src="/invalid.js?v=1.55.0" defer></script>
-<script src="/leaks.js?v=1.55.0" defer></script>
-<script src="/validators.js?v=1.55.0" defer></script>
-<script src="/status-checks.js?v=1.55.0" defer></script>
-<script src="/peek.js?v=1.55.0" defer></script>
-<script src="/asnames.js?v=1.55.0" defer></script>
-<script src="/footer.js?v=1.55.0" defer></script>
+<link rel="stylesheet" href="/style.css?v=1.56.0">
+<script src="/stats.js?v=1.56.0" defer></script>
+<script src="/adoption.js?v=1.56.0" defer></script>
+<script src="/trends.js?v=1.56.0" defer></script>
+<script src="/ui.js?v=1.56.0" defer></script>
+<script src="/resources.js?v=1.56.0" defer></script>
+<script src="/coverage.js?v=1.56.0" defer></script>
+<script src="/invalid.js?v=1.56.0" defer></script>
+<script src="/leaks.js?v=1.56.0" defer></script>
+<script src="/validators.js?v=1.56.0" defer></script>
+<script src="/status-checks.js?v=1.56.0" defer></script>
+<script src="/peek.js?v=1.56.0" defer></script>
+<script src="/asnames.js?v=1.56.0" defer></script>
+<script src="/footer.js?v=1.56.0" defer></script>
 </head>
 <body>
 <a class="skip" href="#main">Skip to main content</a>
 <header class="wrap masthead">
   <div class="top">
-    <p class="back"><a class="brandlink" href="/" title="Back to ASPA Explorer"><img class="brand" src="/img/logo-mark.svg?v=1.55.0" alt="" width="40" height="40"><span>ASPA Explorer</span></a></p>
+    <p class="back"><a class="brandlink" href="/" title="Back to ASPA Explorer"><img class="brand" src="/img/logo-mark.svg?v=1.56.0" alt="" width="40" height="40"><span>ASPA Explorer</span></a></p>
     <nav class="topnav" aria-label="Main"><a href="/">Home</a><a href="/statistics.html" aria-current="page">Statistics</a><a href="/incidents.html">Incidents</a><a href="/examples.html">Examples</a><a href="/api.html">API</a><a href="/guide.html">Guide</a><a href="/status.html">Status</a></nav>
   </div>
   <h1>Statistics</h1>
@@ -58,7 +58,7 @@
   <h2 class="sr-only">The ASPAs</h2>
 <div class="charts">
   <figure class="card wide">
-    <figcaption><span class="t">ASPAs over time</span><span class="s" id="history-sub">Validated ASPA objects per day, stacked by RIR</span></figcaption>
+    <figcaption><span class="t">ASPAs over time</span><span class="s" id="history-sub">ASPAs (customer ASes with a valid ASPA) per day, stacked by the RIR whose trust anchor holds them</span></figcaption>
     <div class="histctl">
       <label>Show
         <select id="hist-metric">
@@ -95,7 +95,7 @@
     </details>
   </figure>
   <figure class="card">
-    <figcaption><span class="t">ASPAs by RIR</span><span class="s">Validated ASPA objects per trust anchor</span></figcaption>
+    <figcaption><span class="t">ASPAs by RIR</span><span class="s">Customer ASes with a valid ASPA, per trust anchor, as the validator gives them now</span></figcaption>
     <div class="bars" id="chart-rir"></div>
   </figure>
   <figure class="card">
@@ -112,13 +112,13 @@
 
   <section class="card pad" aria-labelledby="size-title">
     <h2 id="size-title" class="subhead">By size of the network</h2>
-    <p class="hint">Size is the customer cone: the networks that a network reaches through its customers, from the CAIDA relationships. Larger networks are the ones that matter most for the routes of others.</p>
+    <p class="hint">Size is the customer cone: the network itself and the networks that it reaches through its customers, from the CAIDA relationships; a network that CAIDA does not list counts as a stub. Larger networks are the ones that matter most for the routes of others. Each bar is the share of the networks of its size that have an ASPA; the longest bar is the highest share of this chart.</p>
     <div class="bars cov" id="by-size"></div>
   </section>
 
   <section class="card pad" aria-labelledby="rir-title">
     <h2 id="rir-title" class="subhead">By RIR</h2>
-    <p class="hint">The registry where the AS number was registered, which is not always the one whose trust anchor holds the ASPA.</p>
+    <p class="hint">The registry where the AS number was registered, which is not always the one whose trust anchor holds the ASPA. The longest bar is the highest share of this chart.</p>
     <div class="bars cov" id="by-rir"></div>
   </section>
 
@@ -151,7 +151,7 @@
 
   <section aria-labelledby="cc-title">
     <h2 id="cc-title">By country</h2>
-    <p class="hint">The country where the AS number was registered, not necessarily where the network operates.</p>
+    <p class="hint">The country where the AS number was registered, not necessarily where the network operates. The bar of the coverage is full at 50%.</p>
     <p class="opts">
       <label>Sort by <select id="cc-sort"><option value="seen">networks</option><option value="pct">coverage</option></select></label>
       <label>Countries with at least <select id="cc-min"><option value="1">1 network</option><option value="10">10 networks</option><option value="30" selected>30 networks</option><option value="100">100 networks</option></select></label>
@@ -189,7 +189,7 @@
       <label>Economies with at least <select id="eco-min"><option value="1">1 advertised</option><option value="10" selected>10 advertised</option><option value="50">50 advertised</option><option value="200">200 advertised</option></select></label>
     </p>
     <section class="card table-wrap" tabindex="0" aria-label="AS numbers by economy">
-      <table class="checks live">
+      <table class="checks live" id="eco-table">
         <caption class="sr-only">AS numbers by economy: allocated, advertised, with an ASPA, Internet users, and the figures per million users</caption>
         <thead><tr><th scope="col">Economy</th><th scope="col">Region</th><th scope="col" class="num">Allocated</th><th scope="col" class="num">Advertised</th><th scope="col" class="num">With an ASPA</th><th scope="col" class="num">ASPA % of advertised</th><th scope="col" class="num">Users (M)</th><th scope="col" class="num">ASPAs per M users</th><th scope="col" class="num">Advertised per M users</th></tr></thead>
         <tbody id="eco-rows"></tbody>
@@ -201,7 +201,7 @@
 
   <section class="card pad" aria-labelledby="age-title">
     <h2 id="age-title" class="subhead">By age of the AS number</h2>
-    <p class="hint">The share of the advertised AS numbers that have an ASPA, by the year they were allocated.</p>
+    <p class="hint">The share of the advertised AS numbers that have an ASPA, by the year they were allocated. In each of the two charts the longest bar is its highest share.</p>
     <div id="age-years"></div>
     <h3 class="subhead">By width of the number</h3>
     <div id="age-width"></div>
@@ -236,7 +236,7 @@
         <tbody id="gap-rows"></tbody>
       </table>
     </section>
-    <h3 class="subhead">Over time</h3>
+    <h3 class="subhead">Places of valley over time</h3>
     <ul class="legend" id="leaks-history-legend"></ul>
     <div class="linechart" id="leaks-history"></div>
     <p class="hint" id="leaks-history-note"></p>
@@ -305,11 +305,11 @@
     <div class="tiles" id="inv-tiles"></div>
     <div class="card pad"><h3 class="subhead">Share of invalid announcements, by hour</h3><div class="linechart" id="inv-chart"></div></div>
     <h3 class="subhead">Origins with the most invalid announcements</h3>
-    <section class="card table-wrap" tabindex="0" aria-label="Origins with the most invalid announcements"><table class="checks live"><caption class="sr-only">The 20 origin ASes with the most invalid announcements in the last 14 days</caption><thead><tr><th scope="col">Origin</th><th scope="col" class="num">Invalid</th><th scope="col" class="num">Announcements</th><th scope="col" class="num">Share</th><th scope="col" class="num">Prefixes</th></tr></thead><tbody id="inv-origins"></tbody></table></section>
+    <section class="card table-wrap" tabindex="0" aria-label="Origins with the most invalid announcements"><table class="checks live"><caption class="sr-only">The 20 origin ASes with the most invalid announcements in the days recorded (the last 14 at most)</caption><thead><tr><th scope="col">Origin</th><th scope="col" class="num">Invalid</th><th scope="col" class="num">Announcements</th><th scope="col" class="num">Share</th><th scope="col" class="num">Prefixes</th></tr></thead><tbody id="inv-origins"></tbody></table></section>
     <h3 class="subhead">Origins with the highest share of invalid announcements</h3>
     <section class="card table-wrap" tabindex="0" aria-label="Origins with the highest share of invalid announcements"><table class="checks live"><caption class="sr-only">The 20 origin ASes with the highest share of invalid announcements, among those with at least 100 announcements</caption><thead><tr><th scope="col">Origin</th><th scope="col" class="num">Share</th><th scope="col" class="num">Invalid</th><th scope="col" class="num">Announcements</th><th scope="col" class="num">Prefixes</th></tr></thead><tbody id="inv-share"></tbody></table></section>
     <h3 class="subhead">Prefixes with the most invalid announcements</h3>
-    <section class="card table-wrap" tabindex="0" aria-label="Prefixes with the most invalid announcements"><table class="checks live"><caption class="sr-only">The 20 prefixes with the most invalid announcements in the last 14 days</caption><thead><tr><th scope="col">Prefix</th><th scope="col">Origin</th><th scope="col" class="num">Invalid</th></tr></thead><tbody id="inv-prefixes"></tbody></table></section>
+    <section class="card table-wrap" tabindex="0" aria-label="Prefixes with the most invalid announcements"><table class="checks live"><caption class="sr-only">The 20 prefixes with the most invalid announcements in the days recorded (the last 14 at most)</caption><thead><tr><th scope="col">Prefix</th><th scope="col">Origin</th><th scope="col" class="num">Invalid</th></tr></thead><tbody id="inv-prefixes"></tbody></table></section>
     <p class="hint" id="inv-note"></p>
     <p class="hint">The report as JSON: <a href="/api/v1/invalid.json">/api/v1/invalid.json</a>.</p>
   </section>

@@ -29,14 +29,15 @@
   const country = (cc) => { if (cc === 'ZZ') return 'Unknown'; try { return (names && names.of(cc)) || cc; } catch { return cc; } };
 
   // A line chart of one series: values with a label for each (the first, the middle and the last are written on the axis).
-  // fmtY writes a value of the axis; label describes the chart for a screen reader.
-  function lineChart(box, labels, values, { fmtY = (v) => fmt.format(v), label = '', height = 200 } = {}) {
-    const W = Math.max(280, box.clientWidth || 640), H = height, m = { l: 52, r: 10, t: 10, b: 24 };
+  // fmtY writes a value of the axis; label describes the chart for a screen reader; yTitle is the title of the vertical axis.
+  function lineChart(box, labels, values, { fmtY = (v) => fmt.format(v), label = '', height = 200, yTitle = '' } = {}) {
+    const W = Math.max(280, box.clientWidth || 640), H = height, m = { l: yTitle ? 68 : 52, r: 10, t: 10, b: 24 };
     const iw = W - m.l - m.r, ih = H - m.t - m.b;
     const top = niceTop(Math.max(...values, 0));
     const x = (i) => m.l + (values.length === 1 ? iw / 2 : (iw * i) / (values.length - 1));
     const y = (v) => m.t + ih - (ih * v) / top;
     const g = svg('svg', { viewBox: `0 0 ${W} ${H}`, role: 'img', 'aria-label': label });
+    if (yTitle) g.append(svg('text', { class: 'axistitle', transform: `translate(13 ${m.t + ih / 2}) rotate(-90)`, 'text-anchor': 'middle' }, yTitle));
     for (let k = 0; k <= 4; k++) {
       const v = (top * k) / 4;
       g.append(svg('line', { class: k ? 'grid' : 'axisline', x1: m.l, x2: W - m.r, y1: y(v), y2: y(v) }), svg('text', { class: 'tick', x: m.l - 6, y: y(v) + 4, 'text-anchor': 'end' }, fmtY(v)));

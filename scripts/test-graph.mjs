@@ -33,6 +33,18 @@ test('long rows are cut with a "more" node', () => {
   assert.equal(l.nodes.find((n) => n.kind === 'more').label, '+6 more');
 });
 
+test('long AS numbers: fewer boxes in the row, and none overlaps another', () => {
+  const many = Array.from({ length: 17 }, (_, i) => `AS${131314 + i * 1111}`);
+  const l = layout({ as: 'AS41327', providers: [], customers: many, observed: [] });
+  const row = l.nodes.filter((n) => n.kind === 'customer' || n.kind === 'more').sort((a, b) => a.x - b.x);
+  const drawn = row.filter((n) => n.kind === 'customer').length;
+  assert.ok(drawn < 9 && drawn > 0);
+  assert.equal(l.shown.customers, drawn);
+  assert.equal(row[row.length - 1].label, `+${17 - drawn} more`);
+  for (let i = 1; i < row.length; i++) assert.ok(row[i].x - row[i - 1].x >= (row[i].w + row[i - 1].w) / 2, `${row[i - 1].label} and ${row[i].label} overlap`);
+  assert.ok(row[0].x - row[0].w / 2 >= 0 && row[row.length - 1].x + row[row.length - 1].w / 2 <= l.width);
+});
+
 test('neighbours seen in the routes and not in the ASPA go to the side, with their evidence', () => {
   const l = layout({ as: 'AS12779', providers: ['AS2914'], customers: [], observed: [
     { asn: 'AS60798', label: 'provider', paths: 1135 }, { asn: 'AS2914', label: 'provider', paths: 878 }, { asn: 'AS6939', label: 'none', paths: 529 }, { asn: 'AS3257', label: 'weak', paths: 5 }] });

@@ -35,7 +35,8 @@ export function describe(as, ctx) {
   const history = ctx.eventsByCustomer.get(as) || [];
   const named = ctx.eventsByProvider.get(as) || [];
   const findings = (ctx.findings.get(as) || []).map((f) => ({ kind: f.kind, severity: f.severity, detail: f.detail }));
-  const seen = ctx.unseen ? !ctx.unseen.has(as) : null;
+  // the visibility is checked only for the ASes that a current ASPA names, as customer or provider: for the others it is not known
+  const seen = ctx.unseen && (own || customers.length) ? !ctx.unseen.has(as) : null;
   return {
     asn: as,
     number: asNum(as),
@@ -97,7 +98,7 @@ export function badgeFor(doc) {
 
 const entryText = (as, e) => {
   if (e.kind === 'new') return [`${as}: new ASPA`, `${as} published an ASPA with ${e.providers.length} provider${e.providers.length === 1 ? '' : 's'}: ${list(e.providers)}.`];
-  if (e.kind === 'removed') return [`${as}: ASPA removed`, `The ASPA of ${as} is gone; its routes are back to "unknown".`];
+  if (e.kind === 'removed') return [`${as}: ASPA removed`, `The ASPA of ${as} is gone; the hops from it can no longer be checked.`];
   const bits = [];
   if (e.added.length) bits.push(`added ${list(e.added)}`);
   if (e.dropped.length) bits.push(`dropped ${list(e.dropped)}`);

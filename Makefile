@@ -23,7 +23,7 @@ lint-security:
 secrets:
 	gitleaks git --redact --no-banner .
 
-# Unit tests of the ASPA path verification (no dependencies).
+# Every unit test (scripts/test-*.mjs, no dependencies).
 test:
 	sh scripts/run-tests.sh
 

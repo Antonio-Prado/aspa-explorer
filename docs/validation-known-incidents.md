@@ -8,7 +8,7 @@
 - **Relationships**: the CAIDA AS Relationships (serial-2) of the month of the incident, so that the valley detector and the link detector know what was known then.
 - **ROAs and registries**: those of the day of the run (2026-10-22). The ones of the time were not at hand, so a prefix that had no ROA then may be flagged now, and the other way round.
 - **ASPAs of the day**: not used. The history of ASPA Explorer starts in October 2023.
-- **Detectors**: the thresholds of `extra_detectors.py`, which are first guesses.
+- **Detectors**: the thresholds of the time, in `incident.py` and `extra_detectors.py`: first guesses in the first run, those of 1.51.0 for A10 and for the second section.
 - **Collector**: `rrc00` only. An incident that its peers do not see is not seen.
 
 ## Results
@@ -53,15 +53,18 @@ Five incidents are not an estimate of how many real incidents the detectors miss
 ## To repeat it
 
 ```sh
+mkdir ../replay && cd ../replay                                    # the data stays out of the repository
 python3 -m venv venv && venv/bin/pip install mrtparse            # the parser of MRT files
-python3 tools/replay/fetch.py A9 data/A9                          # the update files of the window (A9, A2, A1, A10 or A12)
-venv/bin/python -I tools/replay/mrt2records.py A9.jsonl.gz data/A9/updates.*.gz
+python3 ../aspa-explorer/tools/replay/fetch.py A9 data/A9         # the update files of the window (A9, A2, A1, A10 or A12)
+venv/bin/python -I ../aspa-explorer/tools/replay/mrt2records.py A9.jsonl.gz data/A9/updates.*.gz
 curl -O https://publicdata.caida.org/datasets/as-relationships/serial-2/20190601.as-rel2.txt.bz2
 curl -O https://data.ris.ripe.net/rrc00/2019.06/bview.20190606.0800.gz   # the table before the event (events.json, `bview`)
-node scripts/rib-links.mjs bview.20190606.0800.gz links-A9.txt            # its links, for the forged-link detector
-tools/replay/run_event.sh A9.jsonl.gz 20190601.as-rel2.txt.bz2 roas.json.xz delegations/ run/A9 links-A9.txt
-python3 tools/replay/analyse.py A9 run/A9 A9.jsonl.gz
+node ../aspa-explorer/scripts/rib-links.mjs bview.20190606.0800.gz links-A9.txt   # its links, for the forged-link detector
+../aspa-explorer/tools/replay/run_event.sh A9.jsonl.gz 20190601.as-rel2.txt.bz2 roas.json.xz delegations/ run/A9 links-A9.txt
+python3 ../aspa-explorer/tools/replay/analyse.py A9 run/A9 A9.jsonl.gz
 ```
+
+`roas.json.xz` is the output of a validator (Routinator's `jsonext`) compressed with xz, and `delegations/` holds the `delegated-*` files of the five RIRs (the cache of `scripts/build-adoption.mjs` has them).
 
 `run_event.sh` runs `python3`; set `PYTHON` to another interpreter (`PYTHON=python3.12`). Without the links file every link that CAIDA lacks is a candidate, as in the first run.
 

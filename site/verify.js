@@ -67,6 +67,13 @@
     return { result, direction, path, N, up, down, maxUp, minUp, maxDown, minDown };
   }
 
+  // The ASes of a verified path that publish no ASPA, among those whose ASPA the procedure reads: every AS but the
+  // neighbour going up (its ASPA would only say who its own providers are), every AS going down.
+  function withoutAspa(aspas, v) {
+    const read = v.direction === 'up' ? v.path.slice(0, -1) : v.path;
+    return [...new Set(read.filter((as) => !aspas.has(as)))];
+  }
+
   // Parse a path as routers print it (neighbour first, origin last). Accepts "AS3356 1299
   // AS680", with spaces or commas. Returns { path } (origin first) or { error }.
   function parsePath(text) {
@@ -85,7 +92,7 @@
     return { path: path.reverse() };
   }
 
-  const api = { hop, compress, verify, parsePath, PROVIDER, NOT_PROVIDER, NO_ATTESTATION };
+  const api = { hop, compress, verify, withoutAspa, parsePath, PROVIDER, NOT_PROVIDER, NO_ATTESTATION };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.AspaVerify = api;
 })(typeof self !== 'undefined' ? self : this);

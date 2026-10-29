@@ -22,7 +22,8 @@
         ? `${v.path[v.maxUp - 1]} does not list ${v.path[v.maxUp]}`
         : `a valley: the up-ramp (${v.maxUp}) and the down-ramp (${v.maxDown}) do not meet in ${v.N} ASes`;
     }
-    const missing = [...new Set(v.path.filter((as) => !aspas.has(as)))];
+    const read = v.direction === 'up' ? v.path.slice(0, -1) : v.path;   // going up, the ASPA of the neighbour is not read
+    const missing = [...new Set(read.filter((as) => !aspas.has(as)))];
     return `no ASPA for ${missing.slice(0, 4).join(', ')}${missing.length > 4 ? ` and ${missing.length - 4} more` : ''}`;
   }
 

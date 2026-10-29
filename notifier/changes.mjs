@@ -53,7 +53,7 @@ export function describeEvent(e, asn, relation) {
     return `${e.customer} ${added ? 'now lists' : 'no longer lists'} ${asn} as a provider${e.kind === 'removed' ? ' (its ASPA was removed)' : ''}.`;
   }
   if (e.kind === 'new') return `${asn} published an ASPA with ${e.providers.length} provider${e.providers.length === 1 ? '' : 's'}: ${list(e.providers)}.`;
-  if (e.kind === 'removed') return `The ASPA of ${asn} is gone; its routes are back to "unknown".`;
+  if (e.kind === 'removed') return `The ASPA of ${asn} is gone; the hops from it can no longer be checked.`;
   const bits = [];
   if (e.added.length) bits.push(`added ${list(e.added)}`);
   if (e.dropped.length) bits.push(`dropped ${list(e.dropped)}`);

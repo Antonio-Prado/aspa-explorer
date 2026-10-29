@@ -76,7 +76,7 @@
     shares($('cov-shares'), d);
     byLength($('cov-rows-v4'), d.families.v4);
     byLength($('cov-rows-v6'), d.families.v6);
-    $('cov-sub').textContent = `The routes of the ${(d.collectors || []).length || 30} collectors, ${fmt.format(d.total.routes)} in all, checked with the downstream verification. By address space each route counts for the addresses it covers (IPv6 in /48s), so a /16 weighs 256 times a /24; the same space seen by several collectors counts each time.`;
+    $('cov-sub').textContent = `The routes of the ${(d.collectors || []).length || 30} collectors, ${fmt.format(d.total.routes)} in all, checked with the downstream verification. By address space each route counts for the addresses it covers (IPv6 in /48s), so a /16 weighs 256 times a /24; the same space seen by several collectors counts each time, and prefixes shorter than /8 in IPv4 or /16 in IPv6 (default routes and tests) are left out of it. In the bars, valid is green, unknown amber and invalid red (often too thin to see).`;
     $('fam-sub').textContent = 'The same routes told apart by the family of the prefix, with the ratio IPv6 / IPv4 in the last column, as in a comparison of the two tables.';
     sideBySide($('fam-rows'), d);
   }

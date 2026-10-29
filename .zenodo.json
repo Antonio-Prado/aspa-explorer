@@ -1,6 +1,6 @@
 {
   "title": "ASPA Explorer",
-  "description": "A web page, a small API and a notification service on top of a Routinator validator: lookups of the validated ASPA objects of the RPKI, AS path and route checks against them, route leaks seen by 30 route collectors, statistics on adoption, feeds, badges and notifications.",
+  "description": "A web page, a small API and a notification service on top of a Routinator validator: lookups of the validated ASPA objects of the RPKI, AS path and route checks against them, places of valley in the routes of 30 route collectors, statistics on adoption, feeds, badges and notifications.",
   "upload_type": "software",
   "license": "MIT",
   "creators": [
@@ -9,6 +9,6 @@
   "keywords": ["ASPA", "RPKI", "BGP", "route leaks", "AS path verification", "routing security"],
   "related_identifiers": [
     { "identifier": "https://aspa.ping6.it/", "relation": "isDocumentedBy", "scheme": "url" },
-    { "identifier": "https://gitlab.dei.unipd.it/Antonio-Prado/aspa-explorer", "relation": "isSupplementTo", "scheme": "url" }
+    { "identifier": "https://github.com/Antonio-Prado/aspa-explorer", "relation": "isSupplementTo", "scheme": "url" }
   ]
 }

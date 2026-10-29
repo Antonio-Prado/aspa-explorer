@@ -181,7 +181,7 @@ function drawHistory() {
   }
   const log = histOpt.log && !mt.stacked && !mt.nolog;
   const W = Math.max(280, box.clientWidth), H = W < 520 ? 240 : 290;
-  const m = { l: mt.pct ? 52 : 44, r: 10, t: 10, b: 24 };
+  const m = { l: mt.pct ? 68 : 60, r: 10, t: 10, b: 24 };
   const iw = W - m.l - m.r, ih = H - m.t - m.b;
   const t0 = dayMs(rows[0].date), t1 = dayMs(rows[rows.length - 1].date);
   const vals = rows.map((r) => mt.value(r));
@@ -198,6 +198,8 @@ function drawHistory() {
   const y = (v) => m.t + ih * (1 - (log ? Math.log10(Math.max(v, 1)) / Math.log10(top) : v / top));
 
   const g = svg('svg', { viewBox: `0 0 ${W} ${H}`, width: W, height: H, 'aria-hidden': 'true', focusable: 'false' });
+  // the title of the vertical axis: the unit of the metric
+  g.append(svg('text', { class: 'axistitle', transform: `translate(13 ${m.t + ih / 2}) rotate(-90)`, 'text-anchor': 'middle' }, mt.pct ? `${mt.label.split(' ')[0]} (%)` : mt.unit.charAt(0).toUpperCase() + mt.unit.slice(1)));
   for (const v of ticks) {
     g.append(svg('line', { x1: m.l, x2: W - m.r, y1: y(v), y2: y(v), class: v > (log ? 1 : 0) ? 'grid' : 'axisline' }));
     const t = svg('text', { x: m.l - 6, y: y(v) + 4, class: 'tick', 'text-anchor': 'end' });
@@ -273,6 +275,18 @@ function drawHistory() {
   };
 }
 
+// the days missing from a daily series (a partial or missing archive): the line crosses them in a straight stretch
+function skippedNote(mt, rows) {
+  if (mt.pct) return '';                                   // the coverage is weekly before 16 October 2026: its gaps are not missing days
+  const days = [];
+  for (let i = 1; i < rows.length; i++) {
+    for (let t = Date.parse(rows[i - 1].date) + 864e5; t < Date.parse(rows[i].date); t += 864e5) days.push(new Date(t).toISOString().slice(0, 10));
+  }
+  if (!days.length) return '';
+  const list = days.length <= 4 ? days.map(fmtDayLong).join(', ').replace(/, ([^,]*)$/, ' and $1') : `${days.length} days`;
+  return ` ${list}: the archive is partial or missing, so ${days.length === 1 ? 'that day is' : 'those days are'} left out and the line crosses ${days.length === 1 ? 'it' : 'them'} straight.`;
+}
+
 // legend, accessible name and note follow the metric and the period
 function describeHistory() {
   const mt = HIST_METRICS[histOpt.metric];
@@ -281,7 +295,8 @@ function describeHistory() {
   const log = $('hist-log');
   log.disabled = !!(mt.stacked || mt.nolog);
   log.parentElement.classList.toggle('off', log.disabled);
-  $('history-sub').textContent = mt.stacked ? 'Validated ASPA objects per day, stacked by RIR' : `${mt.label}, per day`;
+  $('history-sub').textContent = mt.stacked ? 'ASPAs (customer ASes with a valid ASPA) per day, stacked by the RIR whose trust anchor holds them'
+    : mt.pct ? `${mt.label}, weekly before 16 October 2026, then daily` : `${mt.label}, per day`;
   if (!rows.length) return;
   const first = rows[0], last = rows[rows.length - 1];
   const lastRow = history[history.length - 1];
@@ -294,7 +309,7 @@ function describeHistory() {
       el('span', { class: 'lv', text: `${fmtMetric(mt, mt.value(last))}${mt.pct ? '' : ''}` }))]));
   $('history-note').textContent = `${fmtDayLong(first.date)} to ${fmtDayLong(last.date)}. ` +
     (mt.stacked && !lastRow.aspas_afrinic ? 'AFRINIC has published none so far: its line runs along zero. ' : '') + (mt.note ? mt.note + ' ' : '') +
-    'Days before 16 October 2026 come from the RIPE NCC RPKI archive; since then, from this site\'s validator.';
+    'Days before 16 October 2026 come from the RIPE NCC RPKI archive; since then, from this site\'s validator.' + skippedNote(mt, rows);
 }
 
 

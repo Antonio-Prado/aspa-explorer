@@ -7,7 +7,7 @@
 # 5 the audit itself did not run (pkg failed: not a result, the job fails).
 #
 # Runs as an unprivileged user on the CI runner host. The database is refreshed by
-# root (`pkg audit -F`, see the daily periodic scripts); this script only reads it and
+# root (`pkg audit -F`, see deploy/freebsd/pkg-audit-refresh and its cron line); this script only reads it and
 # complains when it has not been refreshed for a while.
 set -u
 

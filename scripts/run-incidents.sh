@@ -6,7 +6,7 @@
 #   4. builds /api/v1/incidents.json (scripts/build-incidents.mjs) and a file with the verdict of each incident, that is not published.
 # Everything is in $BASE: incoming/ (stream.py), work/ (incident.py, with its state), incidents-detail.jsonl.
 #   30 2 * * * /usr/bin/lockf -t 0 /var/db/aspa-data/run.lock /bin/sh -c '/bin/sh /usr/local/libexec/aspa-data/run-incidents.sh >/var/db/aspa-data/run.log 2>&1'
-# (02:30 CEST = 00:30 UTC; lockf: a day of data takes hours to read, and two runs at once would corrupt the state of incident.py;
+# (02:30 local time: 00:30 UTC in summer, 01:30 UTC in winter; lockf: a day of data takes hours to read, and two runs at once would corrupt the state of incident.py;
 # the log is opened inside lockf, so that a run that finds the lock taken does not empty the log of the run that holds it)
 # The record files of more than KEEP_DAYS days are deleted once they have been read, and the incident files of more than
 # KEEP_INCIDENT_DAYS days are not part of the page any more.

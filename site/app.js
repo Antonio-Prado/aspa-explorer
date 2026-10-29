@@ -10,6 +10,8 @@ const RIR_NAMES = { afrinic: 'AFRINIC', apnic: 'APNIC', arin: 'ARIN', lacnic: 'L
 
 const $ = (id) => document.getElementById(id);
 const fmt = new Intl.NumberFormat('en-US');
+// "1 path", "2 paths": a count with its noun in the right number
+const nOf = (n, one, many = `${one}s`) => `${fmt.format(n)} ${n === 1 ? one : many}`;
 
 let aspas = [];            // [{customer, providers, source}] sorted by customer number
 let byCustomer = new Map(); // 'AS123' -> aspa
@@ -310,7 +312,7 @@ function pathCheckNodes(text, direction) {
   if (parsed.error) return [el('p', { class: 'error', text: parsed.error })];
   if (!aspas.length) return [el('p', { class: 'error', text: 'The ASPA data is still loading; try again in a moment.' })];
   const v = AspaVerify.verify(aspaSets, parsed.path, direction);
-  const missing = [...new Set(v.path.filter((as) => !aspaSets.has(as)))];
+  const missing = AspaVerify.withoutAspa(aspaSets, v);
   const kids = [
     el('p', { class: 'verdict v-' + v.result.toLowerCase() }, el('strong', { text: v.result }), ' ', pathVerdict(v, missing)),
     ...ixpNote(v),
@@ -318,8 +320,8 @@ function pathCheckNodes(text, direction) {
   ];
   if (v.N > 1) {
     const down = direction === 'down';
-    const head = el('tr', {}, el('th', { scope: 'col', text: 'Hop' }), el('th', { scope: 'col', text: 'Uphill check' }));
-    if (down) head.append(el('th', { scope: 'col', text: 'Downhill check' }));
+    const head = el('tr', {}, el('th', { scope: 'col', text: 'Hop' }), el('th', { scope: 'col', text: 'Up-ramp check' }));
+    if (down) head.append(el('th', { scope: 'col', text: 'Down-ramp check' }));
     const rows = [];
     for (let i = 1; i < v.N; i++) {
       const row = el('tr', {}, el('th', { scope: 'row', text: `${v.path[i - 1]} → ${v.path[i]}` }),
@@ -347,7 +349,7 @@ function dataStamp() {
 function pathReport(text, direction) {
   const parsed = AspaVerify.parsePath(text);
   const v = AspaVerify.verify(aspaSets, parsed.path, direction);
-  const missing = [...new Set(v.path.filter((as) => !aspaSets.has(as)))];
+  const missing = AspaVerify.withoutAspa(aspaSets, v);
   const cls = { 'Provider+': 'provider', 'Not Provider+': 'not-provider', 'No Attestation': 'none' };
   const sections = [{ heading: 'Verdict', text: `${v.result}. ${pathVerdict(v, missing)} Path from the origin to the neighbour: ${v.path.join(' → ')}. The route comes from ${direction === 'down' ? 'a provider (downstream check)' : 'a customer or a peer (upstream check)'}. ${dataStamp()}` }];
   if (v.N > 1) {
@@ -359,7 +361,7 @@ function pathReport(text, direction) {
       if (down) row.push(hop(v.path[i], v.path[i - 1], v.down[i + 1]));
       rows.push(row);
     }
-    sections.push({ heading: 'Hop by hop', table: { columns: down ? ['Hop', 'Uphill check', 'Downhill check'] : ['Hop', 'Uphill check'], rows } });
+    sections.push({ heading: 'Hop by hop', table: { columns: down ? ['Hop', 'Up-ramp check', 'Down-ramp check'] : ['Hop', 'Up-ramp check'], rows } });
   }
   return { kind: 'path', title: `AS path ${parsed.path.slice().reverse().join(' ')}: ${v.result}`, source: `/#${new URLSearchParams({ path: text.trim(), from: direction })}`, sections };
 }
@@ -383,11 +385,11 @@ function renderPathCheck(text, direction) {
 /* ---------- many paths at once ---------- */
 function bulkReport(r, direction, text) {
   const n = r.rows.length, c = r.counts;
-  const head = `${fmt.format(n)} AS paths checked as routes that come from ${direction === 'down' ? 'a provider (downstream check)' : 'a customer or a peer (upstream check)'}: ${c.Valid} valid, ${c.Unknown} unknown, ${c.Invalid} invalid${c.Error ? `, ${c.Error} not understood` : ''}. ${dataStamp()}`;
+  const head = `${nOf(n, 'AS path')} checked as routes that come from ${direction === 'down' ? 'a provider (downstream check)' : 'a customer or a peer (upstream check)'}: ${c.Valid} valid, ${c.Unknown} unknown, ${c.Invalid} invalid${c.Error ? `, ${c.Error} not understood` : ''}. ${dataStamp()}`;
   const shown = r.rows.slice(0, 500);
   const klass = { Valid: 'valid', Unknown: 'unknown', Invalid: 'invalid', Error: 'invalid' };
   return {
-    kind: 'bulk', title: `${fmt.format(n)} AS paths: ${c.Valid} valid, ${c.Unknown} unknown, ${c.Invalid} invalid`,
+    kind: 'bulk', title: `${nOf(n, 'AS path')}: ${c.Valid} valid, ${c.Unknown} unknown, ${c.Invalid} invalid`,
     sections: [{ heading: 'Summary', text: head + (n > shown.length ? ` The table has the first ${shown.length}.` : '') },
       { heading: 'Paths', table: { columns: ['Line', 'Prefix', 'Path', 'Verdict', 'Why'], rows: shown.map((x) => [String(x.line), x.prefix, x.path || x.input, [x.result, klass[x.result]], x.note]) } }],
   };
@@ -401,7 +403,7 @@ function runBulk() {
   const r = AspaBulk.checkMany(aspaSets, text, direction, AspaVerify);
   if (!r.rows.length) { out.replaceChildren(el('p', { class: 'error', text: 'Nothing to check: write one AS path on each line, for example 3356 1299 680.' })); return; }
   const c = r.counts;
-  const summary = el('p', { class: 'verdict' }, el('strong', { text: `${fmt.format(r.rows.length)} paths` }),
+  const summary = el('p', { class: 'verdict' }, el('strong', { text: nOf(r.rows.length, 'path') }),
     ` ${c.Valid} valid · ${c.Unknown} unknown · ${c.Invalid} invalid${c.Error ? ` · ${c.Error} not understood` : ''}.${r.truncated ? ` Only the first ${fmt.format(AspaBulk.MAX_LINES)} lines were checked.` : ''}`);
   const klass = { Valid: 'v-valid', Unknown: 'v-unknown', Invalid: 'v-invalid', Error: 'v-invalid' };
   const body = el('tbody');
@@ -439,7 +441,6 @@ const LIVE_MAX_BYTES = 12 * 1024 * 1024;
 const LG_API = 'https://stat.ripe.net/data/looking-glass/data.json?resource=';
 const LG_MAX = 24;       // prefixes read from the looking glass at one press: one request each
 const STALE_MS = 60 * 60 * 1000; // a snapshot older than this gets a notice
-const GRAPH_ROW = 9; // as many nodes as a row of the graph draws (MAX_ROW in graph.js)
 const PREFIX_RE = /^(?:\d{1,3}(?:\.\d{1,3}){3}\/\d{1,2}|[0-9a-f:]+:[0-9a-f:]*\/\d{1,3})$/i;
 
 function parseLiveQuery(text) {
@@ -583,7 +584,7 @@ function checkRoutes(routes) {
   const rows = [...byPath.values()].map((e) => {
     const path = e.bgp.map((n) => 'AS' + n).reverse();            // origin first, as the procedure wants it
     const v = AspaVerify.verify(aspaSets, path, 'down');
-    const missing = [...new Set(v.path.filter((as) => !aspaSets.has(as)))];
+    const missing = AspaVerify.withoutAspa(aspaSets, v);
     let why = '';
     if (v.result === 'Invalid') why = `a valley between ${v.path[v.maxUp - 1]} and ${v.path[v.N - v.maxDown]}`;
     else if (v.result === 'Unknown') why = `no ASPA from ${missing.slice(0, 4).join(', ')}${missing.length > 4 ? ` and ${missing.length - 4} more` : ''}`;
@@ -975,7 +976,7 @@ function pairBlock(res, t4, t6, home, origin, atRegistered) {
   const lines = [family('IPv4', a4, 'n4'), family('IPv6', a6, 'n6')];
   if (!atRegistered) lines.push(`The bands of the reading (up to 50 ms normal, 100 ms or more a trombone) are for two points of one country: the probes are in ${home}, not where ${as} is registered, so these are the delays of a trip from there.`);
   const compare = !cmp.both ? 'No probe got into the AS over both families, so the two cannot be compared probe by probe.'
-    : `IPv4 against IPv6, on the ${cmp.both} probes that got in over both: ${Math.abs(cmp.medianDelta) < 1 ? 'about the same time (the typical difference is under 1 ms)' : `IPv6 is ${ms(Math.abs(cmp.medianDelta))} ${cmp.medianDelta > 0 ? 'slower' : 'faster'}`}; IPv4 is faster on ${c.v4}, IPv6 on ${c.v6}, ${c.tie} are even. The networks on the way differ on ${cmp.differentNetworks} of the ${cmp.both}.`;
+    : `IPv4 against IPv6, on the ${cmp.both} probes that got in over both: ${Math.abs(cmp.medianDelta) < 1 ? 'about the same time (the typical difference is under 1 ms)' : `IPv6 is ${ms(Math.abs(cmp.medianDelta))} ${cmp.medianDelta > 0 ? 'slower' : 'faster'}`}; IPv4 is faster on ${c.v4}, IPv6 on ${c.v6}, ${c.tie} ${c.tie === 1 ? 'is' : 'are'} even. The networks on the way differ on ${cmp.differentNetworks} of the ${cmp.both}.`;
   const answered = `${cmp.probes} probes in ${home}${c['v4 only'] || c['v6 only'] ? `; ${c['v4 only']} answered only over IPv4 and ${c['v6 only']} only over IPv6` : ''}. A probe whose traceroute stops before ${as} (the last router that answers is not in it) is not read: its round trip is the one of a router on the way.`;
   const notes = [`IPv4 aims at ${t4.address} (in ${t4.prefix}) and IPv6 at ${t6.address} (in ${t6.prefix}), both of ${as}: two addresses of the same AS, not the same host. The probes are the same, and the delays are counted from the first public address. A difference of a few milliseconds is within what the probes and the queues add; the country of the probes is where ${as} is registered only when it says so above.`, res.place,
     ...res.failed.map((f) => `Not measured: ${f}.`)];
@@ -999,7 +1000,7 @@ function pairBlock(res, t4, t6, home, origin, atRegistered) {
     el('thead', {}, el('tr', {}, ['Probe', 'IPv4 networks', 'IPv4 net round trip', 'IPv6 networks', 'IPv6 net round trip', 'IPv6 − IPv4', 'Faster', 'Networks'].map((t, i) => el('th', { scope: 'col', class: i === 2 || i === 4 || i === 5 ? 'num' : undefined, text: t })))),
     el('tbody', {}, ...body)));
   const report = () => ({
-    kind: 'tromboning', title: `${as} from ${home}: ${headline}`, source: `/#${as}`,
+    kind: 'tromboning', title: `${as} from ${home}: ${headline}`, source: `/#routes=${as}`,
     sections: [{ heading: 'Tromboning', text: `${headline}. ${lines.join(' ')}` }, { heading: 'IPv4 against IPv6', text: `${compare} ${answered} ${notes.join(' ')}` },
       { heading: 'Probes', table: { columns: ['Probe', 'IPv4 networks', 'IPv4 ms', 'IPv6 networks', 'IPv6 ms', 'IPv6 − IPv4', 'Faster', 'Networks'],
         rows: rows.slice(0, 100).map((r) => [probeName(r), nets(r.v4), cell(r, 'v4', 'n4'), nets(r.v6), cell(r, 'v6', 'n6'), signed(r.delta), winner[r.winner], r.sameNetworks === null ? '–' : r.sameNetworks ? 'same' : 'different']) } }],
@@ -1113,7 +1114,7 @@ function otherCountryBox(a, total, home, place) {
   return el('div', { class: 'result r-none', role: 'group', 'aria-label': 'Result of the measurement' },
     el('p', { class: 'headline', text: `Median ${ms(a.median)} from ${home}` }),
     el('p', { text: `${a.n} of ${total} probes in ${home} answered. Median round trip, from the first public address: ${ms(a.median)} (from ${ms(a.min)} to ${ms(a.max)}).` }),
-    el('p', { class: 'hint', text: `The bands of the reading (up to 50 ms normal, 100 ms or more a trombone) are for two points of one country, so there is no reading here: these are the delays of a trip from ${home} to the target. Choose the country of the target to read them.` }),
+    el('p', { class: 'hint', text: `The bands of the reading (up to 50 ms normal, 100 ms or more a trombone) are for two points of one country, so there is no reading here: these are the delays of a trip from ${home} to the target. The reading is given for the probes in the country where the AS is registered.` }),
     ...(place ? [el('p', { class: 'hint', text: place })] : []));
 }
 
@@ -1216,8 +1217,12 @@ function graphBlock(as) {
   const cap = el('p', { class: 'hint' });
   const draw = () => {
     const providers = own ? own.providers.filter((p) => p !== 'AS0') : [], customers = byProvider.get(as) || [];
-    AspaGraph.draw(box, AspaGraph.layout({ as, providers, customers, observed }), (id) => '#' + id);
-    const big = [providers.length > GRAPH_ROW && `${GRAPH_ROW} of its ${providers.length} providers`, customers.length > GRAPH_ROW && `${GRAPH_ROW} of the ${customers.length} ASes that name it as a provider`].filter(Boolean);
+    const lay = AspaGraph.layout({ as, providers, customers, observed });
+    AspaGraph.draw(box, lay, (id) => '#' + id);
+    // what the graph draws: an AS that both lists and is listed (mutual) is in the row of the providers
+    const drawn = (kinds) => lay.nodes.filter((n) => kinds.includes(n.kind)).length;
+    const p = drawn(['provider', 'mutual']), c = drawn(['customer', 'mutual']);
+    const big = [p < providers.length && `${p} of its ${providers.length} providers`, c < customers.length && `${c} of the ${customers.length} ASes that name it as a provider`].filter(Boolean);
     cap.textContent = big.length ? `There are too many to draw them all: the graph shows ${big.join(' and ')}.` : '';
   };
   const btn = el('button', { type: 'button', class: 'linkish', text: 'Add the neighbours that the routes show' });
@@ -1234,7 +1239,7 @@ function graphBlock(as) {
       const extra = observed.filter((o) => !listed.has(o.asn)).length;
       const part = data.sample ? ` (a sample: its routes are too many to read, so only those of ${data.sample.used} of its ${data.sample.total} prefixes)` : '';
       status.textContent = `${fmt.format(routes.length)} routes read${part}; ` + (extra
-        ? `the ${extra > 6 ? 'six most seen of the ' + extra : extra} neighbours that the ASPAs do not list ${extra === 1 ? 'is' : 'are'} drawn on the right.`
+        ? (extra === 1 ? 'the neighbour that the ASPAs do not list is drawn on the right.' : `the ${extra > 6 ? 'six most seen of the ' + extra : extra} neighbours that the ASPAs do not list are drawn on the right.`)
         : 'every neighbour seen in the routes is already in the graph, so there is nothing to add.');
       btn.hidden = true;                                     // done: the graph has them, the button would do nothing more
     } catch (err) { status.textContent = ` Could not read the routes (${err.message}).`; }
@@ -1247,7 +1252,7 @@ function graphBlock(as) {
     el('ul', { class: 'graph-legend' },
       swatch('n-provider', 'a provider listed in its ASPA (arrow from the customer)'), swatch('n-customer', 'an AS whose ASPA lists it as a provider'),
       swatch('n-mutual', 'two ASes that list each other'), swatch('n-seen-provider', 'seen in the routes, looks like a provider, not in its ASPA'),
-      swatch('n-seen', 'seen in the routes, no evidence (a peer, a customer, or not enough routes)')));
+      swatch('n-seen', 'seen in the routes, weak or no evidence of a provider (a peer, a customer, or too few routes)')));
   det.addEventListener('toggle', () => { if (det.open && !box.firstChild) draw(); });
   return det;
 }
@@ -1428,7 +1433,7 @@ function suggestPanel(origin, ev, listed) {
   if (s.add.length) bits.push(`Seen as ${s.add.length === 1 ? 'a provider' : 'providers'} but not in its ASPA: ${names(s.add)}. Add ${s.add.length === 1 ? 'it' : 'them'} if ${s.add.length === 1 ? 'it is' : 'they are'} really your upstream.`);
   if (s.keepUnseen.length) bits.push(`In its ASPA but not seen: ${names(s.keepUnseen)}. Keep ${s.keepUnseen.length === 1 ? 'it' : 'them'} for a backup provider or one the collectors do not see.`);
   if (s.check.length) bits.push(`Weak evidence, to check by hand before adding: ${names(s.check)}.`);
-  if (s.zero) bits.push(`${as} declares AS0 (no transit provider) today: an ASPA with AS0 and other providers is not valid, so replace it rather than extend it.`);
+  if (s.zero) bits.push(`${as} declares AS0 (no transit provider) today: an ASPA with AS0 and other providers contradicts itself, and validators may read it differently, so replace it rather than extend it.`);
   kids.push(...bits.map((x) => el('p', { class: 'hint', text: x })));
   if (s.list.length) kids.push(copyField(`Providers of ${as}`, s.list.join(' ')),
     el('p', { class: 'hint' }, 'It is a proposal from what the collectors see, not a verdict. Check it with ', el('a', { href: '/examples.html#check', text: 'the checker' }), ' and publish it as ', el('a', { href: '/examples.html#publish', text: 'the examples page' }), ' explains.'));
@@ -1459,7 +1464,7 @@ function whatIfPanel(origin, rows, initial) {
           el('td', {}, el('span', { class: 'badge v-' + c.to.toLowerCase(), text: c.to })),
           el('td', { class: 'mono pathcell' }, ...pathLinks(compressBgp([...c.path].reverse().map(asNum)))),
           el('td', { class: 'num', text: fmt.format(c.routes) })))))));
-      if (r.changed.length > 10) kids.push(el('p', { class: 'hint', text: `${fmt.format(r.changed.length - 10)} more paths change; the ones above carry the most routes.` }));
+      if (r.changed.length > 10) kids.push(el('p', { class: 'hint', text: `${nOf(r.changed.length - 10, 'more path changes', 'more paths change')}; the ones above carry the most routes.` }));
     }
     out.replaceChildren(...kids);
   };
@@ -1654,7 +1659,7 @@ async function renderLiveRoutes(text) {
   if (q.kind === 'as') kids.push(livePanel(asNum(q.label)));
   if (usedEvidence) kids.push(el('p', { class: 'hint', text: `Evidence: a neighbour counts as a provider of the origin when the route passes through it up to a Tier-1 network (the clique of ${ctx.source}). A peer, or a provider that is not asked to carry the route upwards, passes upwards only what it learned from its customers. Weak: seen by few feeders or on a small share of the paths. No evidence is not proof of a peer: the collectors see only part of the Internet, and paths of two ASes say nothing. The routes are the last RIB dump of the collectors, which can be up to eight hours old.` }));
   kids.push(el('section', { class: 'table-wrap card', tabindex: '0', 'aria-label': 'Distinct AS paths of the routes' }, el('table', { class: 'checks live' },
-    el('caption', { class: 'sr-only', text: 'Distinct AS paths of the routes, invalid first, with the verdict of the upstream ASPA verification' }),
+    el('caption', { class: 'sr-only', text: 'Distinct AS paths of the routes, invalid first, with the verdict of the downstream ASPA verification' }),
     el('thead', {}, el('tr', {}, el('th', { scope: 'col', text: 'Verdict' }), el('th', { scope: 'col', text: 'AS path, as a router shows it' }),
       el('th', { scope: 'col', class: 'num', text: 'Routes' }), el('th', { scope: 'col', text: 'Why' }))),
     tbody)));
@@ -1702,7 +1707,7 @@ function compareBlock(as) {
     out.replaceChildren(...kids, el('p', { class: 'hint' }, el('span', { class: 'busy', text: 'Looking at the places of valley' })));
     const [pa, pb] = await Promise.all([dayPlaces(a), dayPlaces(b)]);
     const last = out.lastChild;
-    if (!pa || !pb) last.textContent = 'Places of valley: the daily files are kept for the last 60 days, so there is nothing to compare for one of the two days.';
+    if (!pa || !pb) last.textContent = 'Places of valley: one of the two days has no daily file. The files are kept for the last 60 days, and the file of today comes with the daily build, at about 05:30 UTC.';
     else {
       const p = AspaHistory.comparePlaces(pa, pb, as);
       const row = (x) => el('li', {}, x.role === 'gap' ? `its ASPA seems to miss ${x.between[0]}` : `inside a valley between ${x.from} and ${x.to} (${x.between.join(' ')})`, ` · ${x.feeders} feeders`);
@@ -1794,7 +1799,7 @@ function irrBlock(as) {
     kids.push(line('Transit providers, as the object says', roles.transit));
     if (roles.probable.length) kids.push(line('Probable transit providers', roles.probable, 'The object accepts ANY from these and announces only a set of prefixes to them, which is what the policy of an upstream looks like, but it has no part called transit, upstream or provider to say so. An exchange-point route server would look the same: the exchange-point ASes of CAIDA are left out.'));
     if (roles.ixp.length) kids.push(line('Intermediaries (import-via), in practice route servers of exchange points', roles.ixp));
-    kids.push(el('p', { class: 'hint', text: `${fmt.format(roles.customer.length)} customers are declared as well, and ${fmt.format(roles.peer.length)} neighbours with sets of prefixes only (peering, private links or services such as DDoS scrubbing: the object cannot tell them apart)${roles.candidate.length ? `, and ${roles.candidate.length} neighbour${roles.candidate.length === 1 ? ' is' : 's are'} accepted from ANY without saying what ${roles.candidate.length === 1 ? 'it is' : 'they are'}${roles.probable.length ? ' (probable transit providers, above)' : ''}` : ''}.` }));
+    kids.push(el('p', { class: 'hint', text: `${nOf(roles.customer.length, 'customer is', 'customers are')} declared as well, and ${nOf(roles.peer.length, 'neighbour')} with sets of prefixes only (peering, private links or services such as DDoS scrubbing: the object cannot tell them apart)${roles.candidate.length ? `, and ${roles.candidate.length} neighbour${roles.candidate.length === 1 ? ' is' : 's are'} accepted from ANY without saying what ${roles.candidate.length === 1 ? 'it is' : 'they are'}${roles.probable.length ? ' (probable transit providers, above)' : ''}` : ''}.` }));
     if (!c.comparable) {
       kids.push(el('p', { text: 'The object has no part called transit, upstream or provider with a neighbour accepted from ANY, and no neighbour that looks like a provider, so it cannot be compared with the ASPA.' }));
       if (roles.candidate.length) kids.push(line('Accepted from ANY, not said what they are', roles.candidate));
@@ -1856,7 +1861,7 @@ function renderLookup(as) {
     left.append(el('p', {
       text: isZero
         ? `${as} declares that it has no transit providers (AS0), as networks at the top of the hierarchy do. It can still have peers.`
-        : `${as} authorizes ${own.providers.length} provider${own.providers.length === 1 ? '' : 's'}:`,
+        : `${as} authorises ${own.providers.length} provider${own.providers.length === 1 ? '' : 's'}:`,
     }));
     if (!isZero) left.append(chipList(own.providers, 40));
     for (const s of own.source) {
@@ -1945,7 +1950,7 @@ function notifyForm(as) {
   });
   return el('details', { class: 'embed' },
     el('summary', { text: 'Get notified by e-mail or webhook' }),
-    el('p', { class: 'hint' }, `A message when the ASPA of ${as} changes, or when another ASPA adds or drops ${as} as a provider; if you tick the first box, also when a new place of valley involves it; the second one tells you when the routes that the RIPE RIS collectors see show many invalid announcements with this AS as the origin. An e-mail address has to be confirmed through a link; a webhook has to repeat a challenge. Nothing else is kept or used. `, el('a', { href: 'https://www.unipd.it/en/privacy', target: '_blank', rel: 'noopener' }, 'Privacy information', el('span', { class: 'sr-only', text: ' (opens in a new tab)' })), '.'),
+    el('p', { class: 'hint' }, `A message when the ASPA of ${as} changes, or when another ASPA adds or drops ${as} as a provider; if you tick the first box, also when a new place of valley involves it; the second one tells you when the routes that the RIPE RIS collectors see show many announcements that the ASPAs prove invalid with this AS as the origin. An e-mail address has to be confirmed through a link; a webhook has to repeat a challenge. The service keeps the address, the AS and your choices; the web server also keeps the address of each request in its access log for 365 days. `, el('a', { href: 'https://www.unipd.it/en/privacy', target: '_blank', rel: 'noopener' }, 'Privacy information', el('span', { class: 'sr-only', text: ' (opens in a new tab)' })), '.'),
     form, msg,
     el('p', { class: 'hint' }, 'How it works, what is kept and how to stop: ', el('a', { href: '/guide.html#notify', text: 'the guide' }), '.'));
 }

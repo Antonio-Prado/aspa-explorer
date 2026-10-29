@@ -3,7 +3,7 @@ import { createRequire } from 'node:module';
 import assert from 'node:assert/strict';
 
 const require = createRequire(import.meta.url);
-const { verify, parsePath, compress } = require('../site/verify.js');
+const { verify, parsePath, compress, withoutAspa } = require('../site/verify.js');
 
 const aspas = (obj) => new Map(Object.entries(obj).map(([k, v]) => [k, new Set(v)]));
 let passed = 0;
@@ -190,9 +190,15 @@ test('quality: an ASPA that expires within the window, and a very large provider
   assert.match(f.find((x) => x.kind === 'expiring').detail, /expires in 4 days/);
 });
 
+test('withoutAspa: going up the ASPA of the neighbour is not read', () => {
+  const a = aspas({ AS1: ['AS2'] });
+  assert.deepEqual(withoutAspa(a, verify(a, ['AS1', 'AS2', 'AS3'], 'up')), ['AS2']);
+  assert.deepEqual(withoutAspa(a, verify(a, ['AS1', 'AS2', 'AS3'], 'down')), ['AS2', 'AS3']);
+});
+
 test('quality: reserved ranges', () => {
-  for (const as of ['AS23456', 'AS64496', 'AS64512', 'AS65535', 'AS65551', 'AS4200000000', 'AS4294967295']) assert.ok(quality.reserved(as), as);
-  for (const as of ['AS1', 'AS3333', 'AS65552', 'AS4199999999']) assert.ok(!quality.reserved(as), as);
+  for (const as of ['AS23456', 'AS64496', 'AS64512', 'AS65535', 'AS65551', 'AS65552', 'AS131071', 'AS4200000000', 'AS4294967295']) assert.ok(quality.reserved(as), as);
+  for (const as of ['AS1', 'AS3333', 'AS131072', 'AS4199999999']) assert.ok(!quality.reserved(as), as);
 });
 
 console.log(`\n${passed} tests passed`);

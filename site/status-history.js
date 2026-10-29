@@ -106,6 +106,9 @@
     const last = doc.samples.length ? doc.samples[doc.samples.length - 1][0] : Math.floor(Date.now() / 1000);
     const to = Math.max(last, Math.floor(Date.now() / 1000));
     const from = to - r.span;
+    // a period that starts before the first check is named by the first check: the share counts only what was recorded
+    const first = doc.samples.length ? doc.samples[0][0] : null;
+    const period = first && first > from ? `checks since ${at(first)}` : r.label;
     const rows = [];
     const body = [];
     const list = [];
@@ -117,7 +120,7 @@
         const a = from + i * w;
         $('uphover').textContent = `${c.name}, ${stamp(a, r.span)} to ${stamp(a + w, r.span)} UTC: ${cells[i] ? NAME[cells[i]] : 'no sample'}`;
       };
-      const strip2 = el('div', { class: 'up-strip', tabindex: '0', role: 'group', 'aria-label': `${c.name}: ${fmtPct(u.pct)} OK in the ${r.label}. Use the left and right arrow keys to read the cells.` }, svg);
+      const strip2 = el('div', { class: 'up-strip', tabindex: '0', role: 'group', 'aria-label': `${c.name}: ${fmtPct(u.pct)} OK in the ${period}. Use the left and right arrow keys to read the cells.` }, svg);
       let pos = cells.length - 1;
       strip2.addEventListener('pointermove', (e) => { const b = strip2.getBoundingClientRect(); pos = Math.max(0, Math.min(cells.length - 1, Math.floor(((e.clientX - b.left) / b.width) * cells.length))); show(pos); });
       strip2.addEventListener('pointerleave', () => { $('uphover').textContent = ''; });
@@ -138,7 +141,7 @@
     $('uptable').replaceChildren(...body);
     list.sort((a, b) => b.from - a.from);
     const shown = list.slice(0, 12);
-    $('upproblems').replaceChildren(...(shown.length ? shown.map((p) => el('li', {}, el('span', { class: 'badge ' + (p.state === 'd' ? 'v-invalid' : 'v-unknown'), text: NAME[p.state] }), ` ${p.name}: ${at(p.from)}, about ${duration(p.to - p.from)}`)) : [el('li', { text: `No problem in the ${r.label}.` })]));
+    $('upproblems').replaceChildren(...(shown.length ? shown.map((p) => el('li', {}, el('span', { class: 'badge ' + (p.state === 'd' ? 'v-invalid' : 'v-unknown'), text: NAME[p.state] }), ` ${p.name}: ${at(p.from)}, about ${duration(p.to - p.from)}`)) : [el('li', { text: `No problem in the ${period}.` })]));
     $('upmore').textContent = list.length > shown.length ? `${list.length - shown.length} older stretches are not listed.` : '';
     const as = doc.assumed ? ` Samples from ${at(doc.assumed.from)} to ${at(doc.assumed.to)} were not measured: all the parts are taken as OK in that period.` : '';
     $('upsub').textContent = `${doc.samples.length ? `${doc.samples.length.toLocaleString('en-US')} checks since ${at(doc.samples[0][0])}` : 'No check recorded yet'}; one is made every ${Math.round(doc.interval / 60)} minutes. A cell shows the worst state in its stretch of time.${as}`;

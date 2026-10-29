@@ -6,8 +6,8 @@
   const $ = (id) => document.getElementById(id);
   const fmt = new Intl.NumberFormat('en-US');
   const NAMES = {
-    RLK: 'Routing leak (valley in the path)', PRH: 'Prefix hijack (origin that no ROA authorises)', DEG: 'Prefix deaggregation (more specific, another origin)',
-    VOL: 'State volatility (flapping)', ATR: 'Attribute-based session reset (mass withdrawal)', ASM: 'AS path manipulation', other: 'Other',
+    RLK: 'Routing leak (valley in the path)', PRH: 'Prefix hijack (origin or address space)', DEG: 'Prefix deaggregation (another origin, or in excess)',
+    VOL: 'State volatility (flapping, slow convergence, churn)', ATR: 'Attribute-based session reset (session ended, mass withdrawal)', ASM: 'AS path manipulation', other: 'Other',
   };
   const ORDER = ['RLK', 'PRH', 'DEG', 'VOL', 'ATR', 'ASM', 'other'];
   // the types of the survey that a detector can tell apart (data_scripts, extra_detectors.py), shown under their class
@@ -36,7 +36,7 @@
     'PRH-IH': 'IH, incomplete hijack: a more specific beyond the maximum length of the ROA, or another origin.',
     'PRH-AB': 'AB, abusive hijack: a prefix in space that is not for public use, or not allocated.',
     'ASM-PE': 'PE, AS path poisoning: an AS put into the path on purpose. Seen here as an AS that comes back after another, or an AS number that is not allocated.',
-    'ASM-EX': 'EX, path extension evasion: an AS path made longer to evade checks. Seen here as a private AS number in the path.',
+    'ASM-EX': 'EX, path extension evasion: an AS path made longer with extra AS numbers, so that a route is less likely to be chosen. Seen here as a private AS number in the path.',
     'ASM-FI': 'FI, forged origin injection: a fake link to the real origin, which passes route origin validation. Seen here as a last link that CAIDA does not know and the table of the collector does not have.',
     'ASM-PS': 'PS, path shortening: a path without some of the ASes it crosses. Seen here as another link that CAIDA does not know and the table of the collector does not have.',
     'VOL-FO': 'FO, flooding through oscillation: a prefix that flaps, seen by 3 peers or more within a window.',
@@ -99,7 +99,7 @@
   // The curve: the share of the incidents with a path that would be Invalid, for 0 to 100% of the networks publishing.
   const SVG = 'http://www.w3.org/2000/svg';
   const svg = (tag, attrs, ...kids) => { const n = document.createElementNS(SVG, tag); for (const [k, v] of Object.entries(attrs || {})) n.setAttribute(k, v); n.append(...kids); return n; };
-  const SERIES = [{ key: 'largest', label: 'The biggest networks publish first', cls: 's1' }, { key: 'random', label: 'Networks publish in random order', cls: 's2' }];
+  const SERIES = [{ key: 'largest', label: 'The networks with the most customers publish first', cls: 's1' }, { key: 'random', label: 'Networks publish in random order', cls: 's2' }];
 
   function points(d, type) {
     const base = d.adoption.base && d.adoption.base[type] !== undefined ? d.adoption.base[type] : (type === 'total' ? d.total.with_path : d.by_type[type].with_path);    // without the persistent valleys
@@ -120,7 +120,7 @@
       g.append(svg('polyline', { class: `line ${s.cls}`, points: s.values.map((v, i) => `${x(i).toFixed(1)},${y(v).toFixed(1)}`).join(' ') }));
       s.values.forEach((v, i) => g.append(svg('circle', { class: `dot ${s.cls}`, cx: x(i).toFixed(1), cy: y(v).toFixed(1), r: 3 })));
     }
-    g.append(svg('text', { class: 'axistitle', x: m.l + iw / 2, y: H - 6, 'text-anchor': 'middle' }, 'Networks that publish an ASPA (% of all the networks)'),
+    g.append(svg('text', { class: 'axistitle', x: m.l + iw / 2, y: H - 6, 'text-anchor': 'middle' }, `Networks that publish an ASPA (% of the ${fmt.format(d.adoption.ases)} ASes of the CAIDA data)`),
       svg('text', { class: 'axistitle', transform: `translate(13 ${m.t + ih / 2}) rotate(-90)`, 'text-anchor': 'middle' }, 'Incidents that are Invalid (%)'));
     box.replaceChildren(g);
     return series;
@@ -128,7 +128,7 @@
 
   function curve(d) {
     const select = $('inc-type'), box = $('inc-chart');
-    const options = [['total', 'All the incidents with a path']].concat(typesOf(d).filter((k) => d.by_type[k].with_path).map((k) => [k, `${k}, ${(NAMES[k] || k).toLowerCase()}`]));
+    const options = [['total', 'All the incidents with a path, without the persistent valleys']].concat(typesOf(d).filter((k) => d.by_type[k].with_path).map((k) => [k, `${k}, ${(NAMES[k] || k).replace(/^(?!AS )./, (c) => c.toLowerCase())}`]));
     if (options.length < 2 || !d.adoption || !d.adoption.levels) { $('inc-curve-title').parentElement.hidden = true; return; }
     select.replaceChildren(...options.map(([v, t]) => el('option', { value: v, text: t })));
     const show = () => {
@@ -136,7 +136,7 @@
       $('inc-legend').replaceChildren(...series.map((s) => el('li', {}, el('span', { class: `sw ${s.cls}`, 'aria-hidden': 'true' }), el('span', { class: 'lg', text: s.label }), ' ', el('span', { class: 'lv', text: `${s.values[i10].toFixed(0)}% Invalid when 10% publish` }))));
       const [largest, random] = series, i50 = d.adoption.levels.indexOf(50), leaks = type === 'RLK';
       const pc = (v) => `${v.toFixed(0)}%`;
-      $('inc-curve-note').textContent = `How to read it: if only the biggest 10% of the ${fmt.format(d.adoption.ases)} networks of the dataset published an ASPA, ${pc(largest.values[i10])} of these incidents would be Invalid; if 10% of the networks did it in random order, ${pc(random.values[i10])}. With half of the networks, ${pc(largest.values[i50])} and ${pc(random.values[i50])}. The dots are the points that were computed (every 10%); the lines between them only join them.${leaks ? ' For a valley the right end is always 100%, because the detector and the ASPAs use the same CAIDA relationships: look at the shape of the lines, not at the end. The persistent valleys (RLK-PV) are not in this chart.' : ''}`;
+      $('inc-curve-note').textContent = `How to read it: if only the 10% of the ${fmt.format(d.adoption.ases)} networks of the CAIDA data with the most customers published an ASPA, ${pc(largest.values[i10])} of these incidents would be Invalid; if 10% of the networks did it in random order, ${pc(random.values[i10])}. With half of the networks, ${pc(largest.values[i50])} and ${pc(random.values[i50])}. The dots are the points that were computed (every 10%); the lines between them only join them.${leaks ? ' For a valley the right end is always 100%, because the detector and the ASPAs use the same CAIDA relationships: look at the shape of the lines, not at the end. The persistent valleys (RLK-PV) are not in this chart.' : ''}`;
     };
     select.addEventListener('change', show);
     show();
