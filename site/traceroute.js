@@ -93,6 +93,30 @@
       const rtt = rtts.length ? Math.min(...rtts) : null;
       return { n: i + 1, ip, host: h.resolvedHostname && h.resolvedHostname !== ip ? h.resolvedHostname : null, asn, rtt };
     });
+    const p = result.probe;
+    return summaryOf({ platform: 'globalping', city: p.city, country: p.country, asn: p.asn, network: p.network, latitude: p.latitude, longitude: p.longitude },
+      result.result.status, hops);
+  }
+
+  // result: one result of a RIPE Atlas traceroute (one probe); probe: what Atlas says of the probe ({ id, country, asn, latitude,
+  // longitude }). The address that answers most often at a hop stands for it, with its shortest delay; the last entry of a trace
+  // that gets no answer (hop 255) is not a hop.
+  function summariseAtlas(result, probe, asnOf) {
+    const hops = (Array.isArray(result.result) ? result.result : []).filter((h) => typeof h.hop === 'number' && h.hop < 255).map((h) => {
+      const replies = (h.result || []).filter((x) => x.from && typeof x.rtt === 'number');
+      const count = new Map();
+      for (const x of replies) count.set(x.from, (count.get(x.from) || 0) + 1);
+      const ip = [...count].sort((a, b) => b[1] - a[1])[0]?.[0] || null;
+      const rtts = replies.filter((x) => x.from === ip).map((x) => x.rtt);
+      return { n: h.hop, ip, host: null, asn: ip && !isPrivate(ip) ? asnOf(ip) : null, rtt: rtts.length ? Math.min(...rtts) : null };
+    });
+    return summaryOf({ platform: 'atlas', id: probe.id, city: probe.city || null, country: probe.country, asn: probe.asn, network: probe.network || null,
+      latitude: probe.latitude, longitude: probe.longitude }, Array.isArray(result.result) ? 'finished' : 'failed', hops);
+  }
+
+  // The hops of a probe read the same way whatever the platform: the networks on the way, the jump of the delay, the round trip
+  // from the first public address and its reading.
+  function summaryOf(probe, status, hops) {
     const answering = hops.filter((h) => h.ip);
     const last = answering[answering.length - 1] || null;
     // The biggest rise of the delay between two hops that answer. It counts only if the delay stays up from there to the end
@@ -113,9 +137,7 @@
     for (const h of hops) if (h.asn && path[path.length - 1] !== h.asn) path.push(h.asn);
     const lastRtt = last && last.rtt !== null ? last.rtt : null;
     return {
-      probe: { city: result.probe.city, country: result.probe.country, asn: result.probe.asn, network: result.probe.network,
-        latitude: result.probe.latitude, longitude: result.probe.longitude },
-      status: result.result.status, hops, path, jump, lastRtt, reachedAddress: last ? last.ip : null,
+      probe, status, hops, path, jump, lastRtt, reachedAddress: last ? last.ip : null,
       access, net: lastRtt === null ? null : Math.max(0, lastRtt - access),
       // from the first public address to the end, supposing that the target is in the country of the probe
       verdict: lastRtt === null ? null : lastRtt - access >= TROMBONE_MS ? 'trombone' : lastRtt - access > LONG_DELAY_MS ? 'long' : 'ok',
@@ -143,7 +165,8 @@
   // `origin` (an AS number): a measurement counts only when its last network is the origin's, that is when the packet got into the AS that is aimed at;
   // a traceroute that stops on a router on the way has the round trip of that router, which says nothing about the target and is left out (net null).
   function pairProbes(s4, s6, origin) {
-    const key = (s) => `${s.probe.asn || ''}|${s.probe.city || ''}|${s.probe.network || ''}`;
+    // a probe of RIPE Atlas has an id, which tells it for sure
+    const key = (s) => (s.probe.id ? `id|${s.probe.id}` : `${s.probe.asn || ''}|${s.probe.city || ''}|${s.probe.network || ''}`);
     const rest = new Map();
     for (const s of s4) { const k = key(s); if (!rest.has(k)) rest.set(k, []); rest.get(k).push(s); }
     const rows = [];
@@ -276,7 +299,103 @@
     return { checked, misplaced: null };
   }
 
-  const api = { hostIn, targetOf, parseIp, contains, prefixesOf, isPrivate, summarise, aggregate, pairProbes, comparePairs, distanceKm, lanPrefix, ixpsFrom, ixpIndex, ixpOf, placeCheck,
+  // The same bound with other reference points (Izhikevich and others call it the speed of Internet, SOI): from a place, a round
+  // trip to a point `km` away takes at least this many milliseconds, light in fibre there and back, less the margin.
+  const soiFloor = (km, margin = PLACE_MARGIN_KM) => (2 * Math.max(0, km - margin)) / FIBRE_KM_PER_MS;
+  // The place of an instance of a root server is read from a code of a city or an airport, a less precise point than the sites of an
+  // exchange or an anchor: its margin is wider.
+  const ROOT_MARGIN_KM = 300;
+
+  // A declared place against reference points whose place is known: refs [{ sites: [[lat, lon], ...], rtt, margin?, ...what to tell }].
+  // A round trip shorter than the floor for the nearest site of a reference proves that the probe is elsewhere. How many references
+  // could be used, and the strongest proof (the round trip that misses the floor by most), or null.
+  function soiCheck(lat, lon, refs) {
+    if (typeof lat !== 'number' || typeof lon !== 'number') return { checked: 0, misplaced: null };
+    let checked = 0, worst = null;
+    for (const r of refs || []) {
+      if (typeof r.rtt !== 'number' || !Array.isArray(r.sites) || !r.sites.length) continue;
+      checked++;
+      const margin = typeof r.margin === 'number' ? r.margin : PLACE_MARGIN_KM;
+      const km = Math.min(...r.sites.map((s) => distanceKm([lat, lon], s)));
+      const atLeast = soiFloor(km, margin);
+      if (r.rtt < atLeast && (!worst || atLeast - r.rtt > worst.atLeast - worst.rtt)) {
+        const { sites, ...rest } = r;
+        worst = { ...rest, margin, km: Math.round(km), atLeast: Math.round(atLeast * 10) / 10, within: Math.round(margin + (r.rtt / 2) * FIBRE_KM_PER_MS) };
+      }
+    }
+    return { checked, misplaced: worst };
+  }
+
+  // The instance of a root server that answered hostname.bind (the built-in measurements of RIPE Atlas ask it of every probe), as
+  // the code of a place: an IATA code of an airport or of a city, and a country when the name has one. Only the naming schemes of
+  // the operators are read: anything else, such as a resolver or a firewall of the network of the probe that answers in their
+  // place (which is common, and fast), gives null. G names a region only, and D and I use codes of their own: they are not read.
+  const ROOT_NAMES = {
+    a: [[/^nnn1-([a-z]{2})([a-z]{3})\d*(?:-[0-9a-z]+)?$/, 2, 1], [/^nnn1-([a-z]{3})\d*(?:-[0-9a-z]+)?$/, 1, 0]],
+    b: [[/^b\d+-([a-z]{3})$/, 1, 0]],
+    c: [[/^([a-z]{3})\d+[a-z]?\.c\.root-servers\.org$/, 1, 0]],
+    e: [[/^[a-z]\d+\.([a-z]{3})\.eroot$/i, 1, 0]],
+    f: [[/^([A-Z]{3})\.cf\.f\.root-servers\.org$/, 1, 0], [/^([a-z]{3})\d+[a-z]?\.f\.root-servers\.org$/, 1, 0]],
+    h: [[/^\d+\.([a-z]{3})\.h\.root-servers\.org$/, 1, 0]],
+    j: [[/^rootns-(?:el)?([a-z]{3})\d+$/, 1, 0], [/^nnn1-([a-z]{2})([a-z]{3})\d*(?:-[0-9a-z]+)?$/, 2, 1], [/^nnn1-([a-z]{3})\d*(?:-[0-9a-z]+)?$/, 1, 0]],
+    k: [[/^ns\d+\.([a-z]{2})-([a-z]{3})\.k\.ripe\.net$/, 2, 1]],
+    l: [[/^([a-z]{2})-([a-z]{3})-[a-z]{2}$/, 2, 1], [/^([a-z]{3})\d+\.l\.root-servers\.org$/, 1, 0]],
+    m: [[/^M-([A-Z]{3})(?:-[A-Z]+)?-\d+$/, 1, 0]],
+  };
+  function rootPlace(letter, hostname) {
+    for (const [re, code, cc] of ROOT_NAMES[letter] || []) {
+      const m = re.exec(String(hostname || '').trim());
+      if (m) return { code: m[code].toUpperCase(), cc: cc ? m[cc].toUpperCase() : null };
+    }
+    return null;
+  }
+
+  // The answers of the root servers to a probe [{ letter, hostname, rtt }] as reference points, with the instances whose place has
+  // been checked (sites: { letter: { hostname: [lat, lon, code] } }, built and tested against the anchors by scripts/build-root-sites.mjs).
+  // An instance that is not in the list is left out.
+  function rootRefs(answers, sites) {
+    const out = [];
+    for (const a of answers || []) {
+      const s = sites && sites[a.letter] && sites[a.letter][a.hostname];
+      if (s && typeof a.rtt === 'number') out.push({ kind: 'root', letter: a.letter, hostname: a.hostname, code: s[2], sites: [[s[0], s[1]]], rtt: a.rtt, margin: ROOT_MARGIN_KM });
+    }
+    return out;
+  }
+
+  // The anchors of RIPE Atlas to ping from the probes, as reference points: a probe that is not where it is said to be shows it with
+  // a round trip that is too short to an anchor near where it really is, so the anchors are spread: up to `inCountry` in the country
+  // of the probes, as far from each other as they can be, and the one nearest to each point of a world-wide list.
+  // anchors: [{ id, ip, latitude, longitude, country, city }].
+  const WORLD_POINTS = [[50.11, 8.68], [51.51, -0.13], [39.04, -77.49], [37.34, -121.89], [-23.55, -46.63], [-26.2, 28.05], [25.2, 55.27], [19.08, 72.88], [1.35, 103.82], [35.68, 139.69], [-33.87, 151.21]];
+  function pickAnchors(anchors, country, inCountry = 3, points = WORLD_POINTS) {
+    const ok = (anchors || []).filter((a) => a.ip && typeof a.latitude === 'number' && typeof a.longitude === 'number').sort((a, b) => a.id - b.id);
+    const at = (a) => [a.latitude, a.longitude];
+    const home = ok.filter((a) => a.country === country);
+    const chosen = [];
+    if (home.length) {
+      const mid = [home.reduce((t, a) => t + a.latitude, 0) / home.length, home.reduce((t, a) => t + a.longitude, 0) / home.length];
+      chosen.push(home.reduce((b, a) => (distanceKm(at(a), mid) < distanceKm(at(b), mid) ? a : b)));
+      while (chosen.length < Math.min(inCountry, home.length)) {
+        const rest = home.filter((a) => !chosen.includes(a));
+        chosen.push(rest.reduce((b, a) => {
+          const da = Math.min(...chosen.map((c) => distanceKm(at(a), at(c)))), db = Math.min(...chosen.map((c) => distanceKm(at(b), at(c))));
+          return da > db ? a : b;
+        }));
+      }
+    }
+    for (const p of points) {
+      const rest = ok.filter((a) => !chosen.includes(a));
+      if (rest.length) chosen.push(rest.reduce((b, a) => (distanceKm(at(a), p) < distanceKm(at(b), p) ? a : b)));
+    }
+    return chosen;
+  }
+
+  // The pings of a probe to the anchors [{ anchor, rtt }] as reference points (the shortest round trip of each).
+  const anchorRefs = (pings) => (pings || []).filter((p) => p.anchor && typeof p.rtt === 'number')
+    .map((p) => ({ kind: 'anchor', anchor: p.anchor.fqdn || p.anchor.ip, city: p.anchor.city || null, country: p.anchor.country || null, sites: [[p.anchor.latitude, p.anchor.longitude]], rtt: p.rtt }));
+
+  const api = { hostIn, targetOf, parseIp, contains, prefixesOf, isPrivate, summarise, summariseAtlas, aggregate, pairProbes, comparePairs, distanceKm, lanPrefix, ixpsFrom, ixpIndex, ixpOf, placeCheck,
+    soiFloor, soiCheck, rootPlace, rootRefs, pickAnchors, anchorRefs, WORLD_POINTS, ROOT_MARGIN_KM,
     LONG_DELAY_MS, TROMBONE_MS, JUMP_MS, FIBRE_KM_PER_MS, PLACE_MARGIN_KM };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.AspaTraceroute = api;

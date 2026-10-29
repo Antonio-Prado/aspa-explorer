@@ -743,37 +743,65 @@ const ixpIndexOnce = () => (ixpIndexAsked ||= (async () => {
   return AspaTraceroute.ixpIndex(ixps);
 })().catch(() => { ixpIndexAsked = null; return null; }));
 
-// A summary of each result of a measurement, with the check of the place of its probe.
-const summariesOf = (m, idx) => m.results.map((x) => {
+// Where a probe is: the hops on the LANs of exchange points (placeCheck), and the reference points measured for it, the anchors of
+// RIPE Atlas and, for a probe of RIPE Atlas, the instances of the root servers (soiCheck). The proof of the exchange points comes first.
+function placeOf(s, idx, refs) {
+  const ixp = AspaTraceroute.placeCheck(s, idx);
+  const soi = AspaTraceroute.soiCheck(s.probe.latitude, s.probe.longitude, refs || []);
+  return { checked: ixp.checked + soi.checked, misplaced: ixp.misplaced ? { kind: 'ixp', ...ixp.misplaced } : soi.misplaced };
+}
+
+// A summary of each result of a Globalping measurement, with the check of the place of its probe; refsOf(summary): the anchors
+// that the probe pinged, if it did.
+const summariesOf = (m, idx, refsOf = () => []) => m.results.map((x) => {
   const s = AspaTraceroute.summarise(x, (ip) => ipAsnCache.get(ip) || null);
-  s.place = AspaTraceroute.placeCheck(s, idx);
+  s.place = placeOf(s, idx, refsOf(s));
   return s;
 });
 
-// What the check of the places says, for the result: how many probes could be checked, which are elsewhere.
-function placeNote(summaries, idx) {
-  if (!idx) return 'The place of the probes could not be checked: PeeringDB did not give the list of the exchange points (it limits how often an address can ask for it; the page keeps the list for a day once it has it).';
+// The same for the results of a traceroute of RIPE Atlas (runAtlas).
+const atlasSummariesOf = (a, results, idx) => (results || []).filter((x) => a.meta.has(x.prb_id)).map((x) => {
+  const s = AspaTraceroute.summariseAtlas(x, a.meta.get(x.prb_id), (ip) => ipAsnCache.get(ip) || null);
+  s.place = placeOf(s, idx, a.refsOf(x.prb_id));
+  return s;
+});
+
+// The name of a probe in the tables: a probe of RIPE Atlas has a number and a network; Globalping gives a city and a network.
+const probeTitle = (p) => (p.platform === 'atlas' ? `RIPE Atlas ${p.id}${p.asn ? ` · AS${p.asn}` : ''}` : `${p.city || 'A probe'}${p.network ? ` · ${p.network}` : ''}`);
+
+// What the check of the places says, for the result: how many probes could be checked, which are elsewhere. `anchors`: whether the
+// probes pinged the anchors; the probes of RIPE Atlas are also checked with the root servers.
+function placeNote(summaries, idx, anchors) {
+  const atlas = summaries.some((s) => s.probe.platform === 'atlas');
+  const refs = [idx && 'the exchange points that a path crosses, whose sites are known (PeeringDB)', anchors && 'the anchors of RIPE Atlas that the probes ping', atlas && 'for the probes of RIPE Atlas, the instances of the root servers that answer them, in the built-in measurements of RIPE Atlas'].filter(Boolean);
+  if (!refs.length) return 'The place of the probes could not be checked: PeeringDB did not give the list of the exchange points (it limits how often an address can ask for it; the page keeps the list for a day once it has it).';
+  const how = `against points whose place is known: ${refs.length > 1 ? `${refs.slice(0, -1).join('; ')}; and ${refs[refs.length - 1]}` : refs[0]}. A round trip to one of them shorter than light in fibre allows from the place of the probe means that the probe is elsewhere`;
   const checked = summaries.filter((s) => s.place.checked).length, out = summaries.filter((s) => s.place.misplaced).length;
-  const how = 'where the path crosses an exchange point, whose sites are known (PeeringDB): a round trip to it shorter than light in fibre allows from the place of the probe means that the probe is elsewhere';
-  if (!checked) return `The place of the probes is checked ${how}; no path of this measurement crosses one.`;
-  return `The place of the probes is checked ${how}. ${checked} of the ${summaries.length} probes could be checked${out ? `, and ${out} ${out === 1 ? 'is' : 'are'} not where Globalping places ${out === 1 ? 'it' : 'them'}: left out of the reading, marked in the table` : ', and all are where they are said to be'}.`;
+  const noIxp = idx ? '' : ' PeeringDB did not give the list of the exchange points this time.';
+  if (!checked) return `The place of the probes is checked ${how}; none of them could be used for these probes.${noIxp}`;
+  return `The place of the probes is checked ${how}. ${checked} of the ${summaries.length} probes could be checked${out ? `, and ${out} ${out === 1 ? 'is' : 'are'} not where ${out === 1 ? 'it is' : 'they are'} said to be: left out of the reading, marked in the table` : ', and all are where they are said to be'}.${noIxp}`;
 }
 
 // The sentence for a probe that is not where it is said to be, with the figures that prove it.
 function misplacedText(r) {
   const m = r.place.misplaced, ms = (v) => `${v < 10 ? v.toFixed(1) : Math.round(v)} ms`;
-  return `This probe is not where Globalping places it${r.probe.city ? ` (${r.probe.city})` : ''}: hop ${m.hop}, ${m.ip}, is on the LAN of ${m.ixp}${m.city ? ` in ${m.city}` : ''}, whose nearest site is ${m.km} km from that place, and it answers in ${ms(m.rtt)}, while light in fibre needs at least ${ms(m.atLeast)} to go there and back. The probe is within about ${m.within} km of a site of that exchange, so it is left out of the reading.`;
+  const who = r.probe.platform === 'atlas' ? `RIPE Atlas ${r.probe.id} is not where its host places it` : `This probe is not where Globalping places it${r.probe.city ? ` (${r.probe.city})` : ''}`;
+  const left = 'so it is left out of the reading.';
+  if (m.kind === 'anchor') {
+    return `${who}: it reaches the anchor of RIPE Atlas ${m.anchor}${m.city ? ` in ${m.city}` : ''}, ${m.km} km from that place, in ${ms(m.rtt)}, while light in fibre needs at least ${ms(m.atLeast)} to go there and back. The probe is within about ${m.within} km of that anchor, ${left}`;
+  }
+  if (m.kind === 'root') {
+    return `${who}: the ${m.letter.toUpperCase()} root server answers it from its instance ${m.hostname} (${m.code}), ${m.km} km from that place, in ${ms(m.rtt)}, while light in fibre needs at least ${ms(m.atLeast)} to go there and back. The probe is within about ${m.within} km of that instance (the margin is wider than for an anchor, because the place of an instance is read from the code of its city), ${left}`;
+  }
+  return `${who}: hop ${m.hop}, ${m.ip}, is on the LAN of ${m.ixp}${m.city ? ` in ${m.city}` : ''}, whose nearest site is ${m.km} km from that place, and it answers in ${ms(m.rtt)}, while light in fibre needs at least ${ms(m.atLeast)} to go there and back. The probe is within about ${m.within} km of a site of that exchange, ${left}`;
 }
 
-// `reuse`: the id of an earlier measurement, to run this one on the very same probes (the comparison of IPv4 and IPv6)
-async function runTraceroute(address, country, onStatus, reuse = null) {
-  const r = await fetch(GLOBALPING, {
-    method: 'POST', headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-    body: JSON.stringify({ type: 'traceroute', target: address, locations: reuse || [{ country, limit: PROBES }], measurementOptions: { protocol: 'ICMP' } }),
-  });
+// A measurement of Globalping, to its end. `reuse`: the id of an earlier measurement, to run this one on the very same probes.
+async function runGlobalping(spec, onStatus) {
+  const r = await fetch(GLOBALPING, { method: 'POST', headers: { 'Content-Type': 'application/json', Accept: 'application/json' }, body: JSON.stringify(spec) });
   const body = await r.json().catch(() => ({}));
   if (!r.ok) throw new Error(r.status === 429 ? 'the limit of measurements per hour of your address has been reached, try later' : (body.error && body.error.message) || `Globalping answered HTTP ${r.status}`);
-  onStatus(`Measuring from ${body.probesCount || 'a few'} probes`);
+  onStatus(`measuring from ${body.probesCount || 'a few'} probes`);
   for (let i = 0; i < 45; i++) {
     await new Promise((res) => setTimeout(res, 1500));
     const m = await getJson(`${GLOBALPING}/${encodeURIComponent(body.id)}`);
@@ -781,26 +809,127 @@ async function runTraceroute(address, country, onStatus, reuse = null) {
   }
   throw new Error('the probes did not finish in time');
 }
+const runTraceroute = (address, country, onStatus, reuse = null) =>
+  runGlobalping({ type: 'traceroute', target: address, locations: reuse || [{ country, limit: PROBES }], measurementOptions: { protocol: 'ICMP' } }, onStatus);
+
+// The places of the Globalping probes of a traceroute against the anchors of RIPE Atlas: pings from the same probes to anchors chosen
+// by the service of this site for the country (up to three in it and four in the world; nothing is measured on RIPE Atlas for this).
+// Globalping gives no id of a probe, so a probe is told by its network and its place; two probes that look alike are not checked.
+const GP_ANCHORS_HOME = 3, GP_ANCHORS_WORLD = 4;
+async function globalpingAnchors(m, country, onStatus) {
+  const { anchors } = await getJson(`${ATLAS_SERVICE}/anchors?country=${encodeURIComponent(country)}`);
+  const chosen = [...anchors.filter((a) => a.country === country).slice(0, GP_ANCHORS_HOME), ...anchors.filter((a) => a.country !== country).slice(0, GP_ANCHORS_WORLD)];
+  const key = (p) => `${p.asn}|${p.network}|${p.city}|${p.latitude}|${p.longitude}`;
+  const twins = new Set(), seen = new Set();
+  for (const x of m.results) { const k = key(x.probe); if (seen.has(k)) twins.add(k); seen.add(k); }
+  let done = 0;
+  onStatus(`pinging ${chosen.length} anchors of RIPE Atlas`);
+  const pings = await Promise.all(chosen.map((a) => runGlobalping({ type: 'ping', target: a.ip, locations: m.id, measurementOptions: { packets: 3 } }, () => {})
+    .then((p) => { onStatus(`pinging the anchors of RIPE Atlas, ${++done} of ${chosen.length}`); return { anchor: a, results: p.results }; })
+    .catch(() => ({ anchor: a, results: [] }))));
+  const byProbe = new Map();
+  for (const { anchor, results } of pings) {
+    for (const x of results) {
+      const k = key(x.probe), rtt = x.result && x.result.stats && x.result.stats.min;
+      if (twins.has(k) || typeof rtt !== 'number') continue;
+      if (!byProbe.has(k)) byProbe.set(k, []);
+      byProbe.get(k).push({ anchor, rtt });
+    }
+  }
+  return (s) => AspaTraceroute.anchorRefs(byProbe.get(key(s.probe)) || []);
+}
+
+// RIPE Atlas: the measurements are created by the service of this site (atlas/main.mjs), which holds the key of its account; the page
+// reads their results, public, from RIPE Atlas, and the answers that the root servers give to the same probes (every probe of RIPE
+// Atlas asks each of them for hostname.bind every four minutes, in the built-in measurements).
+const ATLAS = 'https://atlas.ripe.net/api/v2';
+const ATLAS_SERVICE = '/api/v1/atlas';
+const ROOT_MEASUREMENTS = { a: 10309, b: 10310, c: 10311, e: 10313, f: 10304, h: 10315, j: 10316, k: 10301, l: 10308, m: 10306 };
+let rootSitesAsked = null;
+const rootSitesOnce = () => (rootSitesAsked ||= getJson('/data/root-sites.json').then((d) => d.sites).catch(() => { rootSitesAsked = null; return null; }));
+
+// The results of a one-off measurement of RIPE Atlas, once each of `expected` probes has one, or once nothing new has come for two
+// readings after the first minute and a half (a probe that goes offline never answers), or when the time is up.
+async function atlasResults(id, expected, onStatus) {
+  let results = [], still = 0;
+  for (let i = 0; i < 24; i++) {
+    await new Promise((res) => setTimeout(res, 10000));
+    const before = results.length;
+    results = await getJson(`${ATLAS}/measurements/${encodeURIComponent(id)}/results/`).catch(() => results);
+    onStatus(`${results.length} of ${expected} probes have answered`);
+    still = results.length > before ? 0 : still + 1;
+    if (results.length >= expected || (i >= 8 && results.length && still >= 2)) break;
+  }
+  return results;
+}
+
+// A test through RIPE Atlas: the service creates a traceroute for each family and pings to the anchors, from the same probes; the page
+// waits for the traceroutes, then reads the pings and the answers of the root servers to those probes.
+async function runAtlas(origin, country, targets, onStatus) {
+  const r = await fetch(`${ATLAS_SERVICE}/measure`, { method: 'POST', headers: { 'Content-Type': 'application/json', Accept: 'application/json' }, body: JSON.stringify({ asn: origin, country, targets }) });
+  const body = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(body.error || `the service of RIPE Atlas answered HTTP ${r.status}`);
+  const n = body.probes.length, ids = body.probes.map((p) => p.id).join(',');
+  onStatus(`measuring from ${n} probes`);
+  const [tr4, tr6] = await Promise.all(['v4', 'v6'].map((f) => (body.traceroutes[f] ? atlasResults(body.traceroutes[f], n, (t) => onStatus(`${f === 'v4' ? 'IPv4' : 'IPv6'}: ${t}`)) : null)));
+  onStatus('reading the pings to the anchors and the answers of the root servers');
+  const [pings, sites, roots] = await Promise.all([
+    Promise.all(body.pings.map((p) => getJson(`${ATLAS}/measurements/${p.id}/results/`).then((res) => ({ anchor: p.anchor, res })).catch(() => ({ anchor: p.anchor, res: [] })))),
+    rootSitesOnce(),
+    Promise.all(Object.entries(ROOT_MEASUREMENTS).map(([letter, id]) => getJson(`${ATLAS}/measurements/${id}/latest/?probe_ids=${ids}`).then((res) => ({ letter, res })).catch(() => ({ letter, res: [] })))),
+  ]);
+  const add = (m, k, v) => { if (!m.has(k)) m.set(k, []); m.get(k).push(v); };
+  const pingsOf = new Map(), rootsOf = new Map();
+  for (const { anchor, res } of pings) for (const x of res) if (typeof x.min === 'number' && x.min >= 0) add(pingsOf, x.prb_id, { anchor, rtt: x.min });
+  for (const { letter, res } of roots) {
+    for (const x of res) {
+      const a = x.result || {};
+      const hostname = (a.answers || []).map((y) => (Array.isArray(y.RDATA) ? y.RDATA.join(' ') : y.RDATA)).find(Boolean);
+      if (hostname && typeof a.rt === 'number') add(rootsOf, x.prb_id, { letter, hostname, rtt: a.rt });
+    }
+  }
+  const meta = new Map(body.probes.map((p) => [p.id, { ...p, platform: 'atlas' }]));
+  return { meta, tr4, tr6, refsOf: (id) => [...AspaTraceroute.anchorRefs(pingsOf.get(id)), ...AspaTraceroute.rootRefs(rootsOf.get(id), sites)] };
+}
+
+// The networks of the addresses of the hops of a set of traceroutes (Globalping results, or results of RIPE Atlas), four at a time.
+async function mapHops(gpResults, atlasResults, onStatus) {
+  const gp = (gpResults || []).flatMap((x) => (x.result.hops || []).map((h) => h.resolvedAddress));
+  const at = (atlasResults || []).flatMap((x) => (Array.isArray(x.result) ? x.result : []).flatMap((h) => (h.result || []).map((y) => y.from)));
+  const ips = [...new Set([...gp, ...at].filter((ip) => ip && !AspaTraceroute.isPrivate(ip)))];
+  onStatus(`Mapping ${ips.length} addresses to their networks`);
+  const queue = [...ips];
+  await Promise.all(Array.from({ length: 4 }, async () => { for (let ip = queue.shift(); ip; ip = queue.shift()) await asnOfIp(ip); }));
+}
 
 // The countries that can be chosen for the probes: the one where the AS is registered first, then these.
 const PROBE_COUNTRIES = ['AR', 'AU', 'AT', 'BE', 'BR', 'BG', 'CA', 'CL', 'CN', 'CO', 'HR', 'CZ', 'DK', 'EG', 'EE', 'FI', 'FR', 'DE', 'GR', 'HK', 'HU', 'IS', 'IN', 'ID', 'IE', 'IL', 'IT', 'JP', 'KE', 'KR', 'LV', 'LT', 'LU', 'MY', 'MX', 'MA', 'NL', 'NZ', 'NG', 'NO', 'PK', 'PE', 'PH', 'PL', 'PT', 'RO', 'RU', 'SA', 'RS', 'SG', 'SK', 'SI', 'ZA', 'ES', 'SE', 'CH', 'TW', 'TH', 'TR', 'UA', 'AE', 'GB', 'US', 'VN'];
 
 // Both families, on the same probes: the measurement over IPv6 first (it picks probes that can use IPv6), then the one over IPv4 on the very same
 // probes (Globalping takes the id of the first as the places of the second). Each family aims at an address of the origin's own prefixes.
-async function measurePair(t4, t6, country, status, origin) {
+// opts: { globalping, atlas, anchors } (the platforms, and whether the Globalping probes ping the anchors); a platform that fails
+// leaves its error in `failed` and the other one is read all the same.
+async function measurePair(t4, t6, country, status, origin, opts) {
   const idxAsked = ixpIndexOnce();
-  const m6 = await runTraceroute(t6.address, country, (t) => status(`IPv6: ${t}`));
-  const m4 = await runTraceroute(t4.address, country, (t) => status(`IPv4: ${t}`), m6.id);
-  const ips = [...new Set([...m6.results, ...m4.results].flatMap((x) => (x.result.hops || []).map((h) => h.resolvedAddress)).filter((ip) => ip && !AspaTraceroute.isPrivate(ip)))];
-  status(`Mapping ${ips.length} addresses to their networks`);
-  const queue = [...ips];
-  await Promise.all(Array.from({ length: 4 }, async () => { for (let ip = queue.shift(); ip; ip = queue.shift()) await asnOfIp(ip); }));
+  const failed = [];
+  const gp = opts.globalping ? (async () => {
+    const m6 = await runTraceroute(t6.address, country, (t) => status('Globalping', `IPv6: ${t}`));
+    const m4 = await runTraceroute(t4.address, country, (t) => status('Globalping', `IPv4: ${t}`), m6.id);
+    const refsOf = opts.anchors ? await globalpingAnchors(m6, country, (t) => status('Globalping', t)).catch(() => () => []) : () => [];
+    return { m4, m6, refsOf };
+  })().catch((err) => { failed.push(`Globalping: ${err.message}`); return null; }) : null;
+  const at = opts.atlas ? runAtlas(origin, country, { v4: t4.address, v6: t6.address }, (t) => status('RIPE Atlas', t))
+    .catch((err) => { failed.push(`RIPE Atlas: ${err.message}`); return null; }) : null;
+  const [g, a] = await Promise.all([gp, at]);
+  await mapHops(g ? [...g.m4.results, ...g.m6.results] : [], a ? [...(a.tr4 || []), ...(a.tr6 || [])] : [], (t) => status('', t));
   const idx = await idxAsked;
-  const s4 = summariesOf(m4, idx), s6 = summariesOf(m6, idx);
-  const rows = AspaTraceroute.pairProbes(s4, s6, origin);
+  const s4 = [], s6 = [], rows = [];
+  if (g) { const x4 = summariesOf(g.m4, idx, g.refsOf), x6 = summariesOf(g.m6, idx, g.refsOf); s4.push(...x4); s6.push(...x6); rows.push(...AspaTraceroute.pairProbes(x4, x6, origin)); }
+  if (a) { const x4 = atlasSummariesOf(a, a.tr4, idx), x6 = atlasSummariesOf(a, a.tr6, idx); s4.push(...x4); s6.push(...x6); rows.push(...AspaTraceroute.pairProbes(x4, x6, origin)); }
+  if (!g && !a) throw new Error(failed.join('; '));
   // a probe that is not where it is said to be, over either family, is left out of the reading and of the comparison
   for (const r of rows) r.misplaced = [r.v4, r.v6].map((s) => s && s.place.misplaced && s).find(Boolean) || null;
-  return { rows, cmp: AspaTraceroute.comparePairs(rows.filter((r) => !r.misplaced)), place: placeNote([...s4, ...s6], idx) };
+  return { rows, cmp: AspaTraceroute.comparePairs(rows.filter((r) => !r.misplaced)), place: placeNote([...s4, ...s6], idx, !!(a || (g && opts.anchors))), failed };
 }
 
 // The result of the comparison. What comes first is the one thing that this panel is for: is there a trombone, over IPv4 and over IPv6. Each family
@@ -848,7 +977,8 @@ function pairBlock(res, t4, t6, home, origin, atRegistered) {
   const compare = !cmp.both ? 'No probe got into the AS over both families, so the two cannot be compared probe by probe.'
     : `IPv4 against IPv6, on the ${cmp.both} probes that got in over both: ${Math.abs(cmp.medianDelta) < 1 ? 'about the same time (the typical difference is under 1 ms)' : `IPv6 is ${ms(Math.abs(cmp.medianDelta))} ${cmp.medianDelta > 0 ? 'slower' : 'faster'}`}; IPv4 is faster on ${c.v4}, IPv6 on ${c.v6}, ${c.tie} are even. The networks on the way differ on ${cmp.differentNetworks} of the ${cmp.both}.`;
   const answered = `${cmp.probes} probes in ${home}${c['v4 only'] || c['v6 only'] ? `; ${c['v4 only']} answered only over IPv4 and ${c['v6 only']} only over IPv6` : ''}. A probe whose traceroute stops before ${as} (the last router that answers is not in it) is not read: its round trip is the one of a router on the way.`;
-  const notes = [`IPv4 aims at ${t4.address} (in ${t4.prefix}) and IPv6 at ${t6.address} (in ${t6.prefix}), both of ${as}: two addresses of the same AS, not the same host. The probes are the same, and the delays are counted from the first public address. A difference of a few milliseconds is within what the probes and the queues add; the country of the probes is where ${as} is registered only when it says so above.`, res.place];
+  const notes = [`IPv4 aims at ${t4.address} (in ${t4.prefix}) and IPv6 at ${t6.address} (in ${t6.prefix}), both of ${as}: two addresses of the same AS, not the same host. The probes are the same, and the delays are counted from the first public address. A difference of a few milliseconds is within what the probes and the queues add; the country of the probes is where ${as} is registered only when it says so above.`, res.place,
+    ...res.failed.map((f) => `Not measured: ${f}.`)];
   const box = el('div', { class: `result r-${kind}`, role: 'group', 'aria-label': 'Result of the measurement over IPv4 and IPv6' },
     el('p', { class: 'headline', text: headline }), ...lines.map((x) => el('p', { text: x })),
     el('p', { class: 'hint', text: compare }), el('p', { class: 'hint', text: answered }), ...notes.map((x) => el('p', { class: 'hint', text: x })),
@@ -857,7 +987,7 @@ function pairBlock(res, t4, t6, home, origin, atRegistered) {
   const winner = { v4: 'IPv4', v6: 'IPv6', tie: 'even', 'v4 only': 'IPv4 only', 'v6 only': 'IPv6 only', none: 'no answer' };
   // a round trip with its reading when it is not a normal one, so that a trombone stands out in the row
   const cell = (r, key, n) => (r[n] === null ? (r[key] && r[key].net !== null ? 'stops early' : '–') : atRegistered && band(r[n]) !== 'ok' ? `${ms(r[n])} · ${word[band(r[n])]}` : ms(r[n]));
-  const probeName = (r) => `${r.probe.city || 'A probe'}${r.probe.network ? ` · ${r.probe.network}` : ''}${r.misplaced ? ' (not where it is said to be, left out)' : ''}`;
+  const probeName = (r) => `${probeTitle(r.probe)}${r.misplaced ? ' (not where it is said to be, left out)' : ''}`;
   const body = rows.map((r) => el('tr', {},
     el('th', { scope: 'row', class: 'probe', text: probeName(r) }),
     el('td', { class: 'mono pathcell', text: nets(r.v4) }), el('td', { class: 'num', text: cell(r, 'v4', 'n4') }),
@@ -887,7 +1017,21 @@ function measureBlock(origin, tr, routes) {
     ...options.map((c, i) => el('option', { value: c, text: i === 0 ? `${countryName(c)}, where ${as} is registered` : countryName(c) })));
   const btn = el('button', { type: 'button', text: `Measure it now from probes in ${countryName(registered)}` });
   select.addEventListener('change', () => { btn.textContent = `Measure it now from probes in ${countryName(select.value)}`; });
+  // the probes: of Globalping (asked from this browser), of RIPE Atlas (asked by the service of this site, with its account), or both
+  const platform = el('select', { id: `probe-platform-${origin}`, 'aria-label': 'Platform of the probes' },
+    el('option', { value: 'both', text: 'Globalping and RIPE Atlas' }), el('option', { value: 'globalping', text: 'Globalping' }), el('option', { value: 'atlas', text: 'RIPE Atlas' }));
+  const anchors = el('input', { type: 'checkbox', id: `gp-anchors-${origin}` });
+  const anchorsLabel = el('label', { class: 'chk', for: anchors.id }, anchors, ` Also check the place of the Globalping probes with pings to anchors of RIPE Atlas (${GP_ANCHORS_HOME + GP_ANCHORS_WORLD} pings from each probe, which count among the measurements of your address)`);
+  const anchorsBox = el('p', {}, anchorsLabel);
+  platform.addEventListener('change', () => { anchorsBox.hidden = platform.value === 'atlas'; });
   const status = el('p', { class: 'hint', 'aria-live': 'polite' });
+  // what each platform is doing, on one line
+  const doing = new Map();
+  const say = (who, text) => {
+    if (who) doing.delete('');                               // a platform has started: the line of the start goes
+    doing.set(who, text);
+    status.replaceChildren(el('span', { class: 'busy', text: [...doing].map(([w, t]) => (w ? `${w}: ${t}` : t)).join(' · ') }));
+  };
   const out = el('div', {});
   // both families on the same probes: possible when the origin has a prefix of each in the routes
   const both = el('input', { type: 'checkbox', id: `pair-${origin}` });
@@ -900,10 +1044,12 @@ function measureBlock(origin, tr, routes) {
     el('p', { class: 'field' }, el('label', { for: addr4.id, class: 'inline', text: 'IPv4 ' }), addr4, ' ', el('label', { for: addr6.id, class: 'inline', text: 'IPv6 ' }), addr6));
   both.addEventListener('change', () => { addrBox.hidden = !both.checked; });
   const bothLabel = el('label', { class: 'chk', for: both.id }, both, ` Compare IPv4 and IPv6 on the same probes${t4 && t6 ? '' : ` (${as} has no ${t4 ? 'IPv6' : 'IPv4'} prefix in the routes)`}`);
+  const lock = (on) => { btn.disabled = on; select.disabled = on; platform.disabled = on; anchors.disabled = on; both.disabled = on || !(t4 && t6); };
   btn.addEventListener('click', async () => {
     const country = select.value, home = countryName(country);
-    btn.disabled = true; select.disabled = true; both.disabled = true; out.replaceChildren();
-    status.replaceChildren(el('span', { class: 'busy', text: 'Starting the probes' }));
+    const opts = { globalping: platform.value !== 'atlas', atlas: platform.value !== 'globalping', anchors: platform.value !== 'atlas' && anchors.checked };
+    lock(true); out.replaceChildren(); doing.clear();
+    say('', 'Starting the probes');
     try {
       if (both.checked) {
         // the addresses typed must be inside the prefixes of the AS, so that the two measurements are about the AS and nothing else
@@ -916,37 +1062,44 @@ function measureBlock(origin, tr, routes) {
           return { prefix, address: v };
         };
         const u4 = pick(addr4, t4, 'IPv4'), u6 = pick(addr6, t6, 'IPv6');
-        const res = await measurePair(u4, u6, country, (t) => status.replaceChildren(el('span', { class: 'busy', text: t })), origin);
+        const res = await measurePair(u4, u6, country, say, origin, opts);
         status.textContent = `IPv4 and IPv6 towards ${as}, from ${res.rows.length} probe${res.rows.length === 1 ? '' : 's'} in ${home}.`;
         out.replaceChildren(pairBlock(res, u4, u6, home, origin, country === registered));
-        btn.disabled = false; select.disabled = false; both.disabled = !(t4 && t6);
+        lock(false);
         return;
       }
       const idxAsked = ixpIndexOnce();
-      const m = await runTraceroute(target.address, country, (t) => status.replaceChildren(el('span', { class: 'busy', text: t })));
-      const ips = [...new Set(m.results.flatMap((x) => (x.result.hops || []).map((h) => h.resolvedAddress)).filter((ip) => ip && !AspaTraceroute.isPrivate(ip)))];
-      status.replaceChildren(el('span', { class: 'busy', text: `Mapping ${ips.length} addresses to their networks` }));
-      const queue = [...ips];
-      await Promise.all(Array.from({ length: 4 }, async () => { for (let ip = queue.shift(); ip; ip = queue.shift()) await asnOfIp(ip); }));
+      const failed = [];
+      const fam = target.address.includes(':') ? 'v6' : 'v4';
+      const gp = opts.globalping ? (async () => {
+        const m = await runTraceroute(target.address, country, (t) => say('Globalping', t));
+        const refsOf = opts.anchors ? await globalpingAnchors(m, country, (t) => say('Globalping', t)).catch(() => () => []) : () => [];
+        return { m, refsOf };
+      })().catch((err) => { failed.push(`Globalping: ${err.message}`); return null; }) : null;
+      const at = opts.atlas ? runAtlas(origin, country, { [fam]: target.address }, (t) => say('RIPE Atlas', t)).catch((err) => { failed.push(`RIPE Atlas: ${err.message}`); return null; }) : null;
+      const [g, a] = await Promise.all([gp, at]);
+      if (!g && !a) throw new Error(failed.join('; '));
+      await mapHops(g ? g.m.results : [], a ? a[fam === 'v4' ? 'tr4' : 'tr6'] : [], (t) => say('', t));
       const idx = await idxAsked;
-      const results = summariesOf(m, idx);
+      const results = [...(g ? summariesOf(g.m, idx, g.refsOf) : []), ...(a ? atlasSummariesOf(a, a[fam === 'v4' ? 'tr4' : 'tr6'], idx) : [])];
       status.textContent = `Traceroute towards ${target.address}, in ${target.prefix} of ${as}, from ${results.length} probe${results.length === 1 ? '' : 's'} in ${home}.`;
       // the probes that are not where they are said to be are left out of the reading, and shown in the table
       const all = AspaTraceroute.aggregate(results.filter((s) => !s.place.misplaced));
-      const place = placeNote(results, idx);
-      const sorted = [...results].sort((a, b) => (b.net === null ? -1 : b.net) - (a.net === null ? -1 : a.net));
+      const place = [placeNote(results, idx, !!(a || (g && opts.anchors))), ...failed.map((f) => `Not measured: ${f}.`)].join(' ');
+      const sorted = [...results].sort((x, y) => (y.net === null ? -1 : y.net) - (x.net === null ? -1 : x.net));
       out.replaceChildren(all ? resultBox(all, results.length, home, country === registered, place)
         : el('div', { class: 'result r-none', role: 'group', 'aria-label': 'Result of the measurement' }, el('p', { class: 'headline', text: 'Nothing to read' }), el('p', { class: 'hint', text: place })),
         probeTable(sorted, all, target, country === registered));
     } catch (err) {
       status.textContent = `The measurement did not work: ${err.message}.`;
     }
-    btn.disabled = false; select.disabled = false; both.disabled = !(t4 && t6);
+    lock(false);
   });
   return el('div', { class: 'measure' },
-    el('p', { class: 'field' }, el('label', { for: select.id, class: 'inline', text: 'Probes in ' }), select, ' ', btn),
-    el('p', {}, bothLabel), addrBox,
-    el('p', { class: 'hint' }, `It runs a traceroute towards ${target.address} (in ${target.prefix}) from up to ${PROBES} probes in the country that you choose, through Globalping (globalping.io), and asks RIPEstat which network each hop belongs to. They both see your address and what is asked, and the test uses ${PROBES} of the 250 measurements an hour that Globalping allows to an address (${2 * PROBES} when it compares IPv4 and IPv6). To check where each probe is, the page also asks PeeringDB, which sees your address too, for the exchange points and their sites, once a day. How the check works: `,
+    el('p', { class: 'field' }, el('label', { for: select.id, class: 'inline', text: 'Probes in ' }), select, ' ',
+      el('label', { for: platform.id, class: 'inline', text: 'of ' }), platform, ' ', btn),
+    el('p', {}, bothLabel), addrBox, anchorsBox,
+    el('p', { class: 'hint' }, `It runs a traceroute towards ${target.address} (in ${target.prefix}) from probes in the country that you choose, and asks RIPEstat which network each hop belongs to. The probes of Globalping (globalping.io, up to ${PROBES}) are asked from this browser: Globalping sees your address, and the test uses ${PROBES} of the 250 measurements an hour that it allows to an address (${2 * PROBES} when it compares IPv4 and IPv6). The probes of RIPE Atlas (up to 8, one for each network) are asked by this site with its own account, which has a limit of measurements for each address and for each day; their results are public on atlas.ripe.net, and this page reads them from there. To check where each probe is, the page also asks PeeringDB for the exchange points and their sites, once a day, and compares the round trips with points whose place is known. How the check works: `,
       el('a', { href: '/guide.html#probe-place', text: 'the guide' }), '.'),
     status, out);
 }
@@ -1004,7 +1157,7 @@ function probeTable(probes, all, target, atRegistered) {
     const more = el('button', { type: 'button', class: 'linkish', 'aria-expanded': 'false', text: 'hops' });
     const v = r.verdict ? badge[r.verdict] : null;
     const elsewhere = r.place && r.place.misplaced;
-    const tr = el('tr', {}, el('th', { scope: 'row', class: 'probe', text: `${r.probe.city || 'A probe'}${r.probe.network ? ` · ${r.probe.network}` : ''}` }),
+    const tr = el('tr', {}, el('th', { scope: 'row', class: 'probe', text: probeTitle(r.probe) }),
       el('td', { class: 'mono pathcell', text: r.path.map((a) => `AS${a}`).join(' → ') || '–' }),
       el('td', { class: 'num', text: ms(r.net) }), el('td', { class: 'num', text: ms(r.lastRtt) }),
       el('td', {}, elsewhere ? el('span', { class: 'badge v-unknown', text: 'not where it is said to be' })
@@ -1042,7 +1195,8 @@ function traceCard(r, target) {
     el('td', { text: h.asn ? `AS${h.asn}` : (h.ip ? (AspaTraceroute.isPrivate(h.ip) ? 'private' : '–') : '') }),
     el('td', { class: 'num', text: rttText(h.rtt) })));
   return el('div', { class: 'trace' },
-    el('h4', { text: `${r.probe.city || 'A probe'}, ${countryName(r.probe.country)}${r.probe.asn ? ` · AS${r.probe.asn}${r.probe.network ? ` ${r.probe.network}` : ''}` : ''}` }),
+    el('h4', { text: r.probe.platform === 'atlas' ? `RIPE Atlas probe ${r.probe.id}, ${countryName(r.probe.country)}${r.probe.asn ? ` · AS${r.probe.asn}` : ''}`
+      : `${r.probe.city || 'A probe'}, ${countryName(r.probe.country)}${r.probe.asn ? ` · AS${r.probe.asn}${r.probe.network ? ` ${r.probe.network}` : ''}` : ''}` }),
     ...notes.map((t) => el('p', { class: 'hint', text: t })),
     el('details', { class: 'embed' }, el('summary', { text: `The ${r.hops.length} hops` }),
       el('section', { class: 'table-wrap card', tabindex: '0', 'aria-label': `Hops of the traceroute from ${r.probe.city || 'the probe'}` }, el('table', { class: 'checks live nb' },

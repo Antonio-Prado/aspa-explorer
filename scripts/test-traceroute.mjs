@@ -2,7 +2,8 @@
 import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
 
-const { hostIn, targetOf, parseIp, contains, prefixesOf, isPrivate, summarise, aggregate, pairProbes, comparePairs, distanceKm, lanPrefix, ixpsFrom, ixpIndex, ixpOf, placeCheck, FIBRE_KM_PER_MS } = createRequire(import.meta.url)('../site/traceroute.js');
+const { hostIn, targetOf, parseIp, contains, prefixesOf, isPrivate, summarise, aggregate, pairProbes, comparePairs, distanceKm, lanPrefix, ixpsFrom, ixpIndex, ixpOf, placeCheck, FIBRE_KM_PER_MS,
+  summariseAtlas, soiFloor, soiCheck, rootPlace, rootRefs, pickAnchors, anchorRefs } = createRequire(import.meta.url)('../site/traceroute.js');
 let passed = 0;
 const test = (name, fn) => { fn(); passed++; console.log('ok  ', name); };
 
@@ -220,6 +221,92 @@ test('a round trip long enough for the distance, a nearby site of the exchange, 
   assert.equal(placeCheck(probeAt(50.0, 8.7, [['80.81.196.146', 0.5]]), idx).misplaced, null);                // a probe in Frankfurt
   assert.deepEqual(placeCheck({ probe: { city: 'Milan' }, hops: [{ n: 1, ip: '80.81.196.146', rtt: 0.5 }] }, idx), { checked: 0, misplaced: null });
   assert.deepEqual(placeCheck(probeAt(45.464, 9.19, [['80.81.196.146', null], ['193.0.0.1', 0.5]]), idx), { checked: 0, misplaced: null });
+});
+
+test('a RIPE Atlas traceroute read like a Globalping one', () => {
+  const result = { prb_id: 6001, result: [
+    { hop: 1, result: [{ from: '192.168.1.1', rtt: 0.5 }, { from: '192.168.1.1', rtt: 0.4 }, { x: '*' }] },
+    { hop: 2, result: [{ from: '195.0.0.1', rtt: 3.2 }, { from: '195.0.0.9', rtt: 2.9 }, { from: '195.0.0.1', rtt: 3.0 }] },
+    { hop: 3, result: [{ x: '*' }, { x: '*' }, { x: '*' }] },
+    { hop: 4, result: [{ from: '193.0.0.1', rtt: 9.1 }, { from: '193.0.0.1', rtt: 8.7, ttl: 60 }] },
+    { hop: 255, result: [{ x: '*' }] },
+  ] };
+  const s = summariseAtlas(result, { id: 6001, country: 'NL', asn: 3333, latitude: 52.35, longitude: 4.9 }, (ip) => (ip.startsWith('195.') ? 1200 : 3333));
+  assert.deepEqual(s.hops.map((h) => [h.n, h.ip, h.rtt]), [[1, '192.168.1.1', 0.4], [2, '195.0.0.1', 3.0], [3, null, null], [4, '193.0.0.1', 8.7]]);
+  assert.deepEqual(s.path, [1200, 3333]);
+  assert.equal(s.probe.platform, 'atlas');
+  assert.equal(s.probe.id, 6001);
+  assert.equal(s.status, 'finished');
+  assert.equal(s.access, 3.0);                                                    // the first public address
+  assert.equal(s.net, 8.7 - 3.0);
+  assert.equal(summariseAtlas({ prb_id: 1, error: 'x' }, { id: 1 }, () => null).status, 'failed');
+});
+
+test('the SOI floor and the strongest of several proofs', () => {
+  assert.equal(soiFloor(80), 0);                                                  // within the margin
+  assert.ok(Math.abs(soiFloor(1100) - 10) < 0.01);                                // 1,000 km of fibre there and back: 10 ms
+  const milan = [45.464, 9.19];
+  const refs = [
+    { kind: 'anchor', anchor: 'de-fra', sites: [[50.11, 8.68]], rtt: 2 },        // Frankfurt, 507 km: at least 4.07 ms
+    { kind: 'anchor', anchor: 'us-iad', sites: [[39.04, -77.49]], rtt: 20 },     // Ashburn, 6,700 km: at least 66 ms, the stronger proof
+    { kind: 'anchor', anchor: 'it-mil', sites: [[45.47, 9.18]], rtt: 0.5 },      // Milan itself: fine
+    { kind: 'anchor', anchor: 'none', sites: [[1, 1]], rtt: null },             // no answer: not used
+  ];
+  const r = soiCheck(...milan, refs);
+  assert.equal(r.checked, 3);
+  assert.equal(r.misplaced.anchor, 'us-iad');
+  assert.equal(r.misplaced.sites, undefined);
+  assert.ok(r.misplaced.atLeast > 60);
+  assert.ok(r.misplaced.within > 2000 && r.misplaced.within < 2200);              // 100 km + 10 ms of fibre
+  assert.deepEqual(soiCheck(...milan, refs.slice(2)), { checked: 1, misplaced: null });
+  assert.deepEqual(soiCheck(undefined, 9, refs), { checked: 0, misplaced: null });
+});
+
+test('the instances of the root servers: the naming schemes of the operators, and nothing else', () => {
+  const cases = [
+    ['a', 'nnn1-ams5', 'AMS', null], ['a', 'nnn1-usmia-2b', 'MIA', 'US'], ['a', 'nnn1-jptyo-3', 'TYO', 'JP'],
+    ['b', 'b1-sin', 'SIN', null], ['c', 'fra1b.c.root-servers.org', 'FRA', null], ['e', 'c01.TPE.eroot', 'TPE', null], ['e', 'p04.ams.eroot', 'AMS', null],
+    ['f', 'TPE.cf.f.root-servers.org', 'TPE', null], ['f', 'ams1a.f.root-servers.org', 'AMS', null], ['h', '001.hkg.h.root-servers.org', 'HKG', null],
+    ['j', 'rootns-elgva1', 'GVA', null], ['j', 'rootns-ams6', 'AMS', null], ['j', 'rootns-elp2', 'ELP', null], ['j', 'nnn1-ams1', 'AMS', null],
+    ['k', 'ns1.nl-ams.k.ripe.net', 'AMS', 'NL'], ['l', 'de-ham-aa', 'HAM', 'DE'], ['l', 'flr01.l.root-servers.org', 'FLR', null],
+    ['m', 'M-ORY-2', 'ORY', null], ['m', 'M-NRT-DIXIE-1', 'NRT', null],
+  ];
+  for (const [l, h, code, cc] of cases) assert.deepEqual(rootPlace(l, h), { code, cc }, `${l} ${h}`);
+  for (const [l, h] of [['a', 'OPNsense.internal'], ['b', 'wall.obskure.net'], ['c', 'gw01.jacobsylvia.com'], ['l', 'There is no hostname, only Zuul!'],
+    ['g', 'groot-eur1-1'], ['d', 'mcva3.droot.maxgigapop.net'], ['i', 's1.mtv'], ['k', 'ns1.nl-ams.k.ripe.net.evil'], ['m', 'm-ory-2'], ['x', 'b1-sin']]) {
+    assert.equal(rootPlace(l, h), null, `${l} ${h}`);
+  }
+});
+
+test('reference points from the roots: only the instances whose place has been checked', () => {
+  const sites = { k: { 'ns1.nl-ams.k.ripe.net': [52.31, 4.76, 'AMS'] }, m: { 'M-ORY-2': [48.72, 2.38, 'ORY'] } };
+  const refs = rootRefs([{ letter: 'k', hostname: 'ns1.nl-ams.k.ripe.net', rtt: 1.1 }, { letter: 'm', hostname: 'M-CDG-2', rtt: 9 },
+    { letter: 'a', hostname: 'OPNsense.internal', rtt: 0.2 }, { letter: 'm', hostname: 'M-ORY-2', rtt: null }], sites);
+  assert.deepEqual(refs, [{ kind: 'root', letter: 'k', hostname: 'ns1.nl-ams.k.ripe.net', code: 'AMS', sites: [[52.31, 4.76]], rtt: 1.1, margin: 300 }]);
+  // a probe declared in Milan that reaches the instance of Amsterdam in 1.1 ms is not in Milan; with the margin of a root, it can be
+  // up to 300 km + 0.55 ms of fibre from Amsterdam
+  const m = soiCheck(45.464, 9.19, refs).misplaced;
+  assert.equal(m.code, 'AMS');
+  assert.equal(m.margin, 300);
+  assert.equal(m.within, 410);
+  // a probe declared in Brussels (about 170 km away) is within the margin of the instance of Amsterdam
+  assert.equal(soiCheck(50.85, 4.35, refs).misplaced, null);
+});
+
+test('the anchors to ping: spread in the country, and one near each point of the world', () => {
+  const A = (id, country, latitude, longitude) => ({ id, ip: `192.0.2.${id}`, country, latitude, longitude, city: `c${id}` });
+  const anchors = [A(1, 'IT', 45.46, 9.19), A(2, 'IT', 41.9, 12.5), A(3, 'IT', 45.07, 7.69), A(4, 'IT', 38.12, 13.36), A(5, 'DE', 50.11, 8.68),
+    A(6, 'US', 39.04, -77.49), A(7, 'JP', 35.68, 139.69), A(8, 'IT', 44.49, 11.34), { id: 9, ip: null, country: 'IT', latitude: 1, longitude: 1 }];
+  const picked = pickAnchors(anchors, 'IT', 3, [[50.11, 8.68], [39.04, -77.49], [35.68, 139.69]]);
+  const ids = picked.map((a) => a.id);
+  assert.equal(ids.length, 6);
+  assert.deepEqual(ids.slice(3), [5, 6, 7]);                                      // the points of the world
+  assert.ok(ids.slice(0, 3).every((id) => [1, 2, 3, 4, 8].includes(id)));
+  assert.ok(ids.includes(4));                                                     // Palermo, the farthest from the others, is taken
+  assert.ok(!ids.includes(9));                                                    // an anchor without an address is not
+  assert.deepEqual(pickAnchors(anchors, 'FR', 3, [[50.11, 8.68]]).map((a) => a.id), [5]);
+  assert.deepEqual(anchorRefs([{ anchor: anchors[4], rtt: 1.2 }, { anchor: anchors[5], rtt: null }]),
+    [{ kind: 'anchor', anchor: '192.0.2.5', city: 'c5', country: 'DE', sites: [[50.11, 8.68]], rtt: 1.2 }]);
 });
 
 console.log(`${passed} tests passed`);

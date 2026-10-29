@@ -1,0 +1,25 @@
+#!/bin/sh
+#
+# PROVIDE: aspa_atlas
+# REQUIRE: LOGIN NETWORKING
+# KEYWORD: shutdown
+#
+# rc.d script of the RIPE Atlas service of the tromboning test (atlas/main.mjs). Install as /usr/local/etc/rc.d/aspa_atlas and
+# add aspa_atlas_enable="YES" to /etc/rc.conf. daemon(8) supervises and restarts the service;
+# chroot(8) with -u only drops privileges to the service user (the root directory stays /). The
+# variable is not called aspa_atlas_user because rc.subr would then run daemon itself as that user.
+. /etc/rc.subr
+
+name=aspa_atlas
+rcvar=aspa_atlas_enable
+load_rc_config $name
+: ${aspa_atlas_enable:=NO}
+: ${aspa_atlas_runas:=aspaatlas}
+: ${aspa_atlas_dir:=/usr/local/libexec/aspa-atlas}
+
+pidfile=/var/run/${name}.pid
+logfile=/var/log/aspa-atlas.log
+command=/usr/sbin/daemon
+command_args="-r -P ${pidfile} -o ${logfile} /usr/sbin/chroot -u ${aspa_atlas_runas} -g ${aspa_atlas_runas} -G ${aspa_atlas_runas} / /usr/local/bin/node --disable-warning=ExperimentalWarning ${aspa_atlas_dir}/atlas/main.mjs"
+
+run_rc_command "$1"

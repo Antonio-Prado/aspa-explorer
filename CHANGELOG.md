@@ -5,6 +5,16 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.54.0] - 2026-10-29
+
+### Added
+- Tromboning test: the probes can also be of RIPE Atlas, besides Globalping (a menu next to the button: both, which is the default, or one of the two). The page cannot hold the key of a RIPE Atlas account, so a new service of this site (`atlas/main.mjs`, behind nginx at `/api/v1/atlas/`, with its own rc.d script `deploy/freebsd/aspa_atlas`) creates the measurements for it: it checks that the address to aim at is inside a prefix that the AS announces (RIPEstat), chooses up to eight connected public probes of the country, one for each network, and creates a one-off traceroute for each family and pings from the same probes to anchors of RIPE Atlas. It keeps a limit for each address and for each day, and three tests in flight at most. The page reads the results, which are public, from RIPE Atlas; the comparison of IPv4 and IPv6 runs the two traceroutes on the same probes, told apart by their numbers.
+- The check of the place of the probes uses two new kinds of reference points besides the exchange points, with the same rule (a round trip shorter than light in fibre allows from the declared place proves that the probe is elsewhere): the anchors of RIPE Atlas (a few in the country and one near each of eleven points of the world), pinged by the probes of RIPE Atlas and, if the visitor asks for it, by those of Globalping; and, for the probes of RIPE Atlas, the instances of the DNS root servers that answer them in the built-in `hostname.bind` measurements, the method of Izhikevich and others (IMC 2026). The place of an instance is read from the code of its city or airport in the naming scheme of each operator (A, B, C, E, F, H, J, K, L and M; G, D and I are not read), and kept only when the anchors confirm it (`scripts/build-root-sites.mjs`, `site/data/root-sites.json`); its margin is 300 km instead of 100. On all the connected probes of 29 October, 1.1% of them are not where their hosts place them by this check.
+- `site/traceroute.js`: `summariseAtlas`, `soiCheck`, `soiFloor`, `rootPlace`, `rootRefs`, `pickAnchors`, `anchorRefs`, with tests; `scripts/test-atlas.mjs` tests the service with RIPEstat and RIPE Atlas faked.
+
+### Changed
+- The content security policy allows `https://atlas.ripe.net` in `connect-src`. The guide explains the probes of RIPE Atlas, what this site and RIPE Atlas see, and the three kinds of reference points.
+
 ## [1.53.6] - 2026-10-28
 
 ### Fixed
