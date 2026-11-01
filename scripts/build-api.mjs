@@ -162,10 +162,17 @@ export function toCsv(rows) {
 
 // ---------- the context ----------
 
-export function makeContext(data, events, unseen, generated) {
-  const aspas = (data.aspas || []).map((a) => ({
-    customer: a.customer, providers: a.providers, source: a.source || [],
+// The AS numbers become file names (badge/AS<n>.svg) and markup: only "AS" and digits are taken. Routinator and the history branch write
+// nothing else; anything different is dropped here rather than trusted.
+export const AS_RE = /^AS\d{1,10}$/;
+const isAs = (s) => typeof s === 'string' && AS_RE.test(s);
+
+export function makeContext(data, rawEvents, unseen, generated) {
+  const aspas = (data.aspas || []).filter((a) => a && isAs(a.customer) && Array.isArray(a.providers)).map((a) => ({
+    customer: a.customer, providers: a.providers.filter(isAs), source: a.source || [],
   }));
+  const events = (rawEvents || []).filter((e) => Array.isArray(e) && isAs(e[1]) && (e[2] == null || Array.isArray(e[2])))
+    .map(([date, customer, providers]) => [date, customer, providers == null ? providers : providers.filter(isAs)]);
   // one entry per customer, the way the page merges them
   const byCustomer = new Map();
   for (const a of aspas) {

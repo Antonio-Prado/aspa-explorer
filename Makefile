@@ -6,7 +6,7 @@ js:
 	sh scripts/check-js.sh
 
 html:
-	npx --yes html-validate@9 site/index.html site/guide.html site/api.html site/subscription.html site/statistics.html site/incidents.html site/status.html site/examples.html site/embed.html site/report.html
+	npx --yes html-validate@9.7.1 site/index.html site/guide.html site/api.html site/subscription.html site/statistics.html site/incidents.html site/status.html site/examples.html site/embed.html site/report.html
 
 # Validates the nginx configuration with a throwaway certificate.
 nginx:
@@ -17,7 +17,7 @@ version:
 
 # Static analysis of the browser code: no innerHTML, eval and similar sinks.
 lint-security:
-	npx --yes eslint@9 --no-config-lookup -c eslint.config.mjs site/*.js
+	npx --yes eslint@9.39.5 --no-config-lookup -c eslint.config.mjs site/*.js
 
 # Secret scan of the whole git history (needs gitleaks: https://github.com/gitleaks/gitleaks).
 secrets:

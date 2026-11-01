@@ -27,7 +27,7 @@ export function atomFeed(events, { site, classify, old = null, now = new Date() 
     const what = (e) => (e.kind === 'new' ? `new, providers ${e.providers.join(', ')}`
       : e.kind === 'removed' ? 'removed'
         : `providers ${[...e.added.map((p) => `+${p}`), ...e.dropped.map((p) => `-${p}`)].join(' ')}`);
-    const items = ev.slice(0, 200).map((e) => `<li><a href="${site}/#${e.customer}">${e.customer}</a>: ${esc(what(e))}</li>`).join('');
+    const items = ev.slice(0, 200).map((e) => `<li><a href="${esc(site)}/#${esc(e.customer)}">${esc(e.customer)}</a>: ${esc(what(e))}</li>`).join('');
     const more = ev.length > 200 ? `<p>and ${ev.length - 200} more</p>` : '';
     const content = esc(`<ul>${items}</ul>${more}`);
     const was = before[d];

@@ -10,14 +10,19 @@ export const MAX_FAILS = 5;
 export const MAX_ROUNDS = 50;                                   // rounds in one drain: the rest waits for the next one, a minute later
 export const MAX_AGE = 2 * 86400;                              // a message that is older than this is not worth sending any more
 export const RETRY = [600, 1800, 3600, 7200, 14400];           // seconds to wait after the 1st, 2nd, ... failed attempt
+// milliseconds that one subscription may use in one round: a receiver that answers just before the deadline every time is never a failure, and without
+// a budget it would hold a worker for ten slow deliveries in a row while the other subscriptions wait. What is left goes in the next round.
+export const ROUND_BUDGET_MS = 30000;
 
-export function makeOutbox({ store, send, log = () => {}, now = () => Math.floor(Date.now() / 1000), concurrency = 8 }) {
+export function makeOutbox({ store, send, log = () => {}, now = () => Math.floor(Date.now() / 1000), concurrency = 8, clock = () => Date.now(), budgetMs = ROUND_BUDGET_MS }) {
   // `job` is plain data (it goes to the database as JSON); `send(sub, job, row)` throws when the message did not go (`row.id` names the message, and stays
   // the same through every attempt).
   const enqueue = (subId, job) => store.outboxAdd(subId, JSON.stringify(job), now());
 
   async function oneSubscription(subId, rows) {
+    const started = clock();
     for (const row of rows) {
+      if (clock() - started >= budgetMs) return;                                     // the rest of its queue waits for the next round, in order
       const sub = store.get(subId);
       if (!sub || sub.status !== 'active') { store.outboxDone(row.id); continue; }     // unsubscribed or disabled meanwhile
       if (now() - row.created > MAX_AGE) { store.outboxDone(row.id); log(`message ${row.id} for subscription ${subId} dropped: older than two days`); continue; }

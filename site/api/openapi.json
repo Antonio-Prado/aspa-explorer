@@ -238,7 +238,7 @@
             "description": "Webhook already subscribed"
           },
           "429": {
-            "description": "Too many requests"
+            "description": "Too many requests: from your address (an IPv6 address counts with its /64), for the AS, or confirmation messages to this address from your network today (at most three)"
           }
         }
       }

@@ -11,11 +11,20 @@ const BRANCH = process.env.ARCHIVE_BRANCH || 'history';
 export const FILES = ['history', 'events', 'visibility'];
 const UA = 'aspa-explorer (https://aspa.ping6.it; antonio.prado@dei.unipd.it)';
 
-// text -> text of a JSON that is worth publishing: it parses, and a list or an object that is not empty
-export function valid(text) {
+const DAY = /^\d{4}-\d{2}-\d{2}$/, AS = /^AS\d{1,10}$/;
+// The shape of each file, as log-snapshot.mjs writes it: the builders and the pages use these values as AS numbers, dates and names of files.
+const SHAPES = {
+  events: (v) => Array.isArray(v) && v.every((e) => Array.isArray(e) && DAY.test(e[0]) && AS.test(e[1]) && (e[2] === null || (Array.isArray(e[2]) && e[2].every((p) => AS.test(p))))),
+  history: (v) => Array.isArray(v) && v.every((r) => r && typeof r === 'object' && DAY.test(r.date)),
+  visibility: (v) => (Array.isArray(v) ? v : v && Array.isArray(v.unseen) ? v.unseen : null)?.every((a) => AS.test(a)) === true,
+};
+
+// text -> text of a JSON that is worth publishing: it parses, a list or an object that is not empty, and (for a file named) of the shape of that file
+export function valid(text, name = null) {
   let v;
   try { v = JSON.parse(text); } catch { return false; }
-  return Array.isArray(v) ? v.length > 0 : v !== null && typeof v === 'object' && Object.keys(v).length > 0;
+  const some = Array.isArray(v) ? v.length > 0 : v !== null && typeof v === 'object' && Object.keys(v).length > 0;
+  return some && (!name || !SHAPES[name] || SHAPES[name](v));
 }
 
 async function main() {
@@ -27,7 +36,7 @@ async function main() {
       const r = await fetch(`${PROJECT}/${name}.json/raw?ref=${BRANCH}`, { headers: { 'User-Agent': UA }, signal: AbortSignal.timeout(60000) });
       if (!r.ok) throw new Error(`HTTP ${r.status}`);
       const raw = await r.text();
-      if (!valid(raw)) throw new Error('not a JSON that can be published');
+      if (!valid(raw, name)) throw new Error('not a JSON of the expected shape, not published');
       const text = JSON.stringify(JSON.parse(raw));          // what is written is the parsed JSON, not the text of the network
       const file = join(dir, `${name}.json`);
       let old = null;

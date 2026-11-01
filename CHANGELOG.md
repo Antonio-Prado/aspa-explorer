@@ -9,6 +9,32 @@ A few numbers were deployed and folded into the next release without a tag of th
 
 ## [Unreleased]
 
+## [1.57.0] - 2026-11-01
+
+A security review of the whole code: the limits of the notifier and of the RIPE Atlas service, the agreement between nginx and the services on the route of a request, and the inputs of the builders.
+
+### Security
+- RIPE Atlas test: a request that is refused (a target outside the prefixes of the AS, a country without probes) no longer uses the budget of the day; 150 refused requests used to switch the test off for everybody until the next day. A separate, larger cap bounds the lookups that refused requests cause.
+- RIPE Atlas test: the place among the three measurements in flight is taken before the first lookup, and given back when no measurement is created; concurrent requests could all pass the check and create more than three at once.
+- RIPE Atlas test: the measurement is created only for requests of the pages of the site (Origin and `application/json` are checked, as the notifier already did), and the target is sent written the one way it was checked.
+- Notifications: requests that nobody confirmed no longer count towards the 20 subscriptions of an address. Anybody could fill the 20 places of somebody else's address with requests renewed every day, and the owner's own request was then dropped without a word. A network can now ask for at most three confirmation messages to one address a day, which also keeps a mailbox from being filled with them.
+- The limits for each address of the notifier and of the RIPE Atlas service count an IPv6 address by its /64, which one host usually has to itself; when the tables of the limits are full, the keys used least recently are forgotten one at a time instead of all at once.
+- The notifier and the RIPE Atlas service refuse a path that the URL parser would change (`\`, `..`): nginx chose the location, and its limits, by the path as sent, while the service would have answered another route.
+- nginx: `/data/validity/` refuses a prefix with `..`; `/changes.atom` has a rate limit and one cached copy whatever the query string; `server_tokens off` and `Strict-Transport-Security`.
+- Builders: AS numbers that are not `AS` and digits are dropped before they become names of files or markup (`build-api.mjs`); the customer is escaped in the HTML of the entries of `changes.atom`; the files of the `history` branch are published only with their expected shape; the downloads of the table dumps accept only https and stop at 2 GiB; a day of `watch-invalid.mjs` keeps at most 200,000 pairs of prefix and origin, and only prefixes; `build-validators.mjs` refuses a server that ignores the byte range; `build-trends.mjs` and `build-resources.mjs` ignore dates and delegation records that are out of range.
+- CI: the scheduled and publishing jobs, which hold the protected variables, also ask for a protected ref; the token of `mirror-wiki.sh` is masked as plain text (a `/` or `&` in it broke the mask); the GitHub actions are pinned to a commit; `html-validate` and `eslint` are pinned to a version.
+
+### Fixed
+- The notifier refuses to start with an empty key for the links, which would have signed every link with nothing; a mail header can never carry a line break, whatever the configuration.
+- The link of a subscription that was switched off after failed deliveries said it was active; it now says to subscribe again.
+- A subscription that answers just before the deadline every time no longer holds a worker of the delivery for its whole queue: it has 30 seconds a round, and the rest waits for the next round.
+- The size of the stored reports is counted once and then kept up to date, instead of read from every report at each new report and each health check.
+- `incident.py`: an error halfway through a file no longer leaves what that file added in the open incidents, so the file read again the next day is not counted twice.
+- A page address with a broken `%` after `#` no longer stops the page; the link of a shared result is checked again in the page before it is made.
+
+### Added
+- `tools/data_scripts/requirements.txt` pins the Python package used on the host.
+
 ## [1.56.0] - 2026-10-29
 
 A review of all the documentation (site, guide, README, wiki and the other documents of the repository) against the code and the data, with the defects it found in the code.

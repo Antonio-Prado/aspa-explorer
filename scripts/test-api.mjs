@@ -91,4 +91,13 @@ test('the full list: one row per ASPA, as JSON rows and as CSV', () => {
   assert.equal(toCsv([{ customer: 'AS1', providers: ['AS0'], rir: 'a,b"c', valid_from: null, valid_until: null }]).split('\n')[1], 'AS1,AS0,"a,b""c",,');
 });
 
+test('AS numbers that are not AS and digits are dropped before they become file names or markup', () => {
+  const bad = makeContext({ aspas: [
+    { customer: 'AS../../x', providers: ['AS1'], source: [] },
+    { customer: 'AS7', providers: ['AS1', 'AS"><x', '../y'], source: [] },
+  ] }, [['2026-10-01', 'AS../z', ['AS1']], ['2026-10-02', 'AS8', ['AS2', '<b>']], ['2026-10-03', 'AS9', 'nope']], null, '2026-10-17T00:00:00Z');
+  assert.deepEqual(subjects(bad), ['AS1', 'AS2', 'AS7', 'AS8']);
+  assert.deepEqual(bad.byCustomer.get('AS7').providers, ['AS1']);
+});
+
 console.log(`${passed} tests passed`);

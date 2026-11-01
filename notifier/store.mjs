@@ -64,8 +64,9 @@ export function openStore(path) {
     failed: db.prepare('UPDATE subscriptions SET fails = fails + 1 WHERE id = ?'),
     disable: db.prepare('UPDATE subscriptions SET status = \'disabled\', disabled_at = ? WHERE id = ?'),
     purge: db.prepare('DELETE FROM subscriptions WHERE status = \'pending\' AND attempted < ?'),
-    // the limit for an address counts the subscriptions that are not switched off: those do not hold a place
-    perTarget: db.prepare('SELECT COUNT(*) AS n FROM subscriptions WHERE kind = ? AND target = ? AND status != \'disabled\''),
+    // the limit for an address counts the subscriptions that work: the ones switched off do not hold a place, and neither do the requests that
+    // nobody has confirmed, which anybody can make for any address (they are bounded by the confirmations a network may ask for, see server.mjs)
+    perTarget: db.prepare('SELECT COUNT(*) AS n FROM subscriptions WHERE kind = ? AND target = ? AND status = \'active\''),
     purgeDisabled: db.prepare('DELETE FROM subscriptions WHERE status = \'disabled\' AND disabled_at < ?'),
     // the limit of an AS is on the subscriptions that are working: the ones that nobody has confirmed (and are deleted after two days) must not fill it
     perAsn: db.prepare('SELECT COUNT(*) AS n FROM subscriptions WHERE asn = ? AND status = \'active\''),
@@ -93,6 +94,8 @@ export function openStore(path) {
     setState: db.prepare('INSERT INTO state (key, value) VALUES (?, ?) ON CONFLICT (key) DO UPDATE SET value = excluded.value'),
   };
   const plain = (r) => (r ? { ...r } : null);
+  // the bytes of the reports, counted once and then kept up to date (the SUM reads every report, and it is asked at each new report and each health check)
+  let reportBytes = null;
   return {
     find: (kind, target, asn) => plain(q.find.get(kind, target, asn)),
     get: (id) => plain(q.byId.get(id)),
@@ -115,9 +118,9 @@ export function openStore(path) {
     countPending: () => q.pendingAll.get().n,
     repend: (id) => q.repend.run(id),
     counts: () => q.counts.all().map(plain),
-    addReport: (id, now, kind, title, body) => q.addReport.run(id, now, kind, title, body),
+    addReport: (id, now, kind, title, body) => { q.addReport.run(id, now, kind, title, body); if (reportBytes !== null) reportBytes += Buffer.byteLength(body); },
     getReport: (id) => { const r = q.getReport.get(id); return r ? { ...r, body: JSON.parse(r.body) } : null; },
-    purgeReports: (olderThan) => Number(q.purgeReports.run(olderThan).changes),
+    purgeReports: (olderThan) => { const n = Number(q.purgeReports.run(olderThan).changes); if (n) reportBytes = null; return n; },
     countReports: () => q.countReports.get().n,
     // bytes, not characters: LENGTH() of a TEXT value counts the characters, and an emoji is one of them and four bytes
     outboxAdd: (subId, job, now) => Number(q.outboxAdd.run(subId, job, now, now).lastInsertRowid),
@@ -129,7 +132,7 @@ export function openStore(path) {
     outboxCount: () => q.outboxCount.get().n,
     outboxOldest: () => q.outboxOldest.get().t,
     countDisabled: () => q.disabledCount.get().n,
-    reportBytes: () => Number(q.reportBytes.get().n),
+    reportBytes: () => (reportBytes === null ? (reportBytes = Number(q.reportBytes.get().n)) : reportBytes),
     getState: (key) => { const r = q.getState.get(key); return r ? JSON.parse(r.value) : null; },
     setState: (key, value) => q.setState.run(key, JSON.stringify(value)),
     // several writes that stand or fall together: what is queued and the state that says it was seen

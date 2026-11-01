@@ -22,7 +22,7 @@ import { createRequire } from 'node:module';
 import { mkdir, readFile, writeFile, rename, stat, readdir, unlink } from 'node:fs/promises';
 import { createWriteStream } from 'node:fs';
 import { pipeline } from 'node:stream/promises';
-import { Readable } from 'node:stream';
+import { Readable, Transform } from 'node:stream';
 import { join } from 'node:path';
 import net from 'node:net';
 import { readRib, openDump } from './mrt.mjs';
@@ -312,12 +312,18 @@ async function downloadDay(collector, day, path) {
   }
 }
 
+// a table dump of a collector is a few hundred MB: anything far larger is not one, and is not kept
+export const MAX_DUMP_BYTES = 2 * 1024 ** 3;
+
 async function download(url, path) {
+  if (!String(url).startsWith('https://')) throw new Error(`${url}: only https addresses are fetched`);
   const tmp = `${path}.tmp`;
   await withRetry(async () => {
     const r = await fetch(url, { headers: { 'User-Agent': UA }, signal: AbortSignal.timeout(300000) });
     if (!r.ok) throw new Error(`${url}: HTTP ${r.status}`);
-    await pipeline(Readable.fromWeb(r.body), createWriteStream(tmp));
+    let size = 0;
+    const cap = new Transform({ transform(chunk, _enc, done) { size += chunk.length; done(size > MAX_DUMP_BYTES ? new Error(`${url}: larger than ${MAX_DUMP_BYTES} bytes`) : null, chunk); } });
+    await pipeline(Readable.fromWeb(r.body), cap, createWriteStream(tmp));
   });
   await rename(tmp, path);
 }

@@ -38,7 +38,7 @@ When a page asset changes (script, style), change its `?v=` as well: the CDN in 
 
 ## Scheduled jobs
 
-Four jobs run only from pipeline schedules (variable `SCHEDULE`), on the runner of the host that serves the page; the fourth, `mirror-wiki` (daily, `SCHEDULE=wiki`), is described above:
+Four jobs run only from pipeline schedules (variable `SCHEDULE`), on the runner of the host that serves the page; the fourth, `mirror-wiki` (daily, `SCHEDULE=wiki`), is described above. That runner takes only jobs of protected refs, and the rules of these jobs and of the publishing ones also ask for `$CI_COMMIT_REF_PROTECTED == "true"`, so that they fail closed if that setting changes: they hold the protected variables.
 
 - `host-package-audit` (weekly, `SCHEDULE=audit`): `pkg audit` on the host, including the FreeBSD base system. The job fails, and GitLab sends the usual pipeline-failure email, when an installed package has a known vulnerability for which the repository already offers a fix; vulnerabilities without a fix yet only produce a warning. A daily root cron job refreshes the vulnerability database (`deploy/freebsd/`).
 - `aspa-snapshot` (daily, `SCHEDULE=snapshot`): logs the number of ASPAs, provider ASes and the split per RIR as a run of the project's model experiment, so *Analyze > Model experiments* charts the adoption of ASPA over time (`scripts/log-snapshot.mjs`). The same run commits the day's row, events and Atom feed to the `history` branch and the visibility file.

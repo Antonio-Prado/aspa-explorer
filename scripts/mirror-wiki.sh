@@ -19,12 +19,13 @@ git_as() {   # git_as USER TOKEN git-arguments...
   GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0=http.extraHeader GIT_CONFIG_VALUE_0="$header" git "$@"
 }
 
-# The output of git goes through sed to hide the token, and in a pipe the status is the one of sed: git is run first, its status kept, and then the output is filtered.
+# The output of git is filtered to hide the token, and in a pipe the status is the one of the filter: git is run first, its status kept, and then the
+# output is filtered. The token is matched as plain text (awk index), not as a sed pattern, in which a '/', '&' or '.' of the token would break the mask.
 masked() {   # masked TOKEN command...: runs the command, prints its output without the token, returns its status
   token=$1; shift
   status=0
   out=$("$@" 2>&1) || status=$?
-  [ -z "$out" ] || printf '%s\n' "$out" | sed "s/${token}/***/g"
+  [ -z "$out" ] || printf '%s\n' "$out" | MASK="$token" awk '{ t = ENVIRON["MASK"]; if (t != "") while ((i = index($0, t)) > 0) $0 = substr($0, 1, i - 1) "***" substr($0, i + length(t)); print }'
   return "$status"
 }
 

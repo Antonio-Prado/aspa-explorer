@@ -44,6 +44,11 @@ export function announcementsOf(data, ixp = new Set()) {
 export const dayOf = (ms) => new Date(ms).toISOString().slice(0, 10);
 export const blankDay = (date) => ({ date, hours: Array.from({ length: 24 }, () => ({ seconds: 0, messages: 0, announcements: 0, valid: 0, unknown: 0, invalid: 0, peak_ann: 0, peak_inv: 0 })), origins: {}, prefixes: {} });
 
+// The (prefix, origin) pairs kept for one day: the prefixes come from the BGP peers of RIS, and a day file is read again at every run, so it has a size
+// limit; the pairs beyond it are only counted (prefixes_omitted). A prefix that is not written as a prefix is not kept either.
+export const MAX_DAY_PREFIXES = 200000;
+const PREFIX_RE = /^[0-9a-f.:]{2,39}\/\d{1,3}$/i;
+
 // One announcement into a day: `verdict` 0 valid, 1 unknown, 2 invalid.
 export function count(day, ms, origin, prefix, verdict) {
   const h = day.hours[new Date(ms).getUTCHours()];
@@ -52,7 +57,13 @@ export function count(day, ms, origin, prefix, verdict) {
   o[0]++;
   if (verdict === 2) {
     o[1]++;
+    if (!PREFIX_RE.test(String(prefix))) return;
     const k = `${prefix}|${origin}`;
+    if (day.prefixes[k] === undefined) {
+      if (day.prefixes_kept === undefined) day.prefixes_kept = Object.keys(day.prefixes).length;     // a day file written before the limit
+      if (day.prefixes_kept >= MAX_DAY_PREFIXES) { day.prefixes_omitted = (day.prefixes_omitted || 0) + 1; return; }
+      day.prefixes_kept++;
+    }
     day.prefixes[k] = (day.prefixes[k] || 0) + 1;
   }
 }

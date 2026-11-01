@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { announcementsOf, blankDay, count, buildReport, dayOf, buildLast, collection, makeDays } from './watch-invalid.mjs';
+import { announcementsOf, blankDay, count, buildReport, dayOf, buildLast, collection, makeDays, MAX_DAY_PREFIXES } from './watch-invalid.mjs';
 
 let passed = 0;
 const test = (name, fn) => { fn(); passed++; console.log('ok  ', name); };
@@ -117,6 +117,21 @@ test('a run that crosses midnight UTC puts each announcement in the day it arriv
   assert.equal(before.date, '2026-10-20');
   assert.equal(after.date, '2026-10-21');
   assert.equal(days.size, 2);
+});
+
+test('a day keeps a bounded number of (prefix, origin) pairs, and only prefixes', () => {
+  const d = blankDay('2026-10-18');
+  const at = Date.parse('2026-10-18T10:00:00Z');
+  count(d, at, 9, 'not a prefix', 2);
+  count(d, at, 9, '192.0.2.0/24|x', 2);
+  assert.deepEqual(d.prefixes, {});
+  assert.equal(d.origins[9][1], 2);                                             // still counted for the origin
+  d.prefixes_kept = MAX_DAY_PREFIXES - 1;
+  count(d, at, 9, '192.0.2.0/24', 2);
+  count(d, at, 9, '198.51.100.0/24', 2);                                        // one pair too many: only counted
+  count(d, at, 9, '192.0.2.0/24', 2);                                           // a pair that is there goes on counting
+  assert.deepEqual(d.prefixes, { '192.0.2.0/24|9': 2 });
+  assert.equal(d.prefixes_omitted, 1);
 });
 
 console.log(`${passed} tests passed`);

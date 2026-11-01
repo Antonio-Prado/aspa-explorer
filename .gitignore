@@ -6,3 +6,10 @@ tmp/
 *.key
 .env
 __pycache__/
+.env.*
+*.db
+*.db-wal
+*.db-shm
+*.sqlite
+# the key of the RIPE Atlas account has no extension
+key

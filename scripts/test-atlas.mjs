@@ -1,6 +1,8 @@
 // Unit tests for atlas/api.mjs, with RIPEstat and RIPE Atlas faked. Run with: node scripts/test-atlas.mjs
 import assert from 'node:assert/strict';
-import { makeAtlasApi, parseAsn, limiter, PROBES } from '../atlas/api.mjs';
+import { makeAtlasApi, parseAsn, limiter, PROBES, quotaKey, canonicalIp } from '../atlas/api.mjs';
+import { createRequire } from 'node:module';
+const T = createRequire(import.meta.url)('../site/traceroute.js');
 
 let passed = 0;
 const test = async (name, fn) => { await fn(); passed++; console.log('ok  ', name); };
@@ -90,6 +92,61 @@ await test('the anchors for a country, without measuring anything', async () => 
   assert.deepEqual(r.body.anchors.slice(0, 2).map((a) => a.city).sort(), ['Milan', 'Rome']);
   assert.equal((await api.anchorsFor({ country: '1' })).status, 400);
   assert.equal(calls.created.length, 0);
+});
+
+await test('the quota key: one IPv6 /64 is one visitor, and the target is sent as the address that was checked', () => {
+  assert.equal(quotaKey('2001:db8:1:2::1'), quotaKey('2001:db8:1:2:ffff::9'));
+  assert.notEqual(quotaKey('2001:db8:1:2::1'), quotaKey('2001:db8:1:3::1'));
+  assert.notEqual(quotaKey('198.51.100.1'), quotaKey('198.51.100.2'));
+  assert.equal(quotaKey('::ffff:198.51.100.1'), quotaKey('198.51.100.1'));
+  assert.equal(canonicalIp(T.parseIp('193.000.0.001')), '193.0.0.1');
+  assert.equal(canonicalIp(T.parseIp('2001:067C:02E8:0000:0000:0000:0000:0001')), '2001:67c:2e8::1');
+  assert.equal(canonicalIp(T.parseIp('2001:db8:0:1:0:0:0:1')), '2001:db8:0:1::1');
+  assert.equal(canonicalIp(T.parseIp('2001:db8:1:2:3:4:5:6')), '2001:db8:1:2:3:4:5:6');
+});
+
+await test('requests that create no measurement do not use the budget of the day, and one /64 has one per-address limit', async () => {
+  const { api, calls } = fake({ perDay: limiter(2, 86400), perIp: limiter(6, 3600) });
+  for (let i = 1; i <= 20; i++) {
+    const r = await api.measure({ asn: 3333, country: 'IT', targets: { v4: '8.8.8.8' } }, `198.51.100.${i}`);
+    assert.equal(r.status, 400);
+  }
+  assert.equal(calls.created.length, 0);
+  assert.equal((await api.measure({ asn: 3333, country: 'IT', targets: { v4: '193.0.0.1' } }, '198.51.100.200')).status, 200);   // the budget is still there
+  const statuses = [];
+  for (let i = 1; i <= 7; i++) statuses.push((await api.measure({ asn: 3333, country: 'FR', targets: { v4: '193.0.0.1' } }, `2001:db8:1:2::${i}`)).status);
+  assert.deepEqual(statuses, [404, 404, 404, 404, 404, 404, 429]);         // seven addresses of one /64 share its six
+});
+
+await test('the measurements in flight: concurrent requests cannot go past the limit', async () => {
+  let open; const gate = new Promise((r) => { open = r; });
+  const created = [];
+  const answers = (url) => (url.includes('announced-prefixes') ? { data: { prefixes: [{ prefix: '193.0.0.0/21' }] } }
+    : url.includes('is_anchor=true') ? { results: [{ id: 101 }], next: null }
+      : url.includes('/anchors/') ? { results: [ANCHORS[0]], next: null }
+        : { results: PROBES_IT, next: null });
+  const slow = makeAtlasApi({
+    getJson: async (url) => { await gate; return answers(url); },             // the upstream answers only after every request has arrived
+    createMeasurements: async (body) => { created.push(body); return body.definitions.map((_, i) => i + 1); },
+    maxRunning: 3,
+  });
+  const pending = Array.from({ length: 12 }, (_, i) => slow.measure({ asn: 3333, country: 'IT', targets: { v4: '193.0.0.1' } }, `198.51.100.${i + 1}`));
+  open();
+  const statuses = (await Promise.all(pending)).map((r) => r.status);
+  assert.equal(statuses.filter((s) => s === 200).length, 3);
+  assert.equal(statuses.filter((s) => s === 429).length, 9);
+  assert.equal(created.length, 3);
+});
+
+await test('a request that fails after taking a place gives it back', async () => {
+  const { api } = fake({ maxRunning: 1, perIp: () => true });
+  assert.equal((await api.measure({ asn: 3333, country: 'IT', targets: { v4: '8.8.8.8' } }, 'a')).status, 400);   // outside the prefixes
+  assert.equal((await api.measure({ asn: 3333, country: 'FR', targets: { v4: '193.0.0.1' } }, 'b')).status, 404);  // no probes
+  assert.equal((await api.measure({ asn: 3333, country: 'IT', targets: { v4: '193.0.0.1' } }, 'c')).status, 200);  // the only place was still free
+  assert.equal((await api.measure({ asn: 3333, country: 'IT', targets: { v4: '193.0.0.1' } }, 'd')).status, 429);  // now it is taken
+  const broken = makeAtlasApi({ getJson: async () => { throw new Error('down'); }, createMeasurements: async () => [], maxRunning: 1, perIp: () => true });
+  await assert.rejects(broken.measure({ asn: 3333, country: 'IT', targets: { v4: '193.0.0.1' } }, 'e'));
+  await assert.rejects(broken.measure({ asn: 3333, country: 'IT', targets: { v4: '193.0.0.1' } }, 'f'));   // not 429: the failed one gave its place back
 });
 
 console.log(`${passed} tests passed`);

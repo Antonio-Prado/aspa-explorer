@@ -3,11 +3,13 @@
 // read from a file that only the service user can read.
 //   ATLAS_PORT       port on 127.0.0.1 (8095)
 //   ATLAS_KEY_FILE   the key (/usr/local/etc/aspa-atlas/key)
+//   ATLAS_SITE       the address of the site, the only origin whose pages may ask for a measurement (https://aspa.ping6.it)
 import { createServer } from 'node:http';
 import { readFileSync } from 'node:fs';
 import { makeAtlasApi } from './api.mjs';
 
 const PORT = Number(process.env.ATLAS_PORT || 8095);
+const SITE = process.env.ATLAS_SITE || 'https://aspa.ping6.it';
 const KEY = readFileSync(process.env.ATLAS_KEY_FILE || '/usr/local/etc/aspa-atlas/key', 'utf8').trim();
 const UA = 'aspa-explorer (https://aspa.ping6.it)';
 const log = (...a) => console.log(new Date().toISOString(), ...a);
@@ -38,12 +40,19 @@ const send = (res, status, body) => {
 createServer(async (req, res) => {
   const ip = String(req.headers['x-real-ip'] || req.socket.remoteAddress || '');
   const url = new URL(req.url, 'http://localhost');
+  // the route is the path exactly as sent (the URL parser would turn '\' into '/' and remove '..', unlike nginx, which chose the location by it)
+  if (String(req.url).split('?')[0] !== url.pathname) return send(res, 400, { error: 'bad request path' });
   try {
     if (req.method === 'GET' && url.pathname === '/api/v1/atlas/anchors') {
       const r = await api.anchorsFor(Object.fromEntries(url.searchParams));
       return send(res, r.status, r.body);
     }
     if (req.method === 'POST' && url.pathname === '/api/v1/atlas/measure') {
+      // a measurement costs credits of the account: only the pages of the site may ask for one. A page of another site can send a form or a
+      // text/plain body without asking the browser first, so both the origin and the type of the body are checked (as in notifier/server.mjs)
+      const origin = req.headers.origin;
+      if (origin && origin !== SITE) return send(res, 403, { error: 'cross-origin requests are not accepted' });
+      if (String(req.headers['content-type'] || '').split(';')[0].trim().toLowerCase() !== 'application/json') return send(res, 415, { error: 'send application/json' });
       let size = 0;
       const chunks = [];
       for await (const c of req) { size += c.length; if (size > 4096) return send(res, 413, { error: 'the request is too large' }); chunks.push(c); }

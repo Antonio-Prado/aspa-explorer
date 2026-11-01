@@ -38,7 +38,7 @@ html-validate:
   stage: lint
   image: node:22-alpine
   script:
-    - npx --yes html-validate@9 site/index.html site/guide.html site/api.html site/subscription.html site/statistics.html site/status.html site/examples.html site/embed.html site/report.html site/incidents.html
+    - npx --yes html-validate@9.7.1 site/index.html site/guide.html site/api.html site/subscription.html site/statistics.html site/status.html site/examples.html site/embed.html site/report.html site/incidents.html
 
 nginx-config:
   extends: .regular
@@ -66,7 +66,7 @@ js-security-lint:
   stage: security
   image: node:22-alpine
   script:
-    - npx --yes eslint@9 --no-config-lookup -c eslint.config.mjs site/*.js
+    - npx --yes eslint@9.39.5 --no-config-lookup -c eslint.config.mjs site/*.js
 
 secret-detection:
   extends: .regular
@@ -92,7 +92,8 @@ a11y:
     - sh scripts/run-a11y.sh
 
 # Scheduled jobs. Pipeline schedules set the SCHEDULE variable; a pipeline started by
-# hand (web or API) with the same variable runs the same job.
+# hand (web or API) with the same variable runs the same job. These jobs and the publishing ones hold the protected
+# variables: each rule also asks for a protected ref, so that they fail closed if a ref or the runner stops being protected.
 
 # Weekly: known vulnerabilities in the packages of the host that runs the runner (nginx,
 # Node.js, the runner itself, the base system). Needs the runner of that host.
@@ -103,7 +104,7 @@ host-package-audit:
   allow_failure:
     exit_codes: 3
   rules:
-    - if: ($CI_PIPELINE_SOURCE == "schedule" || $CI_PIPELINE_SOURCE == "web" || $CI_PIPELINE_SOURCE == "api") && $SCHEDULE == "audit"
+    - if: ($CI_PIPELINE_SOURCE == "schedule" || $CI_PIPELINE_SOURCE == "web" || $CI_PIPELINE_SOURCE == "api") && $SCHEDULE == "audit" && $CI_COMMIT_REF_PROTECTED == "true"
   script:
     - sh scripts/pkg-audit.sh
 
@@ -113,7 +114,7 @@ aspa-snapshot:
   stage: security
   tags: [aspa]
   rules:
-    - if: ($CI_PIPELINE_SOURCE == "schedule" || $CI_PIPELINE_SOURCE == "web" || $CI_PIPELINE_SOURCE == "api") && $SCHEDULE == "snapshot"
+    - if: ($CI_PIPELINE_SOURCE == "schedule" || $CI_PIPELINE_SOURCE == "web" || $CI_PIPELINE_SOURCE == "api") && $SCHEDULE == "snapshot" && $CI_COMMIT_REF_PROTECTED == "true"
   script:
     - node scripts/log-snapshot.mjs
 
@@ -124,7 +125,7 @@ history-refresh:
   stage: security
   tags: [aspa]
   rules:
-    - if: ($CI_PIPELINE_SOURCE == "schedule" || $CI_PIPELINE_SOURCE == "web" || $CI_PIPELINE_SOURCE == "api") && $SCHEDULE == "history"
+    - if: ($CI_PIPELINE_SOURCE == "schedule" || $CI_PIPELINE_SOURCE == "web" || $CI_PIPELINE_SOURCE == "api") && $SCHEDULE == "history" && $CI_COMMIT_REF_PROTECTED == "true"
   script:
     - node scripts/log-snapshot.mjs --history-only
 
@@ -135,7 +136,7 @@ publish-release:
   stage: publish
   tags: [aspa]
   rules:
-    - if: $CI_COMMIT_TAG
+    - if: $CI_COMMIT_TAG && $CI_COMMIT_REF_PROTECTED == "true"
   script:
     - node scripts/publish-release.mjs
 
@@ -145,8 +146,8 @@ github-mirror:
   stage: publish
   tags: [aspa]
   rules:
-    - if: $CI_COMMIT_TAG
-    - if: $CI_COMMIT_BRANCH == "main" && $CI_PIPELINE_SOURCE != "schedule" && $SCHEDULE == null
+    - if: $CI_COMMIT_TAG && $CI_COMMIT_REF_PROTECTED == "true"
+    - if: $CI_COMMIT_BRANCH == "main" && $CI_COMMIT_REF_PROTECTED == "true" && $CI_PIPELINE_SOURCE != "schedule" && $SCHEDULE == null
   script:
     - sh scripts/mirror-github.sh
 
@@ -154,6 +155,6 @@ mirror-wiki:
   stage: publish
   tags: [aspa]
   rules:
-    - if: ($CI_PIPELINE_SOURCE == "schedule" || $CI_PIPELINE_SOURCE == "web" || $CI_PIPELINE_SOURCE == "api") && $SCHEDULE == "wiki"
+    - if: ($CI_PIPELINE_SOURCE == "schedule" || $CI_PIPELINE_SOURCE == "web" || $CI_PIPELINE_SOURCE == "api") && $SCHEDULE == "wiki" && $CI_COMMIT_REF_PROTECTED == "true"
   script:
     - sh scripts/mirror-wiki.sh

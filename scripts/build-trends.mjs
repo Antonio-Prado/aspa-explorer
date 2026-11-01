@@ -15,8 +15,11 @@ const RIR_OF = { r: 'ripe', a: 'arin', p: 'apnic', l: 'lacnic', f: 'afrinic' };
 
 // The last day of each month from the one of the first event to the one of `today` (YYYY-MM-DD), the last point
 // being today itself.
+// The first date comes from the history branch: one that is not a date, or older than ASPA itself, starts the series in 2020 instead of
+// making a loop over centuries.
 export function checkpoints(first, today) {
   const out = [];
+  if (!/^\d{4}-\d{2}/.test(String(first)) || String(first) < '2020-01') first = '2020-01-01';
   let [y, m] = first.slice(0, 7).split('-').map(Number);
   const last = today.slice(0, 7);
   for (;;) {

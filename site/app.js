@@ -1990,14 +1990,17 @@ const pathAs = () => {
   return m ? normalizeAsn(m[1]) : null;
 };
 
+// a fragment that is not valid percent-encoding ('#%') is read as nothing, instead of stopping the page with an error
+const decodeHash = (s) => { try { return decodeURIComponent(s); } catch { return ''; } };
+
 function lookupFromHash() {
   const hash = location.hash.slice(1);
   // a new lookup on an AS page goes back to the plain address, so the address always matches what is shown
   if (hash && location.pathname !== '/' && pathAs()) window.history.replaceState(null, '', '/' + location.hash);   // `history` is the daily series here
   // the table of all ASPAs became a download on the API page: old links to #all go there
   if (hash === 'all') { location.replace('/api.html#download'); return; }
-  const dataTab = { overview: 'tab-overview', changes: 'tab-changes', quality: 'tab-quality' }[hash];
-  if (dataTab) { showTab(dataTab); revealBox('data'); return; }
+  const tabs = { overview: 'tab-overview', changes: 'tab-changes', quality: 'tab-quality' };
+  if (Object.hasOwn(tabs, hash)) { showTab(tabs[hash]); revealBox('data'); return; }
   if (hash.startsWith('path=')) {
     showTab('tab-path');
     const q = new URLSearchParams(hash);
@@ -2010,13 +2013,13 @@ function lookupFromHash() {
   }
   if (hash.startsWith('routes=')) {
     showTab('tab-routes');
-    const res = decodeURIComponent(hash.slice(7));
+    const res = decodeHash(hash.slice(7));
     $('liveq').value = res;
     renderLiveRoutes(res);
     revealBox('tools');
     return;
   }
-  const as = hash ? normalizeAsn(decodeURIComponent(hash)) : pathAs();
+  const as = hash ? normalizeAsn(decodeHash(hash)) : pathAs();
   if (!as) return;
   showTab('tab-lookup');
   $('asn').value = as;

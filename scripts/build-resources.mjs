@@ -55,6 +55,10 @@ export function aggregateResources({ records, seen, aspa, bank = { users: new Ma
   const tot = (rir) => regTotals[rir] || (regTotals[rir] = { rir, allocated: 0, advertised: 0, aspa: 0, aspa_advertised: 0, reserved: 0, available: 0 });
   const free = new Map();                                          // AS numbers that the files list as available or reserved: start -> {end, status}
   for (const r of lines) {
+    // a record of the delegation files lies in the 32-bit AS space; a broken one (end before start, out of range) is left out. The allocated
+    // blocks are walked one AS at a time below, so an allocation of a million AS numbers or more (none is near that) is not taken either.
+    if (!(Number.isInteger(r.start) && Number.isInteger(r.end) && r.start >= 0 && r.end >= r.start && r.end <= 4294967295)) continue;
+    if ((r.status === 'allocated' || r.status === 'assigned') && r.end - r.start >= 1e6) continue;
     const t = tot(r.rir);
     const n = r.end - r.start + 1;
     if (r.status === 'allocated' || r.status === 'assigned') {

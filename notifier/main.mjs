@@ -54,6 +54,8 @@ const keyPath = env('NOTIFY_KEY', '/var/db/aspa-notify/token.key');
 try { writeFileSync(keyPath, randomBytes(32).toString('base64url'), { mode: 0o600, flag: 'wx' }); } catch (err) { if (err.code !== 'EEXIST') throw err; }
 chmodSync(keyPath, 0o600);
 const key = readFileSync(keyPath, 'utf8').trim();
+// a file left empty (the process stopped between creating it and writing it) would sign every link with an empty key
+if (key.length < 32) throw new Error(`${keyPath} is empty or too short: remove it and start the service again to create a new one (the links sent before stop working)`);
 const dkimPath = env('NOTIFY_DKIM_KEY', '/var/db/aspa-notify/dkim.key');
 const dkim = existsSync(dkimPath) ? { domain: DOMAIN, selector: env('NOTIFY_SELECTOR', 'aspa2026'), privateKey: readFileSync(dkimPath, 'utf8') } : null;
 if (!dkim) log('no DKIM key: mails are sent unsigned');

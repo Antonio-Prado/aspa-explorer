@@ -782,6 +782,12 @@ def main():
                         print(f"processed {total_processed} total records | active incidents: {len(active_incidents)}...", end="\r", flush=True)
         except Exception as e:
             print(f"\nerror reading {filepath}: {e}")
+            # the file is not marked as processed and is read again in the next run: what it added to the open incidents and to the
+            # state so far is taken back, so that the records read before the error are not counted twice
+            active_incidents = pickle.loads(checkpoint_incidents)
+            state = pickle.loads(checkpoint_state)
+            if os.path.exists(tmp_output_file):
+                os.remove(tmp_output_file)
             if not os.path.exists(filepath):
                 break
             continue

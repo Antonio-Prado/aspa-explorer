@@ -115,7 +115,7 @@
     paintDot('unknown');
     try {
       const saved = JSON.parse(sessionStorage.getItem('aspa-status') || 'null');
-      if (saved && Date.now() - saved.t < MIN && DOT_TEXT[saved.state]) { paintDot(saved.state); return; }
+      if (saved && Date.now() - saved.t < MIN && Object.hasOwn(DOT_TEXT, saved.state)) { paintDot(saved.state); return; }
     } catch { /* no storage: the checks run */ }
     const state = dotState(await runAll());
     paintDot(state);

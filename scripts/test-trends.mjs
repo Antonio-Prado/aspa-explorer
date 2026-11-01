@@ -60,4 +60,9 @@ test('the series of a chart: all, a RIR or a country, and the top of its axis', 
   assert.equal(niceMax(3229), 3500);
 });
 
+test('a first date that is not a date, or older than ASPA, starts the series in 2020', () => {
+  assert.equal(checkpoints('junk', '2020-03-05')[0], '2020-01-31');
+  assert.equal(checkpoints('0001-01-01', '2020-02-10').length, 2);
+});
+
 console.log(`${passed} tests passed`);

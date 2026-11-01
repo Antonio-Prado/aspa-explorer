@@ -46,7 +46,9 @@
       $('rp-sub').textContent = `Shared by a visitor on ${when(d.created)}; kept until ${when(d.expires).split(',')[0]}. This site has not checked that the content is true.`;
       $('rp-body').replaceChildren(...d.sections.map(section));
       const links = [];
-      if (d.source) links.push(el('a', { href: d.source, text: 'Run it again with the data of today' }), ' · ');
+      // the service accepts only a path of this site as the source; the page checks it again before it makes a link of it
+      const sameSite = (s) => { try { return typeof s === 'string' && s.startsWith('/') && !s.startsWith('//') && new URL(s, location.origin).origin === location.origin; } catch { return false; } };
+      if (sameSite(d.source)) links.push(el('a', { href: d.source, text: 'Run it again with the data of today' }), ' · ');
       links.push(el('a', { href: `/api/v1/reports/${m[1]}`, text: 'This report as JSON' }));
       $('rp-note').replaceChildren('Unverified: anybody can create a report, and this site does not check that the title, the text and the tables are what it computed. The ASPAs may also have changed since. To see the real result, run it again with the data of today. ', ...links);
     } catch (err) {

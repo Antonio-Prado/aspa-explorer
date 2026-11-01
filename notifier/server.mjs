@@ -19,23 +19,40 @@ export const parseAsn = (v) => {
   return m && Number(m[1]) <= MAX_AS ? 'AS' + Number(m[1]) : null;
 };
 
-// A sliding counter per key, in memory (restarting the service forgets it, which is harmless).
-export function limiter(max, windowSec, now = () => Date.now() / 1000) {
+// A sliding counter per key, in memory (restarting the service forgets it, which is harmless). Past `maxKeys` keys the ones used least
+// recently are forgotten, one at a time: clearing them all at once would give every visitor a fresh window whenever somebody sent many keys.
+export function limiter(max, windowSec, now = () => Date.now() / 1000, maxKeys = 50000) {
   const hits = new Map();
   return (key) => {
     const t = now();
     const list = (hits.get(key) || []).filter((x) => t - x < windowSec);
+    hits.delete(key);                                                 // put back at the end: the order of the map is the order of use
     if (list.length >= max) { hits.set(key, list); return false; }
     list.push(t); hits.set(key, list);
-    if (hits.size > 50000) hits.clear();
+    while (hits.size > maxKeys) hits.delete(hits.keys().next().value);
     return true;
   };
+}
+
+// The key of a visitor for the limits: an IPv4 address as it is, an IPv6 address by its /64. One host usually has a whole /64 to itself,
+// so counting single IPv6 addresses would give it as many fresh limits as it wanted (and the shared limits of the service to use up).
+export function clientKey(ip) {
+  const s = String(ip || '').trim().toLowerCase().split('%')[0].replace(/^::ffff:(?=\d+\.\d+\.\d+\.\d+$)/, '');
+  if (!s.includes(':')) return s;
+  const [head, tail] = s.split('::');
+  const h = head ? head.split(':') : [], t = tail === undefined ? [] : tail ? tail.split(':') : [];
+  const groups = tail === undefined ? h : [...h, ...Array(Math.max(0, 8 - h.length - t.length)).fill('0'), ...t];
+  if (groups.length !== 8 || !groups.every((g) => /^[0-9a-f]{1,4}$/.test(g))) return s;
+  return groups.slice(0, 4).map((g) => parseInt(g, 16).toString(16)).join(':') + '::/64';
 }
 
 export function makeApi(deps) {
   const { store, key, site, sendConfirmation, verifyWebhook, now = () => Math.floor(Date.now() / 1000) } = deps;
   const perIp = deps.perIp || limiter(10, HOUR);
   const global = deps.global || limiter(400, HOUR);
+  // confirmation messages to one address from one network: a few a day. The limit is for each network, so that nobody can use up
+  // the place of the owner of the address, and one network cannot flood an address with confirmations either.
+  const perTargetFrom = deps.perTargetFrom || limiter(3, 24 * HOUR, now);
   const MAX_PER_TARGET = deps.maxPerTarget || 20, MAX_PER_ASN = deps.maxPerAsn || 500;
   const verifying = new Set();
   const MAX_PENDING_PER_ASN = deps.maxPendingPerAsn || 100, MAX_PENDING = deps.maxPending || 5000;
@@ -75,7 +92,9 @@ export function makeApi(deps) {
       let row = store.find('email', target, asn);
       if (row && row.status === 'active') return accepted;                              // do not tell whether it exists
       if (row && t - row.attempted < HOUR) return accepted;                             // one confirmation per hour per subscription
+      // the limit of an address counts the subscriptions that work: requests that nobody confirmed must not take the places of its owner
       if (!row && store.countTarget('email', target) >= MAX_PER_TARGET) return accepted;
+      if (!perTargetFrom(`${target} ${ip}`)) return bad('too many confirmation messages were asked for this address from your network today; try again tomorrow', 429);
       if (!global('mail')) return bad('the service is busy, try again later', 503);
       // requests that nobody has confirmed yet are limited too, for each AS and in all: they cannot take the places of the working subscriptions
       if (!row && (store.countPendingAsn(asn) >= MAX_PENDING_PER_ASN || store.countPending() >= MAX_PENDING)) return bad('the service is busy, try again later', 503);
@@ -119,6 +138,7 @@ export function makeApi(deps) {
     const id = readToken(key, 'confirm', body && body.token, confirmSalt);
     const row = id && store.get(id);
     if (!row) return bad('this link is not valid any more; subscribe again', 404);
+    if (row.status === 'disabled') return bad('this subscription was switched off after failed deliveries; subscribe again', 404);
     if (row.status === 'pending') {
       if (store.countAsn(row.asn) >= MAX_PER_ASN) return bad('this AS has reached the limit of subscriptions', 429);      // the limit is checked again when it starts to count
       store.activate(id, now());
@@ -179,7 +199,10 @@ export function httpHandler(api, { site, perIpUnsub = limiter(60, HOUR), health 
     };
     try {
       const url = new URL(req.url, 'http://localhost');
-      const ip = String(req.headers['x-real-ip'] || req.socket.remoteAddress || '');
+      // the route is the path exactly as it was sent: the URL parser turns '\' into '/' and removes '..', and nginx, which chose the location
+      // and its limits by the path as sent, would then have applied the limits of another route
+      if (String(req.url).split('?')[0] !== url.pathname) return send({ status: 400, body: { error: 'bad request path' } });
+      const ip = clientKey(req.headers['x-real-ip'] || req.socket.remoteAddress || '');
       if (req.method === 'GET' && url.pathname === '/api/v1/subscriptions/health' && health) return send({ status: 200, body: health() });
       const rep = /^\/api\/v1\/reports\/([^/]+)$/.exec(url.pathname);
       if (req.method === 'GET' && rep) { const r = api.getReport(rep[1]); return send(r, 'no-store'); }

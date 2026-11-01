@@ -10,7 +10,7 @@ export const EMAIL_RE = /^[A-Za-z0-9._%+-]{1,64}@[A-Za-z0-9-]+(?:\.[A-Za-z0-9-]+
 export function compose({ from, fromName = 'ASPA Explorer', to, subject, text, unsubscribeUrl, replyTo, domain, now = new Date() }) {
   if (!EMAIL_RE.test(to) || to.length > 254) throw new Error('bad recipient');
   const headers = [
-    ['From', `${fromName} <${from}>`],
+    ['From', `${safe(fromName)} <${safe(from)}>`],
     ['To', to],
     ['Subject', safe(subject)],
     ['Date', now.toUTCString().replace('GMT', '+0000')],
@@ -20,9 +20,9 @@ export function compose({ from, fromName = 'ASPA Explorer', to, subject, text, u
     ['Content-Transfer-Encoding', '7bit'],
     ['Auto-Submitted', 'auto-generated'],
   ];
-  if (replyTo) headers.splice(2, 0, ['Reply-To', replyTo]);
+  if (replyTo) headers.splice(2, 0, ['Reply-To', safe(replyTo)]);
   if (unsubscribeUrl) {
-    headers.push(['List-Unsubscribe', `<${unsubscribeUrl}>`], ['List-Unsubscribe-Post', 'List-Unsubscribe=One-Click']);
+    headers.push(['List-Unsubscribe', `<${safe(unsubscribeUrl)}>`], ['List-Unsubscribe-Post', 'List-Unsubscribe=One-Click']);
   }
   const body = text.split('\n').map((l) => safe(l)).join('\n').replace(/\n*$/, '\n');
   return { headers, body };

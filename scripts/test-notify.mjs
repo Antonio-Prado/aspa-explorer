@@ -11,7 +11,7 @@ import { isPublicIp, parseWebhookUrl, post, signature } from '../notifier/webhoo
 import { sign, verify, relaxBody } from '../notifier/dkim.mjs';
 import { compose, serialize, sendmail, EMAIL_RE } from '../notifier/mail.mjs';
 import { openStore } from '../notifier/store.mjs';
-import { makeApi, httpHandler, parseAsn, limiter } from '../notifier/server.mjs';
+import { makeApi, httpHandler, parseAsn, limiter, clientKey } from '../notifier/server.mjs';
 import { dueInvalid, describeInvalid, COOLDOWN } from '../notifier/invalid.mjs';
 import { checkReport, shell, headTags, newId, ID_RE, LIMITS } from '../notifier/reports.mjs';
 import { watchStatus, describeStatusEvent, statusSubject, MONITOR } from '../notifier/status.mjs';
@@ -633,10 +633,10 @@ await test('API: the subscriptions that are switched off do not count for the li
   for (let i = 0; i < 20; i++) { const id = store.insert('email', 'me@example.com', `AS${100 + i}`, null, 1000, 0, 0); store.activate(id, 1000); store.disable(id, 5000); }
   assert.equal(store.countTarget('email', 'me@example.com'), 0);
   assert.equal((await api.subscribe({ kind: 'email', target: 'me@example.com', asn: 'AS3333' }, '1.1.1.1')).status, 202);
-  assert.equal(store.countTarget('email', 'me@example.com'), 1);           // it is a new subscription: it was not refused for the 20 that do not work
+  assert.equal(store.find('email', 'me@example.com', 'AS3333').status, 'pending');   // it is a new subscription: it was not refused for the 20 that do not work
   assert.equal(store.purgeDisabled(5000 - 1), 0);                          // counted from the day it was switched off, not from the day it was confirmed
   assert.equal(store.purgeDisabled(5000 + 30 * 86400 + 1), 20);
-  assert.equal(store.countTarget('email', 'me@example.com'), 1);           // the one that is waiting stays
+  assert.equal(store.find('email', 'me@example.com', 'AS3333').status, 'pending');   // the one that is waiting stays
 });
 
 await test('API: two verifications of the same webhook and AS do not run together', async () => {
@@ -921,6 +921,113 @@ await test('reports: an address has a limit for the day as well as for the hour'
   t += 3700;
   assert.equal(api.createReport(goodReport(), '5.5.5.5').status, 429);
   assert.equal(api.createReport(goodReport(), '5.5.5.6').status, 201);
+});
+
+await test('limits: an IPv6 visitor is one /64, an IPv4 visitor one address', () => {
+  assert.equal(clientKey('198.51.100.7'), '198.51.100.7');
+  assert.equal(clientKey('::ffff:198.51.100.7'), '198.51.100.7');
+  assert.equal(clientKey('2001:db8:1:2::1'), '2001:db8:1:2::/64');
+  assert.equal(clientKey('2001:0db8:0001:0002:ffff:0:0:9'), '2001:db8:1:2::/64');
+  assert.equal(clientKey('2001:db8::1'), '2001:db8:0:0::/64');
+  assert.notEqual(clientKey('2001:db8:1:3::1'), clientKey('2001:db8:1:2::1'));
+  const l = limiter(2, 3600, () => 0);
+  assert.deepEqual([1, 2, 3].map((i) => l(clientKey(`2001:db8:1:2::${i}`))), [true, true, false]);   // three addresses of one /64 share its two
+});
+
+await test('limiter: a flood of new keys forgets the oldest ones one at a time, not every key at once', () => {
+  const l = limiter(1, 3600, () => 0, 3);
+  assert.equal(l('a'), true);
+  assert.equal(l('b'), true);
+  assert.equal(l('b'), false);
+  for (const k of ['c', 'd']) l(k);                                        // four keys: 'a', the least used, is forgotten
+  assert.equal(l('b'), false);                                             // 'b' keeps its window
+  assert.equal(l('a'), true);
+});
+
+await test('API: requests that nobody confirmed do not take the places of the owner of an address', async () => {
+  const { store, api, mails, tick } = setup({ perIp: () => true, global: () => true, perTargetFrom: () => true });
+  for (let i = 1; i <= 20; i++) assert.equal((await api.subscribe({ kind: 'email', target: 'victim@example.org', asn: `AS${i}` }, '203.0.113.9')).status, 202);
+  for (let day = 0; day < 3; day++) {                                      // the requests are asked again every day, so that they are never purged
+    tick(86400);
+    for (let i = 1; i <= 20; i++) await api.subscribe({ kind: 'email', target: 'victim@example.org', asn: `AS${i}` }, '203.0.113.9');
+  }
+  const before = mails.length;
+  assert.equal((await api.subscribe({ kind: 'email', target: 'victim@example.org', asn: 'AS3333' }, '198.51.100.1')).status, 202);
+  assert.equal(mails.length, before + 1);                                  // the owner gets the confirmation
+  assert.equal(api.confirm({ token: mails[mails.length - 1].token }).status, 200);
+  assert.equal(store.countTarget('email', 'victim@example.org'), 1);       // only the working subscription counts
+});
+
+await test('API: one network may ask a few confirmations for one address a day; another network is not affected', async () => {
+  const { api, mails, tick } = setup({ perIp: () => true, global: () => true });
+  for (let i = 1; i <= 3; i++) assert.equal((await api.subscribe({ kind: 'email', target: 'x@example.org', asn: `AS${i}` }, '203.0.113.9')).status, 202);
+  const r = await api.subscribe({ kind: 'email', target: 'x@example.org', asn: 'AS4' }, '203.0.113.9');
+  assert.equal(r.status, 429);
+  assert.match(r.body.error, /from your network/);
+  assert.equal(mails.length, 3);
+  assert.equal((await api.subscribe({ kind: 'email', target: 'x@example.org', asn: 'AS4' }, '198.51.100.1')).status, 202);
+  assert.equal(mails.length, 4);
+  tick(86400 + 1);
+  assert.equal((await api.subscribe({ kind: 'email', target: 'x@example.org', asn: 'AS5' }, '203.0.113.9')).status, 202);
+});
+
+await test('API: the link of a subscription that was switched off does not say it is active', async () => {
+  const { store, api, mails } = setup();
+  await api.subscribe({ kind: 'email', target: 'off@example.com', asn: 'AS3333' }, '1.1.1.1');
+  const id = store.find('email', 'off@example.com', 'AS3333').id;
+  store.activate(id, 1000); store.disable(id, 2000);
+  const r = api.confirm({ token: mails[0].token });
+  assert.equal(r.status, 404);
+  assert.match(r.body.error, /switched off/);
+  assert.equal(store.get(id).status, 'disabled');
+});
+
+await test('HTTP: a path that the URL parser would change is refused, so nginx and the service agree on the route', async () => {
+  const { api, mails } = setup();
+  const server = http.createServer(httpHandler(api, { site: 'https://aspa.example.org' }));
+  await new Promise((r) => server.listen(0, '127.0.0.1', r));
+  const raw = (path) => new Promise((resolve, reject) => {
+    const req = http.request({ host: '127.0.0.1', port: server.address().port, path, method: 'POST', headers: { 'Content-Type': 'application/json' } }, (res) => { res.resume(); res.on('end', () => resolve(res.statusCode)); });
+    req.on('error', reject);
+    req.end(JSON.stringify({ kind: 'email', target: 'r@example.com', asn: 'AS1' }));
+  });
+  assert.equal(await raw('/api/v1/reports\\..\\subscriptions'), 400);
+  assert.equal(await raw('/api/v1/reports/../subscriptions'), 400);
+  assert.equal(mails.length, 0);
+  assert.equal(await raw('/api/v1/subscriptions'), 202);
+  await new Promise((r) => server.close(r));
+});
+
+await test('outbox: a slow subscription gives up its worker after its time budget, and the others go before the rest of its queue', async () => {
+  let clock = 1000, ms = 0;
+  const store = openStore(':memory:');
+  const slow = store.insert('webhook', 'https://slow.example.org/', 'AS1', 's', clock); store.activate(slow, clock);
+  const fast = store.insert('webhook', 'https://fast.example.org/', 'AS1', 'f', clock); store.activate(fast, clock);
+  const order = [];
+  const send = async (sub) => { order.push(sub.id === slow ? 's' : 'f'); if (sub.id === slow) ms += 14000; };
+  const outbox = makeOutbox({ store, send, now: () => clock, clock: () => ms, concurrency: 1, budgetMs: 30000 });
+  for (let i = 0; i < 10; i++) outbox.enqueue(slow, { n: i });
+  outbox.enqueue(fast, { n: 0 });
+  await outbox.drain();
+  assert.ok(order.indexOf('f') <= 3, order.join(''));                      // the fast one is not behind ten slow deliveries
+  assert.equal(order.filter((x) => x === 's').length, 10);                  // and the slow queue is still delivered, in later rounds
+  assert.equal(store.outboxCount(), 0);
+});
+
+await test('store: the bytes of the reports are kept up to date without reading them all again', () => {
+  const s = openStore(':memory:');
+  assert.equal(s.reportBytes(), 0);
+  s.addReport('a'.repeat(32), 100, 'other', 't', JSON.stringify({ title: 'è' }));
+  s.addReport('b'.repeat(32), 200, 'other', 't', '{"x":1}');
+  const sum = () => s.reportBytes();
+  assert.equal(sum(), Buffer.byteLength(JSON.stringify({ title: 'è' })) + 7);
+  assert.equal(s.purgeReports(150), 1);
+  assert.equal(sum(), 7);
+});
+
+await test('mail: no header value can carry a line break, whatever the configuration', () => {
+  const m = compose({ from: 'n@example.org', fromName: 'X\r\nBcc: a@b.c', to: 'r@example.org', subject: 's', text: 't', replyTo: 'r@x.y\nBcc: b@c.d', unsubscribeUrl: 'https://x/\r\nX: y', domain: 'example.org' });
+  for (const [, v] of m.headers) assert.ok(!/[\r\n]/.test(v), v);
 });
 
 console.log(`${passed} tests passed`);

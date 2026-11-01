@@ -80,13 +80,21 @@ async function get(url, headers = {}) {
   return r;
 }
 
+// A part of a file: a server that ignores the range and answers the whole file (about 100 MB) is refused instead of read.
+async function getRange(url, range) {
+  const r = await get(url, { Range: range });
+  if (r.status !== 206) { try { await r.body?.cancel(); } catch { /* already closed */ } throw new Error(`${url}: the byte range was not honoured (HTTP ${r.status})`); }
+  return r;
+}
+
 // One rpki-client export: its build time and counts from the head, the ASPAs from the tail.
 async function fetchRpkiClient(url) {
-  const head = await (await get(url, { Range: 'bytes=0-3999' })).text();
+  const head = await (await getRange(url, 'bytes=0-3999')).text();
   const meta = (key) => { const m = new RegExp(`"${key}":\\s*"?([^",\\n]+)"?`).exec(head); return m ? m[1] : null; };
-  const size = Number((await get(url, { Range: 'bytes=0-0' })).headers.get('content-range')?.split('/')[1]);
+  const size = Number((await getRange(url, 'bytes=0-0')).headers.get('content-range')?.split('/')[1]);
+  if (!Number.isFinite(size) || size <= 0) throw new Error(`${url}: no size in the answer`);
   for (const tail of [2e6, 8e6, 32e6]) {
-    const text = await (await get(url, { Range: `bytes=${Math.max(0, size - tail)}-${size - 1}` })).text();
+    const text = await (await getRange(url, `bytes=${Math.max(0, size - tail)}-${size - 1}`)).text();
     const list = extractArray(text, 'aspas');
     if (list) return { built: meta('buildtime'), count: Number(meta('aspas')), failed: Number(meta('failedaspas')), list };
   }

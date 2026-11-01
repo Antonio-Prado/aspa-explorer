@@ -42,4 +42,10 @@ test('no events: the feed is still a feed, and a text that is not a feed is igno
   assert.deepEqual(readFeed(null), {});
 });
 
+test('the customer is escaped in the HTML of an entry, as the providers are', () => {
+  const out = atomFeed([['2026-10-02', 'AS1"><img src=x onerror=alert(1)>', ['AS2']]], { site: 'https://aspa.example.org', classify, now: new Date('2026-10-02T10:00:00Z') });
+  assert.ok(!out.includes('&lt;img'), out);                                     // once decoded by a reader it would be markup
+  assert.ok(out.includes('&amp;lt;img'));                                        // escaped for the HTML, then for the XML
+});
+
 console.log(`${passed} tests passed`);
