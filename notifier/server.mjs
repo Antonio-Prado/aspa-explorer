@@ -222,7 +222,9 @@ export function httpHandler(api, { site, perIpUnsub = limiter(60, HOUR), health 
       // only to a request made on the host itself
       if (req.method === 'GET' && url.pathname === '/api/v1/subscriptions/health' && health) {
         const h = health();
-        if (!req.headers['x-real-ip'] && /^(127\.|::1$|::ffff:127\.)/.test(String(req.socket.remoteAddress || ''))) return send({ status: 200, body: h });
+        // a request on the host: from loopback, or on the Unix socket (no remote address), and not through nginx (no X-Real-IP)
+        const local = !req.socket.remoteAddress || /^(127\.|::1$|::ffff:127\.)/.test(String(req.socket.remoteAddress));
+        if (!req.headers['x-real-ip'] && local) return send({ status: 200, body: h });
         return send({ status: 200, body: { ok: h.ok, last_poll: h.last_poll, failures_in_a_row: h.failures_in_a_row, poll_seconds: h.poll_seconds } });
       }
       const rep = /^\/api\/v1\/reports\/([^/]+)$/.exec(url.pathname);

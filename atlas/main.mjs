@@ -4,8 +4,9 @@
 //   ATLAS_PORT       port on 127.0.0.1 (8095)
 //   ATLAS_KEY_FILE   the key (/usr/local/etc/aspa-atlas/key)
 //   ATLAS_SITE       the address of the site, the only origin whose pages may ask for a measurement (https://aspa.ping6.it)
+//   ATLAS_SOCKET     a Unix socket to listen on instead of the port (the rc script sets it): only nginx and root can reach it
 import { createServer } from 'node:http';
-import { readFileSync } from 'node:fs';
+import { readFileSync, rmSync, chmodSync } from 'node:fs';
 import { makeAtlasApi } from './api.mjs';
 
 const PORT = Number(process.env.ATLAS_PORT || 8095);
@@ -37,7 +38,7 @@ const send = (res, status, body) => {
   res.end(JSON.stringify(body));
 };
 
-createServer(async (req, res) => {
+const server = createServer(async (req, res) => {
   const ip = String(req.headers['x-real-ip'] || req.socket.remoteAddress || '');
   const url = new URL(req.url, 'http://localhost');
   // the route is the path exactly as sent (the URL parser would turn '\' into '/' and remove '..', unlike nginx, which chose the location by it)
@@ -68,4 +69,10 @@ createServer(async (req, res) => {
     log(`error: ${String(err.message)}`.replace(/\n|\r/g, ''));
     send(res, 502, { error: 'RIPE Atlas or RIPEstat did not answer, try again later' });
   }
-}).listen(PORT, '127.0.0.1', () => log(`listening on 127.0.0.1:${PORT}`));
+});
+// on a Unix socket in a directory of the group of nginx (see notifier/main.mjs): no other local process can reach the service or choose X-Real-IP
+const SOCKET = process.env.ATLAS_SOCKET || '';
+if (SOCKET) {
+  rmSync(SOCKET, { force: true });
+  server.listen(SOCKET, () => { chmodSync(SOCKET, 0o660); log(`listening on ${SOCKET}`); });
+} else server.listen(PORT, '127.0.0.1', () => log(`listening on 127.0.0.1:${PORT}`));

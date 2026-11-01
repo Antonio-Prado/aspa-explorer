@@ -16,9 +16,10 @@
 //   NOTIFY_SITE_DIR  /usr/local/www/aspa                           where site/report.html is (the shell of the pages /r/<id>)
 //   INVALID_LAST     http://127.0.0.1:8080/api/v1/invalid-last.json     what the last run of watch-invalid saw, by origin (every ten minutes)
 //   NOTIFY_PORT      8090 (127.0.0.1)
+//   NOTIFY_SOCKET    a Unix socket to listen on instead of the port (the rc script sets it): only nginx and root can reach it
 //   NOTIFY_POLL      600 seconds between polls
 import http from 'node:http';
-import { readFileSync, existsSync, writeFileSync, chmodSync } from 'node:fs';
+import { readFileSync, existsSync, writeFileSync, chmodSync, rmSync } from 'node:fs';
 import { randomBytes } from 'node:crypto';
 import { openStore } from './store.mjs';
 import { stabilise, audience, describeEvent, stateOf, newPlaces, describePlace, changeBudget, CHANGES_A_DAY } from './changes.mjs';
@@ -295,7 +296,13 @@ const template = () => {
 };
 const server = http.createServer(httpHandler(api, { site: SITE, health, template }));
 server.requestTimeout = 15000; server.headersTimeout = 10000;
-server.listen(Number(env('NOTIFY_PORT', '8090')), '127.0.0.1', () => log(`listening on 127.0.0.1:${env('NOTIFY_PORT', '8090')}`));
+// On a Unix socket, in a directory of the group of nginx (made by the rc script, setgid), readable and writable by the service and that group only:
+// no other local process can reach the service, so the X-Real-IP header that nginx sets is the only one it ever gets.
+const SOCKET = env('NOTIFY_SOCKET', '');
+if (SOCKET) {
+  rmSync(SOCKET, { force: true });                                         // a socket left by a stop that was not clean
+  server.listen(SOCKET, () => { chmodSync(SOCKET, 0o660); log(`listening on ${SOCKET}`); });
+} else server.listen(Number(env('NOTIFY_PORT', '8090')), '127.0.0.1', () => log(`listening on 127.0.0.1:${env('NOTIFY_PORT', '8090')}`));
 poll();
 // the clean-up does not wait for the data: if the upstream fails for days, the expired requests and reports must still go
 function housekeeping() {

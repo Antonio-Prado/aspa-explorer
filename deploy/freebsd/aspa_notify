@@ -16,10 +16,21 @@ load_rc_config $name
 : ${aspa_notify_enable:=NO}
 : ${aspa_notify_runas:=aspanotify}
 : ${aspa_notify_dir:=/usr/local/libexec/aspa-notify}
+: ${aspa_notify_socket=/var/run/aspa-notify/notify.sock}
+: ${aspa_notify_socket_group:=www}
 
 pidfile=/var/run/${name}.pid
 logfile=/var/log/aspa-notify.log
 command=/usr/sbin/daemon
 command_args="-r -P ${pidfile} -o ${logfile} /usr/sbin/chroot -u ${aspa_notify_runas} -g ${aspa_notify_runas} -G ${aspa_notify_runas} / /usr/local/bin/node --disable-warning=ExperimentalWarning ${aspa_notify_dir}/notifier/main.mjs"
+
+# The service listens on a Unix socket in a directory of the group of nginx, setgid so that the socket gets that group: only nginx (and root)
+# can reach it, so the X-Real-IP header it sees is always the one nginx set. An empty aspa_notify_socket keeps the port on 127.0.0.1.
+notify_dir_precmd() {
+  [ -n "${aspa_notify_socket}" ] || return 0
+  install -d -o ${aspa_notify_runas} -g ${aspa_notify_socket_group} -m 2750 "$(dirname ${aspa_notify_socket})"
+}
+start_precmd=notify_dir_precmd
+aspa_notify_env="NOTIFY_SOCKET=${aspa_notify_socket}"
 
 run_rc_command "$1"

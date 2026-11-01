@@ -16,10 +16,21 @@ load_rc_config $name
 : ${aspa_atlas_enable:=NO}
 : ${aspa_atlas_runas:=aspaatlas}
 : ${aspa_atlas_dir:=/usr/local/libexec/aspa-atlas}
+: ${aspa_atlas_socket=/var/run/aspa-atlas/atlas.sock}
+: ${aspa_atlas_socket_group:=www}
 
 pidfile=/var/run/${name}.pid
 logfile=/var/log/aspa-atlas.log
 command=/usr/sbin/daemon
 command_args="-r -P ${pidfile} -o ${logfile} /usr/sbin/chroot -u ${aspa_atlas_runas} -g ${aspa_atlas_runas} -G ${aspa_atlas_runas} / /usr/local/bin/node --disable-warning=ExperimentalWarning ${aspa_atlas_dir}/atlas/main.mjs"
+
+# The service listens on a Unix socket in a directory of the group of nginx, setgid so that the socket gets that group: only nginx (and root)
+# can reach it, so the X-Real-IP header it sees is always the one nginx set. An empty aspa_atlas_socket keeps the port on 127.0.0.1.
+atlas_dir_precmd() {
+  [ -n "${aspa_atlas_socket}" ] || return 0
+  install -d -o ${aspa_atlas_runas} -g ${aspa_atlas_socket_group} -m 2750 "$(dirname ${aspa_atlas_socket})"
+}
+start_precmd=atlas_dir_precmd
+aspa_atlas_env="ATLAS_SOCKET=${aspa_atlas_socket}"
 
 run_rc_command "$1"

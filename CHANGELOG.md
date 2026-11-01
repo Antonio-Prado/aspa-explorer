@@ -9,6 +9,12 @@ A few numbers were deployed and folded into the next release without a tag of th
 
 ## [Unreleased]
 
+## [1.57.1] - 2026-11-01
+
+### Security
+- The notifier and the RIPE Atlas service listen on Unix sockets that only nginx and root can reach (a directory of the group of nginx, made by their rc scripts), instead of ports on 127.0.0.1 that every local process could reach: none of them can send a request past the limits of nginx, or choose the X-Real-IP header that the services trust for their limits. An empty `aspa_notify_socket` or `aspa_atlas_socket` in `rc.conf` keeps the ports.
+- `deploy/nginx/realip.conf.example`: what to add behind a reverse proxy or a CDN, so that the limits for each address count visitors and not the addresses of the proxy.
+
 ## [1.57.0] - 2026-11-01
 
 A security review of the whole code: the limits of the notifier and of the RIPE Atlas service, the agreement between nginx and the services on the route of a request, and the inputs of the builders.

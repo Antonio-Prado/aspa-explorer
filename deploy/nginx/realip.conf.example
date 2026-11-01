@@ -1,0 +1,12 @@
+# Only when the site is behind a reverse proxy or a CDN. Copy to /usr/local/etc/nginx/conf.d/realip.conf and list the addresses of the proxy:
+# nginx then takes the visitor's address from the header that the proxy sets, and $remote_addr (and X-Real-IP, which the notifier and the
+# RIPE Atlas service use for their limits for each address) is the visitor, not the proxy. Without it every visitor that comes through the
+# same address of the proxy shares one limit.
+#
+# List every range of the proxy, and nothing else: a range listed here can claim any address. A CDN publishes its ranges and changes them
+# now and then, so generate this file from that list (a weekly job) rather than writing it by hand.
+#
+# set_real_ip_from 192.0.2.0/24;
+# set_real_ip_from 2001:db8::/32;
+# real_ip_header X-Forwarded-For;      # or the header of the CDN, for instance CF-Connecting-IP
+# real_ip_recursive on;
