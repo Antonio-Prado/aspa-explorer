@@ -43,7 +43,7 @@ sequenceDiagram
 
 - `incident.py` uses the Python standard library only.
 - `stream.py` needs `websocket-client` (`pip install -r requirements.txt`, which pins the version in use on the host).
-- `record.py` needs [`pybgpstream`](https://bgpstream.caida.org/) (which needs `libbgpstream`).
+- `record.py` needs [`pybgpstream`](https://bgpstream.caida.org/) (which needs `libbgpstream`; `pip install -r requirements-research.txt`).
 
 ## The records
 

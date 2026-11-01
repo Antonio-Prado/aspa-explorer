@@ -1,0 +1,2 @@
+# mrt2records.py turns the MRT files of an incident into records.
+mrtparse==2.2.0

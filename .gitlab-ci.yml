@@ -13,6 +13,10 @@ default:
 
 workflow:
   rules:
+    # The history branch holds data, written by the scheduled jobs: it has no pipeline of its own. The project takes this file always from main
+    # (Settings > CI/CD > CI/CD configuration file: .gitlab-ci.yml@<this project>:main), so a commit on another branch cannot bring jobs of its own.
+    - if: $CI_COMMIT_BRANCH == "history"
+      when: never
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
     - if: $CI_COMMIT_BRANCH && $CI_OPEN_MERGE_REQUESTS
       when: never
@@ -66,7 +70,7 @@ js-security-lint:
   stage: security
   image: node:22-alpine
   script:
-    - npx --yes eslint@9.39.5 --no-config-lookup -c eslint.config.mjs site/*.js
+    - npx --yes eslint@10.14.0 --no-config-lookup -c eslint.config.mjs site/*.js
 
 secret-detection:
   extends: .regular

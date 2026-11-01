@@ -21,8 +21,8 @@ import http from 'node:http';
 import { readFileSync, existsSync, writeFileSync, chmodSync } from 'node:fs';
 import { randomBytes } from 'node:crypto';
 import { openStore } from './store.mjs';
-import { stabilise, audience, describeEvent, stateOf, newPlaces, describePlace } from './changes.mjs';
-import { compose, serialize, sendmail } from './mail.mjs';
+import { stabilise, audience, describeEvent, stateOf, newPlaces, describePlace, changeBudget, CHANGES_A_DAY } from './changes.mjs';
+import { compose, serialize, sendmail, mailDomainOk } from './mail.mjs';
 import { post } from './webhook.mjs';
 import { makeOutbox } from './outbox.mjs';
 import { makePulse } from './pulse.mjs';
@@ -98,8 +98,8 @@ async function sendConfirmation({ to, asn, token, site, leaks, invalid }) {
 }
 
 const api = makeApi({
-  store, key, site: SITE, sendConfirmation, log,
-  verifyWebhook: (url, payload, secret) => post(url, payload, { secret }),
+  store, key, site: SITE, sendConfirmation, log, mailDomainOk: (domain) => mailDomainOk(domain),
+  verifyWebhook: (url, payload, secret, headers) => post(url, payload, { secret, headers }),
 });
 
 // Sends one message that was queued (see outbox.mjs); it throws when the message did not go, and the outbox counts the failure and tries again later.
@@ -162,9 +162,19 @@ async function send(sub, job, row) {
 const outbox = makeOutbox({ store, send, log });
 
 // What is queued here is sent by the next drain(): at once, and again every minute for the ones that have to be retried.
+const budget = changeBudget();
 const queueChanges = (events) => {
   const subs = store.allActive();
-  for (const e of events) for (const { sub, relation } of audience(e, subs)) outbox.enqueue(sub.id, { type: 'change', event: e, relation });
+  for (const e of events) for (const { sub, relation } of audience(e, subs)) {
+    const b = budget(sub.id);
+    if (b === 'send') outbox.enqueue(sub.id, { type: 'change', event: e, relation });
+    else if (b === 'notice') {
+      outbox.enqueue(sub.id, { subject: `Many ASPA changes for ${sub.asn} today`, type: 'aspa.notice', extra: {},
+        line: `There have been more than ${CHANGES_A_DAY} changes for ${sub.asn} in the last 24 hours. The next ones are not sent until a day has passed; the page and the feed of ${sub.asn} have all of them.`,
+        footer: 'The data is the output of the validator at rpki.ping6.it, checked every ten minutes.' });
+      log(`subscription ${sub.id}: more than ${CHANGES_A_DAY} changes in a day, the next ones are not sent`);
+    }
+  }
 };
 // the queue and the state that says "seen" are written together: a crash between them would queue the same event again, with another id
 const deliver = () => sources.track('delivery', () => outbox.drain());

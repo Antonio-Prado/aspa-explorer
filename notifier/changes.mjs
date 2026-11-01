@@ -90,3 +90,19 @@ export function describePlace(e) {
     : 'The AS after the climb is a provider of the one before it, which more likely means an ASPA that misses a provider than a leak.';
   return `${e.asn} sits inside a valley between ${e.from} and ${e.to} (ASes in the valley: ${chain}), seen by ${e.feeders} feeders in ${e.routes} routes. ${what}`;
 }
+
+// Messages about changes of ASPAs for one subscription, a day: anybody who holds an ASPA can name any AS as a provider and take it out again, and each
+// change that holds for two polls would be one more message to the subscribers of that AS. Past the limit the subscription gets one notice, then
+// nothing more about changes until the day is over (the page and the feed of the AS still show every change).
+export const CHANGES_A_DAY = 24;
+export function changeBudget(limit = CHANGES_A_DAY, windowSec = 86400, now = () => Math.floor(Date.now() / 1000)) {
+  const sent = new Map();                                                  // subscription id -> times of its messages within the window
+  return (subId) => {
+    const t = now();
+    const list = (sent.get(subId) || []).filter((x) => t - x < windowSec);
+    if (list.length > limit) { sent.set(subId, list); return 'skip'; }
+    list.push(t); sent.set(subId, list);
+    if (sent.size > 50000) sent.delete(sent.keys().next().value);
+    return list.length > limit ? 'notice' : 'send';
+  };
+}

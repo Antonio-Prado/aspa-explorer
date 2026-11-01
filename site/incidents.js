@@ -54,6 +54,7 @@
     const n = document.createElement(tag);
     for (const [k, v] of Object.entries(attrs || {})) {
       if (v === undefined || v === null || v === false) continue;
+      // eslint-disable-next-line no-restricted-syntax -- the element builder: its keys come from the code that calls it
       if (k === 'class') n.className = v; else if (k === 'text') n.textContent = v; else n.setAttribute(k, v);
     }
     for (const c of kids.flat(Infinity)) if (c !== null && c !== undefined && c !== false) n.append(c instanceof Node ? c : document.createTextNode(String(c)));
@@ -98,6 +99,7 @@
 
   // The curve: the share of the incidents with a path that would be Invalid, for 0 to 100% of the networks publishing.
   const SVG = 'http://www.w3.org/2000/svg';
+  // eslint-disable-next-line no-restricted-syntax -- the element builder: its keys come from the code that calls it
   const svg = (tag, attrs, ...kids) => { const n = document.createElementNS(SVG, tag); for (const [k, v] of Object.entries(attrs || {})) n.setAttribute(k, v); n.append(...kids); return n; };
   const SERIES = [{ key: 'largest', label: 'The networks with the most customers publish first', cls: 's1' }, { key: 'random', label: 'Networks publish in random order', cls: 's2' }];
 

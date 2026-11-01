@@ -79,13 +79,13 @@ async function main() {
   try { doc = JSON.parse(await readFile(out, 'utf8')); } catch { /* the first run */ }
   const t = Math.floor(nowMs / 1000);
   const next = addSample(doc, t, letters, checks);
-  await writeFile(`${out}.tmp`, JSON.stringify(next));
-  await rename(`${out}.tmp`, out);
+  await writeFile(`${out}.${process.pid}.tmp`, JSON.stringify(next));
+  await rename(`${out}.${process.pid}.tmp`, out);
   const monthsFile = join(dirname(out), 'status-months.json');
   let prev = null;
   try { prev = JSON.parse(await readFile(monthsFile, 'utf8')); } catch { /* the first run */ }
-  await writeFile(`${monthsFile}.tmp`, JSON.stringify(addMonths(prev, next)));
-  await rename(`${monthsFile}.tmp`, monthsFile);
+  await writeFile(`${monthsFile}.${process.pid}.tmp`, JSON.stringify(addMonths(prev, next)));
+  await rename(`${monthsFile}.${process.pid}.tmp`, monthsFile);
   console.log(`${next.generated}: ${letters} (${next.samples.length} samples)`);
 }
 

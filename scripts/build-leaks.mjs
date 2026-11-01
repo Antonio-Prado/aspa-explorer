@@ -142,12 +142,16 @@ export const spanOf = (plen, v6) => Math.pow(2, (v6 ? 48 : 32) - plen);
 export const MIN_V4 = 8, MIN_V6 = 16;
 const VERDICT = ['valid', 'unknown', 'invalid'];
 const HOP_BUCKETS = 9;                                             // paths of 1 to 8 ASes, and 9 or more
+export const MAX_PLACES = 500000;
 
 export class Leaks {
   constructor(aspas, ixp = new Set(), relOf = () => 'unknown') {
     this.aspas = aspas; this.ixp = ixp; this.relOf = relOf;
     this.total = { routes: 0, valid: 0, unknown: 0, invalid: 0 };
     this.groups = new Map();
+    // the places of valley kept in memory: a day of 30 collectors has a few tens of thousands; peers that sent crafted paths could make far more,
+    // and the places past this many are only counted (omitted), so that the run of the day ends
+    this.maxGroups = MAX_PLACES; this.omitted = 0;
     this.feederSet = new Set();                                       // the networks that feed the collectors, whichever collector
     this.byCollector = new Map();                                     // collector -> {routes, invalid, feeders}
     this.lastCollector = null; this.cur = null;
@@ -190,6 +194,7 @@ export class Leaks {
     const key = `${from}|${between[0]}|${to}`;           // the first AS after the ramp decides the kind: it is part of the place
     let g = this.groups.get(key);
     if (!g) {
+      if (this.groups.size >= this.maxGroups) { this.omitted++; return; }
       const caida = this.relOf(from, between[0]);
       g = { from, to, between, caida, kind: KIND[caida], routes: 0, feeders: new Set(), origins: new Set(), sources: new Set(), example: p.slice().reverse() };
       this.groups.set(key, g);
@@ -198,6 +203,7 @@ export class Leaks {
   }
 
   result(limit = 40) {
+    if (this.omitted) console.error(`${this.omitted} routes in places of valley beyond the first ${this.maxGroups} were only counted`);
     const list = [...this.groups.values()].map((g) => ({
       from: 'AS' + g.from, to: 'AS' + g.to, between: g.between.map((a) => 'AS' + a), caida: g.caida, kind: g.kind,
       routes: g.routes, feeders: g.feeders.size, origins: g.origins.size,

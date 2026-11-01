@@ -9,12 +9,14 @@
     const n = document.createElement(tag);
     for (const [k, v] of Object.entries(attrs || {})) {
       if (v === undefined || v === null || v === false) continue;
+      // eslint-disable-next-line no-restricted-syntax -- the element builder: its keys come from the code that calls it
       if (k === 'class') n.className = v; else if (k === 'text') n.textContent = v; else n.setAttribute(k, v);
     }
     for (const c of kids.flat(Infinity)) if (c !== null && c !== undefined && c !== false) n.append(c instanceof Node ? c : document.createTextNode(String(c)));
     return n;
   }
   const NS = 'http://www.w3.org/2000/svg';
+  // eslint-disable-next-line no-restricted-syntax -- the element builder: its keys come from the code that calls it
   const svg = (tag, attrs, ...kids) => { const n = document.createElementNS(NS, tag); for (const [k, v] of Object.entries(attrs || {})) n.setAttribute(k, v); n.append(...kids); return n; };
   const chip = (as) => el('a', { class: 'chip', href: `/as/${as}`, text: as });
   const when = (iso) => new Date(iso).toLocaleString('en-GB', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'UTC' }) + ' UTC';

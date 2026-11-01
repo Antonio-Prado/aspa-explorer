@@ -4,6 +4,7 @@
 // Pure functions over a lookup of ASPA records, so that they can be tried without a browser (scripts/test-bulk.mjs).
 (function (root) {
   const MAX_LINES = 5000;
+  const MAX_LINE_CHARS = 4000;            // far more than any AS path; a longer line is reported, not parsed
   const PREFIX_RE = /^(?:\d{1,3}(?:\.\d{1,3}){3}\/\d{1,2}|[0-9a-f:]+:[0-9a-f:]*\/\d{1,3})$/i;
 
   // A line, split into the prefix (when the first word is one) and the path text; blank lines and comments are left out by the caller.
@@ -36,6 +37,7 @@
       const raw = lines[i].trim();
       if (!raw || raw.startsWith('#')) { skipped++; continue; }
       if (rows.length >= MAX_LINES) { truncated = true; break; }
+      if (raw.length > MAX_LINE_CHARS) { counts.Error++; rows.push({ line: i + 1, prefix: '', input: `${raw.slice(0, 60)}…`, path: null, result: 'Error', note: `longer than ${MAX_LINE_CHARS} characters` }); continue; }
       const { prefix, text: pathText } = splitLine(raw);
       const parsed = api.parsePath(pathText);
       if (parsed.error) { counts.Error++; rows.push({ line: i + 1, prefix, input: pathText, path: null, result: 'Error', note: parsed.asSet ? 'AS_SET or confederation segment' : parsed.error.replace(/^"(.*?)" is not an AS number\..*$/, 'not an AS number: $1') }); continue; }

@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { Readable } from 'node:stream';
 import { readRib, readAsPath } from './mrt.mjs';
 import { createRequire as cr } from 'node:module';
-import { Leaks, classify, spanOf, aspaMap, relations, byAs, addHistory, withRetry, dumpUrl, dayDumpUrls, previousDay, pickLatestRib, rvListing, isRis, COLLECTORS } from './build-leaks.mjs';
+import { Leaks, classify, spanOf, aspaMap, relations, byAs, addHistory, withRetry, dumpUrl, dayDumpUrls, previousDay, pickLatestRib, rvListing, isRis, COLLECTORS, MAX_PLACES } from './build-leaks.mjs';
 
 let passed = 0;
 const test = async (name, fn) => { await fn(); passed++; console.log('ok  ', name); };
@@ -233,6 +233,18 @@ await test('the routes are counted by verdict, family and length of the path, wi
   const r2 = l.result().families.v4;
   assert.equal(r2.short_prefixes, 1); assert.equal(r2.span.valid, 512);   // the /24 twice: the path of the second one is empty
   assert.equal(spanOf(24, false), 256); assert.equal(spanOf(32, true), 65536); assert.equal(spanOf(48, true), 1);
+});
+
+await test('the places of valley kept in memory are bounded; the routes past the limit are only counted', () => {
+  const l = new Leaks(aspas);
+  l.maxGroups = 1;
+  l.add(500, 'rrc00', [50, 40, 30, 20, 10]);
+  l.add(501, 'rrc00', [50, 40, 31, 20, 10]);                 // another place (31 in the valley): past the limit
+  l.add(502, 'rrc00', [50, 40, 30, 20, 10]);                 // the place that is kept goes on counting
+  assert.equal(l.groups.size, 1);
+  assert.equal(l.omitted, 1);
+  assert.equal([...l.groups.values()][0].routes, 2);
+  assert.ok(MAX_PLACES >= 100000);
 });
 
 console.log(`${passed} tests passed`);

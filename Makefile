@@ -17,7 +17,7 @@ version:
 
 # Static analysis of the browser code: no innerHTML, eval and similar sinks.
 lint-security:
-	npx --yes eslint@9.39.5 --no-config-lookup -c eslint.config.mjs site/*.js
+	npx --yes eslint@10.14.0 --no-config-lookup -c eslint.config.mjs site/*.js
 
 # Secret scan of the whole git history (needs gitleaks: https://github.com/gitleaks/gitleaks).
 secrets:

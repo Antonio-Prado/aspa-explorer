@@ -11,10 +11,12 @@ fi
 root=$(cd "$(dirname "$0")/.." && pwd)
 work=$(mktemp -d)
 trap 'rm -rf "$work"' EXIT
-# The packages are pinned (a job on the host must not take whatever version is the newest that day) and their install scripts do not run.
+# The packages are those of scripts/a11y/package-lock.json, with their integrity hashes (a job on the host must not take whatever version is
+# the newest that day, nor a package that changed under the same version), and their install scripts do not run.
 # The packages and a copy of the test go in a folder of their own (Node looks for packages next to the real file),
 # so that no node_modules is left in the project; the site and the fixtures are the ones of the project.
-(cd "$work" && npm install --no-save --no-audit --no-fund --ignore-scripts playwright-core@1.64.1 axe-core@4.14.0 >/dev/null)
+cp "$root/scripts/a11y/package.json" "$root/scripts/a11y/package-lock.json" "$work/"
+(cd "$work" && npm ci --no-audit --no-fund --ignore-scripts >/dev/null)
 mkdir -p "$work/scripts"
 cp "$root/scripts/test-a11y.mjs" "$work/scripts/"
 cp -R "$root/scripts/fixtures" "$work/scripts/fixtures"

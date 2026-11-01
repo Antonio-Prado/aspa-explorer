@@ -11,6 +11,7 @@
     const n = document.createElement(tag);
     for (const [k, v] of Object.entries(attrs || {})) {
       if (v === undefined || v === null || v === false) continue;
+      // eslint-disable-next-line no-restricted-syntax -- the element builder: its keys come from the code that calls it
       if (k === 'class') n.className = v; else if (k === 'text') n.textContent = v; else n.setAttribute(k, v);
     }
     for (const c of kids.flat(Infinity)) if (c !== null && c !== undefined && c !== false) n.append(c instanceof Node ? c : document.createTextNode(String(c)));
@@ -22,6 +23,7 @@
 
   // The daily totals (/api/v1/leaks-history.json): the places of valley through a peer or a customer and of gap, one point a day.
   const SVG = 'http://www.w3.org/2000/svg';
+  // eslint-disable-next-line no-restricted-syntax -- the element builder: its keys come from the code that calls it
   const svg = (tag, attrs, ...kids) => { const n = document.createElementNS(SVG, tag); for (const [k, v] of Object.entries(attrs || {})) n.setAttribute(k, v); n.append(...kids); return n; };
   const SERIES = [{ key: 'leak', label: 'Via peer or customer', cls: 's1' }, { key: 'gap', label: 'Gaps in ASPAs', cls: 's2' }];
   // "1 Sep": the months in three letters (the browser writes "Sept" in British English)

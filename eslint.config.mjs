@@ -18,6 +18,10 @@ export default [
         { object: 'document', property: 'write', message: 'document.write is not allowed.' },
         { object: 'document', property: 'writeln', message: 'document.writeln is not allowed.' },
       ],
+      // an attribute named by data (onclick, srcdoc, ...) would run it: names are literals, except in the element builders, which say so
+      'no-restricted-syntax': ['error',
+        { selector: "CallExpression[callee.property.name=/^setAttribute(NS)?$/][arguments.0.type!='Literal']", message: 'Name attributes with a literal; only the element builders take the names from their callers (and are marked).' },
+      ],
     },
   },
 ];

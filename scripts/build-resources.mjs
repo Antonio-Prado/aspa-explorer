@@ -166,8 +166,8 @@ async function main() {
     sources: { aspas: 'Routinator, rpki.ping6.it', advertised: 'RIPE RIS collectors, through RIPEstat (ris-asns)', registry: 'delegation files of the five RIRs', people: 'World Bank open data (population, Internet users, regions), most recent value of each economy' },
     ...out,
   };
-  await writeFile(`${outFile}.tmp`, JSON.stringify(doc) + '\n');
-  await rename(`${outFile}.tmp`, outFile);
+  await writeFile(`${outFile}.${process.pid}.tmp`, JSON.stringify(doc) + '\n');
+  await rename(`${outFile}.${process.pid}.tmp`, outFile);
   console.log(`${doc.generated}: ${doc.registries.reduce((s, r) => s + r.allocated, 0)} AS numbers allocated, ${doc.economies.length} economies, ${doc.suspect.length} suspect ASPA customers, ${doc.suspect_providers.length} suspect providers`);
 }
 

@@ -20,6 +20,7 @@ function el(tag, attrs, ...children) {
     if (k === 'class') node.className = v;
     else if (k === 'text') node.textContent = v;
     else if (k.startsWith('on')) node.addEventListener(k.slice(2), v);
+    // eslint-disable-next-line no-restricted-syntax -- the element builder: its keys come from the code that calls it
     else node.setAttribute(k, v === true ? '' : v);
   }
   for (const c of children) {
@@ -124,6 +125,7 @@ const HIST_METRICS = {
 const SVG_NS = 'http://www.w3.org/2000/svg';
 const svg = (tag, attrs, ...kids) => {
   const n = document.createElementNS(SVG_NS, tag);
+  // eslint-disable-next-line no-restricted-syntax -- the element builder: its keys come from the code that calls it
   for (const [k, v] of Object.entries(attrs || {})) n.setAttribute(k, v);
   n.append(...kids);
   return n;

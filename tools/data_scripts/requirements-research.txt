@@ -1,0 +1,2 @@
+# record.py reads the MRT archives of the past with pybgpstream (which needs libbgpstream, installed apart).
+pybgpstream==2.0.2

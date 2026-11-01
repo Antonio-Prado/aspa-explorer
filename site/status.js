@@ -7,6 +7,7 @@
 
   function el(tag, attrs, ...kids) {
     const n = document.createElement(tag);
+    // eslint-disable-next-line no-restricted-syntax -- the element builder: its keys come from the code that calls it
     for (const [k, v] of Object.entries(attrs || {})) { if (k === 'class') n.className = v; else if (k === 'text') n.textContent = v; else n.setAttribute(k, v); }
     for (const c of kids) if (c !== null && c !== undefined) n.append(c instanceof Node ? c : document.createTextNode(String(c)));
     return n;

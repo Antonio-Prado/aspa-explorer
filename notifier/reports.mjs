@@ -11,8 +11,11 @@ export const KINDS = ['path', 'bulk', 'routes', 'whatif', 'tromboning', 'other']
 export const CELL_CLASSES = ['valid', 'unknown', 'invalid', 'provider', 'not-provider', 'none'];
 export const LIMITS = { title: 140, source: 600, sections: 12, heading: 120, text: 2000, columns: 8, column: 60, rows: 500, cell: 240, bytes: 200 * 1024 };
 export const TTL_DAYS = 30;
-// 128 bits since 1.47.6; the 48-bit ones made before (12 characters) are read until they expire
+// 128 bits since 1.47.6; the 48-bit ones made before (12 characters) are read until they expire: the last was made on 20 October 2026, so from
+// 20 November 2026 the short form is refused (see legacyIdOk), and ID_RE, nginx and site/report.js can then lose it
 export const ID_RE = /^(?:[0-9a-f]{32}|[0-9a-f]{12})$/;
+export const LEGACY_ID_UNTIL = Date.parse('2026-11-20T00:00:00Z') / 1000;
+export const legacyIdOk = (id, now) => String(id).length !== 12 || now < LEGACY_ID_UNTIL;
 
 const plain = (v, max) => (typeof v === 'string' ? v.replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f‪-‮⁦-⁩]/g, '').trim().slice(0, max) : null);
 

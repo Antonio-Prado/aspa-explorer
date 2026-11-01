@@ -63,4 +63,11 @@ test('CSV: quoted when needed, a formula made harmless', () => {
   assert.match(csv.split('\n')[1], /^1,193\.0\.0\.0\/21,3356 1299 680,Valid,/);
 });
 
+test('a line far longer than any AS path is reported, not parsed', () => {
+  const r = checkMany(aspas, `3356 1299 680\n${'1 '.repeat(3000)}`, 'down', AspaVerify);
+  assert.equal(r.rows.length, 2);
+  assert.equal(r.rows[1].result, 'Error');
+  assert.match(r.rows[1].note, /longer than/);
+});
+
 console.log(`${passed} tests passed`);

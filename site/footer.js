@@ -16,6 +16,7 @@
 
   const el = (tag, attrs, ...children) => {
     const node = document.createElement(tag);
+    // eslint-disable-next-line no-restricted-syntax -- the element builder: its keys come from the code that calls it
     for (const [k, v] of Object.entries(attrs || {})) node.setAttribute(k, v);
     node.append(...children);
     return node;
@@ -134,8 +135,10 @@
   toTop.hidden = true;
   const NS = 'http://www.w3.org/2000/svg';
   const svg = document.createElementNS(NS, 'svg');
+  // eslint-disable-next-line no-restricted-syntax -- the element builder: its keys come from the code that calls it
   for (const [k, v] of Object.entries({ viewBox: '0 0 24 24', width: '22', height: '22', 'aria-hidden': 'true', focusable: 'false' })) svg.setAttribute(k, v);
   const arrow = document.createElementNS(NS, 'path');
+  // eslint-disable-next-line no-restricted-syntax -- the element builder: its keys come from the code that calls it
   for (const [k, v] of Object.entries({ d: 'M12 19V5M5 12l7-7 7 7', fill: 'none', stroke: 'currentColor', 'stroke-width': '2.4', 'stroke-linecap': 'round', 'stroke-linejoin': 'round' })) arrow.setAttribute(k, v);
   svg.append(arrow);
   toTop.append(svg);

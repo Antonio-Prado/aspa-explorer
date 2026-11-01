@@ -16,6 +16,7 @@
     const n = document.createElement(tag);
     for (const [k, v] of Object.entries(attrs || {})) {
       if (v === undefined || v === null || v === false) continue;
+      // eslint-disable-next-line no-restricted-syntax -- the element builder: its keys come from the code that calls it
       if (k === 'class') n.className = v; else if (k === 'text') n.textContent = v; else n.setAttribute(k, v);
     }
     for (const c of kids) if (c !== null && c !== undefined && c !== false) n.append(c instanceof Node ? c : document.createTextNode(String(c)));

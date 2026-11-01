@@ -1,3 +1,3 @@
 # The packages of the scripts that run on the host (stream.py), at the version in use there.
-# record.py also needs pybgpstream (with libbgpstream), and tools/replay/mrt2records.py mrtparse: research tools, not run by the site.
+# record.py, a research tool not run by the site, has its own file: requirements-research.txt.
 websocket-client==1.8.0

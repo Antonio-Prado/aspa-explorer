@@ -3,17 +3,17 @@ import assert from 'node:assert/strict';
 import http from 'node:http';
 import { generateKeyPairSync } from 'node:crypto';
 import { makeToken, readToken } from '../notifier/tokens.mjs';
-import { stabilise, audience, describeEvent, newPlaces, describePlace } from '../notifier/changes.mjs';
+import { stabilise, audience, describeEvent, newPlaces, describePlace, changeBudget } from '../notifier/changes.mjs';
 import { pool } from '../notifier/pool.mjs';
 import { makePulse } from '../notifier/pulse.mjs';
 import { makeOutbox, RETRY, MAX_FAILS } from '../notifier/outbox.mjs';
 import { isPublicIp, parseWebhookUrl, post, signature } from '../notifier/webhook.mjs';
 import { sign, verify, relaxBody } from '../notifier/dkim.mjs';
-import { compose, serialize, sendmail, EMAIL_RE } from '../notifier/mail.mjs';
+import { compose, serialize, sendmail, EMAIL_RE, mailDomainOk } from '../notifier/mail.mjs';
 import { openStore } from '../notifier/store.mjs';
 import { makeApi, httpHandler, parseAsn, limiter, clientKey } from '../notifier/server.mjs';
 import { dueInvalid, describeInvalid, COOLDOWN } from '../notifier/invalid.mjs';
-import { checkReport, shell, headTags, newId, ID_RE, LIMITS } from '../notifier/reports.mjs';
+import { checkReport, shell, headTags, newId, ID_RE, LIMITS, legacyIdOk, LEGACY_ID_UNTIL } from '../notifier/reports.mjs';
 import { watchStatus, describeStatusEvent, statusSubject, MONITOR } from '../notifier/status.mjs';
 
 let passed = 0;
@@ -167,7 +167,7 @@ const setup = (extra = {}) => {
   const api = makeApi({
     store, key: 'k', site: 'https://aspa.example.org', now: () => clock,
     sendConfirmation: async (m) => { mails.push(m); },
-    verifyWebhook: async (url, payload, secret) => { hooks.push({ url, payload, secret }); return extra.hook ? extra.hook(payload) : { status: 200, body: JSON.stringify({ challenge: payload.challenge }) }; },
+    verifyWebhook: async (url, payload, secret, headers) => { hooks.push({ url, payload, secret, headers }); return extra.hook ? extra.hook(payload, headers) : { status: 200, body: JSON.stringify({ challenge: headers['X-ASPA-Challenge'] }) }; },
     ...extra,
   });
   return { store, api, mails, hooks, tick: (s) => { clock += s; } };
@@ -248,6 +248,17 @@ await test('API: a webhook that does not answer the challenge is not kept', asyn
   const down = setup({ hook: async () => { throw new Error('timeout'); } });
   assert.equal((await down.api.subscribe({ kind: 'webhook', target: 'https://hooks.example.org/in', asn: 'AS3333' }, '3.3.3.3')).status, 400);
   assert.equal(down.store.counts().length, 0);
+});
+
+await test('API: the challenge is in a header, not in the body, and an endpoint that only echoes what it gets does not pass', async () => {
+  const echo = setup({ hook: async (payload, headers) => ({ status: 200, body: JSON.stringify({ json: payload, headers }) }) });   // a test service: echoes body and headers, nested
+  assert.equal((await echo.api.subscribe({ kind: 'webhook', target: 'https://echo.example.org/anything', asn: 'AS3333' }, '3.3.3.4')).status, 400);
+  const body = setup({ hook: async (payload) => ({ status: 200, body: JSON.stringify(payload) }) });                         // echoes the body only
+  assert.equal((await body.api.subscribe({ kind: 'webhook', target: 'https://echo.example.org/body', asn: 'AS3333' }, '3.3.3.5')).status, 400);
+  assert.equal(body.hooks[0].payload.challenge, undefined);
+  assert.match(body.hooks[0].headers['X-ASPA-Challenge'], /^[0-9a-f]{32}$/);
+  const text = setup({ hook: async (payload, headers) => ({ status: 200, body: `ok ${headers['X-ASPA-Challenge']}` }) });    // the value, but not as JSON
+  assert.equal((await text.api.subscribe({ kind: 'webhook', target: 'https://hooks.example.org/in', asn: 'AS3333' }, '3.3.3.6')).status, 400);
 });
 
 await test('store: unconfirmed requests are purged, failures counted', () => {
@@ -641,7 +652,7 @@ await test('API: the subscriptions that are switched off do not count for the li
 
 await test('API: two verifications of the same webhook and AS do not run together', async () => {
   let release; const gate = new Promise((r) => { release = r; });
-  const { store, api } = setup({ perIp: () => true, global: () => true, verifyWebhook: async (url, payload) => { await gate; return { status: 200, body: JSON.stringify({ challenge: payload.challenge }) }; } });
+  const { store, api } = setup({ perIp: () => true, global: () => true, verifyWebhook: async (url, payload, secret, headers) => { await gate; return { status: 200, body: JSON.stringify({ challenge: headers['X-ASPA-Challenge'] }) }; } });
   const first = api.subscribe({ kind: 'webhook', target: 'https://hooks.example.org/in', asn: 'AS3333' }, '2.2.2.2');
   const second = await api.subscribe({ kind: 'webhook', target: 'https://hooks.example.org/in', asn: 'AS3333' }, '2.2.2.3');
   assert.equal(second.status, 409);                                        // the first one is still being checked
@@ -1023,6 +1034,87 @@ await test('store: the bytes of the reports are kept up to date without reading 
   assert.equal(sum(), Buffer.byteLength(JSON.stringify({ title: 'è' })) + 7);
   assert.equal(s.purgeReports(150), 1);
   assert.equal(sum(), 7);
+});
+
+await test('mail: the domain of an address must have its mail servers on the public Internet', async () => {
+  const dnsOf = (mx, hosts) => ({
+    resolveMx: async (d) => { if (mx[d] === undefined) { const e = new Error('nodata'); e.code = 'ENODATA'; throw e; } if (mx[d] === null) { const e = new Error('nx'); e.code = 'ENOTFOUND'; throw e; } return mx[d]; },
+    lookup: async (h) => { if (!hosts[h]) throw new Error('no address'); return hosts[h].map((address) => ({ address, family: address.includes(':') ? 6 : 4 })); },
+  });
+  const ok = (d, mx, hosts) => mailDomainOk(d, dnsOf(mx, hosts));
+  assert.equal(await ok('example.org', { 'example.org': [{ exchange: 'mx.example.org', priority: 10 }] }, { 'mx.example.org': ['198.51.99.1'] }), true);
+  assert.equal(await ok('example.org', { 'example.org': [{ exchange: 'mx.example.org', priority: 10 }] }, { 'mx.example.org': ['10.0.0.5'] }), false);       // a private network
+  assert.equal(await ok('example.org', { 'example.org': [{ exchange: 'a.example.org', priority: 10 }, { exchange: 'b.example.org', priority: 20 }] }, { 'a.example.org': ['198.51.99.1'], 'b.example.org': ['127.0.0.1'] }), false);
+  assert.equal(await ok('example.org', {}, { 'example.org': ['2001:4860::1'] }), true);                      // no MX: the domain itself
+  assert.equal(await ok('example.org', {}, { 'example.org': ['::1'] }), false);
+  assert.equal(await ok('example.org', { 'example.org': [{ exchange: '', priority: 0 }] }, {}), false);       // null MX: takes no mail
+  assert.equal(await ok('example.org', { 'example.org': null }, {}), false);                                 // no such domain
+  assert.equal(await mailDomainOk('slow.example', { resolveMx: () => new Promise(() => {}), timeoutMs: 20 }), false);
+});
+
+await test('API: an address whose domain cannot receive mail on the public Internet is refused, before anything is stored', async () => {
+  const { store, api, mails } = setup({ perIp: () => true, mailDomainOk: async (d) => d !== 'lan.example' });
+  const r = await api.subscribe({ kind: 'email', target: 'x@lan.example', asn: 'AS1' }, '1.1.1.1');
+  assert.equal(r.status, 400);
+  assert.equal(mails.length, 0);
+  assert.equal(store.counts().length, 0);
+});
+
+await test('API: an address answers alike whether or not it is subscribed already, also once the limits are used', async () => {
+  const { store, api, mails } = setup({ perIp: () => true, global: () => true });
+  await api.subscribe({ kind: 'email', target: 's@example.org', asn: 'AS1' }, '198.51.100.1');
+  api.confirm({ token: mails[0].token });                                   // AS1 is subscribed, AS2 and AS3 are not
+  assert.equal(store.find('email', 's@example.org', 'AS1').status, 'active');
+  const from = '203.0.113.7';
+  const answers = [];
+  for (const asn of ['AS1', 'AS2', 'AS1', 'AS3']) answers.push((await api.subscribe({ kind: 'email', target: 's@example.org', asn }, from)).status);
+  assert.deepEqual(answers, [202, 202, 202, 429]);                           // the subscribed AS uses the limit of the network as the others do
+});
+
+await test('API: the answer comes before the confirmation is sent, and a request whose message could not go is removed', async () => {
+  let fail;
+  const failing = new Promise((_, rej) => { fail = rej; });
+  const logs = [];
+  const { store, api } = setup({ perIp: () => true, sendConfirmation: () => failing, log: (m) => logs.push(m) });
+  const r = await api.subscribe({ kind: 'email', target: 'f@example.org', asn: 'AS5' }, '1.1.1.1');
+  assert.equal(r.status, 202);                                               // answered while the mailer is still working
+  assert.equal(store.find('email', 'f@example.org', 'AS5').status, 'pending');
+  fail(new Error('mailer down'));
+  await new Promise((res) => setImmediate(res));
+  assert.equal(store.find('email', 'f@example.org', 'AS5'), null);
+  assert.match(logs.join(' '), /mailer down/);
+});
+
+await test('changes: one subscription gets a limited number of change messages a day, then one notice, then nothing until the day is over', () => {
+  let t = 0;
+  const b = changeBudget(3, 100, () => t);
+  assert.deepEqual([1, 2, 3, 4, 5].map(() => b(7)), ['send', 'send', 'send', 'notice', 'skip']);
+  assert.equal(b(8), 'send');                                                // another subscription has its own
+  t = 101;
+  assert.equal(b(7), 'send');
+});
+
+await test('HTTP: the health through nginx says only what the status page reads; the whole of it only on the host', async () => {
+  const { api } = setup();
+  const full = { ok: true, last_poll: 'x', failures_in_a_row: 0, poll_seconds: 600, outbox_pending: 3, disabled_subscriptions: 1, reports: 9, report_bytes: 99 };
+  const server = http.createServer(httpHandler(api, { site: 'https://aspa.example.org', health: () => full }));
+  await new Promise((r) => server.listen(0, '127.0.0.1', r));
+  const url = `http://127.0.0.1:${server.address().port}/api/v1/subscriptions/health`;
+  assert.deepEqual(await (await fetch(url, { headers: { 'X-Real-IP': '198.51.100.1' } })).json(), { ok: true, last_poll: 'x', failures_in_a_row: 0, poll_seconds: 600 });
+  assert.deepEqual(await (await fetch(url)).json(), full);
+  await new Promise((r) => server.close(r));
+});
+
+await test('reports: the short ids of before 1.47.6 are read only until the last of them has expired', () => {
+  assert.equal(legacyIdOk('0123456789ab', LEGACY_ID_UNTIL - 1), true);
+  assert.equal(legacyIdOk('0123456789ab', LEGACY_ID_UNTIL), false);
+  assert.equal(legacyIdOk('0'.repeat(32), LEGACY_ID_UNTIL + 86400 * 365), true);
+  assert.equal(LEGACY_ID_UNTIL, Date.parse('2026-11-20T00:00:00Z') / 1000);
+});
+
+await test('webhooks: the AS112 servers are not public receivers', () => {
+  for (const ip of ['192.31.196.1', '192.52.193.1', '192.175.48.6', '2620:4f:8000::1']) assert.equal(isPublicIp(ip), false, ip);
+  assert.equal(isPublicIp('192.31.197.1'), true);
 });
 
 await test('mail: no header value can carry a line break, whatever the configuration', () => {

@@ -33,6 +33,7 @@
   const country = (cc) => { if (cc === 'ZZ') return 'Unknown'; try { return (names && names.of(cc)) || cc; } catch { return cc; } };
   const labelOf = (key) => (key === 'all' ? 'All networks' : key.startsWith('rir:') ? (RIRS[key.slice(4)] || key.slice(4)) : country(key.slice(3)));
   const NS = 'http://www.w3.org/2000/svg';
+  // eslint-disable-next-line no-restricted-syntax -- the element builder: its keys come from the code that calls it
   const svg = (tag, attrs) => { const n = document.createElementNS(NS, tag); for (const [k, v] of Object.entries(attrs || {})) n.setAttribute(k, v); return n; };
   const month = (iso) => new Date(iso + 'T00:00:00Z').toLocaleDateString('en-GB', { month: 'short', year: 'numeric', timeZone: 'UTC' });
 

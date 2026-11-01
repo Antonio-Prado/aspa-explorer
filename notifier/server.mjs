@@ -8,7 +8,7 @@ import { makeToken, readToken } from './tokens.mjs';
 import { EMAIL_RE } from './mail.mjs';
 import { parseWebhookUrl } from './webhook.mjs';
 import { MIN_THRESHOLD, MAX_THRESHOLD } from './invalid.mjs';
-import { checkReport, newId, shell, ID_RE, TTL_DAYS } from './reports.mjs';
+import { checkReport, newId, shell, ID_RE, TTL_DAYS, legacyIdOk } from './reports.mjs';
 
 const MAX_AS = 4294967295;
 export const STATUS = 'STATUS';
@@ -47,7 +47,7 @@ export function clientKey(ip) {
 }
 
 export function makeApi(deps) {
-  const { store, key, site, sendConfirmation, verifyWebhook, now = () => Math.floor(Date.now() / 1000) } = deps;
+  const { store, key, site, sendConfirmation, verifyWebhook, now = () => Math.floor(Date.now() / 1000), mailDomainOk = async () => true } = deps;
   const perIp = deps.perIp || limiter(10, HOUR);
   const global = deps.global || limiter(400, HOUR);
   // confirmation messages to one address from one network: a few a day. The limit is for each network, so that nobody can use up
@@ -89,18 +89,27 @@ export function makeApi(deps) {
       const target = String(body.target || '').trim().toLowerCase();
       if (!EMAIL_RE.test(target) || target.length > 254) return bad('that does not look like an e-mail address');
       const accepted = reply(202, { status: 'pending', message: 'If the address is valid, a confirmation message is on its way. Follow the link in it to start receiving notifications.' });
+      // Whether the address is subscribed already must not show, neither in the answer nor in its time: the limits come first and are the same
+      // for every request, and the confirmation is sent after the answer.
+      if (!perTargetFrom(`${target} ${ip}`)) return bad('too many confirmation messages were asked for this address from your network today; try again tomorrow', 429);
+      if (!global('mail')) return bad('the service is busy, try again later', 503);
+      // the mailer delivers to the mail servers of the domain: a domain whose servers are on a private network is refused (the server would connect there)
+      if (!(await mailDomainOk(target.slice(target.lastIndexOf('@') + 1)))) return bad('the domain of that address has no mail server on the public Internet', 400);
       let row = store.find('email', target, asn);
       if (row && row.status === 'active') return accepted;                              // do not tell whether it exists
       if (row && t - row.attempted < HOUR) return accepted;                             // one confirmation per hour per subscription
       // the limit of an address counts the subscriptions that work: requests that nobody confirmed must not take the places of its owner
       if (!row && store.countTarget('email', target) >= MAX_PER_TARGET) return accepted;
-      if (!perTargetFrom(`${target} ${ip}`)) return bad('too many confirmation messages were asked for this address from your network today; try again tomorrow', 429);
-      if (!global('mail')) return bad('the service is busy, try again later', 503);
       // requests that nobody has confirmed yet are limited too, for each AS and in all: they cannot take the places of the working subscriptions
       if (!row && (store.countPendingAsn(asn) >= MAX_PENDING_PER_ASN || store.countPending() >= MAX_PENDING)) return bad('the service is busy, try again later', 503);
       if (row) { store.repend(row.id); store.attempt(row.id, t); store.setLeaks(row.id, leaks); store.setInvalid(row.id, invalid); } else row = { id: store.insert('email', target, asn, null, t, leaks, invalid), attempted: t };
       row = store.get(row.id);
-      try { await sendConfirmation({ to: target, asn, token: confirmToken(row), site, leaks: !!leaks, invalid }); } catch (err) { deps.log && deps.log(`confirmation not sent: ${err.message}`); store.remove(row.id); return bad('the confirmation message could not be sent', 502); }
+      const sent = row;
+      sendConfirmation({ to: target, asn, token: confirmToken(row), site, leaks: !!leaks, invalid }).catch((err) => {
+        deps.log && deps.log(`confirmation not sent: ${err.message}`);
+        const current = store.get(sent.id);
+        if (current && current.status === 'pending' && current.attempted === sent.attempted) store.remove(sent.id);     // the request it was for, unless asked again meanwhile
+      });
       return accepted;
     }
 
@@ -120,10 +129,14 @@ export function makeApi(deps) {
       const secret = 'whsec_' + randomBytes(24).toString('hex');
       const id = row ? row.id : store.insert('webhook', target, asn, secret, t, leaks, invalid);
       if (row) { store.repend(id); store.attempt(id, t, secret); store.setLeaks(id, leaks); store.setInvalid(id, invalid); }
+      // The challenge travels in a header, not in the body, and must come back as {"challenge": "…"}: an endpoint that only echoes what it
+      // receives (somebody else's test service, say) does not pass, so an address can be subscribed only by whoever runs it.
       const challenge = randomBytes(16).toString('hex');
       try {
-        const r = await verifyWebhook(target, { type: 'verification', challenge, asn, unsubscribe: unsubscribeUrl(id) }, secret);
-        if (!(r.status >= 200 && r.status < 300) || !String(r.body).includes(challenge)) throw new Error(`the address answered HTTP ${r.status} without repeating the challenge`);
+        const r = await verifyWebhook(target, { type: 'verification', asn, unsubscribe: unsubscribeUrl(id) }, secret, { 'X-ASPA-Challenge': challenge });
+        let answer = null;
+        try { answer = JSON.parse(String(r.body)); } catch { /* not JSON */ }
+        if (!(r.status >= 200 && r.status < 300) || !answer || answer.challenge !== challenge) throw new Error(`the address answered HTTP ${r.status} without {"challenge": "<the value of the X-ASPA-Challenge header>"}`);
       } catch (err) {
         store.remove(id);
         return bad(`verification failed: ${err.message}`, 400);
@@ -170,7 +183,7 @@ export function makeApi(deps) {
     return reply(201, { id, url: `${site}/r/${id}`, expires_days: TTL_DAYS });
   }
   // a report that has expired is not served, whether the hourly clean-up has deleted it yet or not
-  const readable = (id) => { const r = ID_RE.test(id) && store.getReport(id); return r && r.created + TTL_DAYS * 86400 > now() ? r : null; };
+  const readable = (id) => { const r = ID_RE.test(id) && legacyIdOk(id, now()) && store.getReport(id); return r && r.created + TTL_DAYS * 86400 > now() ? r : null; };
   function getReport(id) {
     const r = readable(id);
     if (!r) return bad('this report does not exist or has expired', 404);
@@ -185,7 +198,9 @@ export function makeApi(deps) {
 const readBody = (req, limit = 2048) => new Promise((resolve, reject) => {
   let size = 0; const chunks = [];
   let failed = false;
-  req.on('data', (c) => { size += c.length; if (size > limit) { if (!failed) { failed = true; reject(new Error('too large')); } } else chunks.push(c); });
+  // past the limit nothing more is kept, and the answer (413) goes at once; a body that goes on far beyond it (nginx caps the bodies, a client that
+  // reaches the port directly does not) closes the connection
+  req.on('data', (c) => { size += c.length; if (size > limit) { if (!failed) { failed = true; reject(new Error('too large')); } if (size > 8 * limit) req.destroy(); } else chunks.push(c); });
   req.on('end', () => resolve(Buffer.concat(chunks).toString('utf8')));
   req.on('error', reject);
 });
@@ -203,7 +218,13 @@ export function httpHandler(api, { site, perIpUnsub = limiter(60, HOUR), health 
       // and its limits by the path as sent, would then have applied the limits of another route
       if (String(req.url).split('?')[0] !== url.pathname) return send({ status: 400, body: { error: 'bad request path' } });
       const ip = clientKey(req.headers['x-real-ip'] || req.socket.remoteAddress || '');
-      if (req.method === 'GET' && url.pathname === '/api/v1/subscriptions/health' && health) return send({ status: 200, body: health() });
+      // the health: through nginx (which sets X-Real-IP) only what the status page reads; the queue and the counts of subscriptions and reports
+      // only to a request made on the host itself
+      if (req.method === 'GET' && url.pathname === '/api/v1/subscriptions/health' && health) {
+        const h = health();
+        if (!req.headers['x-real-ip'] && /^(127\.|::1$|::ffff:127\.)/.test(String(req.socket.remoteAddress || ''))) return send({ status: 200, body: h });
+        return send({ status: 200, body: { ok: h.ok, last_poll: h.last_poll, failures_in_a_row: h.failures_in_a_row, poll_seconds: h.poll_seconds } });
+      }
       const rep = /^\/api\/v1\/reports\/([^/]+)$/.exec(url.pathname);
       if (req.method === 'GET' && rep) { const r = api.getReport(rep[1]); return send(r, 'no-store'); }
       const page = /^\/r\/([^/]+)$/.exec(url.pathname);

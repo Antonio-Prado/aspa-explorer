@@ -59,6 +59,7 @@
   const NS = 'http://www.w3.org/2000/svg';
   const svg = (tag, attrs, ...kids) => {
     const n = document.createElementNS(NS, tag);
+    // eslint-disable-next-line no-restricted-syntax -- the element builder: its keys come from the code that calls it
     for (const [k, v] of Object.entries(attrs || {})) n.setAttribute(k, v);
     n.append(...kids);
     return n;

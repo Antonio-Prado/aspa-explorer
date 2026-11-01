@@ -22,7 +22,13 @@ A security review of the whole code: the limits of the notifier and of the RIPE 
 - The notifier and the RIPE Atlas service refuse a path that the URL parser would change (`\`, `..`): nginx chose the location, and its limits, by the path as sent, while the service would have answered another route.
 - nginx: `/data/validity/` refuses a prefix with `..`; `/changes.atom` has a rate limit and one cached copy whatever the query string; `server_tokens off` and `Strict-Transport-Security`.
 - Builders: AS numbers that are not `AS` and digits are dropped before they become names of files or markup (`build-api.mjs`); the customer is escaped in the HTML of the entries of `changes.atom`; the files of the `history` branch are published only with their expected shape; the downloads of the table dumps accept only https and stop at 2 GiB; a day of `watch-invalid.mjs` keeps at most 200,000 pairs of prefix and origin, and only prefixes; `build-validators.mjs` refuses a server that ignores the byte range; `build-trends.mjs` and `build-resources.mjs` ignore dates and delegation records that are out of range.
-- CI: the scheduled and publishing jobs, which hold the protected variables, also ask for a protected ref; the token of `mirror-wiki.sh` is masked as plain text (a `/` or `&` in it broke the mask); the GitHub actions are pinned to a commit; `html-validate` and `eslint` are pinned to a version.
+- Notifications, webhooks: the challenge of the verification is in the `X-ASPA-Challenge` header, no longer in the body, and the address must answer `{"challenge": "…"}` with it. Repeating the challenge anywhere in the body was enough before, so a service that only echoes what it gets (somebody else's) could be subscribed by anybody. Receivers written for the old verification have to change; there were none subscribed.
+- Notifications, e-mail: an address answers alike, and as fast, whether or not it is subscribed already (the limits come first and the confirmation is sent after the answer); an address whose domain has no mail server on the public Internet is refused, so that the mailer cannot be aimed at a private network; one subscription gets at most 24 messages about changes in 24 hours, then one notice (`aspa.notice` for a webhook), because anybody holding an ASPA can name any AS as a provider over and over.
+- Notifications: the health answer through nginx has only what the status page reads; the queue and the counts of subscriptions and reports are given only to a request made on the host. A body far beyond its limit closes the connection. The AS112 servers are not webhook receivers.
+- The short report ids made before 1.47.6 are read until 20 November 2026, when the last of them has expired, and refused from then on.
+- Builders: the places of valley kept in memory by `build-leaks.mjs` are bounded; two runs of `build-api.mjs` in the same second no longer share a directory; `build-status.mjs` and `build-resources.mjs` write a temporary file of their own process.
+- `pkg-audit-refresh` takes any message of `pkg audit -F` as a failure, instead of a few words: a failure it did not know marked the database as fresh.
+- CI and supply chain: the packages of the accessibility test come from `scripts/a11y/package-lock.json`, with their integrity hashes (`npm ci`); `eslint` 10; a lint rule refuses attribute names that are not literals, outside the element builders, which are marked.
 
 ### Fixed
 - The notifier refuses to start with an empty key for the links, which would have signed every link with nothing; a mail header can never carry a line break, whatever the configuration.
@@ -32,8 +38,10 @@ A security review of the whole code: the limits of the notifier and of the RIPE 
 - `incident.py`: an error halfway through a file no longer leaves what that file added in the open incidents, so the file read again the next day is not counted twice.
 - A page address with a broken `%` after `#` no longer stops the page; the link of a shared result is checked again in the page before it is made.
 
+- The bulk check reports a line longer than 4,000 characters instead of parsing it.
+
 ### Added
-- `tools/data_scripts/requirements.txt` pins the Python package used on the host.
+- `tools/data_scripts/requirements.txt` pins the Python package used on the host; `requirements-research.txt` there and `tools/replay/requirements.txt` pin those of the research tools.
 
 ## [1.56.0] - 2026-10-29
 

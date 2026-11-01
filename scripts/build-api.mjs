@@ -237,7 +237,9 @@ async function main() {
 
   const stamp = generated.replace(/[-:]/g, '').replace('T', '-').replace('Z', '');
   const dir = join(out, stamp);
-  await rm(dir, { recursive: true, force: true });
+  // the directory of this build is made by this run alone: two runs in the same second would otherwise write into, and delete, the same one
+  await mkdir(out, { recursive: true });
+  try { await mkdir(dir); } catch (err) { if (err.code === 'EEXIST') throw new Error(`${dir} exists: another build of the same second is running`); throw err; }
   for (const d of ['api/v1/as', 'badge', 'feed']) await mkdir(join(dir, d), { recursive: true });
   let n = 0;
   for (const as of ases) {

@@ -4,8 +4,10 @@
 # weekly host-package-audit CI job reads the result.
 # catalogue first, so that the audit job can tell whether a fixed version is available
 /usr/local/sbin/pkg update -q >/dev/null 2>&1
+# pkg audit exits 1 both when it fails and when it finds vulnerable packages, so the status says nothing; with -q it writes nothing on stderr when
+# the database was fetched (or was already current), and a message when it was not: any message counts as a failure, and the marker is not touched.
 err=$(/usr/local/sbin/pkg audit -F -q 2>&1 >/dev/null)
-if echo "$err" | grep -qiE 'fail|error|unable|cannot|resolve|timed out'; then
+if [ -n "$err" ]; then
   echo "$err" | logger -t pkg-audit-refresh
   exit 1
 fi

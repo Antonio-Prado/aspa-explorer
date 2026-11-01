@@ -25,6 +25,7 @@ jobs:
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: 22
-      - run: npm install --no-save --no-audit --no-fund playwright-core@1.64.1 axe-core@4.14.0
+      # the packages of scripts/a11y/package-lock.json, checked against their integrity hashes, without install scripts
+      - run: cp scripts/a11y/package.json scripts/a11y/package-lock.json . && npm ci --no-audit --no-fund --ignore-scripts
       - run: npx playwright-core install --with-deps chromium
       - run: node scripts/test-a11y.mjs

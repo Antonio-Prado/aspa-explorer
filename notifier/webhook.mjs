@@ -16,7 +16,9 @@ const inV4 = (n, base, bits) => {
 };
 const V4_BLOCKED = [['0.0.0.0', 8], ['10.0.0.0', 8], ['100.64.0.0', 10], ['127.0.0.0', 8], ['169.254.0.0', 16], ['172.16.0.0', 12],
   ['192.0.0.0', 24], ['192.0.2.0', 24], ['192.88.99.0', 24], ['192.168.0.0', 16], ['198.18.0.0', 15], ['198.51.100.0', 24],
-  ['203.0.113.0', 24], ['224.0.0.0', 4], ['240.0.0.0', 4]].map(([a, b]) => [v4(a), b]);
+  ['203.0.113.0', 24], ['224.0.0.0', 4], ['240.0.0.0', 4],
+  // the AS112 servers (RFC 7534, RFC 7535): routed, but sinks of the reverse DNS of private addresses, not receivers of webhooks
+  ['192.31.196.0', 24], ['192.52.193.0', 24], ['192.175.48.0', 24]].map(([a, b]) => [v4(a), b]);
 
 // The 16 bytes of an IPv6 address in any of its written forms (leading zeros, "::", a dotted IPv4 tail), or null.
 function v6bytes(ip) {
@@ -40,7 +42,7 @@ const inV6 = (bytes, base, bits) => {
 };
 // What is inside 2000::/3 and is not for the public Internet (IANA special-purpose registry): the Teredo, benchmarking, ORCHID and documentation
 // space of 2001::/23 and 2001:db8::/32, 6to4, the old 6bone block 3ffe::/16, SRv6 SIDs, and the documentation block 3fff::/20. Compared on the 128 bits, not on the text.
-const V6_BLOCKED = [['2001::', 23], ['2001:db8::', 32], ['2002::', 16], ['3ffe::', 16], ['3fff::', 20], ['5f00::', 16]];
+const V6_BLOCKED = [['2001::', 23], ['2001:db8::', 32], ['2002::', 16], ['3ffe::', 16], ['3fff::', 20], ['5f00::', 16], ['2620:4f:8000::', 48]];   // the last: AS112 (RFC 7534)
 
 // true only for a unicast address on the public Internet
 export function isPublicIp(ip) {

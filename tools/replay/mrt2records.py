@@ -1,5 +1,5 @@
 """RIPE RIS update files (MRT) -> the records of record.py/stream.py: A and W, S for a change of state of a session, and M for an
-entry that the parser could not read in full. Needs `mrtparse` (pip install mrtparse); run it with `python -I`.
+entry that the parser could not read in full. Needs `mrtparse` (`pip install -r requirements.txt` in this folder, which pins it); run it with `python -I`.
 usage: mrt2records.py OUT.jsonl.gz FILE.gz ..."""
 import gzip, json, sys
 from datetime import datetime, timezone
