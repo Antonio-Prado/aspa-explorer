@@ -1188,6 +1188,8 @@ await test('rtr: the first poll takes note, a new anomaly is announced once, an 
   u = watchRtr(c({ serial_stale: false, connected: false, last_serial_change: S }, '2026-11-10T09:05:00Z'), u.saved);
   u = watchRtr(c({ serial_stale: true, connected: true, last_serial_change: S, stale_after_s: 10800 }, '2026-11-10T09:10:00Z'), u.saved);
   assert.deepEqual(u.events, []);                                                   // stale since before the first poll: still not news
+  const v = watchRtr(c({ serial_stale: false, connected: true, last_serial_change: '2026-11-10T09:20:00Z' }, '2026-11-10T09:20:00Z'), { last: { routinator: 0 }, stale: { routinator: true } });
+  assert.equal(v.events.length, 1); assert.equal(v.events[0].trigger, 'serial_advancing');   // a state saved before 1.62.3: the recovery is still told
   assert.equal(describeRtrEvent(a2), 'High anomaly at 2026-11-09 15:00:00 UTC: the number of VRPs announced was off the baseline (1200, 161.2 deviations from the usual). The sync was unlike the ones before it.');
   assert.equal(describeRtrEvent(a1), 'Medium anomaly at 2026-11-09 14:00:00 UTC: several measures of the sync at once was off the baseline. The sync was unlike the ones before it.');
   assert.equal(describeRtrEvent({ at: '2026-11-09T16:00:00Z', severity: 'high', category: 'structural', trigger: 'reset', raw: {} }), 'High anomaly at 2026-11-09 16:00:00 UTC: the session was reset. The session itself misbehaved.');

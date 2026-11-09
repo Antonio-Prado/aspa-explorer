@@ -36,7 +36,7 @@ export function watchRtr(doc, saved) {
     const isStale = Boolean(c.session && c.session.serial_stale);
     const since = c.session && c.session.last_serial_change ? c.session.last_serial_change : null;
     stale[c.id] = isStale;
-    told[c.id] = c.id in oldTold ? oldTold[c.id] : null;
+    told[c.id] = c.id in oldTold ? oldTold[c.id] : (oldStale[c.id] ? since : null);   // a state saved before 1.62.3 knows the stall but not its serial
     if (old && c.id in oldStale) {
       if (isStale && !oldStale[c.id] && (since === null || told[c.id] !== since)) {
         events.push({ at: when, cache: c.name || c.id, cache_id: c.id, severity: 'high', category: 'structural', trigger: 'serial_stale', since, hours: c.session.stale_after_s ? Math.round(c.session.stale_after_s / 3600) : null });
