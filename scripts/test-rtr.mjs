@@ -75,6 +75,10 @@ test('the metrics say whether the session is up; without them the last event doe
   assert.equal(d.events[0].reason, 'EOF');
   assert.equal(summarise([], T0).last_sync, null);
   assert.equal(summarise([], T0).session.connected, false);
+  // before the first sync the version is not known, whatever the monitor asked for
+  const fresh = summarise(parseLines(JSON.stringify({ timestamp: at(0), cache: 'c', event_type: 'connected', proto_version: 2 })), T0 + 1000, { session_state: 1, protocol_version: 2 });
+  assert.equal(fresh.session.protocol, null);
+  assert.equal(fresh.session.carries_aspa, false);
 });
 
 test('anomalies: the newest first, rounded, counted by severity and in the last 7 days; events keep reasons and codes', () => {
