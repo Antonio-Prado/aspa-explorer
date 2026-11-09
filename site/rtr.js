@@ -33,7 +33,7 @@
     lineChart($('rtr-chart'), labels, totals, { label: `${word} held by the RTR client, one point an hour`, yTitle: word });
     lineChart($('rtr-changes'), labels, changes, { label: `${word} announced or withdrawn in each hour`, yTitle: `${word} changed` });
     const lo = Math.min(...totals), hi = Math.max(...totals);
-    $('rtr-chart-note').textContent = `${fmt.format(pts.length)} hours from ${labels[0]} to ${labels[labels.length - 1]} UTC. The ${word} went from ${fmt.format(lo)} to ${fmt.format(hi)} at most; the second chart counts the records announced or withdrawn in each hour (a full resync, which announces everything again, is not counted). The vertical axis of the first chart starts at zero, as the other charts of the page.`;
+    $('rtr-chart-note').textContent = `${fmt.format(pts.length)} hours from ${labels[0]} to ${labels[labels.length - 1]} UTC. ${lo === hi ? `The ${word} stayed at ${fmt.format(lo)}` : `The ${word} went from ${fmt.format(lo)} at least to ${fmt.format(hi)} at most`}; the second chart counts the records announced or withdrawn in each hour (a full resync, which announces everything again, is not counted). The vertical axis of the first chart starts at zero, as the other charts of the page.`;
   }
 
   async function main() {

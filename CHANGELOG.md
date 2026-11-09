@@ -5,9 +5,14 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 Each version is a tag, and its release, with these notes, is on [GitHub](https://github.com/Antonio-Prado/aspa-explorer/releases).
-A few numbers were deployed and folded into the next release without a tag of their own (1.13.0, 1.14.0, 1.16.0, 1.17.0, 1.18.3, 1.20.1, 1.20.2, 1.39.3 and 1.43.9, whose changes are in 1.43.10), and 1.23.2 was not used.
+A few numbers were deployed and folded into the next release without a tag of their own (1.13.0, 1.14.0, 1.16.0, 1.17.0, 1.18.3, 1.20.1, 1.20.2, 1.39.3, 1.43.9, whose changes are in 1.43.10, and 1.58.0, whose changes are in 1.58.1), and 1.23.2 was not used.
 
 ## [Unreleased]
+
+## [1.58.1] - 2026-11-09
+
+### Fixed
+- The note under the charts of the RTR section said that a count "went from 4,042 to 4,042" when it did not change.
 
 ## [1.58.0] - 2026-11-09
 
