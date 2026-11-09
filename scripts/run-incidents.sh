@@ -64,6 +64,8 @@ find data -name 'records_*.jsonl.gz' -mtime +"$KEEP_DAYS" -delete
 find . -maxdepth 1 -name 'incidents_*.jsonl' -mtime +"$KEEP_INCIDENT_DAYS" -delete
 if ls incidents_*.jsonl >/dev/null 2>&1; then
   "$NODE" "$SCRIPTS/build-incidents.mjs" "$GEN/incidents.json" . --cache="$GEN/cache" --detail="$BASE/incidents-detail.jsonl"
+  # the detail file is public (/api/v1/incidents-detail.jsonl) and weighs hundreds of megabytes: a compressed copy for nginx (gzip_static)
+  gzip -kf "$BASE/incidents-detail.jsonl"
 else
   echo "no incident file yet: nothing to publish"
 fi

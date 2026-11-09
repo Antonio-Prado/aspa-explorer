@@ -1,0 +1,3 @@
+# A copy of the anomaly baseline of each RTR monitor that nginx can read (the monitor writes it readable by its user only).
+# Root's crontab, every five minutes; nginx serves the copies as /api/v1/rtr/<id>-baseline.json (deploy/nginx/aspa.conf).
+*/5 * * * * for d in /var/db/raven/*/; do n=$(basename "$d"); [ -f "$d/anomaly-baseline.json" ] && install -o root -g wheel -m 644 "$d/anomaly-baseline.json" "/var/db/aspa-gen/rtr-baselines/$n.json"; done
