@@ -32,6 +32,7 @@ export const FILES = (site) => [
   ['leaks.json', `${site}/api/v1/leaks.json`, 'places of valley in the routes of the 33 collectors of RIPE RIS and RouteViews, today'],
   ['leaks-history.json', `${site}/api/v1/leaks-history.json`, 'one row a day of the totals of the leaks'],
   ['validators.json', `${site}/api/v1/validators.json`, 'the ASPAs of three validators compared'],
+  ['rtr.json', `${site}/api/v1/rtr.json`, 'the RTR session with the validator of the site and with the reference caches, as independent RTR clients see them: the records held and changed by hour for 30 days, the anomalies'],
 ];
 
 const sha256 = (buf) => createHash('sha256').update(buf).digest('hex');
