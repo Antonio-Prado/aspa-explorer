@@ -23,18 +23,18 @@
 <meta name="twitter:card" content="summary_large_image">
 <meta name="color-scheme" content="light dark">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
-<link rel="stylesheet" href="/style.css?v=1.61.0">
-<script src="/download.js?v=1.61.0" defer></script>
-<script src="/datasets.js?v=1.61.0" defer></script>
-<script src="/status-checks.js?v=1.61.0" defer></script>
-<script src="/asnames.js?v=1.61.0" defer></script>
-<script src="/footer.js?v=1.61.0" defer></script>
+<link rel="stylesheet" href="/style.css?v=1.62.0">
+<script src="/download.js?v=1.62.0" defer></script>
+<script src="/datasets.js?v=1.62.0" defer></script>
+<script src="/status-checks.js?v=1.62.0" defer></script>
+<script src="/asnames.js?v=1.62.0" defer></script>
+<script src="/footer.js?v=1.62.0" defer></script>
 </head>
 <body>
 <a class="skip" href="#main">Skip to main content</a>
 <header class="wrap masthead">
   <div class="top">
-    <p class="back"><a class="brandlink" href="/" title="Back to ASPA Explorer"><img class="brand" src="/img/logo-mark.svg?v=1.61.0" alt="" width="40" height="40"><span>ASPA Explorer</span></a></p>
+    <p class="back"><a class="brandlink" href="/" title="Back to ASPA Explorer"><img class="brand" src="/img/logo-mark.svg?v=1.62.0" alt="" width="40" height="40"><span>ASPA Explorer</span></a></p>
     <nav class="topnav" aria-label="Main"><a href="/">Home</a><a href="/statistics.html">Statistics</a><a href="/incidents.html">Incidents</a><a href="/examples.html">Examples</a><a href="/api.html" aria-current="page">API</a><a href="/guide.html">Guide</a><a href="/status.html">Status</a></nav>
   </div>
   <h1>API</h1>
@@ -158,7 +158,7 @@ X-ASPA-Signature: sha256=…      HMAC-SHA256(secret, timestamp + "." + body), h
       <li><a href="/api/v1/adoption.json">/api/v1/adoption.json</a>: the adoption numbers: networks seen in BGP and how many have an ASPA, by RIR, country and size, and the 100 largest networks. Built once a day; the sources are named in the file.</li>
       <li><a href="/api/v1/leaks.json">/api/v1/leaks.json</a>: the places of valley of today in the routes of the 33 collectors, by collector, with the totals; <a href="/api/v1/leaks-history.json">/api/v1/leaks-history.json</a>, one row a day of the totals. Built once a day.</li>
       <li><a href="/api/v1/validators.json">/api/v1/validators.json</a>: the ASPAs of three validators compared, every hour.</li>
-      <li><a href="/api/v1/rtr.json">/api/v1/rtr.json</a>: the RTR session with the validator as an independent RTR client sees it: the session, the last sync, the last 24 hours, the VRPs and ASPAs held and changed hour by hour for 30 days, the anomalies found in the stream of syncs and the session events, for the validator of the site (the top-level fields) and for every cache followed (<code>caches</code>, the reference caches included). Every five minutes.</li>
+      <li><a href="/api/v1/rtr.json">/api/v1/rtr.json</a>: the RTR session with the validator as an independent RTR client sees it: the session, the last sync, the last 24 hours, the VRPs and ASPAs held and changed hour by hour for 30 days, the anomalies found in the stream of syncs and the session events, for the validator of the site (the top-level fields) and for every cache followed (<code>caches</code>, the reference caches included). Every five minutes. The raw telemetry of each monitor is <code>/api/v1/rtr/&lt;id&gt;.ndjson</code>, with the <code>id</code> of the cache as in <code>caches</code> (for example <a href="/api/v1/rtr/routinator.ndjson">/api/v1/rtr/routinator.ndjson</a>): one JSON record a line, as RAVEN writes it, for each session event, sync and anomaly since the monitor started; it grows by a few hundred lines a day.</li>
       <li><a href="/api/v1/relations.json">/api/v1/relations.json</a>: the providers that the CAIDA relationships infer for each AS, and <a href="/api/v1/asn-registry.json">/api/v1/asn-registry.json</a>, the registry and the country of each AS number. Built once a day.</li>
       <li><a href="/api/v1/status-history.json">/api/v1/status-history.json</a> and <a href="/api/v1/status-months.json">/api/v1/status-months.json</a>: the checks of the status page, every 15 minutes, and their shares by month.</li>
       <li><a href="/api/v1/archive/history.json">/api/v1/archive/history.json</a>, <a href="/api/v1/archive/events.json">/api/v1/archive/events.json</a> and <a href="/api/v1/archive/visibility.json">/api/v1/archive/visibility.json</a>: the daily history (one row a day), the events (every change to an ASPA since 12 October 2023) and the BGP visibility. They are copied every ten minutes from the <code>history</code> branch of the project.</li>

@@ -105,7 +105,7 @@
       el('td', { text: e.probe ? 'Version probe refused' : (EVENT[e.type] || e.type) }),
       el('td', { text: [e.reason, e.code !== undefined ? `code ${e.code}` : null, e.protocol !== undefined ? `RTR version ${e.protocol}` : null].filter(Boolean).join(', ') || '–' }))) : [el('tr', {}, el('td', { colspan: '3', text: 'No session event recorded.' }))]));
 
-    $('rtr-note').textContent = `In the last 24 hours the cache of the site announced ${fmt.format(d.vrp_announced || 0)} VRPs and withdrew ${fmt.format(d.vrp_withdrawn || 0)}, announced ${fmt.format(d.aspa_announced || 0)} ASPAs and withdrew ${fmt.format(d.aspa_withdrawn || 0)}${d.duration_max_ms ? `; the longest sync took ${fmt.format(d.duration_max_ms)} ms` : ''}. The same data is available as JSON (/api/v1/rtr.json), and the subscribers to the status alerts are told of every anomaly. RAVEN is BSD-3-Clause software by Nokia; the idea is explained in the RIPE Labs article "Your router trusts its validator. But who's watching the validator?".`;
+    $('rtr-note').textContent = `In the last 24 hours the cache of the site announced ${fmt.format(d.vrp_announced || 0)} VRPs and withdrew ${fmt.format(d.vrp_withdrawn || 0)}, announced ${fmt.format(d.aspa_announced || 0)} ASPAs and withdrew ${fmt.format(d.aspa_withdrawn || 0)}${d.duration_max_ms ? `; the longest sync took ${fmt.format(d.duration_max_ms)} ms` : ''}. The same data is available as JSON (/api/v1/rtr.json), the raw telemetry of each monitor as NDJSON (/api/v1/rtr/<id>.ndjson), and the subscribers to the status alerts are told of every anomaly. RAVEN is BSD-3-Clause software by Nokia; the idea is explained in the RIPE Labs article "Your router trusts its validator. But who's watching the validator?".`;
   }
   main();
 })();

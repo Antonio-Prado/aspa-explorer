@@ -9,6 +9,11 @@ A few numbers were deployed and folded into the next release without a tag of th
 
 ## [Unreleased]
 
+## [1.62.0] - 2026-11-09
+
+### Added
+- The raw telemetry of each RTR monitor is public: `/api/v1/rtr/<id>.ndjson`, with the id of the cache as in `rtr.json` (one JSON record a line for each session event, sync and anomaly, as RAVEN writes it), in the API page and in the OpenAPI description (1.5.0). Nothing personal is in it, and a baseline from a public cache is of use to the author of the monitor and to anybody studying validators.
+
 ## [1.61.0] - 2026-11-09
 
 ### Added
