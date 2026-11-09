@@ -1128,14 +1128,29 @@ await test('rtr: the first poll takes note, a new anomaly is announced once, an 
   const a2 = { at: '2026-11-09T15:00:00Z', severity: 'high', category: 'statistical', trigger: 'vrp_announced', z: { vrp_announced: 161.2 }, raw: { vrp_announced: 1200 } };
   const first = watchRtr({ anomalies: { list: [a1] } }, null);
   assert.deepEqual(first.events, []);
-  assert.equal(first.saved.last, Date.parse(a1.at));
+  assert.deepEqual(first.saved.last, { routinator: Date.parse(a1.at) });
   const second = watchRtr({ anomalies: { list: [a2, a1] } }, first.saved);          // the file lists the newest first
-  assert.deepEqual(second.events, [a2]);
-  assert.equal(second.saved.last, Date.parse(a2.at));
+  assert.equal(second.events.length, 1);
+  assert.equal(second.events[0].at, a2.at);
+  assert.equal(second.events[0].cache, 'the validator');
+  assert.deepEqual(second.saved.last, { routinator: Date.parse(a2.at) });
   assert.deepEqual(watchRtr({ anomalies: { list: [a2, a1] } }, second.saved).events, []);
   assert.deepEqual(watchRtr({}, second.saved).events, []);                           // a file without anomalies, or broken
-  assert.deepEqual(watchRtr(null, null), { events: [], saved: { last: 0 } });
-  assert.deepEqual(watchRtr({ anomalies: { list: [{ at: 'never' }, a1] } }, { last: 0 }).events, [a1]);
+  assert.deepEqual(watchRtr(null, null), { events: [], saved: { last: {} } });
+  assert.equal(watchRtr({ anomalies: { list: [{ at: 'never' }, a1] } }, { last: 0 }).events.length, 1);   // the state of 1.58 (one number) still works
+  // several caches: each has its own memory, and the events say which cache
+  const two = { caches: [{ id: 'routinator', name: 'Routinator of this site', anomalies: { list: [a1] } }, { id: 'cloudflare', name: 'Cloudflare', anomalies: { list: [] } }] };
+  const s1 = watchRtr(two, null);
+  assert.deepEqual(s1.saved.last, { routinator: Date.parse(a1.at), cloudflare: 0 });
+  two.caches[1].anomalies.list = [a1];                                              // an older anomaly, but new on this cache
+  const s2 = watchRtr(two, s1.saved);
+  assert.equal(s2.events.length, 1);
+  assert.equal(s2.events[0].cache, 'Cloudflare');
+  assert.equal(describeRtrEvent(s2.events[0]), 'Medium anomaly on Cloudflare at 2026-11-09 14:00:00 UTC: several measures of the sync at once was off the baseline. The sync was unlike the ones before it.');
+  assert.deepEqual(watchRtr(two, s2.saved).events, []);
+  const s3 = watchRtr({ caches: [two.caches[0], { id: 'fort', name: 'Fort', anomalies: { list: [a2] } }] }, s2.saved);   // a cache added later: its first poll only takes note
+  assert.deepEqual(s3.events, []);
+  assert.equal(s3.saved.last.fort, Date.parse(a2.at));
   assert.equal(describeRtrEvent(a2), 'High anomaly at 2026-11-09 15:00:00 UTC: the number of VRPs announced was off the baseline (1200, 161.2 deviations from the usual). The sync was unlike the ones before it.');
   assert.equal(describeRtrEvent(a1), 'Medium anomaly at 2026-11-09 14:00:00 UTC: several measures of the sync at once was off the baseline. The sync was unlike the ones before it.');
   assert.equal(describeRtrEvent({ at: '2026-11-09T16:00:00Z', severity: 'high', category: 'structural', trigger: 'reset', raw: {} }), 'High anomaly at 2026-11-09 16:00:00 UTC: the session was reset. The session itself misbehaved.');

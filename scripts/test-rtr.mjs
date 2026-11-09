@@ -1,9 +1,9 @@
 // Unit tests for scripts/build-rtr.mjs (no dependencies). Run with: node scripts/test-rtr.mjs
 import assert from 'node:assert/strict';
-import { parseLines, parseMetrics, summarise, KEEP_DAYS, MAX_ANOMALIES } from './build-rtr.mjs';
+import { parseLines, parseMetrics, summarise, cachesFromEnv, KEEP_DAYS, MAX_ANOMALIES } from './build-rtr.mjs';
 
 let passed = 0;
-const test = (name, fn) => { fn(); passed++; console.log('ok  ', name); };
+const test = async (name, fn) => { await fn(); passed++; console.log('ok  ', name); };
 
 const T0 = Date.parse('2026-11-09T14:00:00Z');
 const at = (min) => new Date(T0 + min * 60e3).toISOString().replace(/\.\d+Z$/, 'Z');
@@ -102,6 +102,47 @@ test('the hourly points keep 30 days', () => {
   const d = summarise(parseLines(lines.join('\n')), T0);
   assert.equal(d.series.points.length, 2);
   assert.equal(d.telemetry.syncs, 3);
+});
+
+await test('a cache that refuses RTR version 2: the probe is an event, not an anomaly, and the session carries no ASPA', () => {
+  const lines = [
+    JSON.stringify({ timestamp: at(0), cache: 'c', event_type: 'connected', proto_version: 2 }),
+    JSON.stringify({ timestamp: at(0.01), cache: 'c', event_type: 'error', error_text: 'Bad protocol version\u0000', error_code: 4, proto_version: 2 }),
+    JSON.stringify({ timestamp: at(0.01), cache: 'c', event_type: 'anomaly', category: 'structural', trigger: 'error_report', severity: 'high' }),
+    JSON.stringify({ timestamp: at(0.1), cache: 'c', event_type: 'connected', proto_version: 0 }),
+    sync(0.2, { sync_type: 'full', aspa_total: 0, vrp_announced: 1000 }),
+    sync(2, { serial: 3, aspa_total: 0 }),
+    JSON.stringify({ timestamp: at(3), cache: 'c', event_type: 'anomaly', category: 'structural', trigger: 'reset', severity: 'high' }),
+  ];
+  const d = summarise(parseLines(lines.join('\n')), T0 + 5 * 60e3);
+  assert.equal(d.anomalies.total, 1);                                  // the reset, not the probe
+  assert.equal(d.anomalies.probes, 1);
+  assert.equal(d.anomalies.list[0].trigger, 'reset');
+  assert.equal(d.session.protocol, 0);
+  assert.equal(d.session.carries_aspa, false);
+  const err = d.events.find((e) => e.type === 'error');
+  assert.equal(err.probe, true);
+  assert.equal(err.reason, 'Bad protocol version');
+  assert.equal(err.code, 4);
+  const v2 = summarise(parseLines([JSON.stringify({ timestamp: at(0), cache: 'c', event_type: 'connected', proto_version: 2 }), sync(1)].join('\n')), T0 + 5 * 60e3);
+  assert.equal(v2.session.protocol, 2);
+  assert.equal(v2.session.carries_aspa, true);
+});
+
+await test('the caches from the environment: one by default, several from JSON, a bad list refused', async () => {
+  const one = await cachesFromEnv({});
+  assert.equal(one.length, 1);
+  assert.equal(one[0].id, 'routinator');
+  assert.equal(one[0].telemetry, '/var/db/raven/rtr-telemetry.ndjson');
+  assert.equal(one[0].metrics, 'http://127.0.0.1:9595/metrics');
+  assert.equal((await cachesFromEnv({ RTR_METRICS: '', RTR_CACHE: 'x.example' }))[0].metrics, null);
+  const two = await cachesFromEnv({ RTR_CACHES: '[{"id":"a","telemetry":"/a.ndjson"},{"id":"b","name":"B","host":"b.example","telemetry":"/b.ndjson","metrics":"http://127.0.0.1:1/metrics","note":"n"}]' });
+  assert.equal(two.length, 2);
+  assert.equal(two[0].name, 'a');
+  assert.equal(two[0].metrics, null);
+  assert.equal(two[1].note, 'n');
+  await assert.rejects(cachesFromEnv({ RTR_CACHES: '[{"name":"no id"}]' }));
+  await assert.rejects(cachesFromEnv({ RTR_CACHES: '[]' }));
 });
 
 console.log(`${passed} tests passed`);

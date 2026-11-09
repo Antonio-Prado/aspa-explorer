@@ -23,27 +23,27 @@
 <meta name="twitter:card" content="summary_large_image">
 <meta name="color-scheme" content="light dark">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
-<link rel="stylesheet" href="/style.css?v=1.58.1">
-<script src="/stats.js?v=1.58.1" defer></script>
-<script src="/adoption.js?v=1.58.1" defer></script>
-<script src="/trends.js?v=1.58.1" defer></script>
-<script src="/ui.js?v=1.58.1" defer></script>
-<script src="/resources.js?v=1.58.1" defer></script>
-<script src="/coverage.js?v=1.58.1" defer></script>
-<script src="/invalid.js?v=1.58.1" defer></script>
-<script src="/leaks.js?v=1.58.1" defer></script>
-<script src="/validators.js?v=1.58.1" defer></script>
-<script src="/rtr.js?v=1.58.1" defer></script>
-<script src="/status-checks.js?v=1.58.1" defer></script>
-<script src="/peek.js?v=1.58.1" defer></script>
-<script src="/asnames.js?v=1.58.1" defer></script>
-<script src="/footer.js?v=1.58.1" defer></script>
+<link rel="stylesheet" href="/style.css?v=1.59.0">
+<script src="/stats.js?v=1.59.0" defer></script>
+<script src="/adoption.js?v=1.59.0" defer></script>
+<script src="/trends.js?v=1.59.0" defer></script>
+<script src="/ui.js?v=1.59.0" defer></script>
+<script src="/resources.js?v=1.59.0" defer></script>
+<script src="/coverage.js?v=1.59.0" defer></script>
+<script src="/invalid.js?v=1.59.0" defer></script>
+<script src="/leaks.js?v=1.59.0" defer></script>
+<script src="/validators.js?v=1.59.0" defer></script>
+<script src="/rtr.js?v=1.59.0" defer></script>
+<script src="/status-checks.js?v=1.59.0" defer></script>
+<script src="/peek.js?v=1.59.0" defer></script>
+<script src="/asnames.js?v=1.59.0" defer></script>
+<script src="/footer.js?v=1.59.0" defer></script>
 </head>
 <body>
 <a class="skip" href="#main">Skip to main content</a>
 <header class="wrap masthead">
   <div class="top">
-    <p class="back"><a class="brandlink" href="/" title="Back to ASPA Explorer"><img class="brand" src="/img/logo-mark.svg?v=1.58.1" alt="" width="40" height="40"><span>ASPA Explorer</span></a></p>
+    <p class="back"><a class="brandlink" href="/" title="Back to ASPA Explorer"><img class="brand" src="/img/logo-mark.svg?v=1.59.0" alt="" width="40" height="40"><span>ASPA Explorer</span></a></p>
     <nav class="topnav" aria-label="Main"><a href="/">Home</a><a href="/statistics.html" aria-current="page">Statistics</a><a href="/incidents.html">Incidents</a><a href="/examples.html">Examples</a><a href="/api.html">API</a><a href="/guide.html">Guide</a><a href="/status.html">Status</a></nav>
   </div>
   <h1>Statistics</h1>
@@ -333,6 +333,15 @@
     <h2 id="rtr-title">The validator as a router sees it</h2>
     <p class="hint" id="rtr-sub"><span class="busy">Loading</span></p>
     <div class="tiles live-tiles" id="rtr-tiles"></div>
+    <h3 class="subhead">The caches side by side</h3>
+    <p class="hint" id="rtr-caches-sub"></p>
+    <section class="card table-wrap" tabindex="0" aria-label="Table of the RTR caches followed, side by side">
+      <table class="checks live">
+        <caption class="sr-only">The caches followed: session, RTR version, VRPs, ASPAs, last sync, syncs in 24 hours and anomalies in 7 days</caption>
+        <thead><tr><th scope="col">Cache</th><th scope="col">Session</th><th scope="col">RTR</th><th scope="col" class="num">VRPs</th><th scope="col" class="num">ASPAs</th><th scope="col">Last sync</th><th scope="col" class="num">Syncs, 24 h</th><th scope="col" class="num">Anomalies, 7 days</th></tr></thead>
+        <tbody id="rtr-caches"></tbody>
+      </table>
+    </section>
     <h3 class="subhead">Records held and changed, hour by hour</h3>
     <div class="histctl"><label>Show <select id="rtr-metric" aria-controls="rtr-chart rtr-changes"><option value="aspa">ASPAs</option><option value="vrp">VRPs</option></select></label></div>
     <div class="linechart" id="rtr-chart"></div>
@@ -342,11 +351,11 @@
     <section class="card table-wrap" tabindex="0" aria-label="Table of the anomalies found in the RTR session">
       <table class="checks live">
         <caption class="sr-only">Anomalies found by the detector: when, severity, what was off and the values</caption>
-        <thead><tr><th scope="col">When</th><th scope="col">Severity</th><th scope="col">What was off</th><th scope="col">Values</th></tr></thead>
+        <thead><tr><th scope="col">When</th><th scope="col">Cache</th><th scope="col">Severity</th><th scope="col">What was off</th><th scope="col">Values</th></tr></thead>
         <tbody id="rtr-anomalies"></tbody>
       </table>
     </section>
-    <h3 class="subhead">Session events</h3>
+    <h3 class="subhead">Session events of the cache of the site</h3>
     <section class="card table-wrap" tabindex="0" aria-label="Table of the events of the RTR session">
       <table class="checks live">
         <caption class="sr-only">Events of the RTR session: when, the event and its detail</caption>

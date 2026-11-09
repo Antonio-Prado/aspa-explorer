@@ -1,0 +1,7 @@
+[
+  { "id": "routinator", "name": "Routinator of this site", "host": "rpki.example.net",
+    "telemetry": "/var/db/raven/routinator/rtr-telemetry.ndjson", "metrics": "http://127.0.0.1:9595/metrics" },
+  { "id": "cloudflare", "name": "Cloudflare (public RTR server, VRPs only)", "host": "rtr.rpki.cloudflare.com",
+    "telemetry": "/var/db/raven/cloudflare/rtr-telemetry.ndjson", "metrics": "http://127.0.0.1:9596/metrics",
+    "note": "A public server run by Cloudflare on its rpki-client validator; it speaks RTR version 0, so it carries no ASPA." }
+]

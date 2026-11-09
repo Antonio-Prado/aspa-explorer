@@ -9,6 +9,16 @@ A few numbers were deployed and folded into the next release without a tag of th
 
 ## [Unreleased]
 
+## [1.59.0] - 2026-11-09
+
+### Added
+- **The caches side by side**: the RTR monitor can follow several caches, one monitor for each (`deploy/freebsd/raven_rtr` with profiles), and `scripts/build-rtr.mjs` sums them all up (`RTR_CACHES`, `deploy/freebsd/rtr-caches.json.example`): the first is the validator of the site, the others reference caches run by somebody else. The first reference is the public RTR server of Cloudflare, on its rpki-client validator. The section of the statistics page gets a table of the caches (session, RTR version, VRPs, ASPAs, last sync, syncs, anomalies) and the anomalies of every cache, with the cache they belong to; the status alerts say on which cache an anomaly was found, and each cache is watched on its own.
+- A cache that refuses RTR version 2 (Cloudflare's answers in version 0, so it carries no ASPA) is shown as checking the VRPs only; the monitor's hourly version probe, refused with error 4, is listed among the session events as a probe and not counted as an anomaly.
+
+### Changed
+- `/api/v1/rtr.json` has `cache_id`, `cache_name`, `caches` (every cache followed, the first included), `session.carries_aspa` and `anomalies.probes`; the top-level fields are still those of the validator of the site.
+
+
 ## [1.58.1] - 2026-11-09
 
 ### Fixed

@@ -4,13 +4,18 @@
 // finds in the stream of syncs (each measure of a sync against the median and the deviation of the previous ones). This builder sums the
 // file up as one JSON (served as /api/v1/rtr.json): the session, the last sync, the last 24 hours, the counts of VRPs and ASPAs hour by hour
 // for 30 days, the anomalies and the session events, next to the count of ASPAs of the JSON export that the site shows: the two should agree
-// within a refresh of the cache. Meant for a cron job every five minutes.
+// within a refresh of the cache. Meant for a cron job every five minutes. More than one cache can be followed, each by its own
+// monitor: the first is the cache of the site (the top-level fields of the file, which the status check and the notifier read), the
+// others are references, and all of them are in `caches`, so that the page can put them side by side: a change that every cache sees
+// comes from upstream (a registry, a repository), one that a single cache sees is that validator's own.
 //
 //   node scripts/build-rtr.mjs OUT_FILE
 //
-// Environment: RTR_TELEMETRY, the NDJSON file of the monitor (default /var/db/raven/rtr-telemetry.ndjson); RTR_METRICS, its Prometheus
-// endpoint (default http://127.0.0.1:9595/metrics; empty to do without); ASPA_DATA, the URL or file of Routinator's jsonext (default
-// http://127.0.0.1:8080/data/aspas.json); RTR_CACHE, the name of the cache shown on the page (default rpki.ping6.it).
+// Environment: RTR_CACHES, the caches as a JSON array or the path of a file with one, each {id, name, host, telemetry (the NDJSON file
+// of its monitor), metrics (its Prometheus endpoint, or none)}; without it one cache, from RTR_TELEMETRY (default
+// /var/db/raven/rtr-telemetry.ndjson), RTR_METRICS (default http://127.0.0.1:9595/metrics; empty to do without) and RTR_CACHE (the name
+// of the cache shown on the page, default rpki.ping6.it). ASPA_DATA, the URL or file of Routinator's jsonext (default
+// http://127.0.0.1:8080/data/aspas.json), whose count of ASPAs is put next to the one of the first cache.
 import { readFile, writeFile, rename } from 'node:fs/promises';
 
 export const KEEP_DAYS = 30;        // of hourly points
@@ -68,13 +73,24 @@ const syncOf = (r) => ({
 // session event of the file is used, which cannot tell a monitor that stopped from one that is quiet.
 export function summarise(records, now = Date.now(), metrics = null) {
   const syncs = records.filter((r) => r.event_type === 'sync');
-  const anomalies = records.filter((r) => r.event_type === 'anomaly');
+  // The monitor asks for RTR version 2 and, when the cache refuses it with error 4 (Bad protocol version), goes on with a lower one and
+  // writes a structural anomaly: that is the probe, repeated every hour, not a fault of the cache. Such errors are kept among the events
+  // as probes and their anomalies are left out of the counts.
+  const probeTimes = new Set(records.filter((r) => r.event_type === 'error' && r.error_code === 4).map((r) => r.t));
+  const isProbe = (r) => r.category === 'structural' && r.trigger === 'error_report' && [...probeTimes].some((t) => Math.abs(t - r.t) <= 1000);
+  const anomalies = records.filter((r) => r.event_type === 'anomaly' && !isProbe(r));
+  const probes = records.filter((r) => r.event_type === 'anomaly' && isProbe(r)).length;
   const events = records.filter((r) => r.event_type !== 'sync' && r.event_type !== 'anomaly');
   const last = syncs.length ? syncs[syncs.length - 1] : null;
   const lastConn = [...events].reverse().find((e) => e.event_type === 'connected' || e.event_type === 'disconnected') || null;
   const connected = metrics && 'session_state' in metrics ? metrics.session_state === 1 : Boolean(lastConn && lastConn.event_type === 'connected');
   const protocol = metrics && Number.isFinite(metrics.protocol_version) ? metrics.protocol_version : (lastConn && lastConn.proto_version) || null;
-  const session = { connected, since: lastConn ? iso(lastConn.t) : null, protocol, expired: metrics && 'data_expired' in metrics ? metrics.data_expired === 1 : null, from_metrics: Boolean(metrics && 'session_state' in metrics) };
+  const lastEstablished = [...events].reverse().find((e) => e.event_type === 'connected' && e.proto_version !== undefined && (!last || e.t <= last.t + 60000)) || null;
+  const negotiated = last && lastEstablished ? lastEstablished.proto_version : protocol;
+  const session = {
+    connected, since: lastConn ? iso(lastConn.t) : null, protocol: negotiated ?? protocol, expired: metrics && 'data_expired' in metrics ? metrics.data_expired === 1 : null,
+    from_metrics: Boolean(metrics && 'session_state' in metrics), carries_aspa: (negotiated ?? protocol ?? 0) >= 2 || Boolean(last && nz(last.aspa_total) > 0),
+  };
 
   const day = syncs.filter((r) => r.t > now - DAY);
   const last_24h = {
@@ -108,40 +124,45 @@ export function summarise(records, now = Date.now(), metrics = null) {
     last_sync: last ? syncOf(last) : null,
     last_24h,
     series: { interval: 'hour', columns: ['time', 'vrp_total', 'aspa_total', 'vrp_changes', 'aspa_changes'], points },
-    anomalies: { total: anomalies.length, high: count('high'), medium: count('medium'), last_7_days: anomalies.filter((a) => a.t > now - 7 * DAY).length, list },
+    anomalies: { total: anomalies.length, high: count('high'), medium: count('medium'), last_7_days: anomalies.filter((a) => a.t > now - 7 * DAY).length, probes, list },
     events: events.slice(-MAX_EVENTS).reverse().map((e) => ({
-      at: iso(e.t), type: e.event_type, reason: e.reset_reason || e.disconnect_reason || e.error_text || null,
+      at: iso(e.t), type: e.event_type, reason: (e.reset_reason || e.disconnect_reason || e.error_text || null) && String(e.reset_reason || e.disconnect_reason || e.error_text).replace(/\0+$/, ''),
+      ...(e.event_type === 'error' && e.error_code === 4 ? { probe: true } : {}),
       ...(Number.isFinite(e.error_code) ? { code: e.error_code } : {}), ...(e.proto_version ? { protocol: e.proto_version } : {}),
     })),
     telemetry: { from: records.length ? iso(records[0].t) : null, records: records.length, syncs: syncs.length },
   };
 }
 
-async function main() {
-  const out = process.argv[2];
-  if (!out) { console.error('usage: node scripts/build-rtr.mjs OUT_FILE'); process.exit(2); }
-  const file = process.env.RTR_TELEMETRY || '/var/db/raven/rtr-telemetry.ndjson';
-  const metricsUrl = process.env.RTR_METRICS === undefined ? 'http://127.0.0.1:9595/metrics' : process.env.RTR_METRICS;
-  const dataUrl = process.env.ASPA_DATA || 'http://127.0.0.1:8080/data/aspas.json';
-  const now = Date.now();
+// The caches to follow, from RTR_CACHES (a JSON array, or the path of a file with one) or from the single-cache variables.
+export async function cachesFromEnv(env = process.env) {
+  if (env.RTR_CACHES) {
+    const text = env.RTR_CACHES.trim().startsWith('[') ? env.RTR_CACHES : await readFile(env.RTR_CACHES, 'utf8');
+    const list = JSON.parse(text);
+    if (!Array.isArray(list) || !list.length || list.some((c) => !c || typeof c.id !== 'string' || typeof c.telemetry !== 'string')) throw new Error('RTR_CACHES: an array of {id, name, host, telemetry, metrics} is expected');
+    return list.map((c) => ({ id: c.id, name: c.name || c.id, host: c.host || c.id, telemetry: c.telemetry, metrics: c.metrics || null, note: c.note || null }));
+  }
+  return [{
+    id: 'routinator', name: 'Routinator of this site', host: env.RTR_CACHE || 'rpki.ping6.it',
+    telemetry: env.RTR_TELEMETRY || '/var/db/raven/rtr-telemetry.ndjson',
+    metrics: env.RTR_METRICS === undefined ? 'http://127.0.0.1:9595/metrics' : (env.RTR_METRICS || null), note: null,
+  }];
+}
+
+// one cache: its telemetry and metrics read and summed up
+async function readCache(c, now) {
   let text = '';
-  try { text = await readFile(file, 'utf8'); } catch (err) { console.error(`telemetry not read: ${err.message}`); }
+  try { text = await readFile(c.telemetry, 'utf8'); } catch (err) { console.error(`${c.id}: telemetry not read: ${err.message}`); }
   let metrics = null;
-  if (metricsUrl) {
+  if (c.metrics) {
     try {
-      const r = await fetch(metricsUrl, { signal: AbortSignal.timeout(5000) });
+      const r = await fetch(c.metrics, { signal: AbortSignal.timeout(5000) });
       if (!r.ok) throw new Error(`HTTP ${r.status}`);
       metrics = parseMetrics(await r.text());
-    } catch (err) { console.error(`metrics not read: ${err.message}`); }
+    } catch (err) { console.error(`${c.id}: metrics not read: ${err.message}`); }
   }
-  let http = null;
-  try {
-    const raw = /^https?:/.test(dataUrl) ? await (await fetch(dataUrl, { headers: { Accept: 'application/json' }, signal: AbortSignal.timeout(20000) })).text() : await readFile(dataUrl, 'utf8');
-    const d = JSON.parse(raw);
-    http = { aspas: Array.isArray(d.aspas) ? d.aspas.length : null, generated: d.metadata && d.metadata.generatedTime ? d.metadata.generatedTime : null };
-  } catch (err) { console.error(`ASPA export not read: ${err.message}`); }
-  const doc = {
-    generated: iso(now), cache: process.env.RTR_CACHE || 'rpki.ping6.it', monitor: 'RAVEN rtr monitor',
+  return {
+    id: c.id, name: c.name, host: c.host, ...(c.note ? { note: c.note } : {}),
     ...summarise(parseLines(text), now, metrics),
     metrics: metrics && Object.keys(metrics).length ? {
       vrp: metrics.vrp_count ?? null, aspa: metrics.aspa_count ?? null,
@@ -149,11 +170,27 @@ async function main() {
       last_serial_change: Number.isFinite(metrics.last_serial_change_seconds) && metrics.last_serial_change_seconds > 0 ? iso(metrics.last_serial_change_seconds * 1000) : null,
       anomalies: metrics.anomaly_total || null,
     } : null,
-    http,
   };
+}
+
+async function main() {
+  const out = process.argv[2];
+  if (!out) { console.error('usage: node scripts/build-rtr.mjs OUT_FILE'); process.exit(2); }
+  const dataUrl = process.env.ASPA_DATA || 'http://127.0.0.1:8080/data/aspas.json';
+  const now = Date.now();
+  const caches = [];
+  for (const c of await cachesFromEnv()) caches.push(await readCache(c, now));
+  let http = null;
+  try {
+    const raw = /^https?:/.test(dataUrl) ? await (await fetch(dataUrl, { headers: { Accept: 'application/json' }, signal: AbortSignal.timeout(20000) })).text() : await readFile(dataUrl, 'utf8');
+    const d = JSON.parse(raw);
+    http = { aspas: Array.isArray(d.aspas) ? d.aspas.length : null, generated: d.metadata && d.metadata.generatedTime ? d.metadata.generatedTime : null };
+  } catch (err) { console.error(`ASPA export not read: ${err.message}`); }
+  const { id, name, host, note, ...primary } = caches[0];
+  const doc = { generated: iso(now), cache: host, cache_id: id, cache_name: name, monitor: 'RAVEN rtr monitor', ...primary, http, caches };
   await writeFile(`${out}.tmp`, JSON.stringify(doc));
   await rename(`${out}.tmp`, out);
-  console.log(`${out}: ${doc.telemetry.syncs} syncs, ${doc.anomalies.total} anomalies, session ${doc.session.connected ? 'up' : 'down'}`);
+  console.log(caches.map((c) => `${c.id}: ${c.telemetry.syncs} syncs, ${c.anomalies.total} anomalies, session ${c.session.connected ? 'up' : 'down'}${c.session.carries_aspa ? '' : ', no ASPA'}`).join('; '));
 }
 
 if (import.meta.url === `file://${process.argv[1]}`) main().catch((err) => { console.error(err.message); process.exit(1); });

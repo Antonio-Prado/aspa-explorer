@@ -1,7 +1,8 @@
 'use strict';
 
 // The "validator as a router sees it" section of the statistics page: /api/v1/rtr.json, built every five minutes by scripts/build-rtr.mjs
-// from the telemetry of an independent RTR client (RAVEN's `rtr monitor`) that follows the Routinator of this site over RTR version 2.
+// from the telemetry of independent RTR clients (RAVEN's `rtr monitor`): one follows the Routinator of this site over RTR version 2,
+// the others reference caches; the charts and the session events are those of the first, the anomalies those of all.
 (function () {
   const $ = (id) => document.getElementById(id);
   const { el, fmt, when, lineChart } = window.AspaUI;
@@ -64,22 +65,46 @@
     $('rtr-tiles').replaceChildren(...tiles.map((t) => el('div', { class: `tile card${t.cls ? ` ${t.cls}` : ''}` },
       el('div', { class: 'label', text: t.label }), el('div', { class: 'value', text: t.value }), el('div', { class: 'note', text: t.note }))));
 
+    // the caches side by side: the first is the cache of the site, the others references; a change that all see comes from upstream
+    const caches = Array.isArray(doc.caches) && doc.caches.length ? doc.caches : [{ id: doc.cache_id || 'routinator', name: doc.cache_name || 'Routinator of this site', host: doc.cache, session: s, last_sync: ls, last_24h: d, anomalies: an }];
+    $('rtr-caches').replaceChildren(...caches.map((c) => {
+      const cs = c.session || {}, cl = c.last_sync, cd = c.last_24h || {}, ca = c.anomalies || {};
+      return el('tr', {},
+        el('th', { scope: 'row' }, el('span', { text: c.name || c.id }), c.note ? el('span', { class: 'muted', text: ` ${c.note}` }) : null),
+        el('td', {}, el('span', { class: `badge ${cs.connected && !cs.expired ? 'v-valid' : 'v-invalid'}`, text: cs.connected ? (cs.expired ? 'Up, data expired' : 'Up') : 'Down' })),
+        el('td', { text: cs.protocol === null || cs.protocol === undefined ? '–' : `v${cs.protocol}${cs.carries_aspa ? '' : ', no ASPA'}` }),
+        el('td', { class: 'num', text: cl ? fmt.format(cl.vrp_total) : '–' }),
+        el('td', { class: 'num', text: cl ? (cs.carries_aspa ? fmt.format(cl.aspa_total) : 'not carried') : '–' }),
+        el('td', { text: cl ? `${ago(now - Date.parse(cl.at))}${cl.type ? `, ${cl.type}` : ''}` : 'none yet' }),
+        el('td', { class: 'num', text: fmt.format(cd.syncs || 0) }),
+        el('td', { class: 'num', text: `${fmt.format(ca.last_7_days || 0)}${ca.probes ? ` (+${fmt.format(ca.probes)} version probes left out)` : ''}` }));
+    }));
+    if (caches.length > 1) {
+      const withSync = caches.filter((c) => c.last_sync);
+      const vrps = withSync.map((c) => c.last_sync.vrp_total);
+      const spread = vrps.length > 1 ? Math.max(...vrps) - Math.min(...vrps) : 0;
+      $('rtr-caches-sub').textContent = `${caches.length} caches are followed, each by its own monitor. The first is the validator of this site; the others are references run by somebody else, from different code and different fetches of the same repositories. A change that every cache sees comes from upstream (a registry, a repository, a holder); one that a single cache sees is that validator's own.${vrps.length > 1 ? ` Right now their counts of VRPs are ${fmt.format(spread)} apart${spread ? ' (they read the repositories at different moments)' : ''}.` : ''} A reference that speaks a version of RTR below 2 carries no ASPA, so it checks the VRPs only.`;
+    } else $('rtr-caches-sub').textContent = 'One cache is followed: the validator of this site.';
+
     $('rtr-metric').addEventListener('change', drawCharts);
     drawCharts();
 
     const values = (a) => Object.keys(a.raw || {}).filter((k) => k === a.trigger || (a.z && Math.abs(a.z[k] || 0) >= 3)).map((k) => `${WHAT[k] || k}: ${value(k, a.raw[k])}${a.z && Number.isFinite(a.z[k]) ? ` (z ${a.z[k]})` : ''}`).join('; ');
-    $('rtr-anomalies').replaceChildren(...(an.list && an.list.length ? an.list.map((a) => el('tr', {},
+    const allAnomalies = caches.flatMap((c) => ((c.anomalies && c.anomalies.list) || []).map((a) => ({ ...a, cache: c.name || c.id }))).sort((a, b) => Date.parse(b.at) - Date.parse(a.at)).slice(0, 50);
+    const seen = caches.map((c) => `${fmt.format(c.telemetry ? c.telemetry.syncs : 0)} on ${c.name || c.id}`).join(', ');
+    $('rtr-anomalies').replaceChildren(...(allAnomalies.length ? allAnomalies.map((a) => el('tr', {},
       el('td', { text: when(a.at) }),
+      el('td', { text: a.cache }),
       el('td', {}, el('span', { class: `badge ${a.severity === 'high' ? 'v-invalid' : 'v-unknown'}`, text: a.severity || 'unknown' })),
       el('td', { text: `${WHAT[a.trigger] || a.trigger || 'unknown'}${a.category === 'structural' ? ' (the session itself)' : ''}` }),
-      el('td', { text: values(a) || '–' }))) : [el('tr', {}, el('td', { colspan: '4', text: `None so far. The detector says nothing before it has seen 100 syncs and compares each sync with the last 500; it has seen ${fmt.format(doc.telemetry ? doc.telemetry.syncs : 0)}.` }))]));
+      el('td', { text: values(a) || '–' }))) : [el('tr', {}, el('td', { colspan: '5', text: `None so far. The detector says nothing before it has seen 100 syncs on a cache and compares each sync with the last 500; it has seen ${seen}.` }))]));
 
     $('rtr-events').replaceChildren(...(doc.events && doc.events.length ? doc.events.map((e) => el('tr', {},
       el('td', { text: when(e.at) }),
-      el('td', { text: EVENT[e.type] || e.type }),
-      el('td', { text: [e.reason, e.code !== undefined ? `code ${e.code}` : null, e.protocol ? `RTR version ${e.protocol}` : null].filter(Boolean).join(', ') || '–' }))) : [el('tr', {}, el('td', { colspan: '3', text: 'No session event recorded.' }))]));
+      el('td', { text: e.probe ? 'Version probe refused' : (EVENT[e.type] || e.type) }),
+      el('td', { text: [e.reason, e.code !== undefined ? `code ${e.code}` : null, e.protocol !== undefined ? `RTR version ${e.protocol}` : null].filter(Boolean).join(', ') || '–' }))) : [el('tr', {}, el('td', { colspan: '3', text: 'No session event recorded.' }))]));
 
-    $('rtr-note').textContent = `In the last 24 hours the cache announced ${fmt.format(d.vrp_announced || 0)} VRPs and withdrew ${fmt.format(d.vrp_withdrawn || 0)}, announced ${fmt.format(d.aspa_announced || 0)} ASPAs and withdrew ${fmt.format(d.aspa_withdrawn || 0)}${d.duration_max_ms ? `; the longest sync took ${fmt.format(d.duration_max_ms)} ms` : ''}. The same data is available as JSON (/api/v1/rtr.json), and the subscribers to the status alerts are told of every anomaly. RAVEN is BSD-3-Clause software by Nokia; the idea is explained in the RIPE Labs article "Your router trusts its validator. But who's watching the validator?".`;
+    $('rtr-note').textContent = `In the last 24 hours the cache of the site announced ${fmt.format(d.vrp_announced || 0)} VRPs and withdrew ${fmt.format(d.vrp_withdrawn || 0)}, announced ${fmt.format(d.aspa_announced || 0)} ASPAs and withdrew ${fmt.format(d.aspa_withdrawn || 0)}${d.duration_max_ms ? `; the longest sync took ${fmt.format(d.duration_max_ms)} ms` : ''}. The same data is available as JSON (/api/v1/rtr.json), and the subscribers to the status alerts are told of every anomaly. RAVEN is BSD-3-Clause software by Nokia; the idea is explained in the RIPE Labs article "Your router trusts its validator. But who's watching the validator?".`;
   }
   main();
 })();
