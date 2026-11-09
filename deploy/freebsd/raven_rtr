@@ -12,11 +12,13 @@
 # for a profile as well (raven_rtr_<profile>_<name>), and each profile gets its own directory under raven_rtr_dir, its own log,
 # pid file and metrics port:
 #
-#   raven_rtr_profiles="routinator cloudflare"
+#   raven_rtr_profiles="routinator level66 cloudflare"
 #   raven_rtr_routinator_cache="192.0.2.1:3323"
 #   raven_rtr_routinator_prometheus="127.0.0.1:9595"
+#   raven_rtr_level66_cache="rpki.level66.services:3323"
+#   raven_rtr_level66_prometheus="127.0.0.1:9596"
 #   raven_rtr_cloudflare_cache="rtr.rpki.cloudflare.com:8282"
-#   raven_rtr_cloudflare_prometheus="127.0.0.1:9596"
+#   raven_rtr_cloudflare_prometheus="127.0.0.1:9597"
 #
 # Without profiles a single monitor runs with the plain variables and writes straight into raven_rtr_dir. daemon(8) supervises and
 # restarts the process; chroot(8) with -u only drops privileges to the service user (the root directory stays /). The variable is

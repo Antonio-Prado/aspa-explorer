@@ -1,4 +1,4 @@
-// Valleys (possible route leaks, or gaps in ASPAs) in the routes of the RIPE RIS and RouteViews collectors, today: every route of 30 collectors is
+// Valleys (possible route leaks, or gaps in ASPAs) in the routes of the RIPE RIS and RouteViews collectors, today: every route of 33 collectors is
 // checked with the downstream ASPA verification, and the paths that the ASPAs prove to contain a valley are
 // grouped by the place of the valley. Written as one JSON file (served as /api/v1/leaks.json).
 //
@@ -11,7 +11,7 @@
 //
 // Inputs (environment, with defaults for the production host):
 //   ASPA_DATA        URL or file of Routinator's jsonext     http://127.0.0.1:8080/data/aspas.json
-//   LEAKS_COLLECTORS comma separated collectors              sixteen of RIPE RIS and fourteen of RouteViews (COLLECTORS below)
+//   LEAKS_COLLECTORS comma separated collectors              nineteen of RIPE RIS and fourteen of RouteViews (COLLECTORS below)
 //   LEAKS_EVENTS     URL or file of the history of changes   the events.json of the history branch (only with --day)
 //   LEAKS_ADOPTION   file with the Tier-1 clique and the IXP ASes (adoption.json), next to OUT_FILE
 //
@@ -31,7 +31,7 @@ const { verify } = createRequire(import.meta.url)('../site/verify.js');
 if (net.setDefaultAutoSelectFamilyAttemptTimeout) net.setDefaultAutoSelectFamilyAttemptTimeout(3000);
 // RIPE RIS (16): Amsterdam, London, Amsterdam, Geneva, Vienna, Tokyo, Stockholm, Milan, New York, Frankfurt, Palo Alto, Sao Paulo, Miami, Johannesburg, Paris, Singapore.
 // RouteViews (14; University of Oregon, other peers than RIS): Oregon, route-views3 and 4, London, Palo Alto, Tokyo, New York, Perth, Atlanta, Singapore, Johannesburg, Sao Paulo, Sydney, Equinix.
-export const COLLECTORS = 'rrc00,rrc01,rrc03,rrc04,rrc05,rrc06,rrc07,rrc10,rrc11,rrc12,rrc14,rrc15,rrc16,rrc19,rrc21,rrc23,route-views2,route-views3,route-views4,route-views.linx,route-views.isc,route-views.wide,route-views.ny,route-views.perth,route-views.telxatl,route-views.sg,route-views.napafrica,route-views2.saopaulo,route-views.sydney,route-views.eqix';
+export const COLLECTORS = 'rrc00,rrc01,rrc03,rrc04,rrc05,rrc06,rrc07,rrc10,rrc11,rrc12,rrc13,rrc14,rrc15,rrc16,rrc19,rrc20,rrc21,rrc23,rrc25,route-views2,route-views3,route-views4,route-views.linx,route-views.isc,route-views.wide,route-views.ny,route-views.perth,route-views.telxatl,route-views.sg,route-views.napafrica,route-views2.saopaulo,route-views.sydney,route-views.eqix';
 export const isRis = (collector) => /^rrc\d+$/.test(collector);
 // The table dump of a collector: the latest one, or the one of 00:00 UTC of a day (YYYYMMDD).
 // For RouteViews the latest one has to be found in the listing of the month (pickLatestRib).
@@ -149,7 +149,7 @@ export class Leaks {
     this.aspas = aspas; this.ixp = ixp; this.relOf = relOf;
     this.total = { routes: 0, valid: 0, unknown: 0, invalid: 0 };
     this.groups = new Map();
-    // the places of valley kept in memory: a day of 30 collectors has a few tens of thousands; peers that sent crafted paths could make far more,
+    // the places of valley kept in memory: a day of 33 collectors has a few tens of thousands; peers that sent crafted paths could make far more,
     // and the places past this many are only counted (omitted), so that the run of the day ends
     this.maxGroups = MAX_PLACES; this.omitted = 0;
     this.feederSet = new Set();                                       // the networks that feed the collectors, whichever collector

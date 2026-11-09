@@ -1,7 +1,7 @@
 'use strict';
 
 // Two sections of the statistics page made from the same file as the route leaks, /api/v1/leaks.json (the families of routes of the
-// 30 collectors): how much of the address space the routes that ASPA proves valid cover, by length of the AS path, and the routes of
+// 33 collectors): how much of the address space the routes that ASPA proves valid cover, by length of the AS path, and the routes of
 // IPv6 and IPv4 side by side with their ratio.
 (function () {
   const { el, fmt, pct } = window.AspaUI;

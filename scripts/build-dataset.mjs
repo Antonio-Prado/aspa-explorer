@@ -29,7 +29,7 @@ export const FILES = (site) => [
   ['resources.json', `${site}/api/v1/resources.json`, 'AS numbers allocated, advertised and with an ASPA, by RIR, region, economy, year and width; ASPAs that name numbers that are not allocated'],
   ['invalid.json', `${site}/api/v1/invalid.json`, 'the invalid announcements of the last 14 days as the RIS Live stream gives them: by hour, origin and prefix'],
   ['trends.json', `${site}/api/v1/trends.json`, 'networks with an ASPA, month by month, for each RIR and country'],
-  ['leaks.json', `${site}/api/v1/leaks.json`, 'places of valley in the routes of the 30 collectors of RIPE RIS and RouteViews, today'],
+  ['leaks.json', `${site}/api/v1/leaks.json`, 'places of valley in the routes of the 33 collectors of RIPE RIS and RouteViews, today'],
   ['leaks-history.json', `${site}/api/v1/leaks-history.json`, 'one row a day of the totals of the leaks'],
   ['validators.json', `${site}/api/v1/validators.json`, 'the ASPAs of three validators compared'],
 ];
