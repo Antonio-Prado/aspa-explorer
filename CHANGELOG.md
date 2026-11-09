@@ -9,6 +9,11 @@ A few numbers were deployed and folded into the next release without a tag of th
 
 ## [Unreleased]
 
+## [1.59.3] - 2026-11-09
+
+### Added
+- A fourth reference cache: the public RTR server of DaKnObNET in Zurich (Routinator, RTR version 2), whose operator turned the ASPAs on at our request the same evening. Five caches are followed.
+
 ## [1.59.2] - 2026-11-09
 
 ### Fixed

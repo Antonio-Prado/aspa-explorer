@@ -7,6 +7,9 @@
   { "id": "level66", "name": "Level66 Network (public RTR server)", "host": "rpki.level66.services",
     "telemetry": "/var/db/raven/level66/rtr-telemetry.ndjson", "metrics": "http://127.0.0.1:9596/metrics",
     "note": "a public server offered to the community by Level66 Network; RTR version 2, with the ASPAs" },
+  { "id": "daknob_zrh2", "name": "DaKnObNET, Zurich (public RTR server)", "host": "r3k.zrh2.v.rpki.daknob.net",
+    "telemetry": "/var/db/raven/daknob_zrh2/rtr-telemetry.ndjson", "metrics": "http://127.0.0.1:9599/metrics",
+    "note": "a public server offered to the community by DaKnObNET (AS210312), Routinator; RTR version 2, with the ASPAs" },
   { "id": "cloudflare", "name": "Cloudflare (public RTR server, VRPs only)", "host": "rtr.rpki.cloudflare.com",
     "telemetry": "/var/db/raven/cloudflare/rtr-telemetry.ndjson", "metrics": "http://127.0.0.1:9597/metrics",
     "note": "a public server on Cloudflare's rpki-client validator; it speaks RTR version 0, so it carries no ASPA" }
