@@ -9,6 +9,11 @@ A few numbers were deployed and folded into the next release without a tag of th
 
 ## [Unreleased]
 
+## [1.59.2] - 2026-11-09
+
+### Fixed
+- The caches side by side: the note of a cache is on its own line under the name, and the sentence above the table counts the validators of the site (two since Fort) and the references instead of calling every other cache a reference.
+
 ## [1.59.1] - 2026-11-09
 
 ### Fixed

@@ -278,11 +278,15 @@ flowchart LR
     R -.->|"fetch, validate"| T["RPKI repositories<br>of the five RIRs"]
     V -->|"routes"| P["RIPEstat"]
     N -->|"/api/v1/archive/*"| H["history branch,<br>copied every 10 minutes"]
+    M["RTR monitors<br>RAVEN"] -.->|"RTR"| R
+    M -.->|"RTR"| C["Fort, Level66,<br>Cloudflare caches"]
+    M --> F
     click V "https://github.com/Antonio-Prado/aspa-explorer#features"
     click N "https://github.com/Antonio-Prado/aspa-explorer/wiki/Deployment#what-the-nginx-configuration-does"
     click F "https://aspa.ping6.it/api.html"
     click S "https://github.com/Antonio-Prado/aspa-explorer/wiki/Deployment#notifications-optional"
     click H "https://github.com/Antonio-Prado/aspa-explorer/wiki/Deployment#rebuilding-the-history"
+    click M "https://github.com/Antonio-Prado/aspa-explorer/wiki/Deployment#the-rtr-monitor-optional"
 ```
 
 In a browser that allows it (GitLab does) the boxes of the diagram are links to the part of this README or of the wiki that explains them; the table below has the same links for everywhere else.

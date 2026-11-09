@@ -70,7 +70,7 @@
     $('rtr-caches').replaceChildren(...caches.map((c) => {
       const cs = c.session || {}, cl = c.last_sync, cd = c.last_24h || {}, ca = c.anomalies || {};
       return el('tr', {},
-        el('th', { scope: 'row' }, el('span', { text: c.name || c.id }), c.note ? el('span', { class: 'muted', text: ` ${c.note}` }) : null),
+        el('th', { scope: 'row' }, el('span', { text: c.name || c.id }), c.note ? el('br') : null, c.note ? el('small', { class: 'muted', text: c.note }) : null),
         el('td', {}, el('span', { class: `badge ${cs.connected && !cs.expired ? 'v-valid' : 'v-invalid'}`, text: cs.connected ? (cs.expired ? 'Up, data expired' : 'Up') : 'Down' })),
         el('td', { text: cs.protocol === null || cs.protocol === undefined ? '–' : `v${cs.protocol}${cs.carries_aspa ? '' : ', no ASPA'}` }),
         el('td', { class: 'num', text: cl ? fmt.format(cl.vrp_total) : '–' }),
@@ -83,7 +83,8 @@
       const withSync = caches.filter((c) => c.last_sync);
       const vrps = withSync.map((c) => c.last_sync.vrp_total);
       const spread = vrps.length > 1 ? Math.max(...vrps) - Math.min(...vrps) : 0;
-      $('rtr-caches-sub').textContent = `${caches.length} caches are followed, each by its own monitor. The first is the validator of this site; the others are references run by somebody else, from different code and different fetches of the same repositories. A change that every cache sees comes from upstream (a registry, a repository, a holder); one that a single cache sees is that validator's own.${vrps.length > 1 ? ` Right now their counts of VRPs are ${fmt.format(spread)} apart${spread ? ' (they read the repositories at different moments)' : ''}.` : ''} A reference that speaks a version of RTR below 2 carries no ASPA, so it checks the VRPs only.`;
+      const ours = caches.filter((c) => c.host === doc.cache).length;
+      $('rtr-caches-sub').textContent = `${caches.length} caches are followed, each by its own monitor: ${ours === 1 ? 'the validator of this site' : `the ${ours} validators of this site, with different code on the same host`}, and ${caches.length - ours === 1 ? 'a reference cache' : `${caches.length - ours} reference caches`} run by somebody else, from different code and different fetches of the same repositories. A change that every cache sees comes from upstream (a registry, a repository, a holder); one that a single cache sees is that validator's own; one that the validators of the site share and the references do not is in the network or the timing of the host.${vrps.length > 1 ? ` Right now the counts of VRPs are ${fmt.format(spread)} apart between the highest and the lowest${spread ? ' (they read the repositories at different moments)' : ''}.` : ''} A reference that speaks a version of RTR below 2 carries no ASPA, so it checks the VRPs only.`;
     } else $('rtr-caches-sub').textContent = 'One cache is followed: the validator of this site.';
 
     $('rtr-metric').addEventListener('change', drawCharts);
