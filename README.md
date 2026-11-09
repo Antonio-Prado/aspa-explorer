@@ -332,7 +332,7 @@ scripts/                       the builders of the per-AS API (build-api.mjs), o
 tools/                         backfill-history.py rebuilds the history from the RIPE NCC RPKI archive;
                                data_scripts/ is the corrected copy of the research scripts of the Incidents
                                page (with extra_detectors.py and tests); replay/ runs them over past windows
-docs/                          validation-known-incidents.md, the detectors over five known incidents
+docs/                          validation-known-incidents.md, the detectors over five known incidents; rpki-chain-incidents.md, the RPKI chain and its incidents; recommenders-compared.md, two ways of guessing providers against the ASPAs
 deploy/nginx/                  server blocks and proxy cache zone (aspa.conf), the proxy settings shared by
                                the data endpoints (rpki-proxy.conf) and the security headers
 deploy/freebsd/                rc scripts of the notifier, of the Atlas service and of the stream of the Incidents page, daily
@@ -368,6 +368,8 @@ Releases follow [Semantic Versioning](https://semver.org/); the version shown in
 | <a href="SECURITY.md" target="_blank" rel="noopener">SECURITY.md</a> | how to report a vulnerability (also `/.well-known/security.txt`) |
 | <a href="CODE_OF_CONDUCT.md" target="_blank" rel="noopener">CODE_OF_CONDUCT.md</a> | how we expect people to behave |
 | <a href="docs/validation-known-incidents.md" target="_blank" rel="noopener">docs/validation-known-incidents.md</a> | the incident detectors run over five known incidents (A9, A1, A2, A10, A12): what they find, the noise, how to repeat it |
+| <a href="docs/rpki-chain-incidents.md" target="_blank" rel="noopener">docs/rpki-chain-incidents.md</a> | the five links between a ROA and a router's decision, the documented incidents on each (RIR repositories, validators, routers) with their sources, and what the RTR monitor of the site sees of them |
+| <a href="docs/recommenders-compared.md" target="_blank" rel="noopener">docs/recommenders-compared.md</a> | the heuristic of RAVEN's `aspa recommend` and the evidence of this site run over the same table dumps and judged against the published ASPAs (`tools/compare-recommenders.mjs`) |
 | <a href="MAINTAINING.md" target="_blank" rel="noopener">MAINTAINING.md</a> | for the maintainers: the copies of the repository, applying a pull request, the services and the scheduled jobs |
 | <a href="https://github.com/Antonio-Prado/aspa-explorer/wiki/Home#" target="_blank" rel="noopener">Wiki</a> | user guide, accessibility, deployment |
 | <a href="LICENSE" target="_blank" rel="noopener">LICENSE</a> | MIT |
