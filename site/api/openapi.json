@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "ASPA Explorer API",
-    "version": "1.3.0",
+    "version": "1.4.0",
     "description": "ASPA objects validated by Routinator at rpki.ping6.it, their history and quality, for any AS. Open data, read-only, no key.",
     "contact": {
       "email": "antonio.prado@dei.unipd.it"
@@ -499,6 +499,1474 @@
               "text/csv": {
                 "schema": {
                   "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/leaks.json": {
+      "get": {
+        "summary": "The places of valley of today in the routes of the collectors",
+        "description": "Built once a day from the 00:00 UTC table dumps of 33 collectors of RIPE RIS and RouteViews (scripts/build-leaks.mjs): every route is checked with the downstream ASPA verification and the paths that the ASPAs prove to contain a valley are grouped by the place of the valley.",
+        "responses": {
+          "200": {
+            "description": "The file",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "generated": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "aspas": {
+                      "type": "integer",
+                      "description": "ASPAs used"
+                    },
+                    "relationships": {
+                      "type": "string",
+                      "description": "the CAIDA relationships file"
+                    },
+                    "collectors": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "collector": {
+                            "type": "string"
+                          },
+                          "routes": {
+                            "type": "integer"
+                          },
+                          "built": {
+                            "type": "string",
+                            "format": "date-time"
+                          },
+                          "source": {
+                            "type": "string"
+                          },
+                          "invalid": {
+                            "type": "integer"
+                          },
+                          "feeders": {
+                            "type": "integer"
+                          },
+                          "places": {
+                            "type": "integer"
+                          },
+                          "only": {
+                            "type": "integer",
+                            "description": "places that only this collector sees"
+                          }
+                        },
+                        "additionalProperties": true
+                      }
+                    },
+                    "total": {
+                      "type": "object",
+                      "properties": {
+                        "routes": {
+                          "type": "integer"
+                        },
+                        "valid": {
+                          "type": "integer"
+                        },
+                        "unknown": {
+                          "type": "integer"
+                        },
+                        "invalid": {
+                          "type": "integer"
+                        },
+                        "feeders": {
+                          "type": "integer"
+                        }
+                      },
+                      "additionalProperties": true
+                    },
+                    "families": {
+                      "type": "object",
+                      "properties": {
+                        "v4": {
+                          "type": "object"
+                        },
+                        "v6": {
+                          "type": "object"
+                        }
+                      },
+                      "description": "the same totals for IPv4 and IPv6",
+                      "additionalProperties": true
+                    },
+                    "places": {
+                      "type": "integer"
+                    },
+                    "kinds": {
+                      "type": "object",
+                      "properties": {
+                        "gap": {
+                          "type": "integer"
+                        },
+                        "leak": {
+                          "type": "integer"
+                        },
+                        "unclear": {
+                          "type": "integer"
+                        }
+                      },
+                      "additionalProperties": true
+                    },
+                    "groups": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "from": {
+                            "type": "string",
+                            "description": "AS number as ASnnn"
+                          },
+                          "to": {
+                            "type": "string",
+                            "description": "AS number as ASnnn"
+                          },
+                          "between": {
+                            "type": "array",
+                            "items": {
+                              "type": "string",
+                              "description": "AS number as ASnnn"
+                            }
+                          },
+                          "caida": {
+                            "type": "string"
+                          },
+                          "kind": {
+                            "type": "string"
+                          },
+                          "routes": {
+                            "type": "integer"
+                          },
+                          "feeders": {
+                            "type": "integer"
+                          },
+                          "origins": {
+                            "type": "integer"
+                          },
+                          "example": {
+                            "type": "array",
+                            "items": {
+                              "type": "string",
+                              "description": "AS number as ASnnn"
+                            }
+                          }
+                        },
+                        "additionalProperties": true
+                      },
+                      "description": "the 100 places with most routes"
+                    },
+                    "leakers": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "asn": {
+                            "type": "string",
+                            "description": "AS number as ASnnn"
+                          },
+                          "places": {
+                            "type": "integer"
+                          },
+                          "routes": {
+                            "type": "integer"
+                          },
+                          "feeders": {
+                            "type": "integer"
+                          },
+                          "origins": {
+                            "type": "integer"
+                          }
+                        },
+                        "additionalProperties": true
+                      }
+                    },
+                    "gaps": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "customer": {
+                            "type": "string",
+                            "description": "AS number as ASnnn"
+                          },
+                          "missing": {
+                            "type": "string",
+                            "description": "AS number as ASnnn"
+                          },
+                          "places": {
+                            "type": "integer"
+                          },
+                          "routes": {
+                            "type": "integer"
+                          },
+                          "feeders": {
+                            "type": "integer"
+                          },
+                          "origins": {
+                            "type": "integer"
+                          }
+                        },
+                        "additionalProperties": true
+                      },
+                      "description": "ASPAs that seem to miss a provider"
+                    }
+                  },
+                  "additionalProperties": true
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/leaks-history.json": {
+      "get": {
+        "summary": "The daily totals of the places of valley",
+        "description": "One row a day since 1 September 2026, written by the valley job.",
+        "responses": {
+          "200": {
+            "description": "The file",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "date": {
+                        "type": "string",
+                        "format": "date"
+                      },
+                      "routes": {
+                        "type": "integer"
+                      },
+                      "invalid": {
+                        "type": "integer"
+                      },
+                      "unknown": {
+                        "type": "integer"
+                      },
+                      "feeders": {
+                        "type": "integer"
+                      },
+                      "places": {
+                        "type": "integer"
+                      },
+                      "leak": {
+                        "type": "integer"
+                      },
+                      "gap": {
+                        "type": "integer"
+                      }
+                    },
+                    "additionalProperties": true
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/leaks-by-as.json": {
+      "get": {
+        "summary": "The places of valley that involve each AS",
+        "description": "Places seen by at least min_feeders feeders, by AS, for the page of an AS and for the notifier.",
+        "responses": {
+          "200": {
+            "description": "The file",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "generated": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "min_feeders": {
+                      "type": "integer"
+                    },
+                    "as": {
+                      "type": "object",
+                      "properties": {},
+                      "description": "AS number (ASnnn) -> array of places {role, kind, from, to, between, feeders, routes}",
+                      "additionalProperties": true
+                    }
+                  },
+                  "additionalProperties": true
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/validators.json": {
+      "get": {
+        "summary": "The ASPAs of three validators compared",
+        "description": "Every hour: this site's Routinator, rpki-client (the console of the project) and the rpki-client of Cloudflare (scripts/build-validators.mjs).",
+        "responses": {
+          "200": {
+            "description": "The file",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "generated": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "sources": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string"
+                          },
+                          "name": {
+                            "type": "string"
+                          },
+                          "built": {
+                            "type": "string",
+                            "format": "date-time"
+                          },
+                          "count": {
+                            "type": "integer"
+                          },
+                          "failed": {
+                            "type": "integer"
+                          }
+                        },
+                        "additionalProperties": true
+                      }
+                    },
+                    "customers": {
+                      "type": "integer"
+                    },
+                    "identical": {
+                      "type": "integer"
+                    },
+                    "differences": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "customer": {
+                            "type": "string",
+                            "description": "AS number as ASnnn"
+                          },
+                          "as0": {
+                            "type": "boolean"
+                          },
+                          "providers": {
+                            "type": "object",
+                            "properties": {},
+                            "description": "validator id -> providers, or null when it does not have the ASPA",
+                            "additionalProperties": true
+                          }
+                        },
+                        "additionalProperties": true
+                      }
+                    },
+                    "pairs": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "a": {
+                            "type": "string"
+                          },
+                          "b": {
+                            "type": "string"
+                          },
+                          "both": {
+                            "type": "integer"
+                          },
+                          "only_a": {
+                            "type": "integer"
+                          },
+                          "only_b": {
+                            "type": "integer"
+                          },
+                          "differ": {
+                            "type": "integer"
+                          }
+                        },
+                        "additionalProperties": true
+                      }
+                    },
+                    "differences_total": {
+                      "type": "integer"
+                    }
+                  },
+                  "additionalProperties": true
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/rtr.json": {
+      "get": {
+        "summary": "The RTR session with the validator, as independent RTR clients see it",
+        "description": "Every five minutes (scripts/build-rtr.mjs) from the telemetry of RAVEN's rtr monitor, one monitor for each cache: the validator of the site (the top-level fields) and every cache followed, references included (caches). The anomalies are those of the adaptive detector of the monitor on the stream of syncs.",
+        "responses": {
+          "200": {
+            "description": "The file",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "generated": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "cache": {
+                      "type": "string",
+                      "description": "host of the first cache"
+                    },
+                    "cache_id": {
+                      "type": "string"
+                    },
+                    "cache_name": {
+                      "type": "string"
+                    },
+                    "monitor": {
+                      "type": "string"
+                    },
+                    "session": {
+                      "type": "object",
+                      "properties": {
+                        "connected": {
+                          "type": "boolean"
+                        },
+                        "since": {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        "protocol": {
+                          "type": [
+                            "integer",
+                            "null"
+                          ],
+                          "description": "RTR version agreed, 2 carries the ASPAs"
+                        },
+                        "expired": {
+                          "type": [
+                            "boolean",
+                            "null"
+                          ]
+                        },
+                        "carries_aspa": {
+                          "type": "boolean"
+                        },
+                        "last_serial_change": {
+                          "type": [
+                            "string",
+                            "null"
+                          ],
+                          "format": "date-time"
+                        },
+                        "serial_stale": {
+                          "type": "boolean",
+                          "description": "the cache answers but its serial has not changed for stale_after_s"
+                        },
+                        "stale_after_s": {
+                          "type": "integer"
+                        }
+                      },
+                      "additionalProperties": true
+                    },
+                    "last_sync": {
+                      "type": "object",
+                      "properties": {
+                        "at": {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        "type": {
+                          "type": "string",
+                          "enum": [
+                            "full",
+                            "incremental"
+                          ]
+                        },
+                        "serial": {
+                          "type": [
+                            "integer",
+                            "null"
+                          ]
+                        },
+                        "serial_changed": {
+                          "type": "boolean"
+                        },
+                        "vrp_total": {
+                          "type": "integer"
+                        },
+                        "aspa_total": {
+                          "type": "integer"
+                        },
+                        "vrp_announced": {
+                          "type": "integer"
+                        },
+                        "vrp_withdrawn": {
+                          "type": "integer"
+                        },
+                        "aspa_announced": {
+                          "type": "integer"
+                        },
+                        "aspa_withdrawn": {
+                          "type": "integer"
+                        },
+                        "duration_ms": {
+                          "type": [
+                            "integer",
+                            "null"
+                          ]
+                        },
+                        "interval_s": {
+                          "type": [
+                            "integer",
+                            "null"
+                          ]
+                        }
+                      },
+                      "additionalProperties": true
+                    },
+                    "last_24h": {
+                      "type": "object",
+                      "properties": {
+                        "syncs": {
+                          "type": "integer"
+                        },
+                        "full": {
+                          "type": "integer"
+                        },
+                        "serial_changes": {
+                          "type": "integer"
+                        },
+                        "vrp_announced": {
+                          "type": "integer"
+                        },
+                        "vrp_withdrawn": {
+                          "type": "integer"
+                        },
+                        "aspa_announced": {
+                          "type": "integer"
+                        },
+                        "aspa_withdrawn": {
+                          "type": "integer"
+                        },
+                        "interval_median_s": {
+                          "type": [
+                            "integer",
+                            "null"
+                          ]
+                        },
+                        "duration_max_ms": {
+                          "type": [
+                            "integer",
+                            "null"
+                          ]
+                        }
+                      },
+                      "additionalProperties": true
+                    },
+                    "series": {
+                      "type": "object",
+                      "properties": {
+                        "interval": {
+                          "type": "string"
+                        },
+                        "columns": {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          }
+                        },
+                        "points": {
+                          "type": "array",
+                          "items": {
+                            "type": "array",
+                            "items": {
+                              "type": "integer"
+                            }
+                          },
+                          "description": "[time (s), vrp_total, aspa_total, vrp_changes, aspa_changes], one an hour for 30 days"
+                        }
+                      },
+                      "additionalProperties": true
+                    },
+                    "anomalies": {
+                      "type": "object",
+                      "properties": {
+                        "total": {
+                          "type": "integer"
+                        },
+                        "high": {
+                          "type": "integer"
+                        },
+                        "medium": {
+                          "type": "integer"
+                        },
+                        "last_7_days": {
+                          "type": "integer"
+                        },
+                        "probes": {
+                          "type": "integer",
+                          "description": "version probes refused by the cache, left out"
+                        },
+                        "list": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "at": {
+                                "type": "string",
+                                "format": "date-time"
+                              },
+                              "category": {
+                                "type": "string",
+                                "enum": [
+                                  "statistical",
+                                  "structural"
+                                ]
+                              },
+                              "trigger": {
+                                "type": "string"
+                              },
+                              "severity": {
+                                "type": "string",
+                                "enum": [
+                                  "high",
+                                  "medium"
+                                ]
+                              },
+                              "z": {
+                                "type": "object"
+                              },
+                              "raw": {
+                                "type": "object"
+                              }
+                            },
+                            "additionalProperties": true
+                          },
+                          "description": "the newest first, at most 50"
+                        }
+                      },
+                      "additionalProperties": true
+                    },
+                    "events": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "at": {
+                            "type": "string",
+                            "format": "date-time"
+                          },
+                          "type": {
+                            "type": "string"
+                          },
+                          "reason": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "code": {
+                            "type": "integer"
+                          },
+                          "protocol": {
+                            "type": "integer"
+                          },
+                          "probe": {
+                            "type": "boolean"
+                          }
+                        },
+                        "additionalProperties": true
+                      }
+                    },
+                    "telemetry": {
+                      "type": "object",
+                      "properties": {
+                        "from": {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        "records": {
+                          "type": "integer"
+                        },
+                        "syncs": {
+                          "type": "integer"
+                        }
+                      },
+                      "additionalProperties": true
+                    },
+                    "metrics": {
+                      "type": [
+                        "object",
+                        "null"
+                      ],
+                      "description": "the gauges of the monitor, when its Prometheus endpoint answers"
+                    },
+                    "http": {
+                      "type": [
+                        "object",
+                        "null"
+                      ],
+                      "description": "the count of ASPAs of the JSON export of the first cache, to compare"
+                    },
+                    "caches": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "description": "one entry for each cache followed, with id, name, host, note and the same fields as the top level"
+                      }
+                    }
+                  },
+                  "additionalProperties": true
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/trends.json": {
+      "get": {
+        "summary": "Networks with an ASPA month by month",
+        "description": "Built once a day (scripts/build-trends.mjs): for all of them and for each RIR and country.",
+        "responses": {
+          "200": {
+            "description": "The file",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "generated": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "source": {
+                      "type": "string"
+                    },
+                    "points": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      },
+                      "description": "the months, YYYY-MM"
+                    },
+                    "total": {
+                      "type": "array",
+                      "items": {
+                        "type": "integer"
+                      }
+                    },
+                    "rir": {
+                      "type": "object",
+                      "properties": {},
+                      "description": "rir -> array of integers, one for each month",
+                      "additionalProperties": true
+                    },
+                    "country": {
+                      "type": "object",
+                      "properties": {},
+                      "description": "country code -> array of integers",
+                      "additionalProperties": true
+                    }
+                  },
+                  "additionalProperties": true
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/incidents.json": {
+      "get": {
+        "summary": "What the ASPAs say about the routing incidents of the detectors",
+        "description": "Built once a day (scripts/build-incidents.mjs) from the incidents that the detectors of the project find in the RIS Live stream.",
+        "responses": {
+          "200": {
+            "description": "The file",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "generated": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "files": {
+                      "type": "integer"
+                    },
+                    "aspas": {
+                      "type": "string"
+                    },
+                    "relationships": {
+                      "type": "string"
+                    },
+                    "period": {
+                      "type": "object",
+                      "properties": {
+                        "from": {
+                          "type": "string"
+                        },
+                        "to": {
+                          "type": "string"
+                        }
+                      },
+                      "additionalProperties": true
+                    },
+                    "total": {
+                      "type": "object",
+                      "properties": {
+                        "incidents": {
+                          "type": "integer"
+                        },
+                        "with_path": {
+                          "type": "integer"
+                        },
+                        "real": {
+                          "type": "object"
+                        },
+                        "ideal": {
+                          "type": "object"
+                        }
+                      },
+                      "additionalProperties": true
+                    },
+                    "by_type": {
+                      "type": "object",
+                      "properties": {},
+                      "description": "type -> counts and verdicts",
+                      "additionalProperties": true
+                    },
+                    "subtypes": {
+                      "type": "object",
+                      "properties": {},
+                      "description": "subtype -> counts and verdicts",
+                      "additionalProperties": true
+                    },
+                    "adoption": {
+                      "type": "object",
+                      "properties": {},
+                      "description": "the curve of the verdicts as more networks publish an ASPA",
+                      "additionalProperties": true
+                    }
+                  },
+                  "additionalProperties": true
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/invalid.json": {
+      "get": {
+        "summary": "The invalid announcements of the last 14 days, as the collectors receive them",
+        "description": "RIS Live, about nine minutes in every ten (scripts/watch-invalid.mjs): by hour, by origin AS and by prefix.",
+        "responses": {
+          "200": {
+            "description": "The file",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "generated": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "from": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "to": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "profile": {
+                      "type": "object",
+                      "properties": {
+                        "seconds": {
+                          "type": "integer"
+                        },
+                        "messages": {
+                          "type": "integer"
+                        },
+                        "announcements": {
+                          "type": "integer"
+                        },
+                        "valid": {
+                          "type": "integer"
+                        },
+                        "unknown": {
+                          "type": "integer"
+                        },
+                        "invalid": {
+                          "type": "integer"
+                        },
+                        "invalid_share": {
+                          "type": "number"
+                        },
+                        "announcements_per_second": {
+                          "type": "number"
+                        }
+                      },
+                      "additionalProperties": true
+                    },
+                    "hours": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "at": {
+                            "type": "string",
+                            "format": "date-time"
+                          },
+                          "seconds": {
+                            "type": "integer"
+                          },
+                          "messages": {
+                            "type": "integer"
+                          },
+                          "announcements": {
+                            "type": "integer"
+                          },
+                          "valid": {
+                            "type": "integer"
+                          },
+                          "unknown": {
+                            "type": "integer"
+                          },
+                          "invalid": {
+                            "type": "integer"
+                          }
+                        },
+                        "additionalProperties": true
+                      }
+                    },
+                    "by_count": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "asn": {
+                            "type": "string",
+                            "description": "AS number as ASnnn"
+                          },
+                          "invalid": {
+                            "type": "integer"
+                          },
+                          "announcements": {
+                            "type": "integer"
+                          },
+                          "share": {
+                            "type": "number"
+                          },
+                          "prefixes": {
+                            "type": "integer"
+                          }
+                        },
+                        "additionalProperties": true
+                      }
+                    },
+                    "by_share": {
+                      "type": "array",
+                      "items": {
+                        "type": "object"
+                      }
+                    },
+                    "prefixes": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "prefix": {
+                            "type": "string"
+                          },
+                          "origin": {
+                            "type": "string",
+                            "description": "AS number as ASnnn"
+                          },
+                          "invalid": {
+                            "type": "integer"
+                          }
+                        },
+                        "additionalProperties": true
+                      }
+                    }
+                  },
+                  "additionalProperties": true
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/resources.json": {
+      "get": {
+        "summary": "AS numbers from allocation to ASPA",
+        "description": "Built once a day (scripts/build-resources.mjs) from the RIR delegation files, the collectors, the validator and the World Bank: by RIR, region, economy, year of allocation and width of the number.",
+        "responses": {
+          "200": {
+            "description": "The file",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "generated": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "sources": {
+                      "type": "object"
+                    },
+                    "registries": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "rir": {
+                            "type": "string"
+                          },
+                          "allocated": {
+                            "type": "integer"
+                          },
+                          "advertised": {
+                            "type": "integer"
+                          },
+                          "aspa": {
+                            "type": "integer"
+                          },
+                          "aspa_advertised": {
+                            "type": "integer"
+                          },
+                          "reserved": {
+                            "type": "integer"
+                          },
+                          "available": {
+                            "type": "integer"
+                          }
+                        },
+                        "additionalProperties": true
+                      }
+                    },
+                    "economies": {
+                      "type": "array",
+                      "items": {
+                        "type": "object"
+                      }
+                    },
+                    "regions": {
+                      "type": "array",
+                      "items": {
+                        "type": "object"
+                      }
+                    },
+                    "by_year": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "year": {
+                            "type": "integer"
+                          },
+                          "allocated": {
+                            "type": "integer"
+                          },
+                          "advertised": {
+                            "type": "integer"
+                          },
+                          "aspa": {
+                            "type": "integer"
+                          }
+                        },
+                        "additionalProperties": true
+                      }
+                    },
+                    "by_width": {
+                      "type": "array",
+                      "items": {
+                        "type": "object"
+                      }
+                    },
+                    "bogus": {
+                      "type": "object"
+                    }
+                  },
+                  "additionalProperties": true
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/status-history.json": {
+      "get": {
+        "summary": "The checks of the status page, every 15 minutes, for 90 days",
+        "description": "scripts/build-status.mjs: a sample is [seconds since the epoch, one letter for each check: o OK, l late, d down, - not checked], in the order of checks.",
+        "responses": {
+          "200": {
+            "description": "The file",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "generated": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "interval": {
+                      "type": "integer"
+                    },
+                    "assumed": {
+                      "type": "object",
+                      "properties": {
+                        "from": {
+                          "type": "integer"
+                        },
+                        "to": {
+                          "type": "integer"
+                        }
+                      },
+                      "additionalProperties": true
+                    },
+                    "checks": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string"
+                          },
+                          "name": {
+                            "type": "string"
+                          },
+                          "expected": {
+                            "type": "string"
+                          }
+                        },
+                        "additionalProperties": true
+                      }
+                    },
+                    "samples": {
+                      "type": "array",
+                      "items": {
+                        "type": "array",
+                        "items": {
+                          "type": [
+                            "integer",
+                            "string"
+                          ]
+                        }
+                      }
+                    }
+                  },
+                  "additionalProperties": true
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/status-months.json": {
+      "get": {
+        "summary": "The availability of each part of the service by month",
+        "description": "The tallies of the samples of the status history, kept for good.",
+        "responses": {
+          "200": {
+            "description": "The file",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "generated": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "interval": {
+                      "type": "integer"
+                    },
+                    "last": {
+                      "type": "integer"
+                    },
+                    "checks": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string"
+                          },
+                          "name": {
+                            "type": "string"
+                          }
+                        },
+                        "additionalProperties": true
+                      }
+                    },
+                    "months": {
+                      "type": "object",
+                      "properties": {},
+                      "description": "YYYY-MM -> {samples, parts: {id: [ok, late, down]}}",
+                      "additionalProperties": true
+                    }
+                  },
+                  "additionalProperties": true
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/relations.json": {
+      "get": {
+        "summary": "The providers that the CAIDA relationships infer for each AS",
+        "description": "Built once a day with the adoption numbers.",
+        "responses": {
+          "200": {
+            "description": "The file",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "generated": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "source": {
+                      "type": "string"
+                    },
+                    "serial": {
+                      "type": "string"
+                    },
+                    "providers": {
+                      "type": "object",
+                      "properties": {},
+                      "description": "AS number (digits) -> array of provider AS numbers",
+                      "additionalProperties": true
+                    }
+                  },
+                  "additionalProperties": true
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/asn-registry.json": {
+      "get": {
+        "summary": "The registry and the country of each AS number",
+        "description": "From the delegation files of the five RIRs, once a day.",
+        "responses": {
+          "200": {
+            "description": "The file",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "generated": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "asns": {
+                      "type": "object",
+                      "properties": {},
+                      "description": "AS number (digits) -> [rir, country code]",
+                      "additionalProperties": true
+                    }
+                  },
+                  "additionalProperties": true
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/archive/history.json": {
+      "get": {
+        "summary": "The daily history of the ASPAs since 12 October 2023",
+        "description": "A copy of the history branch, refreshed every ten minutes: one row a day.",
+        "responses": {
+          "200": {
+            "description": "The file",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "date": {
+                        "type": "string",
+                        "format": "date"
+                      },
+                      "aspas": {
+                        "type": "integer"
+                      },
+                      "provider_ases": {
+                        "type": "integer"
+                      },
+                      "median_providers": {
+                        "type": "number"
+                      },
+                      "largest_provider_set": {
+                        "type": "integer"
+                      },
+                      "no_provider_aspas": {
+                        "type": "integer"
+                      }
+                    },
+                    "description": "with aspas_<rir> for each RIR and the coverage figures",
+                    "additionalProperties": true
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/archive/events.json": {
+      "get": {
+        "summary": "Every change of an ASPA since 12 October 2023",
+        "description": "A copy of the history branch: [date, customer, providers or null when the ASPA was removed].",
+        "responses": {
+          "200": {
+            "description": "The file",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "array",
+                    "items": {
+                      "type": [
+                        "string",
+                        "array",
+                        "null"
+                      ]
+                    },
+                    "description": "[date, ASnnn, [ASnnn, ...] | null]"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/archive/visibility.json": {
+      "get": {
+        "summary": "The ASes with an ASPA that the collectors do not see",
+        "description": "A copy of the history branch, written by the daily snapshot.",
+        "responses": {
+          "200": {
+            "description": "The file",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "date": {
+                      "type": "string",
+                      "format": "date"
+                    },
+                    "seen": {
+                      "type": "integer"
+                    },
+                    "unseen": {
+                      "type": "array",
+                      "items": {
+                        "type": "string",
+                        "description": "AS number as ASnnn"
+                      }
+                    }
+                  },
+                  "additionalProperties": true
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/datasets/index.json": {
+      "get": {
+        "summary": "The dated snapshots for research",
+        "description": "One .tar.gz a month with the files of the API, a manifest of SHA-256 sums and a README; CC BY 4.0.",
+        "responses": {
+          "200": {
+            "description": "The file",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "generated": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "snapshots": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "name": {
+                            "type": "string"
+                          },
+                          "date": {
+                            "type": "string",
+                            "format": "date"
+                          },
+                          "bytes": {
+                            "type": "integer"
+                          },
+                          "sha256": {
+                            "type": "string"
+                          },
+                          "license": {
+                            "type": "string"
+                          }
+                        },
+                        "additionalProperties": true
+                      }
+                    }
+                  },
+                  "additionalProperties": true
                 }
               }
             }

@@ -8,6 +8,7 @@ export const WHAT = {
   aspa_announced: 'the number of ASPAs announced', aspa_withdrawn: 'the number of ASPAs withdrawn',
   correlated: 'several measures of the sync at once',
   reset: 'the session was reset', error: 'an error in the session', disconnected: 'the session dropped', cache_not_ready: 'the cache was not ready',
+  serial_stale: 'the cache answers but its serial has not advanced', serial_advancing: 'the serial of the cache advances again',
 };
 export const MAX_LINES = 10;
 
@@ -19,16 +20,26 @@ const at = (a) => Date.parse(a && a.at);
 export function watchRtr(doc, saved) {
   const caches = doc && Array.isArray(doc.caches) && doc.caches.length ? doc.caches : (doc ? [{ id: doc.cache_id || 'routinator', name: doc.cache_name || doc.cache || 'the validator', anomalies: doc.anomalies }] : []);
   const old = saved && saved.last && typeof saved.last === 'object' ? saved.last : (saved && Number.isFinite(saved.last) ? { routinator: saved.last } : null);
-  const next = {}, events = [];
+  const oldStale = saved && saved.stale && typeof saved.stale === 'object' ? saved.stale : {};
+  const next = {}, stale = {}, events = [];
+  const when = doc && Number.isFinite(Date.parse(doc.generated)) ? doc.generated : new Date().toISOString();
   for (const c of caches) {
     const list = c.anomalies && Array.isArray(c.anomalies.list) ? c.anomalies.list.filter((a) => Number.isFinite(at(a))) : [];
     const newest = list.reduce((m, a) => Math.max(m, at(a)), 0);
     const seen = old && Number.isFinite(old[c.id]) ? old[c.id] : null;
     if (seen !== null) for (const a of list) if (at(a) > seen) events.push({ ...a, cache: c.name || c.id, cache_id: c.id });
     next[c.id] = seen === null ? newest : Math.max(seen, newest);
+    // the serial that stops advancing while the cache answers (and its recovery): the builder says so, the first poll only takes note
+    const isStale = Boolean(c.session && c.session.serial_stale);
+    stale[c.id] = isStale;
+    if (old && c.id in oldStale && oldStale[c.id] !== isStale) {
+      events.push(isStale
+        ? { at: when, cache: c.name || c.id, cache_id: c.id, severity: 'high', category: 'structural', trigger: 'serial_stale', since: c.session.last_serial_change || null, hours: c.session.stale_after_s ? Math.round(c.session.stale_after_s / 3600) : null }
+        : { at: when, cache: c.name || c.id, cache_id: c.id, severity: 'medium', category: 'structural', trigger: 'serial_advancing' });
+    }
   }
-  if (!old) return { events: [], saved: { last: next } };
-  return { events: events.sort((a, b) => at(a) - at(b)), saved: { last: next } };
+  if (!old) return { events: [], saved: { last: next, stale } };
+  return { events: events.sort((a, b) => at(a) - at(b)), saved: { last: next, stale } };
 }
 
 const utc = (s) => new Date(s).toISOString().replace(/\.\d+Z$/, '').replace('T', ' ') + ' UTC';
@@ -39,6 +50,8 @@ export const describeRtrEvent = (a) => {
   const what = WHAT[a.trigger] || a.trigger || 'something in the sync';
   const raw = a.raw && a.trigger in a.raw ? ` (${value(a.trigger, a.raw[a.trigger])}` + (a.z && Number.isFinite(a.z[a.trigger]) ? `, ${a.z[a.trigger]} deviations from the usual)` : ')') : '';
   const where = a.cache ? ` on ${a.cache}` : '';
+  if (a.trigger === 'serial_stale') return `${sev} anomaly${where} at ${utc(a.at)}: ${what}${a.since ? ` since ${utc(a.since)}` : ''}${a.hours ? ` (more than ${a.hours} hours)` : ''}. The validator behind it has stopped publishing, or stalled: its routers keep old data without an alarm.`;
+  if (a.trigger === 'serial_advancing') return `${sev} anomaly${where} at ${utc(a.at)}: ${what}.`;
   if (a.category === 'structural') return `${sev} anomaly${where} at ${utc(a.at)}: ${what}. The session itself misbehaved.`;
   return `${sev} anomaly${where} at ${utc(a.at)}: ${what} was off the baseline${raw}. The sync was unlike the ones before it.`;
 };

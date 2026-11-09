@@ -185,9 +185,20 @@ export async function cached(url, path, maxAgeMs) {
   return path;
 }
 
+// a fetch tried three times, with a timeout: a single failure of a daily job keeps a page two days old
+async function fetchRetry(url, headers = {}) {
+  for (let attempt = 1; ; attempt++) {
+    try {
+      const r = await fetch(url, { headers: { 'User-Agent': UA, ...headers }, signal: AbortSignal.timeout(60000) });
+      if (!r.ok) throw new Error(`HTTP ${r.status}`);
+      return r;
+    } catch (err) { if (attempt === 3) throw new Error(`${url}: ${(err.cause && err.cause.code) || err.message}`); }
+  }
+}
+
 async function latestCaida() {
   const base = 'https://publicdata.caida.org/datasets/as-relationships/serial-2/';
-  const html = await (await fetch(base, { headers: { 'User-Agent': UA } })).text();
+  const html = await (await fetchRetry(base)).text();
   const names = [...html.matchAll(/(\d{8})\.as-rel2\.txt\.bz2/g)].map((m) => m[1]).sort();
   if (!names.length) throw new Error('no CAIDA file found');
   return { date: names[names.length - 1], url: `${base}${names[names.length - 1]}.as-rel2.txt.bz2` };
@@ -199,7 +210,7 @@ async function main() {
   const cache = cacheArg || join(outFile, '..', 'cache');
   await mkdir(cache, { recursive: true });
   const dataUrl = process.env.ASPA_DATA || 'http://127.0.0.1:8080/data/aspas.json';
-  const getJson = async (u) => { const r = await fetch(u, { headers: { Accept: 'application/json', 'User-Agent': UA } }); if (!r.ok) throw new Error(`${u}: HTTP ${r.status}`); return r.json(); };
+  const getJson = async (u) => (await fetchRetry(u, { Accept: 'application/json' })).json();
 
   const data = await getJson(dataUrl);
   if (!Array.isArray(data.aspas) || !data.aspas.length) throw new Error('the ASPA data is empty: not publishing');

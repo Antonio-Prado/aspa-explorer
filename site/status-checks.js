@@ -68,9 +68,9 @@
       const t = Date.parse(d.generated);
       const sync = d.last_sync ? Date.parse(d.last_sync.at) : 0;
       const up = d.session && d.session.connected && !d.session.expired;
-      const state = !up || now - t > 2 * HOUR ? 'down' : now - t > 20 * MIN || now - sync > 30 * MIN ? 'late' : 'ok';
+      const state = !up || now - t > 2 * HOUR ? 'down' : now - t > 20 * MIN || now - sync > 30 * MIN || d.session.serial_stale ? 'late' : 'ok';
       const n = (d.anomalies && d.anomalies.last_7_days) || 0;
-      return { state, at: sync || t, extra: `${d.last_sync ? `${d.last_sync.vrp_total.toLocaleString('en-US')} VRPs and ${d.last_sync.aspa_total.toLocaleString('en-US')} ASPAs` : 'no sync yet'}${n ? `, ${n} anomal${n === 1 ? 'y' : 'ies'} in 7 days` : ''}` };
+      return { state, at: sync || t, extra: `${d.last_sync ? `${d.last_sync.vrp_total.toLocaleString('en-US')} VRPs and ${d.last_sync.aspa_total.toLocaleString('en-US')} ASPAs` : 'no sync yet'}${d.session.serial_stale ? ', the serial has not advanced for hours' : ''}${n ? `, ${n} anomal${n === 1 ? 'y' : 'ies'} in 7 days` : ''}` };
     } },
     { id: 'notifications', name: 'Notifications', expected: 'checks the validator every 10 minutes', run: async (now) => {
       const h = await get('/api/v1/subscriptions/health');

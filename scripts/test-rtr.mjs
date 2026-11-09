@@ -1,6 +1,6 @@
 // Unit tests for scripts/build-rtr.mjs (no dependencies). Run with: node scripts/test-rtr.mjs
 import assert from 'node:assert/strict';
-import { parseLines, parseMetrics, summarise, cachesFromEnv, KEEP_DAYS, MAX_ANOMALIES } from './build-rtr.mjs';
+import { parseLines, parseMetrics, summarise, cachesFromEnv, KEEP_DAYS, MAX_ANOMALIES, STALE_AFTER } from './build-rtr.mjs';
 
 let passed = 0;
 const test = async (name, fn) => { await fn(); passed++; console.log('ok  ', name); };
@@ -131,6 +131,22 @@ await test('a cache that refuses RTR version 2: the probe is an event, not an an
   const v2 = summarise(parseLines([JSON.stringify({ timestamp: at(0), cache: 'c', event_type: 'connected', proto_version: 2 }), sync(1)].join('\n')), T0 + 5 * 60e3);
   assert.equal(v2.session.protocol, 2);
   assert.equal(v2.session.carries_aspa, true);
+});
+
+await test('a serial that does not advance: stale after three hours of syncs without a change, not when the session is down or the syncs stopped', () => {
+  const lines = [JSON.stringify({ timestamp: at(0), cache: 'c', event_type: 'connected', proto_version: 2 }), sync(0, { sync_type: 'full' }), sync(10, { serial: 7 })];
+  for (let m = 20; m <= 200; m += 10) lines.push(sync(m, { serial: 7, serial_changed: false }));
+  const r = parseLines(lines.join('\n'));
+  const d = summarise(r, T0 + 200 * 60e3);
+  assert.equal(d.session.last_serial_change, at(10));
+  assert.equal(d.session.serial_stale, true);
+  assert.equal(d.session.stale_after_s, STALE_AFTER / 1000);
+  assert.equal(summarise(r, T0 + 100 * 60e3).session.serial_stale, false);                         // too early
+  assert.equal(summarise(r, T0 + 200 * 60e3, { session_state: 0 }).session.serial_stale, false);   // down: another problem
+  assert.equal(summarise(r, T0 + 600 * 60e3).session.serial_stale, false);                         // the syncs stopped as well: not this signal
+  const m = summarise(r, T0 + 200 * 60e3, { session_state: 1, last_serial_change_seconds: (T0 + 190 * 60e3) / 1000 });
+  assert.equal(m.session.serial_stale, false);                                                      // the gauge of the monitor knows better
+  assert.equal(m.session.last_serial_change, at(190));
 });
 
 await test('the caches from the environment: one by default, several from JSON, a bad list refused', async () => {

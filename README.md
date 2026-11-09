@@ -4,7 +4,7 @@
 
 <p align="center">
   <strong>Explore, check and follow the ASPA objects of the RPKI.</strong><br>
-  A web page, a small API and a notification service on top of a <a href="https://github.com/NLnetLabs/routinator" target="_blank" rel="noopener">Routinator</a> validator: lookups, AS path and route checks, statistics, feeds, badges and notifications.
+  A web page, a small API and a notification service on top of two RPKI validators, <a href="https://github.com/NLnetLabs/routinator" target="_blank" rel="noopener">Routinator</a> and <a href="https://github.com/NICMx/FORT-validator" target="_blank" rel="noopener">Fort</a>, watched over RTR as routers see them: lookups, AS path and route checks, routing incidents, statistics, feeds, badges and notifications.
 </p>
 
 <p align="center">
@@ -403,6 +403,8 @@ The downstream verification implemented by the path check is analysed in the fol
 ## Acknowledgements
 
 Thanks to Leo Vegoda of PeeringDB for suggesting the names of the ASes as tooltips (1.52.0).
+
+The RTR monitors are [RAVEN](https://github.com/nokia/bgp-routing-security-monitor) by Ritesh Mukherjee (Nokia, BSD-3-Clause), whose RIPE Labs article prompted them (1.58.0). The reference caches are public RTR servers offered to the community: the ones of Level66 Network and of DaKnObNET, which turned the ASPAs on at our request, and the one of Cloudflare, whose JSON export is also one of the three validators compared. The second validator of the site is [Fort](https://github.com/NICMx/FORT-validator) by NIC México.
 
 ## License
 

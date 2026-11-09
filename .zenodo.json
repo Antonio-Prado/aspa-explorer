@@ -1,6 +1,6 @@
 {
   "title": "ASPA Explorer",
-  "description": "A web page, a small API and a notification service on top of a Routinator validator: lookups of the validated ASPA objects of the RPKI, AS path and route checks against them, places of valley in the routes of 30 route collectors, statistics on adoption, feeds, badges and notifications.",
+  "description": "A web page, a small API and a notification service on top of two RPKI validators, Routinator and Fort, watched over RTR as routers see them: lookups of the validated ASPA objects of the RPKI, AS path and route checks against them, routing incidents, places of valley in the routes of 33 route collectors, statistics on adoption, feeds, badges and notifications.",
   "upload_type": "software",
   "license": "MIT",
   "creators": [

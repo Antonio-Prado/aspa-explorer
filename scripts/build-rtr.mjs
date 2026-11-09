@@ -21,6 +21,7 @@ import { readFile, writeFile, rename } from 'node:fs/promises';
 export const KEEP_DAYS = 30;        // of hourly points
 export const MAX_ANOMALIES = 50;    // kept in the file, the newest first
 export const MAX_EVENTS = 20;       // session events kept, the newest first
+export const STALE_AFTER = 3 * 3600e3;   // a cache whose serial has not changed for this long, while it answers, has stopped publishing or stalled
 const HOUR = 3600e3, DAY = 86400e3;
 const iso = (ms) => new Date(ms).toISOString().replace(/\.\d+Z$/, 'Z');
 
@@ -89,9 +90,15 @@ export function summarise(records, now = Date.now(), metrics = null) {
   // leaves zero out); before the first sync the gauge of the monitor says the version it asked for, not the one agreed
   const lastEstablished = last ? [...events].reverse().find((e) => e.event_type === 'connected' && e.t <= last.t) || null : null;
   const negotiated = last ? (lastEstablished ? (lastEstablished.proto_version ?? 0) : protocol) : null;
+  // the last sync that changed the serial: a cache that keeps answering with the same serial for hours is not being updated
+  const lastChange = [...syncs].reverse().find((r) => r.serial_changed === true) || null;
+  const lastChangeAt = metrics && Number.isFinite(metrics.last_serial_change_seconds) && metrics.last_serial_change_seconds > 0 ? metrics.last_serial_change_seconds * 1000 : (lastChange ? lastChange.t : null);
   const session = {
     connected, since: lastConn ? iso(lastConn.t) : null, protocol: negotiated, expired: metrics && 'data_expired' in metrics ? metrics.data_expired === 1 : null,
     from_metrics: Boolean(metrics && 'session_state' in metrics), carries_aspa: Boolean(last) && ((negotiated ?? 0) >= 2 || nz(last.aspa_total) > 0),
+    last_serial_change: lastChangeAt ? iso(lastChangeAt) : null,
+    serial_stale: Boolean(connected && last && lastChangeAt && now - lastChangeAt > STALE_AFTER && now - last.t <= STALE_AFTER),
+    stale_after_s: STALE_AFTER / 1000,
   };
 
   const day = syncs.filter((r) => r.t > now - DAY);

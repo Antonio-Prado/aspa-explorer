@@ -9,6 +9,16 @@ A few numbers were deployed and folded into the next release without a tag of th
 
 ## [Unreleased]
 
+## [1.61.0] - 2026-11-09
+
+### Added
+- The OpenAPI description (`site/api/openapi.json`, 1.4.0) now covers every file of the statistics as well: valleys and their history and by-AS file, validators compared, the RTR caches, trends, incidents, invalid announcements, resources, status history and months, relationships and registry, the three files of the history archive and the index of the snapshots; 28 paths instead of 11.
+- A cache that keeps answering while its serial has not advanced for three hours is told apart: `session.serial_stale` and `session.last_serial_change` in `rtr.json`, the status check of the RTR session goes late, and the status alerts get a message when a cache becomes stale and when its serial advances again (a point raised by the author of RAVEN, whose detector does not catch it yet).
+- Credits for Fort, RAVEN and the operators of the reference caches, in the guide and in the README; the tagline of the project names two validators watched over RTR.
+
+### Fixed
+- The adoption job stopped for two days after a single network failure of one of its requests: every request is now tried three times with a timeout, as the downloads already were.
+
 ## [1.60.0] - 2026-11-09
 
 ### Added
