@@ -1,6 +1,9 @@
 [
   { "id": "routinator", "name": "Routinator of this site", "host": "rpki.example.net",
     "telemetry": "/var/db/raven/routinator/rtr-telemetry.ndjson", "metrics": "http://127.0.0.1:9595/metrics" },
+  { "id": "fort", "name": "Fort of this site", "host": "rpki.example.net",
+    "telemetry": "/var/db/raven/fort/rtr-telemetry.ndjson", "metrics": "http://127.0.0.1:9598/metrics",
+    "note": "a second validator of the site, with different code, on the same host as the first; RTR version 2, with the ASPAs" },
   { "id": "level66", "name": "Level66 Network (public RTR server)", "host": "rpki.level66.services",
     "telemetry": "/var/db/raven/level66/rtr-telemetry.ndjson", "metrics": "http://127.0.0.1:9596/metrics",
     "note": "a public server offered to the community by Level66 Network; RTR version 2, with the ASPAs" },

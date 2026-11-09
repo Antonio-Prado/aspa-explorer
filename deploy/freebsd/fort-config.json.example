@@ -1,0 +1,16 @@
+{
+  "tal": "/usr/local/etc/fort/tal/",
+  "local-repository": "/var/db/fort/repository/",
+  "work-offline": false,
+  "mode": "server",
+  "server": {
+    "address": [ "192.0.2.1" ],
+    "port": "3324",
+    "max-rtr-version": 2,
+    "interval": { "validation": 600, "refresh": 600, "retry": 600, "expire": 7200 }
+  },
+  "log": { "enabled": true, "level": "warning", "output": "syslog", "facility": "daemon", "tag": "fort" },
+  "validation-log": { "enabled": false },
+  "http": { "user-agent": "fort/1.7.0 (rpki.example.net)" },
+  "output": { "aspa": "/var/db/fort/output/aspa.json", "format": "json" }
+}
