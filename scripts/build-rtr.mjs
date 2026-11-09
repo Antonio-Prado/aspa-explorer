@@ -90,9 +90,12 @@ export function summarise(records, now = Date.now(), metrics = null) {
   // leaves zero out); before the first sync the gauge of the monitor says the version it asked for, not the one agreed
   const lastEstablished = last ? [...events].reverse().find((e) => e.event_type === 'connected' && e.t <= last.t) || null : null;
   const negotiated = last ? (lastEstablished ? (lastEstablished.proto_version ?? 0) : protocol) : null;
-  // the last sync that changed the serial: a cache that keeps answering with the same serial for hours is not being updated
-  const lastChange = [...syncs].reverse().find((r) => r.serial_changed === true) || null;
-  const lastChangeAt = metrics && Number.isFinite(metrics.last_serial_change_seconds) && metrics.last_serial_change_seconds > 0 ? metrics.last_serial_change_seconds * 1000 : (lastChange ? lastChange.t : null);
+  // the last sync that changed the serial: a cache that keeps answering with the same serial for hours is not being updated. A full resync
+  // (a new session, after a reset or a restart of the validator) delivers everything the cache holds and so proves its data as fresh as the
+  // serial does: it restarts the clock, which the gauge of the monitor (last_serial_change_seconds) does not know; the later of the two counts.
+  const lastChange = [...syncs].reverse().find((r) => r.serial_changed === true || r.sync_type === 'full') || null;
+  const gaugeAt = metrics && Number.isFinite(metrics.last_serial_change_seconds) && metrics.last_serial_change_seconds > 0 ? metrics.last_serial_change_seconds * 1000 : null;
+  const lastChangeAt = Math.max(gaugeAt || 0, lastChange ? lastChange.t : 0) || null;
   const session = {
     connected, since: lastConn ? iso(lastConn.t) : null, protocol: negotiated, expired: metrics && 'data_expired' in metrics ? metrics.data_expired === 1 : null,
     from_metrics: Boolean(metrics && 'session_state' in metrics), carries_aspa: Boolean(last) && ((negotiated ?? 0) >= 2 || nz(last.aspa_total) > 0),

@@ -9,6 +9,11 @@ A few numbers were deployed and folded into the next release without a tag of th
 
 ## [Unreleased]
 
+## [1.62.3] - 2026-11-09
+
+### Fixed
+- The alert on a serial that stops advancing was raised wrongly, and several times, on a cache whose validator was being restarted: a full resync, which a new session brings, delivers everything the cache holds and proves its data fresh, so it restarts the clock of the check (the gauge of the monitor does not count it), and the notifier tells one stall once, whatever the session does meanwhile: a session that drops and comes back with the same serial is the same stall, and the recovery is a serial later than the one that stalled, not the session coming back. The message says that the node answering the session, not only the validator, may be the one that stalled: an anycast cache has many.
+
 ## [1.62.2] - 2026-11-09
 
 ### Added

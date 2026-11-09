@@ -983,7 +983,7 @@
                         },
                         "serial_stale": {
                           "type": "boolean",
-                          "description": "the cache answers but its serial has not changed for stale_after_s"
+                          "description": "the cache answers but its serial has not changed for stale_after_s; a full resync counts as a change, since it delivers everything the cache holds"
                         },
                         "stale_after_s": {
                           "type": "integer"

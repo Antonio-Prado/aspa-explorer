@@ -147,6 +147,12 @@ await test('a serial that does not advance: stale after three hours of syncs wit
   const m = summarise(r, T0 + 200 * 60e3, { session_state: 1, last_serial_change_seconds: (T0 + 190 * 60e3) / 1000 });
   assert.equal(m.session.serial_stale, false);                                                      // the gauge of the monitor knows better
   assert.equal(m.session.last_serial_change, at(190));
+  // a full resync (the validator restarted, or the session was reset) delivers everything again: the clock restarts, whatever the gauge says
+  const reset = parseLines([...lines, JSON.stringify({ timestamp: at(150), cache: 'c', event_type: 'connected', proto_version: 2 }), sync(150, { sync_type: 'full', serial_changed: false, serial: undefined })].join('\n'));
+  const f = summarise(reset, T0 + 200 * 60e3, { session_state: 1, last_serial_change_seconds: (T0 + 10 * 60e3) / 1000 });
+  assert.equal(f.session.serial_stale, false);
+  assert.equal(f.session.last_serial_change, at(150));
+  assert.equal(summarise(reset, T0 + 340 * 60e3, { session_state: 1, last_serial_change_seconds: (T0 + 10 * 60e3) / 1000 }).session.serial_stale, true);   // and then stale again
 });
 
 await test('the caches from the environment: one by default, several from JSON, a bad list refused', async () => {

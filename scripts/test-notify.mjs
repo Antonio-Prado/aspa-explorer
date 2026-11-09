@@ -1136,7 +1136,7 @@ await test('rtr: the first poll takes note, a new anomaly is announced once, an 
   assert.deepEqual(second.saved.last, { routinator: Date.parse(a2.at) });
   assert.deepEqual(watchRtr({ anomalies: { list: [a2, a1] } }, second.saved).events, []);
   assert.deepEqual(watchRtr({}, second.saved).events, []);                           // a file without anomalies, or broken
-  assert.deepEqual(watchRtr(null, null), { events: [], saved: { last: {}, stale: {} } });
+  assert.deepEqual(watchRtr(null, null), { events: [], saved: { last: {}, stale: {}, told: {} } });
   assert.equal(watchRtr({ anomalies: { list: [{ at: 'never' }, a1] } }, { last: 0 }).events.length, 1);   // the state of 1.58 (one number) still works
   // several caches: each has its own memory, and the events say which cache
   const two = { caches: [{ id: 'routinator', name: 'Routinator of this site', anomalies: { list: [a1] } }, { id: 'cloudflare', name: 'Cloudflare', anomalies: { list: [] } }] };
@@ -1165,8 +1165,29 @@ await test('rtr: the first poll takes note, a new anomaly is announced once, an 
   const t2 = watchRtr(stuck, t1.saved);
   assert.equal(t2.events.length, 1);
   assert.equal(t2.events[0].trigger, 'serial_stale');
-  assert.equal(describeRtrEvent(t2.events[0]), 'High anomaly on Routinator of this site at 2026-11-10 09:00:00 UTC: the cache answers but its serial has not advanced since 2026-11-10 05:50:00 UTC (more than 3 hours). The validator behind it has stopped publishing, or stalled: its routers keep old data without an alarm.');
+  assert.equal(describeRtrEvent(t2.events[0]), 'High anomaly on Routinator of this site at 2026-11-10 09:00:00 UTC: the cache answers but its serial has not advanced since 2026-11-10 05:50:00 UTC (more than 3 hours). The validator behind it, or the node of it that answers this session, has stopped publishing or stalled: its routers keep old data without an alarm.');
   assert.deepEqual(watchRtr(stuck, t2.saved).events, []);                           // said once
+  // the session drops while the serial is stale and comes back with the same serial: the same stall, said already; the recovery is a
+  // later serial, and a cache that was already stale at the first poll is not news when its session comes back either
+  const c = (session, generated) => ({ generated, caches: [{ id: 'routinator', name: 'R', anomalies: { list: [] }, session }] });
+  const S = '2026-11-10T05:50:00Z';
+  let st = watchRtr(c({ serial_stale: false, connected: true, last_serial_change: S }, '2026-11-10T08:00:00Z'), null);
+  st = watchRtr(c({ serial_stale: true, connected: true, last_serial_change: S, stale_after_s: 10800 }, '2026-11-10T09:00:00Z'), st.saved);
+  assert.equal(st.events.length, 1); assert.equal(st.events[0].trigger, 'serial_stale');
+  st = watchRtr(c({ serial_stale: false, connected: false, last_serial_change: S }, '2026-11-10T09:05:00Z'), st.saved);
+  assert.deepEqual(st.events, []);                                                  // dropped: not a recovery
+  st = watchRtr(c({ serial_stale: true, connected: true, last_serial_change: S, stale_after_s: 10800 }, '2026-11-10T09:10:00Z'), st.saved);
+  assert.deepEqual(st.events, []);                                                  // back, same serial: said already
+  st = watchRtr(c({ serial_stale: false, connected: true, last_serial_change: S }, '2026-11-10T09:15:00Z'), st.saved);
+  assert.deepEqual(st.events, []);                                                  // a reset gave a full resync, the serial itself did not move
+  st = watchRtr(c({ serial_stale: false, connected: true, last_serial_change: '2026-11-10T09:20:00Z' }, '2026-11-10T09:20:00Z'), st.saved);
+  assert.equal(st.events.length, 1); assert.equal(st.events[0].trigger, 'serial_advancing');
+  st = watchRtr(c({ serial_stale: true, connected: true, last_serial_change: '2026-11-10T09:20:00Z', stale_after_s: 10800 }, '2026-11-10T12:30:00Z'), st.saved);
+  assert.equal(st.events.length, 1); assert.equal(st.events[0].trigger, 'serial_stale');   // a new stall, said again
+  let u = watchRtr(c({ serial_stale: true, connected: true, last_serial_change: S, stale_after_s: 10800 }, '2026-11-10T09:00:00Z'), null);
+  u = watchRtr(c({ serial_stale: false, connected: false, last_serial_change: S }, '2026-11-10T09:05:00Z'), u.saved);
+  u = watchRtr(c({ serial_stale: true, connected: true, last_serial_change: S, stale_after_s: 10800 }, '2026-11-10T09:10:00Z'), u.saved);
+  assert.deepEqual(u.events, []);                                                   // stale since before the first poll: still not news
   assert.equal(describeRtrEvent(a2), 'High anomaly at 2026-11-09 15:00:00 UTC: the number of VRPs announced was off the baseline (1200, 161.2 deviations from the usual). The sync was unlike the ones before it.');
   assert.equal(describeRtrEvent(a1), 'Medium anomaly at 2026-11-09 14:00:00 UTC: several measures of the sync at once was off the baseline. The sync was unlike the ones before it.');
   assert.equal(describeRtrEvent({ at: '2026-11-09T16:00:00Z', severity: 'high', category: 'structural', trigger: 'reset', raw: {} }), 'High anomaly at 2026-11-09 16:00:00 UTC: the session was reset. The session itself misbehaved.');
