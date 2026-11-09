@@ -9,6 +9,11 @@ A few numbers were deployed and folded into the next release without a tag of th
 
 ## [Unreleased]
 
+## [1.62.1] - 2026-11-09
+
+### Changed
+- The RTR section of the statistics page links RAVEN, the documentation of its monitor and the RIPE Labs article, as the guide and the README do; the README links the article and the documentation as well.
+
 ## [1.62.0] - 2026-11-09
 
 ### Added

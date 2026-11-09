@@ -16,6 +16,7 @@
   const ago = (ms) => (ms < 2 * MIN ? 'just now' : ms < 90 * MIN ? `${Math.round(ms / MIN)} min ago` : ms < 48 * HOUR ? `${Math.round(ms / HOUR)} h ago` : `${Math.round(ms / 86400e3)} days ago`);
   const value = (k, v) => (k.endsWith('_ns') ? `${fmt.format(Math.round(v / 1e9))} s` : fmt.format(v));
   const hourLabel = (s) => new Date(s * 1000).toLocaleString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit', timeZone: 'UTC' });
+  const ext = (href, text) => el('a', { href, target: '_blank', rel: 'noopener' }, text, el('span', { class: 'sr-only', text: ' (opens in a new tab)' }));
 
   let doc = null;
   function drawCharts() {
@@ -49,7 +50,7 @@
     }
     const now = Date.now();
     const s = doc.session || {}, ls = doc.last_sync, d = doc.last_24h || {}, an = doc.anomalies || { list: [] };
-    $('rtr-sub').textContent = `An independent RTR client (RAVEN, the open-source BGP routing security monitor of Nokia, in its "rtr monitor" mode) follows the Routinator of this site at ${doc.cache} the way a router does, over RTR version ${s.protocol || 2}, which carries the ASPAs as well as the VRPs. It records every sync and runs an adaptive detector on them: each measure of a sync (its duration, the time since the one before, the records announced and withdrawn) against the median and the deviation of the previous ones. A validator that stops publishing, loses objects or floods its routers shows up here before any route changes. Telemetry since ${doc.telemetry && doc.telemetry.from ? when(doc.telemetry.from) : 'unknown'}, read ${when(doc.generated)}.`;
+    $('rtr-sub').replaceChildren('An independent RTR client (', ext('https://github.com/nokia/bgp-routing-security-monitor', 'RAVEN'), `, the open-source BGP routing security monitor of Nokia, in its "rtr monitor" mode) follows the Routinator of this site at ${doc.cache} the way a router does, over RTR version ${s.protocol || 2}, which carries the ASPAs as well as the VRPs. It records every sync and runs an adaptive detector on them: each measure of a sync (its duration, the time since the one before, the records announced and withdrawn) against the median and the deviation of the previous ones. A validator that stops publishing, loses objects or floods its routers shows up here before any route changes. Telemetry since ${doc.telemetry && doc.telemetry.from ? when(doc.telemetry.from) : 'unknown'}, read ${when(doc.generated)}.`);
 
     const httpNote = doc.http && doc.http.aspas !== null && ls
       ? (doc.http.aspas === ls.aspa_total ? `the same as the JSON export of the site` : `the JSON export of the site has ${fmt.format(doc.http.aspas)}: a different moment of the cache, or a difference worth a look`)
@@ -105,7 +106,7 @@
       el('td', { text: e.probe ? 'Version probe refused' : (EVENT[e.type] || e.type) }),
       el('td', { text: [e.reason, e.code !== undefined ? `code ${e.code}` : null, e.protocol !== undefined ? `RTR version ${e.protocol}` : null].filter(Boolean).join(', ') || '–' }))) : [el('tr', {}, el('td', { colspan: '3', text: 'No session event recorded.' }))]));
 
-    $('rtr-note').textContent = `In the last 24 hours the cache of the site announced ${fmt.format(d.vrp_announced || 0)} VRPs and withdrew ${fmt.format(d.vrp_withdrawn || 0)}, announced ${fmt.format(d.aspa_announced || 0)} ASPAs and withdrew ${fmt.format(d.aspa_withdrawn || 0)}${d.duration_max_ms ? `; the longest sync took ${fmt.format(d.duration_max_ms)} ms` : ''}. The same data is available as JSON (/api/v1/rtr.json), the raw telemetry of each monitor as NDJSON (/api/v1/rtr/<id>.ndjson), and the subscribers to the status alerts are told of every anomaly. RAVEN is BSD-3-Clause software by Nokia; the idea is explained in the RIPE Labs article "Your router trusts its validator. But who's watching the validator?".`;
+    $('rtr-note').replaceChildren(`In the last 24 hours the cache of the site announced ${fmt.format(d.vrp_announced || 0)} VRPs and withdrew ${fmt.format(d.vrp_withdrawn || 0)}, announced ${fmt.format(d.aspa_announced || 0)} ASPAs and withdrew ${fmt.format(d.aspa_withdrawn || 0)}${d.duration_max_ms ? `; the longest sync took ${fmt.format(d.duration_max_ms)} ms` : ''}. The same data is available as `, el('a', { href: '/api/v1/rtr.json', text: 'JSON' }), ', the raw telemetry of each monitor as NDJSON (/api/v1/rtr/<id>.ndjson, see the ', el('a', { href: '/api.html', text: 'API page' }), '), and the subscribers to the status alerts are told of every anomaly. RAVEN is BSD-3-Clause software by Nokia, with its ', ext('https://ritmukhe.github.io/raven-docs/user-guide/cli-reference/#raven-rtr-monitor', 'documentation of the monitor'), '; the idea is explained in the RIPE Labs article ', ext('https://labs.ripe.net/author/ritesh-mukherjee/your-router-trusts-its-validator-but-whos-watching-the-validator/', 'Your router trusts its validator. But who\'s watching the validator?'), ' by Ritesh Mukherjee.');
   }
   main();
 })();
