@@ -113,12 +113,12 @@ await test('a cache that refuses RTR version 2: the probe is an event, not an an
     JSON.stringify({ timestamp: at(0), cache: 'c', event_type: 'connected', proto_version: 2 }),
     JSON.stringify({ timestamp: at(0.01), cache: 'c', event_type: 'error', error_text: 'Bad protocol version\u0000', error_code: 4, proto_version: 2 }),
     JSON.stringify({ timestamp: at(0.01), cache: 'c', event_type: 'anomaly', category: 'structural', trigger: 'error_report', severity: 'high' }),
-    JSON.stringify({ timestamp: at(0.1), cache: 'c', event_type: 'connected', proto_version: 0 }),
+    JSON.stringify({ timestamp: at(0.1), cache: 'c', event_type: 'connected' }),                      // version 0: the monitor leaves the zero out
     sync(0.2, { sync_type: 'full', aspa_total: 0, vrp_announced: 1000 }),
     sync(2, { serial: 3, aspa_total: 0 }),
     JSON.stringify({ timestamp: at(3), cache: 'c', event_type: 'anomaly', category: 'structural', trigger: 'reset', severity: 'high' }),
   ];
-  const d = summarise(parseLines(lines.join('\n')), T0 + 5 * 60e3);
+  const d = summarise(parseLines(lines.join('\n')), T0 + 5 * 60e3, { session_state: 1, protocol_version: 2 });   // the gauge still says 2
   assert.equal(d.anomalies.total, 1);                                  // the reset, not the probe
   assert.equal(d.anomalies.probes, 1);
   assert.equal(d.anomalies.list[0].trigger, 'reset');

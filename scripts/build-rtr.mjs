@@ -84,10 +84,11 @@ export function summarise(records, now = Date.now(), metrics = null) {
   const last = syncs.length ? syncs[syncs.length - 1] : null;
   const lastConn = [...events].reverse().find((e) => e.event_type === 'connected' || e.event_type === 'disconnected') || null;
   const connected = metrics && 'session_state' in metrics ? metrics.session_state === 1 : Boolean(lastConn && lastConn.event_type === 'connected');
-  const protocol = metrics && Number.isFinite(metrics.protocol_version) ? metrics.protocol_version : (lastConn && lastConn.proto_version) || null;
-  const lastEstablished = [...events].reverse().find((e) => e.event_type === 'connected' && e.proto_version !== undefined && (!last || e.t <= last.t + 60000)) || null;
-  // the version is known once a sync came: before that the gauge of the monitor says the version it asked for, not the one agreed
-  const negotiated = last ? (lastEstablished ? lastEstablished.proto_version : protocol) : null;
+  const protocol = metrics && Number.isFinite(metrics.protocol_version) ? metrics.protocol_version : (lastConn && lastConn.proto_version) ?? null;
+  // the connection that brought the last sync says the version agreed (a record without proto_version means version 0: the monitor
+  // leaves zero out); before the first sync the gauge of the monitor says the version it asked for, not the one agreed
+  const lastEstablished = last ? [...events].reverse().find((e) => e.event_type === 'connected' && e.t <= last.t) || null : null;
+  const negotiated = last ? (lastEstablished ? (lastEstablished.proto_version ?? 0) : protocol) : null;
   const session = {
     connected, since: lastConn ? iso(lastConn.t) : null, protocol: negotiated, expired: metrics && 'data_expired' in metrics ? metrics.data_expired === 1 : null,
     from_metrics: Boolean(metrics && 'session_state' in metrics), carries_aspa: Boolean(last) && ((negotiated ?? 0) >= 2 || nz(last.aspa_total) > 0),

@@ -9,6 +9,11 @@ A few numbers were deployed and folded into the next release without a tag of th
 
 ## [Unreleased]
 
+## [1.59.1] - 2026-11-09
+
+### Fixed
+- The RTR version of a cache that answered in version 0 was shown as 2: the monitor leaves a zero out of its records, and the gauge says the version asked for. The version is now the one of the connection that brought the last sync.
+
 ## [1.59.0] - 2026-11-09
 
 ### Added
