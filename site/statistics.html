@@ -23,27 +23,27 @@
 <meta name="twitter:card" content="summary_large_image">
 <meta name="color-scheme" content="light dark">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
-<link rel="stylesheet" href="/style.css?v=1.59.3">
-<script src="/stats.js?v=1.59.3" defer></script>
-<script src="/adoption.js?v=1.59.3" defer></script>
-<script src="/trends.js?v=1.59.3" defer></script>
-<script src="/ui.js?v=1.59.3" defer></script>
-<script src="/resources.js?v=1.59.3" defer></script>
-<script src="/coverage.js?v=1.59.3" defer></script>
-<script src="/invalid.js?v=1.59.3" defer></script>
-<script src="/leaks.js?v=1.59.3" defer></script>
-<script src="/validators.js?v=1.59.3" defer></script>
-<script src="/rtr.js?v=1.59.3" defer></script>
-<script src="/status-checks.js?v=1.59.3" defer></script>
-<script src="/peek.js?v=1.59.3" defer></script>
-<script src="/asnames.js?v=1.59.3" defer></script>
-<script src="/footer.js?v=1.59.3" defer></script>
+<link rel="stylesheet" href="/style.css?v=1.60.0">
+<script src="/stats.js?v=1.60.0" defer></script>
+<script src="/adoption.js?v=1.60.0" defer></script>
+<script src="/trends.js?v=1.60.0" defer></script>
+<script src="/ui.js?v=1.60.0" defer></script>
+<script src="/resources.js?v=1.60.0" defer></script>
+<script src="/coverage.js?v=1.60.0" defer></script>
+<script src="/invalid.js?v=1.60.0" defer></script>
+<script src="/leaks.js?v=1.60.0" defer></script>
+<script src="/validators.js?v=1.60.0" defer></script>
+<script src="/rtr.js?v=1.60.0" defer></script>
+<script src="/status-checks.js?v=1.60.0" defer></script>
+<script src="/peek.js?v=1.60.0" defer></script>
+<script src="/asnames.js?v=1.60.0" defer></script>
+<script src="/footer.js?v=1.60.0" defer></script>
 </head>
 <body>
 <a class="skip" href="#main">Skip to main content</a>
 <header class="wrap masthead">
   <div class="top">
-    <p class="back"><a class="brandlink" href="/" title="Back to ASPA Explorer"><img class="brand" src="/img/logo-mark.svg?v=1.59.3" alt="" width="40" height="40"><span>ASPA Explorer</span></a></p>
+    <p class="back"><a class="brandlink" href="/" title="Back to ASPA Explorer"><img class="brand" src="/img/logo-mark.svg?v=1.60.0" alt="" width="40" height="40"><span>ASPA Explorer</span></a></p>
     <nav class="topnav" aria-label="Main"><a href="/">Home</a><a href="/statistics.html" aria-current="page">Statistics</a><a href="/incidents.html">Incidents</a><a href="/examples.html">Examples</a><a href="/api.html">API</a><a href="/guide.html">Guide</a><a href="/status.html">Status</a></nav>
   </div>
   <h1>Statistics</h1>
@@ -56,7 +56,26 @@
 <main class="wrap" id="main" tabindex="-1">
   <div class="tiles" id="tiles" aria-live="polite"></div>
 
-  <h2 class="sr-only">The ASPAs</h2>
+  <nav class="toc card" aria-label="Contents">
+    <ol>
+      <li><a href="#aspas-title">The ASPAs over time</a></li>
+      <li><a href="#adoption-title">Adoption by size and by RIR</a></li>
+      <li><a href="#top-title">The largest transit networks</a></li>
+      <li><a href="#tr-title">Networks with an ASPA over time</a></li>
+      <li><a href="#cc-title">By country</a></li>
+      <li><a href="#res-title">From allocation to ASPA</a></li>
+      <li><a href="#age-title">By age of the AS number</a></li>
+      <li><a href="#bogus-title">ASPAs that name AS numbers that should not be there</a></li>
+      <li><a href="#leaks-title">Valleys today</a></li>
+      <li><a href="#cov-title">Valid routes by address space</a></li>
+      <li><a href="#fam-title">IPv6 and IPv4 side by side</a></li>
+      <li><a href="#inv-title">Invalid announcements, as they happen</a></li>
+      <li><a href="#val-title">Validators compared</a></li>
+      <li><a href="#rtr-title">The validator as a router sees it</a></li>
+    </ol>
+  </nav>
+
+  <h2 class="sr-only" id="aspas-title">The ASPAs</h2>
 <div class="charts">
   <figure class="card wide">
     <figcaption><span class="t">ASPAs over time</span><span class="s" id="history-sub">ASPAs (customer ASes with a valid ASPA) per day, stacked by the RIR whose trust anchor holds them</span></figcaption>
@@ -109,7 +128,7 @@
   </figure>
 </div>
 
-  <h2 class="sr-only">Adoption</h2>
+  <h2 class="sr-only" id="adoption-title">Adoption</h2>
 
   <section class="card pad" aria-labelledby="size-title">
     <h2 id="size-title" class="subhead">By size of the network</h2>

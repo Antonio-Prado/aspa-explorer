@@ -9,6 +9,11 @@ A few numbers were deployed and folded into the next release without a tag of th
 
 ## [Unreleased]
 
+## [1.60.0] - 2026-11-09
+
+### Added
+- A table of contents at the top of the statistics page (fourteen sections) and of the Incidents page (five), as the examples, guide and API pages already had.
+
 ## [1.59.3] - 2026-11-09
 
 ### Added
