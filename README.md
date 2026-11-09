@@ -92,6 +92,12 @@
     <td align="center"><sub>Compare two dates for an AS</sub></td>
   </tr>
   <tr>
+    <td colspan="2" align="center"><img src="assets/screenshots/rtr-dark.jpg" width="70%" alt="The validator as a router sees it: the session, the last sync, the VRPs and ASPAs over RTR, the syncs and the anomalies, and the table of the four caches side by side: Routinator and Fort of the site, Level66 and Cloudflare"></td>
+  </tr>
+  <tr>
+    <td colspan="2" align="center"><sub>The validator as a router sees it, with the caches side by side</sub></td>
+  </tr>
+  <tr>
     <td colspan="2" align="center"><img src="assets/screenshots/collectors-dark.jpg" width="70%" alt="Collectors compared: a bar for each of the 33 collectors of RIPE RIS and RouteViews with the places of valley it sees, and the same places told apart by who sees them"></td>
   </tr>
   <tr>
