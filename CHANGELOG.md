@@ -9,6 +9,14 @@ A few numbers were deployed and folded into the next release without a tag of th
 
 ## [Unreleased]
 
+## [1.58.0] - 2026-11-09
+
+### Added
+- **The validator as a router sees it**, a section of the statistics page: an independent RTR client ([RAVEN](https://github.com/nokia/bgp-routing-security-monitor), Nokia, BSD-3-Clause, in its `rtr monitor` mode) follows the site's Routinator over RTR version 2, which carries the ASPAs as well as the VRPs, records every sync and runs an adaptive detector on them. The section shows the session, the last sync, the last 24 hours, the VRPs and ASPAs held and changed hour by hour for 30 days (two charts, ASPAs or VRPs), the count of ASPAs over RTR next to the one of the JSON export, the anomalies and the session events. `scripts/build-rtr.mjs` sums the telemetry up every five minutes as `/api/v1/rtr.json`; `deploy/freebsd/raven_rtr` runs the monitor as a service. The idea comes from the RIPE Labs article *Your router trusts its validator. But who's watching the validator?* (Ritesh Mukherjee).
+- Status: a check for the RTR session with the validator (down when the session is not up or its data expired, late when the summary or the last sync is old), on the page, in the dot of the menu and in the status history.
+- Notifications: the subscribers to the status alerts are told of every anomaly that the detector finds (one message for the anomalies of a poll, `aspa.rtr` for webhooks). Tests in `scripts/test-rtr.mjs` and `scripts/test-notify.mjs`.
+
+
 ## [1.57.1] - 2026-11-01
 
 ### Security

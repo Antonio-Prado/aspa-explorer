@@ -15,6 +15,7 @@ import { makeApi, httpHandler, parseAsn, limiter, clientKey } from '../notifier/
 import { dueInvalid, describeInvalid, COOLDOWN } from '../notifier/invalid.mjs';
 import { checkReport, shell, headTags, newId, ID_RE, LIMITS, legacyIdOk, LEGACY_ID_UNTIL } from '../notifier/reports.mjs';
 import { watchStatus, describeStatusEvent, statusSubject, MONITOR } from '../notifier/status.mjs';
+import { watchRtr, describeRtrEvent, describeRtrEvents, rtrSubject, MAX_LINES } from '../notifier/rtr.mjs';
 
 let passed = 0;
 const test = async (name, fn) => { await fn(); passed++; console.log('ok  ', name); };
@@ -1120,6 +1121,31 @@ await test('webhooks: the AS112 servers are not public receivers', () => {
 await test('mail: no header value can carry a line break, whatever the configuration', () => {
   const m = compose({ from: 'n@example.org', fromName: 'X\r\nBcc: a@b.c', to: 'r@example.org', subject: 's', text: 't', replyTo: 'r@x.y\nBcc: b@c.d', unsubscribeUrl: 'https://x/\r\nX: y', domain: 'example.org' });
   for (const [, v] of m.headers) assert.ok(!/[\r\n]/.test(v), v);
+});
+
+await test('rtr: the first poll takes note, a new anomaly is announced once, an old one never', () => {
+  const a1 = { at: '2026-11-09T14:00:00Z', severity: 'medium', category: 'statistical', trigger: 'correlated', z: { vrp_announced: 3.6, sync_duration_ns: 3.9 }, raw: { vrp_announced: 300, sync_duration_ns: 3100000000 } };
+  const a2 = { at: '2026-11-09T15:00:00Z', severity: 'high', category: 'statistical', trigger: 'vrp_announced', z: { vrp_announced: 161.2 }, raw: { vrp_announced: 1200 } };
+  const first = watchRtr({ anomalies: { list: [a1] } }, null);
+  assert.deepEqual(first.events, []);
+  assert.equal(first.saved.last, Date.parse(a1.at));
+  const second = watchRtr({ anomalies: { list: [a2, a1] } }, first.saved);          // the file lists the newest first
+  assert.deepEqual(second.events, [a2]);
+  assert.equal(second.saved.last, Date.parse(a2.at));
+  assert.deepEqual(watchRtr({ anomalies: { list: [a2, a1] } }, second.saved).events, []);
+  assert.deepEqual(watchRtr({}, second.saved).events, []);                           // a file without anomalies, or broken
+  assert.deepEqual(watchRtr(null, null), { events: [], saved: { last: 0 } });
+  assert.deepEqual(watchRtr({ anomalies: { list: [{ at: 'never' }, a1] } }, { last: 0 }).events, [a1]);
+  assert.equal(describeRtrEvent(a2), 'High anomaly at 2026-11-09 15:00:00 UTC: the number of VRPs announced was off the baseline (1200, 161.2 deviations from the usual). The sync was unlike the ones before it.');
+  assert.equal(describeRtrEvent(a1), 'Medium anomaly at 2026-11-09 14:00:00 UTC: several measures of the sync at once was off the baseline. The sync was unlike the ones before it.');
+  assert.equal(describeRtrEvent({ at: '2026-11-09T16:00:00Z', severity: 'high', category: 'structural', trigger: 'reset', raw: {} }), 'High anomaly at 2026-11-09 16:00:00 UTC: the session was reset. The session itself misbehaved.');
+  assert.equal(describeRtrEvent({ at: '2026-11-09T16:00:00Z', severity: 'high', category: 'statistical', trigger: 'sync_duration_ns', raw: { sync_duration_ns: 31000000000 }, z: {} }), 'High anomaly at 2026-11-09 16:00:00 UTC: the duration of the sync was off the baseline (31 s). The sync was unlike the ones before it.');
+  assert.equal(rtrSubject([a1]), 'ASPA Explorer: an anomaly in the RTR session with the validator');
+  assert.equal(rtrSubject([a1, a2]), 'ASPA Explorer: 2 anomalies in the RTR session with the validator (high)');
+  const many = Array.from({ length: MAX_LINES + 4 }, () => a1);
+  assert.equal(describeRtrEvents(many).length, MAX_LINES + 1);
+  assert.equal(describeRtrEvents(many)[MAX_LINES], 'And 4 more, on the statistics page.');
+  assert.equal(describeRtrEvents([a1]).length, 1);
 });
 
 console.log(`${passed} tests passed`);

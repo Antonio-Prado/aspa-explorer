@@ -13,6 +13,7 @@
 //   ASPA_DATA        http://127.0.0.1:8080/data/aspas.json
 //   LEAKS_BY_AS      http://127.0.0.1:8080/api/v1/leaks-by-as.json   places of valley of each AS (built once a day)
 //   STATUS_HISTORY   http://127.0.0.1:8080/api/v1/status-history.json   the states of the parts of the service (every 15 minutes)
+//   RTR_FILE         http://127.0.0.1:8080/api/v1/rtr.json              the RTR session with the validator and its anomalies (every 5 minutes)
 //   NOTIFY_SITE_DIR  /usr/local/www/aspa                           where site/report.html is (the shell of the pages /r/<id>)
 //   INVALID_LAST     http://127.0.0.1:8080/api/v1/invalid-last.json     what the last run of watch-invalid saw, by origin (every ten minutes)
 //   NOTIFY_PORT      8090 (127.0.0.1)
@@ -30,6 +31,7 @@ import { makePulse } from './pulse.mjs';
 import { TTL_DAYS } from './reports.mjs';
 import { dueInvalid, describeInvalid } from './invalid.mjs';
 import { watchStatus, describeStatusEvent, statusSubject } from './status.mjs';
+import { watchRtr, describeRtrEvents, rtrSubject } from './rtr.mjs';
 import { makeApi, httpHandler, STATUS } from './server.mjs';
 
 const env = (k, d) => process.env[k] || d;
@@ -40,6 +42,7 @@ const REPLY_TO = env('NOTIFY_REPLY_TO', 'antonio.prado@dei.unipd.it');
 const DATA = env('ASPA_DATA', 'http://127.0.0.1:8080/data/aspas.json');
 const LEAKS = env('LEAKS_BY_AS', 'http://127.0.0.1:8080/api/v1/leaks-by-as.json');
 const STATUS_FILE = env('STATUS_HISTORY', 'http://127.0.0.1:8080/api/v1/status-history.json');
+const RTR_FILE = env('RTR_FILE', 'http://127.0.0.1:8080/api/v1/rtr.json');
 const INVALID_FILE = env('INVALID_LAST', 'http://127.0.0.1:8080/api/v1/invalid-last.json');
 const SITE_DIR = env('NOTIFY_SITE_DIR', '/usr/local/www/aspa');
 const POLL = Number(env('NOTIFY_POLL', '600')) * 1000;
@@ -105,7 +108,7 @@ const api = makeApi({
 
 // Sends one message that was queued (see outbox.mjs); it throws when the message did not go, and the outbox counts the failure and tries again later.
 // `job` is plain data: {type: 'change', event, relation} for a change of ASPAs, {type: 'message', ...} for a place of valley or an alert on invalid
-// announcements, {type: 'status', events} for the state of the service.
+// announcements, {type: 'status', events} for the state of the service, {type: 'rtr', events} for the anomalies of the RTR session.
 const FOOTER_LEAKS = 'The places of valley are read once a day from the table dumps of collectors of RIPE RIS and RouteViews. A place is a candidate, not a verdict.';
 async function send(sub, job, row) {
   const event_id = `aspa-${row.id}`;                   // the same through every attempt: a receiver can drop the second copy of a message
@@ -130,6 +133,19 @@ async function send(sub, job, row) {
         change: { customer: e.customer, kind: e.kind, providers: e.providers, added: e.added, dropped: e.dropped },
         page: `${SITE}/as/${sub.asn}`, unsubscribe: unsub,
       }, { secret: sub.secret }));
+    }
+  } else if (job.type === 'rtr') {
+    const text = describeRtrEvents(job.events);
+    if (sub.kind === 'email') {
+      await mailTo(sub.target, rtrSubject(job.events), [
+        ...text, '',
+        `Details: ${SITE}/statistics.html#rtr-title`, '',
+        'You receive this because you subscribed to the status alerts of ASPA Explorer. To stop:',
+        unsubPage, '',
+        'An independent RTR client follows the validator of the site as a router would; its detector compares each sync with the ones before it. An anomaly is a sync out of the ordinary, not a verdict on the data.',
+      ].join('\n'), unsub);
+    } else {
+      ok(await post(sub.target, { event_id, type: 'aspa.rtr', text: text.join(' '), time: new Date().toISOString(), anomalies: job.events.map((a) => ({ at: a.at, severity: a.severity, category: a.category, trigger: a.trigger, values: a.raw || {}, z: a.z || {} })), page: `${SITE}/statistics.html#rtr-title`, unsubscribe: unsub }, { secret: sub.secret }));
     }
   } else if (job.type === 'status') {
     const text = job.events.map(describeStatusEvent);
@@ -220,6 +236,23 @@ async function pollStatus() {
   return at;
 }
 
+// The RTR session with the validator (rtr.json, every five minutes): the subscriptions to the topic "status" get one message for the anomalies
+// that the monitor found since the previous poll. The first poll only takes note of the anomalies already in the file.
+async function pollRtr() {
+  const r = await fetch(RTR_FILE, { headers: { Accept: 'application/json', 'User-Agent': 'aspa-explorer-notifier' } });
+  if (!r.ok) throw new Error(`rtr: HTTP ${r.status}`);
+  const doc = await r.json();
+  const at = Date.parse(doc && doc.generated);
+  const out = watchRtr(doc, store.getState('rtr'));
+  if (!out.events.length) { store.setState('rtr', out.saved); return at; }
+  log(`${out.events.length} anomal${out.events.length === 1 ? 'y' : 'ies'} in the RTR session`);
+  store.transaction(() => {
+    for (const sub of store.allActive().filter((s) => s.asn === STATUS)) outbox.enqueue(sub.id, { type: 'rtr', events: out.events });
+    store.setState('rtr', out.saved);
+  });
+  return at;
+}
+
 // Invalid announcements (invalid-last.json, written every ten minutes by watch-invalid): the subscriptions with a threshold are told when
 // their AS reached it, and not again for six hours.
 async function pollInvalid() {
@@ -283,6 +316,7 @@ async function poll() {
     store.transaction(() => { queueChanges(out.events); store.setState('committed', [...out.committed]); store.setState('pending', out.pending); });
     try { await sources.track('leaks', pollLeaks); } catch (err) { log(`leaks not read: ${err.message}`); }
     try { await sources.track('status', pollStatus); } catch (err) { log(`status not read: ${err.message}`); }
+    try { await sources.track('rtr', pollRtr); } catch (err) { log(`rtr not read: ${err.message}`); }
     try { await sources.track('invalid', pollInvalid); } catch (err) { log(`invalid announcements not read: ${err.message}`); }
   } catch (err) { pulse.failures++; sources.fail('aspas'); log(`poll failed: ${err.message}`); } finally { busy = false; }
   try { await deliver(); } catch (err) { log(`outbox: ${err.message}`); }       // a failure of the queue is counted by itself, not as one of the reads

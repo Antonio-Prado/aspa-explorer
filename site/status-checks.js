@@ -63,6 +63,15 @@
       const reached = v.sources.filter((s) => !s.error).length;
       return { state: reached < v.sources.length ? 'late' : byAge(now - t, 3 * HOUR, 12 * HOUR), at: t, extra: `${reached} of ${v.sources.length} validators read, ${v.differences_total} difference${v.differences_total === 1 ? '' : 's'}` };
     } },
+    { id: 'rtr', name: 'RTR session with the validator', expected: 'a sync every few minutes, summed up every 5 minutes', run: async (now) => {
+      const d = await get('/api/v1/rtr.json');
+      const t = Date.parse(d.generated);
+      const sync = d.last_sync ? Date.parse(d.last_sync.at) : 0;
+      const up = d.session && d.session.connected && !d.session.expired;
+      const state = !up || now - t > 2 * HOUR ? 'down' : now - t > 20 * MIN || now - sync > 30 * MIN ? 'late' : 'ok';
+      const n = (d.anomalies && d.anomalies.last_7_days) || 0;
+      return { state, at: sync || t, extra: `${d.last_sync ? `${d.last_sync.vrp_total.toLocaleString('en-US')} VRPs and ${d.last_sync.aspa_total.toLocaleString('en-US')} ASPAs` : 'no sync yet'}${n ? `, ${n} anomal${n === 1 ? 'y' : 'ies'} in 7 days` : ''}` };
+    } },
     { id: 'notifications', name: 'Notifications', expected: 'checks the validator every 10 minutes', run: async (now) => {
       const h = await get('/api/v1/subscriptions/health');
       const t = h.last_poll ? Date.parse(h.last_poll) : 0;

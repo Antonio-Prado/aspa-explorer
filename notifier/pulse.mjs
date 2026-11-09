@@ -1,13 +1,13 @@
-// What the notifier knows about each of the files it reads (the ASPAs, the places of valley, the state of the service, the invalid announcements)
+// What the notifier knows about each of the files it reads (the ASPAs, the places of valley, the state of the service, the invalid announcements, the RTR session)
 // and about the delivery of the queue (its own source: reading can work while sending breaks, and the other way round):
 // when it was last read well and how many times in a row it failed. A source that is down for a day must show in /api/v1/subscriptions/health,
 // even when the others, and the queue of the messages, are fine.
-export const SOURCES = ['aspas', 'leaks', 'status', 'invalid', 'delivery'];
+export const SOURCES = ['aspas', 'leaks', 'status', 'invalid', 'rtr', 'delivery'];
 export const BAD_AFTER = 3;          // failures in a row after which a source is called down
 
 // How old the data of a source may be (seconds) before the source is called stale, although it is read without errors: a file that nobody renews
 // is served with HTTP 200 for as long as it is there. About three times the interval at which each one is made.
-export const MAX_AGE = { aspas: 3600, leaks: 36 * 3600, status: 3600, invalid: 1800 };
+export const MAX_AGE = { aspas: 3600, leaks: 36 * 3600, status: 3600, invalid: 1800, rtr: 1800 };
 
 export function makePulse(names = SOURCES, now = () => Date.now(), maxAge = MAX_AGE) {
   const s = Object.fromEntries(names.map((n) => [n, { lastOk: null, failures: 0, dataAt: null }]));

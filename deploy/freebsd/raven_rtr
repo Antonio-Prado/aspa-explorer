@@ -1,0 +1,33 @@
+#!/bin/sh
+#
+# PROVIDE: raven_rtr
+# REQUIRE: LOGIN NETWORKING
+# KEYWORD: shutdown
+#
+# rc.d script for RAVEN's RTR monitor (github.com/nokia/bgp-routing-security-monitor, BSD-3-Clause):
+# an independent RTR client that follows the Routinator cache of rpki.ping6.it, writes session and
+# sync telemetry as NDJSON and runs an adaptive anomaly detector on the sync stream. Install as
+# /usr/local/etc/rc.d/raven_rtr and add raven_rtr_enable="YES" to /etc/rc.conf. daemon(8) supervises
+# and restarts the process; chroot(8) with -u only drops privileges to the service user (the root
+# directory stays /). The variable is not called raven_rtr_user because rc.subr would then run daemon
+# itself as that user.
+. /etc/rc.subr
+name=raven_rtr
+rcvar=raven_rtr_enable
+load_rc_config $name
+: ${raven_rtr_enable:=NO}
+: ${raven_rtr_runas:=raven}
+: ${raven_rtr_cache:=147.162.96.12:3323}
+: ${raven_rtr_transport:=tcp}
+: ${raven_rtr_dir:=/var/db/raven}
+: ${raven_rtr_prometheus:=127.0.0.1:9595}
+pidfile=/var/run/${name}.pid
+logfile=/var/log/raven-rtr.log
+command=/usr/sbin/daemon
+command_args="-r -R 30 -P ${pidfile} -o ${logfile} /usr/sbin/chroot -u ${raven_rtr_runas} -g ${raven_rtr_runas} -G ${raven_rtr_runas} / /usr/local/bin/raven rtr monitor --cache ${raven_rtr_cache} --transport ${raven_rtr_transport} --log-file ${raven_rtr_dir}/rtr-telemetry.ndjson --anomaly-snapshot ${raven_rtr_dir}/anomaly-baseline.json --prometheus ${raven_rtr_prometheus} --log-format json"
+raven_dir_precmd() {
+  install -d -o ${raven_rtr_runas} -g ${raven_rtr_runas} -m 755 "${raven_rtr_dir}"
+}
+start_precmd=raven_dir_precmd
+raven_rtr_env="HOME=${raven_rtr_dir}"
+run_rc_command "$1"
