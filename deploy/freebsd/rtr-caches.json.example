@@ -10,6 +10,9 @@
   { "id": "daknob_zrh2", "name": "DaKnObNET, Zurich (public RTR server)", "host": "r3k.zrh2.v.rpki.daknob.net",
     "telemetry": "/var/db/raven/daknob_zrh2/rtr-telemetry.ndjson", "metrics": "http://127.0.0.1:9599/metrics",
     "note": "a public server offered to the community by DaKnObNET (AS210312), Routinator; RTR version 2, with the ASPAs" },
+  { "id": "daknob_ams1", "name": "DaKnObNET, Amsterdam (public RTR server, VRPs only)", "host": "rcgr.ams1.v.rpki.daknob.net",
+    "telemetry": "/var/db/raven/daknob_ams1/rtr-telemetry.ndjson", "metrics": "http://127.0.0.1:9600/metrics",
+    "note": "a public server offered to the community by DaKnObNET (AS210312), rpki-client with StayRTR; it speaks RTR version 0, so it carries no ASPA" },
   { "id": "cloudflare", "name": "Cloudflare (public RTR server, VRPs only)", "host": "rtr.rpki.cloudflare.com",
     "telemetry": "/var/db/raven/cloudflare/rtr-telemetry.ndjson", "metrics": "http://127.0.0.1:9597/metrics",
     "note": "a public server on Cloudflare's rpki-client validator; it speaks RTR version 0, so it carries no ASPA" }

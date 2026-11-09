@@ -9,6 +9,11 @@ A few numbers were deployed and folded into the next release without a tag of th
 
 ## [Unreleased]
 
+## [1.62.2] - 2026-11-09
+
+### Added
+- A fifth reference cache: the public RTR server of DaKnObNET in Amsterdam (rpki-client with StayRTR), back in service after three days down, which its operator fixed when we asked. It speaks RTR version 0, so it checks the VRPs only, as the one of Cloudflare. Six caches are followed.
+
 ## [1.62.1] - 2026-11-09
 
 ### Changed
