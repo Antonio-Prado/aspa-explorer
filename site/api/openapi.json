@@ -2012,6 +2012,133 @@
           }
         }
       }
+    },
+    "/api/v1/rtr/{cache}-baseline.json": {
+      "get": {
+        "summary": "The baseline of the anomaly detector of one RTR monitor",
+        "description": "The snapshot that RAVEN's rtr monitor saves every few minutes: the windows of the six measures (interval since the previous sync, duration, VRPs and ASPAs announced and withdrawn) that the detector compares each sync with.",
+        "parameters": [
+          {
+            "name": "cache",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "routinator",
+                "fort",
+                "level66",
+                "daknob_zrh2",
+                "cloudflare"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The baseline",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such cache, or no baseline saved yet"
+          }
+        }
+      }
+    },
+    "/api/v1/rtr/{cache}.metrics": {
+      "get": {
+        "summary": "The Prometheus metrics of one RTR monitor",
+        "description": "The raven_rtr_* gauges and counters of the monitor (session state, VRP and ASPA counts, last sync, last serial change, data expired, protocol version, anomalies by severity), in the Prometheus text format.",
+        "parameters": [
+          {
+            "name": "cache",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "routinator",
+                "fort",
+                "level66",
+                "daknob_zrh2",
+                "cloudflare"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The metrics",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/invalid-days/{day}.json": {
+      "get": {
+        "summary": "The invalid announcements of one day",
+        "description": "The daily file of watch-invalid.mjs for one of the last fourteen days: the runs of the day with their counts, and the origins and prefixes with most invalid announcements.",
+        "parameters": [
+          {
+            "name": "day",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[0-9]{8}$"
+            },
+            "description": "YYYYMMDD, UTC"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The day",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not one of the last fourteen days"
+          }
+        }
+      }
+    },
+    "/api/v1/incidents-detail.jsonl": {
+      "get": {
+        "summary": "Every incident of the detectors, one record a line",
+        "description": "The file that the aggregates of incidents.json come from, written once a day: for each incident its type and subtype, actor, start and end (UTC), why it ended, the number of AS paths kept, and the verdicts of the downstream ASPA verification with the ASPAs of the day (real) and with complete ASPAs (complete). Tens of megabytes.",
+        "responses": {
+          "200": {
+            "description": "The incidents",
+            "content": {
+              "application/x-ndjson": {
+                "schema": {
+                  "type": "string",
+                  "description": "one JSON object a line: {type, subtype, actor, start, end, end_reason, paths, real, complete}"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
