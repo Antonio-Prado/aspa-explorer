@@ -10,7 +10,8 @@
     "interval": { "validation": 600, "refresh": 600, "retry": 600, "expire": 7200 }
   },
   "log": { "enabled": true, "level": "warning", "output": "syslog", "facility": "daemon", "tag": "fort" },
-  "validation-log": { "enabled": false },
+  "validation-log": { "enabled": true, "level": "warning", "output": "syslog", "facility": "daemon", "tag": "fort-validation" },
   "http": { "user-agent": "fort/1.7.0 (rpki.example.net)" },
+  "rsync": { "enabled": true, "program": "/usr/local/bin/rsync" },
   "output": { "aspa": "/var/db/fort/output/aspa.json", "format": "json" }
 }
