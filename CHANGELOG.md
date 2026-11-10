@@ -9,6 +9,11 @@ A few numbers were deployed and folded into the next release without a tag of th
 
 ## [Unreleased]
 
+## [1.63.1] - 2026-11-10
+
+### Fixed
+- The sentence above *Validators compared* named "this site's" twice: the two validators of the site are now named once together, before the others.
+
 ## [1.63.0] - 2026-11-10
 
 ### Added

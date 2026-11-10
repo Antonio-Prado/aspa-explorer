@@ -35,8 +35,14 @@
       return;
     }
     const ids = d.sources.map((s) => s.id);
-    const WHO = { routinator: "this site's Routinator (NLnet Labs)", fort: "this site's Fort (NIC México)", 'rpki-client': 'rpki-client (OpenBSD, the console of the project)', cloudflare: 'the rpki-client that Cloudflare runs' };
-    const who = ids.map((id) => WHO[id] || id);
+    // the validators of this site are named once together, then the others
+    const LOCAL = { routinator: 'Routinator (NLnet Labs)', fort: 'Fort (NIC México)' };
+    const OTHER = { 'rpki-client': 'rpki-client (OpenBSD, the console of the project)', cloudflare: 'the rpki-client that Cloudflare runs' };
+    const local = ids.filter((id) => id in LOCAL).map((id) => LOCAL[id]);
+    const who = [
+      ...(local.length > 1 ? [`the two of this site, ${local.join(' and ')}`] : local.map((x) => `this site's ${x}`)),
+      ...ids.filter((id) => !(id in LOCAL)).map((id) => OTHER[id] || id),
+    ];
     $('val-sub').textContent = `The ASPAs of ${d.sources.length} validators, read ${when(d.generated)}: ${who.slice(0, -1).join(', ')} and ${who[who.length - 1]}. Of ${fmt.format(d.customers)} customers, ${fmt.format(d.identical)} have the same providers in all of them.`;
     $('val-tiles').replaceChildren(...d.sources.map((s) => el('div', { class: 'tile card' },
       el('div', { class: 'label', text: SHORT[s.id] || s.name }),
