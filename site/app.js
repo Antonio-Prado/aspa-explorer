@@ -91,37 +91,34 @@ function chipList(list, limit) {
 const fmtDayLong = (iso) => new Date(iso + 'T00:00:00Z').toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' });
 
 function renderOverview(status) {
-  const providerCount = byProvider.size;
-  const zero = aspas.filter((a) => a.providers.length === 1 && a.providers[0] === 'AS0').length;
-  const sizes = aspas.map((a) => a.providers.length).sort((x, y) => x - y);
-  const median = sizes.length ? sizes[Math.floor((sizes.length - 1) / 2)] : 0;
-
   const tile = (label, value, note) => el('div', { class: 'tile card' },
-    el('div', { class: 'label', text: label }), el('div', { class: 'value', text: value }), note && el('div', { class: 'note', text: note }));
-  $('tiles').replaceChildren(
-    tile('ASPAs', fmt.format(aspas.length), 'with a valid ASPA'),
-    tile('Provider ASes', fmt.format(providerCount), 'named as a provider'),
-    tile('Median providers', String(median), `largest set: ${fmt.format(sizes[sizes.length - 1] || 0)}`),
-    tile('AS0 ASPAs', fmt.format(zero), 'no transit providers'),
-  );
+    label && el('div', { class: 'label', text: label }), el('div', { class: 'value', text: value }), note && el('div', { class: 'note', text: note }));
+  // three numbers only on the home page: how many, what share of the networks in BGP, and how many of the largest
+  // transit networks (the last two from the daily adoption numbers); the rest is on the State of ASPA page
+  $('tiles').replaceChildren(tile(null, fmt.format(aspas.length), 'networks have published an ASPA'));
 
   const done = status && status.lastUpdateDone;
   $('meta').textContent = `${fmt.format(aspas.length)} ASPAs · last validation ${fmtDate(done)}` +
     (status && status.version ? ` · ${status.version.replace('/', ' ')}` : '');
 }
 
-// The coverage tile: the share of the networks seen in BGP that have an ASPA, from the daily adoption numbers.
+// The coverage and transit tiles, from the daily adoption numbers: the share of the networks seen in BGP that have
+// an ASPA, and how many of the 100 largest transit networks have one.
 async function addCoverageTile() {
   try {
     const d = await getJson('/api/v1/adoption.json');
     if (!d || !d.seen || !$('tiles').children.length) return;
-    const old = $('tile-coverage');
-    if (old) old.remove();
+    for (const id of ['tile-coverage', 'tile-transit']) { const old = $(id); if (old) old.remove(); }
     $('tiles').append(el('div', { class: 'tile card', id: 'tile-coverage' },
-      el('div', { class: 'label', text: 'Coverage' }),
-      el('div', { class: 'value', text: `${d.pct.toFixed(d.pct < 10 ? 2 : 1)}%` }),
-      el('div', { class: 'note', text: `of ${fmt.format(d.seen)} ASes in BGP` })));
-  } catch { /* the tile is simply not shown */ }
+      el('div', { class: 'value', text: `${d.pct.toFixed(1)}%` }),
+      el('div', { class: 'note', text: `of the ${fmt.format(d.seen)} ASes seen in BGP` })));
+    const top = Array.isArray(d.top_transit) ? d.top_transit.length : 0;
+    if (top && Number.isFinite(d.top_transit_with_aspa)) {
+      $('tiles').append(el('a', { class: 'tile card', id: 'tile-transit', href: '/statistics.html#top-title' },
+        el('div', { class: 'value', text: `${d.top_transit_with_aspa} of ${top}` }),
+        el('div', { class: 'note', text: 'largest transit networks have one' })));
+    }
+  } catch { /* the tiles are simply not shown */ }
 }
 
 /* ---------- ASPA quality ---------- */
@@ -2000,7 +1997,9 @@ function lookupFromHash() {
   if (hash && location.pathname !== '/' && pathAs()) window.history.replaceState(null, '', '/' + location.hash);   // `history` is the daily series here
   // the table of all ASPAs became a download on the API page: old links to #all go there
   if (hash === 'all') { location.replace('/api.html#download'); return; }
-  const tabs = { overview: 'tab-overview', changes: 'tab-changes', quality: 'tab-quality' };
+  // #overview was a tab of the data; its numbers are now right under the tools
+  if (hash === 'overview') { revealBox('tiles'); return; }
+  const tabs = { changes: 'tab-changes', quality: 'tab-quality' };
   if (Object.hasOwn(tabs, hash)) { showTab(tabs[hash]); revealBox('data'); return; }
   if (hash.startsWith('path=')) {
     showTab('tab-path');

@@ -718,3 +718,26 @@ table.live th.grp { text-align: center; }
 svg .axistitle { fill: var(--ink-2); font-size: 12px; }
 .linechart .dot.s1 { fill: var(--s1); }
 .linechart .dot.s2 { fill: var(--s2); }
+
+/* 1.64: the menu of three areas, and the home page with the search first */
+.topnav a.minor { font-weight: 500; color: var(--ink-2); }
+.tools .hero-title { margin: 0.25rem 0 0.4rem; font-size: 1.9rem; line-height: 1.2; letter-spacing: -0.015em; }
+.tools .hero-sub { margin: 0 0 1.1rem; color: var(--ink-2); font-size: 1.05rem; max-width: 46rem; }
+.tools #asn { font-size: 1.1rem; }
+.today { margin-top: 1.25rem; }
+.hero-tiles { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.hero-tiles .tile { text-decoration: none; color: inherit; }
+.hero-tiles .tile .value { font-size: 1.9rem; font-weight: 700; }
+.hero-tiles .tile .note { font-size: 0.9rem; color: var(--ink-2); }
+a.tile:hover { box-shadow: 0 0 0 2px var(--accent); }
+.areas { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin: 1.25rem 0 2rem; }
+.area { display: flex; flex-direction: column; gap: 0.35rem; padding: 1.2rem 1.3rem; text-decoration: none; color: var(--ink); }
+.area:hover { box-shadow: 0 0 0 2px var(--accent); }
+.area .kicker { font-size: 0.78rem; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--accent); }
+.area .area-title { font-size: 1.15rem; font-weight: 700; }
+.area .area-text { color: var(--ink-2); font-size: 0.95rem; line-height: 1.5; }
+.data .section-title { font-size: 1.2rem; margin: 0 0 0.5rem; }
+@media (max-width: 720px) {
+  .hero-tiles, .areas { grid-template-columns: 1fr; }
+  .tools .hero-title { font-size: 1.5rem; }
+}

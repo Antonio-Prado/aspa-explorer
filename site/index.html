@@ -24,41 +24,40 @@
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <link rel="canonical" href="https://aspa.ping6.it/">
 <link rel="alternate" type="application/atom+xml" title="ASPA Explorer: changes" href="/changes.atom">
-<link rel="stylesheet" href="/style.css?v=1.63.2">
-<script src="/verify.js?v=1.63.2" defer></script>
-<script src="/history.js?v=1.63.2" defer></script>
-<script src="/quality.js?v=1.63.2" defer></script>
-<script src="/evidence.js?v=1.63.2" defer></script>
-<script src="/whatif.js?v=1.63.2" defer></script>
-<script src="/traceroute.js?v=1.63.2" defer></script>
-<script src="/graph.js?v=1.63.2" defer></script>
-<script src="/live.js?v=1.63.2" defer></script>
-<script src="/bulk.js?v=1.63.2" defer></script>
-<script src="/irr.js?v=1.63.2" defer></script>
-<script src="/valley.js?v=1.63.2" defer></script>
-<script src="/recent.js?v=1.63.2" defer></script>
-<script src="/peek.js?v=1.63.2" defer></script>
-<script src="/share.js?v=1.63.2" defer></script>
-<script src="/app.js?v=1.63.2" defer></script>
-<script src="/status-checks.js?v=1.63.2" defer></script>
-<script src="/asnames.js?v=1.63.2" defer></script>
-<script src="/footer.js?v=1.63.2" defer></script>
+<link rel="stylesheet" href="/style.css?v=1.64.0">
+<script src="/verify.js?v=1.64.0" defer></script>
+<script src="/history.js?v=1.64.0" defer></script>
+<script src="/quality.js?v=1.64.0" defer></script>
+<script src="/evidence.js?v=1.64.0" defer></script>
+<script src="/whatif.js?v=1.64.0" defer></script>
+<script src="/traceroute.js?v=1.64.0" defer></script>
+<script src="/graph.js?v=1.64.0" defer></script>
+<script src="/live.js?v=1.64.0" defer></script>
+<script src="/bulk.js?v=1.64.0" defer></script>
+<script src="/irr.js?v=1.64.0" defer></script>
+<script src="/valley.js?v=1.64.0" defer></script>
+<script src="/recent.js?v=1.64.0" defer></script>
+<script src="/peek.js?v=1.64.0" defer></script>
+<script src="/share.js?v=1.64.0" defer></script>
+<script src="/app.js?v=1.64.0" defer></script>
+<script src="/status-checks.js?v=1.64.0" defer></script>
+<script src="/asnames.js?v=1.64.0" defer></script>
+<script src="/footer.js?v=1.64.0" defer></script>
 </head>
 <body>
 <a class="skip" href="#main">Skip to main content</a>
 <header class="wrap masthead">
   <div class="top">
-    <h1><a class="homelink" href="/"><img class="brand" src="/img/logo-mark.svg?v=1.63.2" alt="" width="40" height="40"><span>ASPA Explorer</span></a></h1>
-    <nav class="topnav" aria-label="Main"><a href="/" aria-current="page">Home</a><a href="/statistics.html">Statistics</a><a href="/incidents.html">Incidents</a><a href="/examples.html">Examples</a><a href="/api.html">API</a><a href="/guide.html">Guide</a><a href="/status.html">Status</a></nav>
+    <h1><a class="homelink" href="/"><img class="brand" src="/img/logo-mark.svg?v=1.64.0" alt="" width="40" height="40"><span>ASPA Explorer</span></a></h1>
+    <nav class="topnav" aria-label="Main"><a href="/" aria-current="page">My network</a><a href="/statistics.html">State of ASPA</a><a href="/incidents.html">Right now</a><a class="minor" href="/guide.html">Guide</a><a class="minor" href="/api.html">API</a><a class="minor" href="/status.html">Status</a></nav>
   </div>
-  <p class="lede">Validated ASPA objects from the RPKI, as seen by the Routinator validator at <a href="https://rpki.ping6.it/ui/" target="_blank" rel="noopener">rpki.ping6.it<span class="sr-only"> (opens in a new tab)</span></a>. A second validator of the site, <a href="https://nicmx.github.io/FORT-validator/" target="_blank" rel="noopener">Fort<span class="sr-only"> (opens in a new tab)</span></a>, reads the same repositories, and every hour the two are <a href="/statistics.html#val-title">compared</a> with each other and with rpki-client.</p>
-  <p class="lede">An <strong>ASPA</strong> (Autonomous System Provider Authorization) is a signed RPKI object in which a customer AS lists the ASes allowed to act as its upstream providers. Routers use these lists to detect route leaks and some forged AS paths. A provider set of <code>AS0</code> means the AS declares it has no upstream providers.</p>
   <p class="meta" id="meta"><span class="busy">Loading data</span></p>
 </header>
 
 <main class="wrap" id="main" tabindex="-1">
   <section class="card tools" id="tools" aria-labelledby="tools-title">
-    <h2 id="tools-title" class="sr-only">Tools</h2>
+    <h2 id="tools-title" class="hero-title">Is your network protected by ASPA?</h2>
+    <p class="hero-sub">Look up an AS to see its ASPA, whether its routes are valid, and what to fix. New to ASPA? Read <a href="/guide.html#what">what it is</a>, or <a href="/examples.html">write your first one</a>.</p>
     <div class="tabs" role="tablist" aria-label="Tools" data-group="tool">
       <button type="button" role="tab" class="tab" id="tab-lookup" aria-controls="panel-lookup" aria-selected="true" tabindex="0">Look up an AS</button>
       <button type="button" role="tab" class="tab" id="tab-path" aria-controls="panel-path" aria-selected="false" tabindex="-1">Check an AS path</button>
@@ -133,18 +132,36 @@
     </div>
   </section>
 
+  <section class="today" id="today" aria-labelledby="today-title">
+    <h2 id="today-title" class="sr-only">ASPA today</h2>
+    <div class="tiles hero-tiles" id="tiles"></div>
+  </section>
+
+  <nav class="areas" aria-label="The areas of the site">
+    <a class="area card" href="#asn">
+      <span class="kicker">My network</span>
+      <span class="area-title">Check and fix your ASPA</span>
+      <span class="area-text">Your ASPA, your routes, your neighbours, and alerts when something changes.</span>
+    </a>
+    <a class="area card" href="/statistics.html">
+      <span class="kicker">State of ASPA</span>
+      <span class="area-title">Who has adopted it</span>
+      <span class="area-text">Growth over time, by registry, size and country, and how many routes it covers.</span>
+    </a>
+    <a class="area card" href="/incidents.html">
+      <span class="kicker">Right now</span>
+      <span class="area-title">What is happening in routing</span>
+      <span class="area-text">Incidents, invalid announcements, valleys and the health of the validators.</span>
+    </a>
+  </nav>
+
   <section class="data" id="data" aria-labelledby="data-title">
-    <h2 id="data-title" class="sr-only">Explore the data</h2>
-    <div class="tabs" role="tablist" aria-label="Data" data-group="data">
-      <button type="button" role="tab" class="tab" id="tab-overview" aria-controls="panel-overview" aria-selected="true" tabindex="0">Overview</button>
-      <button type="button" role="tab" class="tab" id="tab-changes" aria-controls="panel-changes" aria-selected="false" tabindex="-1">Recent changes</button>
+    <h2 id="data-title" class="section-title">Latest changes and quality</h2>
+    <div class="tabs" role="tablist" aria-label="Latest changes and quality" data-group="data">
+      <button type="button" role="tab" class="tab" id="tab-changes" aria-controls="panel-changes" aria-selected="true" tabindex="0">Recent changes</button>
       <button type="button" role="tab" class="tab" id="tab-quality" aria-controls="panel-quality" aria-selected="false" tabindex="-1">ASPA quality</button>
     </div>
-    <div role="tabpanel" class="tabpanel" id="panel-overview" aria-labelledby="tab-overview">
-      <div class="tiles" id="tiles"></div>
-      <p class="hint more-stats">Charts over time, by RIR and by provider, and the adoption numbers: see the <a href="/statistics.html">Statistics</a> page.</p>
-    </div>
-    <div role="tabpanel" class="tabpanel" id="panel-changes" aria-labelledby="tab-changes" hidden>
+    <div role="tabpanel" class="tabpanel" id="panel-changes" aria-labelledby="tab-changes">
       <p class="hint">ASPAs that appeared, changed their providers or disappeared in the last 14 days, as seen by this validator. Subscribe to the <a href="/changes.atom">Atom feed</a>.</p>
       <div class="card changes" id="changes-body"><p class="hint"><span class="busy">Loading the changes</span></p></div>
     </div>

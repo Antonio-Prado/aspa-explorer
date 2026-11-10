@@ -9,6 +9,11 @@ A few numbers were deployed and folded into the next release without a tag of th
 
 ## [Unreleased]
 
+## [1.64.0] - 2026-11-10
+
+### Changed
+- The first step of a simpler interface. The menu has three areas, *My network* (the home page and its tools), *State of ASPA* (the statistics) and *Right now* (the incidents), then the guide, the API and the status, set apart; the examples belong to *My network*. The home page opens on the search, under the question it answers, with a line to the guide and to the examples in place of the two paragraphs of introduction; below the tools come three numbers (the networks with an ASPA, their share of the ASes seen in BGP, and how many of the 100 largest transit networks have one, which opens their list), the three areas, and *Recent changes* and *ASPA quality*. The other numbers of the old overview are among what *ASPAs over time* draws on the statistics page; `#overview` goes to the three numbers.
+
 ## [1.63.2] - 2026-11-10
 
 ### Fixed

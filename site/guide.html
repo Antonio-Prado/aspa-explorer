@@ -23,17 +23,17 @@
 <meta name="twitter:card" content="summary_large_image">
 <meta name="color-scheme" content="light dark">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
-<link rel="stylesheet" href="/style.css?v=1.63.2">
-<script src="/status-checks.js?v=1.63.2" defer></script>
-<script src="/asnames.js?v=1.63.2" defer></script>
-<script src="/footer.js?v=1.63.2" defer></script>
+<link rel="stylesheet" href="/style.css?v=1.64.0">
+<script src="/status-checks.js?v=1.64.0" defer></script>
+<script src="/asnames.js?v=1.64.0" defer></script>
+<script src="/footer.js?v=1.64.0" defer></script>
 </head>
 <body>
 <a class="skip" href="#main">Skip to main content</a>
 <header class="wrap masthead">
   <div class="top">
-    <p class="back"><a class="brandlink" href="/" title="Back to ASPA Explorer"><img class="brand" src="/img/logo-mark.svg?v=1.63.2" alt="" width="40" height="40"><span>ASPA Explorer</span></a></p>
-    <nav class="topnav" aria-label="Main"><a href="/">Home</a><a href="/statistics.html">Statistics</a><a href="/incidents.html">Incidents</a><a href="/examples.html">Examples</a><a href="/api.html">API</a><a href="/guide.html" aria-current="page">Guide</a><a href="/status.html">Status</a></nav>
+    <p class="back"><a class="brandlink" href="/" title="Back to ASPA Explorer"><img class="brand" src="/img/logo-mark.svg?v=1.64.0" alt="" width="40" height="40"><span>ASPA Explorer</span></a></p>
+    <nav class="topnav" aria-label="Main"><a href="/">My network</a><a href="/statistics.html">State of ASPA</a><a href="/incidents.html">Right now</a><a class="minor" href="/guide.html" aria-current="page">Guide</a><a class="minor" href="/api.html">API</a><a class="minor" href="/status.html">Status</a></nav>
   </div>
   <h1>Guide</h1>
   <p class="lede">How the ASPA Explorer interface works, what each number means and where the data comes from.</p>
@@ -70,7 +70,7 @@
     <h2 id="what">What you are looking at</h2>
     <p>An <strong>ASPA</strong> (Autonomous System Provider Authorization) is a signed object published in the RPKI. In it, a <em>customer</em> AS lists the ASes that are allowed to act as its upstream <em>providers</em>. Routers that validate AS paths use these lists to spot route leaks and some forged paths.</p>
     <p>ASPA Explorer shows every ASPA that a Routinator validator currently considers valid. The ASPAs are shown as the validator gives them, with no edits, so you can search them and see the big picture. The checks built on them, such as the evidence about the providers, the valleys and the quality findings, are readings, and each is explained below.</p>
-    <p>The home page has two sets of tabs. The first, <em>Look up an AS</em>, <em>Check an AS path</em> and <em>Routes seen in BGP</em>, holds the three tools, one at a time; the result appears under the tool. The second, <em>Overview</em>, <em>Recent changes</em> and <em>ASPA quality</em>, holds the data. The tabs work with the arrow keys, <kbd>Home</kbd> and <kbd>End</kbd>. Every address keeps working: <code>#AS680</code> opens the lookup, <code>#path=…</code> the path check, <code>#routes=…</code> the routes, and <code>#overview</code>, <code>#changes</code> and <code>#quality</code> open the data tabs. The full list of ASPAs, which used to be a table here, is a download on the <a href="/api.html#download">API page</a> (an old <code>#all</code> link goes there).</p>
+    <p>The menu has three areas: <em>My network</em> (the home page, with the tools for one network), <em>State of ASPA</em> (the statistics) and <em>Right now</em> (the incidents), then the guide, the API and the status. On the home page the tabs <em>Look up an AS</em>, <em>Check an AS path</em> and <em>Routes seen in BGP</em> hold the three tools, one at a time; the result appears under the tool. Below them come three numbers, the three areas, and the <em>Recent changes</em> and <em>ASPA quality</em> tabs. The tabs work with the arrow keys, <kbd>Home</kbd> and <kbd>End</kbd>. Every address keeps working: <code>#AS680</code> opens the lookup, <code>#path=…</code> the path check, <code>#routes=…</code> the routes, and <code>#overview</code> goes to the three numbers, <code>#changes</code> and <code>#quality</code> open their tabs. The full list of ASPAs, which used to be a table here, is a download on the <a href="/api.html#download">API page</a> (an old <code>#all</code> link goes there).</p>
     <p>At the top of the page a line summarises the data: the number of ASPAs, the time of the last validation run (always in UTC) and the version of the validator that produced it.</p>
   </section>
 
@@ -94,21 +94,18 @@
 
   <section aria-labelledby="overview">
     <h2 id="overview">The overview</h2>
-    <h3>The tiles</h3>
+    <h3>The three numbers</h3>
     <dl>
-      <dt>ASPAs</dt>
+      <dt>Networks that have published an ASPA</dt>
       <dd>Customer ASes that have a valid ASPA.</dd>
-      <dt>Provider ASes</dt>
-      <dd>Distinct ASes that appear as a provider in at least one ASPA. <code>AS0</code> is not counted.</dd>
-      <dt>Median providers</dt>
-      <dd>The middle value of the number of providers per ASPA, with the size of the largest provider set underneath.</dd>
-      <dt>AS0 ASPAs</dt>
-      <dd>ASPAs whose only provider is <code>AS0</code>: the customer declares that it has no transit providers.</dd>
-      <dt>Coverage</dt>
+      <dt>Share of the ASes seen in BGP</dt>
       <dd>The share of the networks seen in BGP that have an ASPA, from the daily adoption numbers.</dd>
+      <dt>Largest transit networks</dt>
+      <dd>How many of the 100 transit networks with the largest customer cones have an ASPA; it opens their list on the statistics page.</dd>
     </dl>
+    <p>The provider ASes, the median number of providers per ASPA and the ASPAs with <code>AS0</code> are among what <em>ASPAs over time</em> can draw, on the statistics page.</p>
     <h3>The charts, on the statistics page</h3>
-    <p>The charts are on the <a href="/statistics.html">statistics page</a>, which the overview points to.</p>
+    <p>The charts are on the <a href="/statistics.html">statistics page</a>, under <em>State of ASPA</em> in the menu.</p>
     <dl>
       <dt>ASPAs over time</dt>
       <dd>How the ASPAs evolved day by day since 12 October 2023, the first day with an ASPA in the RIPE NCC RPKI archive. <em>Show</em> chooses what is drawn: the ASPAs stacked by RIR (AFRINIC has published none so far), their total, the provider ASes, the median number of providers per ASPA, the no-provider ASPAs (<code>AS0</code>), or the <em>coverage</em>, the share of the ASes seen by the RIPE RIS route collectors that have an ASPA (one sample a week before 16 October 2026). <em>Period</em> narrows the chart to the last 12 months or 90 days, and the logarithmic scale, available for the single-line charts except the coverage, makes a small start and a steep rise readable together. Hover over the chart, or focus it and use the left and right arrow keys (<kbd>Page Up</kbd>, <kbd>Page Down</kbd>, <kbd>Home</kbd> and <kbd>End</kbd> go further), to read a single day; <em>Show as a table</em> lists the last day of each month, and the daily data can be downloaded as CSV or JSON. The days up to 15 October 2026 are computed from the daily output of the <a href="https://ftp.ripe.net/rpki/" target="_blank" rel="noopener">RIPE NCC RPKI repository archive<span class="sr-only"> (opens in a new tab)</span></a>; from then on a daily snapshot of the validator behind this page is added. A few days with a partial or missing archive are left out, so the line may cross them in a straight stretch.</dd>
