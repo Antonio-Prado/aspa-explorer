@@ -9,6 +9,11 @@ A few numbers were deployed and folded into the next release without a tag of th
 
 ## [Unreleased]
 
+## [1.66.0] - 2026-11-10
+
+### Changed
+- The page of an AS gives the answer first, as the home page does: *Yes* (it has an ASPA, with how many providers and how many quality checks find something to look at) or *Not yet* (with how to publish one), with the registry that publishes it, until when it is valid and how many ASPAs name it as a provider. The details are in five tabs instead of nine blocks one under the other: *ASPA* (its providers, who names it, the object and its quality), *Routes and neighbours*, *History* (with the comparison of two dates), *Registry (IRR)* and *Alerts and sharing*. Above the answer only the search is left, with a line to the other two tools; their tabs come back when one of them is chosen.
+
 ## [1.65.0] - 2026-11-10
 
 ### Changed

@@ -9,7 +9,7 @@ authors:
     email: antonio.prado@dei.unipd.it
     affiliation: "Department of Information Engineering, University of Padova"
 license: MIT
-version: "1.65.0"
+version: "1.66.0"
 date-released: "2026-11-10"
 doi: "10.5281/zenodo.23450622"
 abstract: "A web page, a small API and a notification service on top of two RPKI validators, Routinator and Fort, watched over RTR as routers see them: lookups of the validated ASPA objects of the RPKI, AS path and route checks against them, routing incidents, places of valley in the routes of 33 route collectors, statistics on adoption, feeds, badges and notifications."

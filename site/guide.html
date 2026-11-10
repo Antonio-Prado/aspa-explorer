@@ -23,16 +23,16 @@
 <meta name="twitter:card" content="summary_large_image">
 <meta name="color-scheme" content="light dark">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
-<link rel="stylesheet" href="/style.css?v=1.65.0">
-<script src="/status-checks.js?v=1.65.0" defer></script>
-<script src="/asnames.js?v=1.65.0" defer></script>
-<script src="/footer.js?v=1.65.0" defer></script>
+<link rel="stylesheet" href="/style.css?v=1.66.0">
+<script src="/status-checks.js?v=1.66.0" defer></script>
+<script src="/asnames.js?v=1.66.0" defer></script>
+<script src="/footer.js?v=1.66.0" defer></script>
 </head>
 <body>
 <a class="skip" href="#main">Skip to main content</a>
 <header class="wrap masthead">
   <div class="top">
-    <p class="back"><a class="brandlink" href="/" title="Back to ASPA Explorer"><img class="brand" src="/img/logo-mark.svg?v=1.65.0" alt="" width="40" height="40"><span>ASPA Explorer</span></a></p>
+    <p class="back"><a class="brandlink" href="/" title="Back to ASPA Explorer"><img class="brand" src="/img/logo-mark.svg?v=1.66.0" alt="" width="40" height="40"><span>ASPA Explorer</span></a></p>
     <nav class="topnav" aria-label="Main"><a href="/">My network</a><a href="/statistics.html">State of ASPA</a><a href="/incidents.html">Right now</a><a class="minor" href="/guide.html" aria-current="page">Guide</a><a class="minor" href="/api.html">API</a><a class="minor" href="/status.html">Status</a></nav>
   </div>
   <h1>Guide</h1>
@@ -77,7 +77,7 @@
   <section aria-labelledby="lookup">
     <h2 id="lookup">Looking up an AS</h2>
     <p>Type an AS number in the first tab at the top and press <em>Look up</em>. All of these are accepted: <code>AS680</code>, <code>as 680</code> and <code>680</code>. AS numbers go up to 4294967295. Anything else shows a short hint instead of a result.</p>
-    <p>The result has a header with the AS number and two outside links, <em>bgpthingy</em> and <em>RIPEstat</em>, that open in a new tab. Below it are two columns:</p>
+    <p>The result has a header with the AS number and two outside links, <em>bgpthingy</em> and <em>RIPEstat</em>, that open in a new tab. Under it comes the answer in one line, green or red: <em>Yes</em>, the AS has an ASPA (with how many providers, and how many of the quality checks below find something to look at), or <em>Not yet</em>, with a link to the examples; and the registry that publishes it, until when it is valid, and how many ASPAs name the AS as a provider. The details are in five tabs: <em>ASPA</em> (the two columns below and the quality checks), <em>Routes and neighbours</em> (the check of its routes, and the graph of its neighbourhood), <em>History</em> (with the comparison of two dates), <em>Registry (IRR)</em> and <em>Alerts and sharing</em>. The <em>ASPA</em> tab has two columns:</p>
     <dl>
       <dt>Its own ASPA</dt>
       <dd>The providers that this AS authorises, shown as clickable chips. For each ASPA object the page also lists the RIR (the trust anchor it comes from), its validity period (<em>not before</em> to <em>not after</em>) and the repository address of the signed object. If the AS has not published an ASPA the page says so: its upstream relationships cannot be verified.</dd>

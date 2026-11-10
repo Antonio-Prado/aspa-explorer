@@ -176,7 +176,6 @@ function renderAsQuality(as) {
       el('span', { text: `${AspaQuality.KINDS[f.kind].title}: ${as} ${f.detail}` }),
       f.kind === 'mutual' ? el('span', {}, ' · check now: ', ...f.providers.slice(0, 3).flatMap((p) => [el('a', { href: `#routes=${p}`, text: p }), ' ']), el('a', { href: `#routes=${as}`, text: as })) : null))));
   }
-  out.push(el('p', {}, el('a', { href: `#routes=${as}`, text: `Check the routes ${as} originates` }), ' against the ASPAs, and compare its neighbours with its providers.'));
   box.replaceChildren(...out);
 }
 
@@ -1844,6 +1843,8 @@ function irrBlock(as) {
 
 function renderLookup(as) {
   const out = $('result');
+  // the page of an AS shows only the search above the answer: the tabs of the tools come back with another tool
+  document.body.classList.toggle('as-view', Boolean(as));
   if (!as) { out.replaceChildren(); lookupAs = null; return; }
   const n = asNum(as);
   const own = byCustomer.get(as);
@@ -1882,7 +1883,40 @@ function renderLookup(as) {
   }
 
   const seen = recentNote(as, own ? own.providers : [], customers.length);
-  out.replaceChildren(head, ...(seen ? [seen] : []), el('div', { class: 'res-grid' }, left, right), el('div', { class: 'res-hist', id: 'as-history' }), el('div', { class: 'res-hist' }, el('h4', { text: 'Compare' }), compareBlock(as)), el('div', { class: 'res-hist', id: 'as-quality' }), irrBlock(as), graphHolder(as), shareBlock(as));
+  // The answer first, as on the home page; then the details in tabs, so that one thing is shown at a time.
+  const mine = findings.filter((f) => f.customer === as && f.severity !== 'note');
+  const src = own && own.source && own.source[0];
+  const facts = [];
+  if (own && src) {
+    facts.push(`published at ${rirName(src.tal)}`);
+    if (src.validity && src.validity.notAfter) facts.push(`valid until ${fmtDayLong(fmtDay(src.validity.notAfter))}`);
+  }
+  facts.push(customers.length ? `named as a provider by ${fmt.format(customers.length)} ASPA${customers.length === 1 ? '' : 's'}` : 'named as a provider by no ASPA');
+  const isZeroOwn = own && own.providers.length === 1 && own.providers[0] === 'AS0';
+  const verdict = own
+    ? el('div', { class: 'you v-yes res-verdict' },
+      el('p', { class: 'v-line' }, el('strong', { class: 'v-word', text: 'Yes.' }), isZeroOwn ? ` ${as} has an ASPA: it declares no transit providers (AS0).` : ` ${as} has an ASPA with ${own.providers.length} provider${own.providers.length === 1 ? '' : 's'}${mine.length ? `, and ${mine.length} thing${mine.length === 1 ? '' : 's'} to check` : ', and no issue'}.`),
+      el('p', { class: 'v-from', text: facts.join(' · ') }))
+    : el('div', { class: 'you v-no res-verdict' },
+      el('p', { class: 'v-line' }, el('strong', { class: 'v-word', text: 'Not yet.' }), ` ${as} has no ASPA, so a router cannot check which networks may carry its routes.`),
+      el('p', { class: 'v-links' }, el('a', { href: '/examples.html', text: 'How to publish one' })),
+      el('p', { class: 'v-from', text: facts.join(' · ') }));
+  const tabs = [
+    ['aspa', 'ASPA', [el('div', { class: 'res-grid' }, left, right), el('div', { class: 'res-hist', id: 'as-quality' })]],
+    ['routes', 'Routes and neighbours', [el('p', {}, el('a', { href: `#routes=${as}`, text: `Check the routes ${as} originates` }), ' against the ASPAs, and compare its neighbours with its providers.'), graphHolder(as)]],
+    ['history', 'History', [el('div', { class: 'res-hist', id: 'as-history' }), el('div', { class: 'res-hist' }, el('h4', { text: 'Compare' }), compareBlock(as))]],
+    ['irr', 'Registry (IRR)', [irrBlock(as)]],
+    ['follow', 'Alerts and sharing', [shareBlock(as)]],
+  ];
+  const list = el('div', { class: 'tabs as-tabs', role: 'tablist', 'aria-label': `Details of ${as}` },
+    ...tabs.map(([id, label], i) => el('button', { type: 'button', role: 'tab', class: 'tab', id: `as-tab-${id}`, 'aria-controls': `as-panel-${id}`, 'aria-selected': String(i === 0), tabindex: i === 0 ? '0' : '-1', text: label })));
+  const panels = tabs.map(([id, , kids], i) => {
+    const p = el('div', { role: 'tabpanel', class: 'tabpanel as-panel', id: `as-panel-${id}`, 'aria-labelledby': `as-tab-${id}` }, ...kids);
+    p.hidden = i !== 0;
+    return p;
+  });
+  out.replaceChildren(head, verdict, ...(seen ? [seen] : []), list, ...panels);
+  wireTabs(list);
   document.title = `${as} · ASPA Explorer`;
   const canon = document.querySelector('link[rel="canonical"]');
   if (canon) canon.setAttribute('href', `${location.origin}/as/${as}`);
@@ -2003,8 +2037,9 @@ function lookupFromHash() {
   if (hash === 'overview') { location.replace('/'); return; }
   if (hash === 'changes' || hash === 'quality') { location.replace(`/statistics.html#${hash}`); return; }
   // the home page opens a tool by name: /network.html#path, /network.html#routes
-  if (hash === 'path' || hash === 'routes') { showTab(hash === 'path' ? 'tab-path' : 'tab-routes'); $(hash === 'path' ? 'aspath' : 'liveq').focus(); return; }
+  if (hash === 'path' || hash === 'routes') { document.body.classList.remove('as-view'); showTab(hash === 'path' ? 'tab-path' : 'tab-routes'); $(hash === 'path' ? 'aspath' : 'liveq').focus(); return; }
   if (hash.startsWith('path=')) {
+    document.body.classList.remove('as-view');
     showTab('tab-path');
     const q = new URLSearchParams(hash);
     const direction = q.get('from') === 'up' ? 'up' : 'down';
@@ -2015,6 +2050,7 @@ function lookupFromHash() {
     return;
   }
   if (hash.startsWith('routes=')) {
+    document.body.classList.remove('as-view');
     showTab('tab-routes');
     const res = decodeHash(hash.slice(7));
     $('liveq').value = res;
@@ -2046,18 +2082,21 @@ function selectTab(tab, { focus = false } = {}) {
 const showTab = (id) => { const t = $(id); if (t && t.getAttribute('aria-selected') !== 'true') selectTab(t); };
 
 function setupTabs() {
-  for (const list of document.querySelectorAll('[role="tablist"]')) {
-    const tabs = [...list.querySelectorAll('[role="tab"]')];
-    tabs.forEach((t, i) => {
-      t.addEventListener('click', () => selectTab(t));
-      t.addEventListener('keydown', (e) => {
-        const to = { ArrowRight: i + 1, ArrowLeft: i - 1, Home: 0, End: tabs.length - 1 }[e.key];
-        if (to === undefined) return;
-        e.preventDefault();
-        selectTab(tabs[(to + tabs.length) % tabs.length], { focus: true });
-      });
+  for (const list of document.querySelectorAll('[role="tablist"]')) wireTabs(list);
+}
+
+// the clicks and the keys of one row of tabs (the rows made later, as the tabs of an AS, are wired when they are made)
+function wireTabs(list) {
+  const tabs = [...list.querySelectorAll('[role="tab"]')];
+  tabs.forEach((t, i) => {
+    t.addEventListener('click', () => selectTab(t));
+    t.addEventListener('keydown', (e) => {
+      const to = { ArrowRight: i + 1, ArrowLeft: i - 1, Home: 0, End: tabs.length - 1 }[e.key];
+      if (to === undefined) return;
+      e.preventDefault();
+      selectTab(tabs[(to + tabs.length) % tabs.length], { focus: true });
     });
-  }
+  });
 }
 
 /* ---------- load ---------- */

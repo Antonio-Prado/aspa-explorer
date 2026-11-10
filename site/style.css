@@ -793,3 +793,15 @@ mark.hl { background: var(--ok-bg); color: var(--ok-ink); padding: 0 0.25em; bor
 .you .v-links { margin-top: 0.5rem; font-size: 1rem; }
 .you .v-from { margin-top: 0.5rem; font-size: 0.85rem; color: var(--ink-2); }
 .hero-band .hero-sub.small { font-size: 1rem; margin-bottom: 0.9rem; }
+
+/* 1.66: the page of an AS, the answer first and the details in tabs */
+.res-verdict { max-width: none; margin: 0.75rem 0 1rem; }
+.res-verdict .v-line { font-size: 1.2rem; }
+.as-tabs { margin-top: 0.5rem; }
+.as-panel { padding-top: 0.75rem; }
+.as-panel > .res-hist:first-child, .as-panel > .res-grid:first-child { margin-top: 0; padding-top: 0; border-top: 0; }
+.as-also { display: none; }
+.as-view .as-also { display: block; margin: 0.4rem 0 0; }
+.as-view .tools .hero-sub, .as-view .tools > .tabs, .as-view #lookup-hint { display: none; }
+.as-view #tools-title, .as-view #lookup-title { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+.as-view .tools #panel-lookup { padding-top: 1rem; }

@@ -91,10 +91,16 @@ for (const [name, path] of PAGES) {
         await page.goto(base + path, { waitUntil: 'networkidle' });
         await page.waitForTimeout(600);
         if (name === 'as') {
+          // the answer first, then the tabs (counted below): open the one of the routes and the neighbourhood graph in it
+          await page.locator('#as-tab-routes').click();
           await page.evaluate(() => { const d = document.getElementById('as-graph'); if (d) d.open = true; });
           await page.waitForTimeout(300);
         }
         const extra = [];
+        if (name === 'as') {
+          if (!(await page.locator('.res-verdict').count())) extra.push('as: no answer at the top of the page of the AS');
+          if ((await page.locator('.as-tabs [role="tab"]').count()) !== 5) extra.push('as: the page of the AS has not 5 tabs');
+        }
         if (name === 'bulk') {
           // many paths at once: open the box, check a few lines, and expect a table, the files and the button to share
           await page.evaluate(() => { document.getElementById('bulk').open = true; });
@@ -146,6 +152,7 @@ for (const [name, path] of PAGES) {
         }
         if (name === 'irr') {
           // the IRR object against the ASPA: press the button, expect what the fixture says (AS6762 is transit in the object and not in the ASPA)
+          await page.locator('#as-tab-irr').click();
           await page.locator('#as-irr button').click();
           await page.waitForTimeout(500);
           const missing = await page.locator('#as-irr .irr-line', { hasText: 'not in the ASPA' }).first().innerText().catch(() => '');
