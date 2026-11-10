@@ -9,6 +9,11 @@ A few numbers were deployed and folded into the next release without a tag of th
 
 ## [Unreleased]
 
+## [1.62.5] - 2026-11-10
+
+### Changed
+- Fort, the second validator of the site, has its logo next to the one of Routinator: in the credits of the footer ("Validated by Routinator and Fort", linking the site of Fort) and at the end of the README. The logo is the one of the Fort project (NIC México), with dark lettering on a white ground so that it reads in both themes.
+
 ## [1.62.4] - 2026-11-10
 
 ### Fixed

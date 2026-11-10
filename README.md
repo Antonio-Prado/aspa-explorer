@@ -417,6 +417,8 @@ Released under the <a href="LICENSE" target="_blank" rel="noopener">MIT License<
   &nbsp;&nbsp;&nbsp;
   <a href="https://nlnetlabs.nl/projects/routinator/" target="_blank" rel="noopener"><img src="assets/credits/routinator-avatar.png" alt="Validated by Routinator, by NLnet Labs" title="Validated by Routinator, by NLnet Labs" height="40"></a>
   &nbsp;&nbsp;&nbsp;
+  <a href="https://nicmx.github.io/FORT-validator/" target="_blank" rel="noopener"><img src="assets/credits/fort-logo.svg" alt="Validated by Fort, by NIC México" title="Validated by Fort, by NIC México" height="40"></a>
+  &nbsp;&nbsp;&nbsp;
   <a href="https://en.wikipedia.org/wiki/Vi_(text_editor)" target="_blank" rel="noopener"><img src="assets/credits/vi-logo.svg" alt="Made with vi, the text editor" title="Made with vi, the text editor" height="32"></a>
   &nbsp;&nbsp;&nbsp;
   <span role="img" aria-label="Inspired by passion" title="Inspired by passion">❤️</span>
