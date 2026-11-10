@@ -1,0 +1,39 @@
+#!/bin/sh
+#
+# PROVIDE: fortd
+# REQUIRE: LOGIN NETWORKING
+# BEFORE: LOGIN
+# KEYWORD: shutdown
+#
+# rc.d script of the Fort validator, in place of the one of the package. That one runs
+# `fort --daemon=true`, and Fort's daemon mode calls umask(0) (src/daemon.c): its cache, its RTR
+# state and its output are then created writable by everybody (0777 directories, 0666 files).
+# Here Fort stays in the foreground and daemon(8) supervises it, with the umask of rc.subr
+# (fortd_umask, 022). Install as /usr/local/etc/rc.d/fortd; in /etc/rc.conf set fort_enable="NO"
+# and fortd_enable="YES". chroot(8) with -u only drops privileges to the user of Fort; its own
+# messages go to syslog with the tag fort, as with the script of the package (-f detaches it from the
+# terminal that started it, so that a start over ssh returns).
+. /etc/rc.subr
+
+name=fortd
+rcvar=fortd_enable
+load_rc_config $name
+: ${fortd_enable:=NO}
+: ${fortd_runas:=fort}
+: ${fortd_config:=/usr/local/etc/fort/fort-config.json}
+: ${fortd_umask:=022}
+
+pidfile=/var/run/${name}.pid
+required_file=${fortd_config}
+command=/usr/sbin/daemon
+command_args="-f -r -R 30 -P ${pidfile} -S -T fort /usr/sbin/chroot -u ${fortd_runas} -g ${fortd_runas} -G ${fortd_runas} / /usr/local/bin/fort --configuration-file=${fortd_config} --daemon=false"
+
+fortd_precmd() {
+  if [ ! -d /usr/local/etc/fort/tal ]; then
+    echo "fortd: the TALs are missing, see fort --init-tals" >&2
+    return 1
+  fi
+}
+start_precmd=fortd_precmd
+
+run_rc_command "$1"
