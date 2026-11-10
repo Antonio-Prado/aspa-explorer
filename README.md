@@ -77,7 +77,7 @@
   </tr>
   <tr>
     <td width="50%"><img src="assets/screenshots/leaks-dark.jpg" alt="Valleys today: the invalid routes of the collectors, grouped by the place of the valley, with the ASes inside it"></td>
-    <td width="50%"><img src="assets/screenshots/validators-dark.jpg" alt="Validators compared: the customers whose providers differ between Routinator, rpki-client and the rpki-client of Cloudflare"></td>
+    <td width="50%"><img src="assets/screenshots/validators-dark.jpg" alt="Validators compared: the customers whose providers differ between the Routinator and the Fort of this site, rpki-client and the rpki-client of Cloudflare"></td>
   </tr>
   <tr>
     <td align="center"><sub>Valleys seen today in the table dumps</sub></td>
