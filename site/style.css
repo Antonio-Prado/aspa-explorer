@@ -805,3 +805,17 @@ mark.hl { background: var(--ok-bg); color: var(--ok-ink); padding: 0 0.25em; bor
 .as-view .tools .hero-sub, .as-view .tools > .tabs, .as-view #lookup-hint { display: none; }
 .as-view #tools-title, .as-view #lookup-title { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
 .as-view .tools #panel-lookup { padding-top: 1rem; }
+
+/* 1.67: My network and the page of an AS in the manner of the home page: no frame around the tools, the data line in the
+   footer, and for an AS one centred column of larger text */
+.network .tools { background: none; box-shadow: none; border-radius: 0; }
+.network .tools .tabs { padding: 0; }
+.network .tools .tabpanel { padding-left: 0; padding-right: 0; }
+.network .recent { right: 0; }
+.network .foot .meta { margin: 0 0 0.6rem; }
+.as-view #main { max-width: 52rem; }
+.as-view .tools .field { max-width: 34rem; }
+.as-view #result:not(:empty) { border-top: 0; padding-top: 0.25rem; }
+.as-view #result { font-size: 1.0625rem; line-height: 1.6; }
+.as-view .res-head h3 { font-size: 2rem; letter-spacing: -0.01em; }
+.as-view .res-verdict .v-line { font-size: 1.3rem; }

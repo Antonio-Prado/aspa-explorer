@@ -9,6 +9,11 @@ A few numbers were deployed and folded into the next release without a tag of th
 
 ## [Unreleased]
 
+## [1.67.0] - 2026-11-10
+
+### Changed
+- *My network* and the page of an AS look like the home page: no frame around the tools, and the line with the count of the ASPAs and the last validation moved to the footer. The page of an AS reads as one centred column, with larger text and the number of the AS in large type; the path check and the routes keep the full width that their tables need.
+
 ## [1.66.0] - 2026-11-10
 
 ### Changed
