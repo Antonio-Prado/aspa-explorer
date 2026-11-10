@@ -12,7 +12,7 @@ A few numbers were deployed and folded into the next release without a tag of th
 ## [1.65.0] - 2026-11-10
 
 ### Changed
-- The home page is a hub, as light as a screen: the question it answers, a search that opens the page of an AS, a line to the path check, the routes seen in BGP and the examples, three numbers and the three areas. The tools moved to the *My network* page (`/network.html`), which also answers the page of an AS (`/as/AS680`); *Recent changes* and *ASPA quality* moved to the *State of ASPA* page, in a section of their own near the top (`latest.js`). Every old address still leads to the same thing: `/#AS680` to the page of the AS, `/#path=…` and `/#routes=…` to the tools, `/#changes` and `/#quality` to their tabs. How to cite moved from under the title of every page to the first row of the footer.
+- The home page reads as one page that answers one question, in the manner of isbgpsafeyet.com: a band with the question and a search that opens the page of an AS (and a line to the path check, the routes seen in BGP and the examples), then one column of large text: where ASPA stands in one sentence, the 100 largest transit networks as a table of status (the first 15, then all), and four questions that open. The tools moved to the *My network* page (`/network.html`), which also answers the page of an AS (`/as/AS680`); *Recent changes* and *ASPA quality* moved to the *State of ASPA* page, in a section of their own near the top (`latest.js`). Every old address still leads to the same thing: `/#AS680` to the page of the AS, `/#path=…` and `/#routes=…` to the tools, `/#changes` and `/#quality` to their tabs. How to cite moved from under the title of every page to the first row of the footer.
 
 ## [1.64.0] - 2026-11-10
 

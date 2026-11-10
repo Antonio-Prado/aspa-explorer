@@ -742,20 +742,43 @@ a.tile:hover { box-shadow: 0 0 0 2px var(--accent); }
   .tools .hero-title { font-size: 1.5rem; }
 }
 
-/* 1.65: the home page as a hub: the search, three numbers, the three areas */
-.home .hero { max-width: 44rem; margin: 2.5rem auto 0; text-align: center; }
-.home .hero h2 { margin: 0 0 0.6rem; font-size: 2.3rem; line-height: 1.15; letter-spacing: -0.02em; }
-.home .hero-sub { margin: 0 0 1.5rem; color: var(--ink-2); font-size: 1.1rem; }
+/* 1.65: the home page in the manner of a single page that answers one question: a band with the question and the
+   search, then one column of reading (large text, generous lines), a status table and questions that open */
+.home main { padding-bottom: 1rem; }
+.home .masthead { padding-bottom: 1rem; }
+.column { max-width: 44rem; margin: 0 auto; padding: 0 1rem; }
+.hero-band { background: var(--wash); border-top: 1px solid var(--grid); border-bottom: 1px solid var(--grid); padding: 3.25rem 0 2.25rem; text-align: center; }
+.hero-band h2 { margin: 0 0 0.9rem; font-size: 2.9rem; line-height: 1.12; letter-spacing: -0.02em; }
+.hero-band .hero-sub { margin: 0 auto 1.6rem; max-width: 38rem; color: var(--ink-2); font-size: 1.15rem; line-height: 1.6; }
+mark.hl { background: var(--ok-bg); color: var(--ok-ink); padding: 0 0.25em; border-radius: 0.3em; }
 .hero-search { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }
 .hero-search input { flex: 1 1 18rem; min-width: 0; height: 3.2rem; padding: 0 1rem; font-size: 1.1rem; }
 .hero-search button { height: 3.2rem; padding: 0 1.6rem; font-size: 1.05rem; }
-.home .hero .error { min-height: 1.2em; margin: 0.4rem 0 0; }
-.hero-links { margin: 0.3rem 0 0; color: var(--muted); font-size: 0.92rem; }
-.home .today { margin-top: 3rem; }
-.home .masthead { padding-bottom: 0.5rem; }
+.hero-band .error { min-height: 1.2em; margin: 0.5rem auto 0; max-width: 30rem; }
+.hero-band .error:empty { display: none; }
+.hero-links { margin: 0.8rem 0 0; color: var(--ink-2); font-size: 0.95rem; }
+.home .prose { padding-top: 2.75rem; font-size: 1.125rem; line-height: 1.7; color: var(--ink-2); }
+.home .prose h2 { margin: 0 0 0.6rem; font-size: 1.75rem; line-height: 1.25; color: var(--ink); letter-spacing: -0.01em; }
+.home .prose p { margin: 0 0 0.9rem; }
+.home .prose strong { color: var(--ink); }
+.home .answer { font-size: 1.35rem; line-height: 1.6; color: var(--ink); }
+.home-more { font-size: 0.98rem; }
+.status-wrap { overflow-x: auto; margin: 1rem 0 0.75rem; }
+.status-table { width: 100%; border-collapse: collapse; font-size: 1rem; line-height: 1.4; }
+.status-table th { text-align: left; font-size: 0.75rem; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); padding: 0.4rem 0.6rem; border-bottom: 1px solid var(--grid); }
+.status-table td { padding: 0.45rem 0.6rem; border-bottom: 1px solid var(--grid); color: var(--ink); }
+.status-table .num { text-align: right; font-variant-numeric: tabular-nums; }
+.status-table .muted { color: var(--muted); }
+.status-table td.state { font-weight: 600; }
+.status-table td.state.yes { background: var(--ok-bg); color: var(--ok-ink); }
+.status-table td.state.no { background: var(--bad-bg); color: var(--bad-ink); }
+.faq details { background: var(--track); border-radius: 8px; margin: 0.6rem 0; }
+.faq summary { padding: 0.55rem 0.9rem; font-size: 1.2rem; font-weight: 600; color: var(--ink); cursor: pointer; }
+.faq details p { margin: 0; padding: 0 1rem 0.9rem 2rem; }
 .latest .tabs { margin-top: 0.5rem; }
 @media (max-width: 720px) {
-  .home .hero { margin-top: 1.25rem; }
-  .home .hero h2 { font-size: 1.7rem; }
+  .hero-band { padding: 2rem 0 1.5rem; }
+  .hero-band h2 { font-size: 2rem; }
+  .home .prose { font-size: 1.05rem; }
+  .home .answer { font-size: 1.15rem; }
 }
-.home .hero .error:empty { display: none; }

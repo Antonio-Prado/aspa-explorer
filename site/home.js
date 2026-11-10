@@ -31,18 +31,51 @@
       location.assign(`/as/${as}`);
     });
 
-    // the count of the validator of the site (from the comparison of the validators, a small file) and the daily adoption numbers
-    getJson('/api/v1/validators.json').then((d) => {
-      const r = (d.sources || []).find((s) => s.id === 'routinator');
-      if (r && Number.isFinite(r.count)) $('home-count').textContent = fmt.format(r.count);
-    }).catch(() => { $('home-count').textContent = '–'; });
-    getJson('/api/v1/adoption.json').then((d) => {
-      if (Number.isFinite(d.pct) && d.seen) {
-        $('home-share').textContent = `${d.pct.toFixed(1)}%`;
-        $('home-share-note').textContent = `of the ${fmt.format(d.seen)} ASes seen in BGP`;
-      }
-      const top = Array.isArray(d.top_transit) ? d.top_transit.length : 0;
-      if (top && Number.isFinite(d.top_transit_with_aspa)) $('home-transit').textContent = `${d.top_transit_with_aspa} of ${top}`;
-    }).catch(() => { $('home-share').textContent = '–'; $('home-transit').textContent = '–'; });
+    // where ASPA stands, in one sentence: the count of the validator of the site (from the comparison of the validators, a
+    // small file) and the daily adoption numbers; then the largest transit networks, as a table of status
+    const answer = $('home-answer');
+    Promise.all([getJson('/api/v1/validators.json').catch(() => null), getJson('/api/v1/adoption.json').catch(() => null)]).then(([v, d]) => {
+      const r = v && (v.sources || []).find((s) => s.id === 'routinator');
+      const parts = [];
+      if (r && Number.isFinite(r.count)) parts.push(el('strong', { text: fmt.format(r.count) }), ' networks have published an ASPA.');
+      if (d && Number.isFinite(d.pct) && d.seen) parts.push(' That is ', el('mark', { class: 'hl', text: `${d.pct.toFixed(1)}%` }), ` of the ${fmt.format(d.seen)} networks seen in BGP.`);
+      const top = d && Array.isArray(d.top_transit) ? d.top_transit : [];
+      if (top.length && Number.isFinite(d.top_transit_with_aspa)) parts.push(` Of the ${top.length} largest transit networks, `, el('strong', { text: String(d.top_transit_with_aspa) }), ` ${d.top_transit_with_aspa === 1 ? 'has' : 'have'} one.`);
+      answer.replaceChildren(...(parts.length ? parts : ['The numbers are not available at the moment.']));
+      transit(top);
+    });
   });
+
+  function el(tag, attrs, ...kids) {
+    const n = document.createElement(tag);
+    for (const [k, v] of Object.entries(attrs || {})) {
+      if (v === undefined || v === null || v === false) continue;
+      // eslint-disable-next-line no-restricted-syntax -- the element builder: its keys come from the code that calls it
+      if (k === 'class') n.className = v; else if (k === 'text') n.textContent = v; else if (k.startsWith('on')) n.addEventListener(k.slice(2), v); else n.setAttribute(k, v);
+    }
+    for (const c of kids) if (c !== null && c !== undefined && c !== false) n.append(c instanceof Node ? c : document.createTextNode(String(c)));
+    return n;
+  }
+
+  // the table of the largest transit networks: the first 15, then all of them on request
+  function transit(top) {
+    const body = $('transit-rows');
+    if (!top.length) { body.replaceChildren(el('tr', {}, el('td', { colspan: '5', text: 'The list is not available at the moment.' }))); return; }
+    const row = (t, i) => el('tr', {},
+      el('td', { class: 'num muted', text: String(i + 1) }),
+      el('td', {}, el('a', { class: 'mono', href: `/as/${t.asn}`, text: t.asn })),
+      el('td', { text: t.cc || '' }),
+      el('td', { class: 'num', text: fmt.format(t.cone) }),
+      t.aspa
+        ? el('td', { class: 'state yes', text: t.providers === 0 ? 'published, no providers' : 'published' })
+        : el('td', { class: 'state no', text: 'none' }));
+    const draw = (n) => {
+      body.replaceChildren(...top.slice(0, n).map(row));
+      const more = $('transit-more');
+      more.replaceChildren(n < top.length
+        ? el('button', { type: 'button', class: 'linkish', text: `Show all ${top.length}`, onclick: () => draw(top.length) })
+        : el('a', { href: '/statistics.html#top-title', text: 'The same list, with filters, on the statistics page' }));
+    };
+    draw(15);
+  }
 })();
