@@ -42,7 +42,9 @@
   <section class="hero-band" aria-labelledby="hero-title">
     <div class="column">
       <h2 id="hero-title">Is your network <mark class="hl">protected</mark> by ASPA?</h2>
-      <p class="hero-sub">An ASPA tells the routers of the Internet which networks may carry your routes. Look up your AS to see whether it has one, whether your routes are valid, and what to fix.</p>
+      <p class="hero-sub">An ASPA tells the routers of the Internet which networks may carry your routes.</p>
+      <div class="you" id="home-verdict" aria-live="polite"><p class="v-line"><span class="busy">Checking the network you are on</span></p></div>
+      <p class="hero-sub small">Or look up any AS: whether it has an ASPA, whether its routes are valid, and what to fix.</p>
       <form class="hero-search" id="home-search" autocomplete="off" novalidate>
         <label for="home-asn" class="sr-only">AS number</label>
         <input id="home-asn" name="asn" type="text" inputmode="text" spellcheck="false" placeholder="AS number, e.g. AS680" aria-describedby="home-error">

@@ -6,7 +6,8 @@ root=$(cd "$(dirname "$0")/.." && pwd)
 work=$(mktemp -d)
 trap 'rm -rf "$work"' EXIT
 
-mkdir -p "$work/tls" "$work/cache" "$work/www"
+mkdir -p "$work/tls" "$work/cache" "$work/www" "$work/gen"
+printf '193.0.0.0/21 3333;\n' > "$work/gen/client-origin.conf"
 openssl req -x509 -newkey rsa:2048 -nodes -days 1 -subj "/CN=aspa.test" \
   -keyout "$work/tls/key.pem" -out "$work/tls/fullchain.pem" 2>/dev/null
 cp -R "$root/site/." "$work/www/"
@@ -26,6 +27,7 @@ sed -e "s|/usr/local/etc/nginx/tls|$work/tls|g" \
     -e "s|/var/db/aspa-gen/leaks-history.json|$work/gen/leaks-history.json|g" \
     -e "s|/var/db/aspa-gen/leaks-days|$work/gen/leaks-days|g" \
     -e "s|/var/db/aspa-gen/validators.json|$work/gen/validators.json|g" \
+    -e "s|/var/db/aspa-gen/client-origin.conf|$work/gen/client-origin.conf|g" \
     -e "s|/var/db/aspa-gen/current|$work/gen|g" \
     -e "s|192\.0\.2\.10|127.0.0.1|g" \
     -e "s|127\.0\.0\.1:8080;|127.0.0.1:18080;|" \

@@ -1,0 +1,3 @@
+# The map from prefix to origin AS that answers /client-ip (scripts/build-client-origin.mjs, from the RIPE RIS whois dumps).
+# Root's crontab, once a day: the script runs as aspagen and exits 0 only when it wrote a new map; then nginx is checked and reloaded.
+40 7 * * * su -m aspagen -c "/usr/local/bin/node /usr/local/libexec/aspa-gen/scripts/build-client-origin.mjs /var/db/aspa-gen/client-origin.conf" >/var/db/aspa-gen/client-origin.log 2>&1 && /usr/local/sbin/nginx -t -q && /usr/sbin/service nginx reload >/dev/null

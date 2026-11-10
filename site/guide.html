@@ -304,6 +304,7 @@
 
   <section aria-labelledby="data">
     <h2 id="data">Where the data comes from</h2>
+    <p id="your-network"><strong>Your network, on the home page.</strong> The home page answers for the network you are on: this server sees your address, finds the AS that originates it in BGP in a map it keeps, built every day from the dumps of <a href="https://ris.ripe.net/docs/ris-whois/" target="_blank" rel="noopener">RIPE RIS whois<span class="sr-only"> (opens in a new tab)</span></a> (for each prefix the origin seen by the most RIS peers, at least ten), and the page reads the ASPA of that AS from the API of this site. Your address is not stored and is sent to nobody else. Behind a VPN or a proxy the answer is about the network of the VPN or the proxy.</p>
     <p>The data comes from <a href="https://github.com/NLnetLabs/routinator" target="_blank" rel="noopener">Routinator<span class="sr-only"> (opens in a new tab)</span></a>, the RPKI validator run at <a href="https://rpki.ping6.it/" target="_blank" rel="noopener">rpki.ping6.it<span class="sr-only"> (opens in a new tab)</span></a>. It validates the RPKI repositories of all five RIRs and the page reads three of its outputs:</p>
     <ul>
       <li>the list of valid ASPAs (<a href="https://rpki.ping6.it/jsonext?exclude=routeOrigins,routerKeys" target="_blank" rel="noopener">jsonext<span class="sr-only"> (opens in a new tab)</span></a>, route origins and router keys left out);</li>

@@ -782,3 +782,14 @@ mark.hl { background: var(--ok-bg); color: var(--ok-ink); padding: 0 0.25em; bor
   .home .prose { font-size: 1.05rem; }
   .home .answer { font-size: 1.15rem; }
 }
+.you { margin: 0 auto 1.4rem; max-width: 38rem; padding: 1rem 1.25rem; border-radius: 12px; background: var(--surface); border: 1px solid var(--grid); text-align: left; }
+.you p { margin: 0; }
+.you .v-line { font-size: 1.3rem; line-height: 1.45; color: var(--ink); }
+.you .v-word { margin-right: 0.15em; }
+.you.v-yes { background: var(--ok-bg); border-color: transparent; }
+.you.v-yes .v-line, .you.v-yes .v-word { color: var(--ok-ink); }
+.you.v-no { background: var(--bad-bg); border-color: transparent; }
+.you.v-no .v-line, .you.v-no .v-word { color: var(--bad-ink); }
+.you .v-links { margin-top: 0.5rem; font-size: 1rem; }
+.you .v-from { margin-top: 0.5rem; font-size: 0.85rem; color: var(--ink-2); }
+.hero-band .hero-sub.small { font-size: 1rem; margin-bottom: 0.9rem; }

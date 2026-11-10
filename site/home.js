@@ -31,6 +31,8 @@
       location.assign(`/as/${as}`);
     });
 
+    verdict();
+
     // where ASPA stands, in one sentence: the count of the validator of the site (from the comparison of the validators, a
     // small file) and the daily adoption numbers; then the largest transit networks, as a table of status
     const answer = $('home-answer');
@@ -55,6 +57,43 @@
     }
     for (const c of kids) if (c !== null && c !== undefined && c !== false) n.append(c instanceof Node ? c : document.createTextNode(String(c)));
     return n;
+  }
+
+  // The answer for the network the visitor is on: /client-ip gives the address and the AS that originates it in BGP (a map
+  // kept on this server, see build-client-origin.mjs), the API of the site gives the ASPA of that AS.
+  async function verdict() {
+    const box = $('home-verdict');
+    const say = (kind, ...line) => {
+      box.className = `you v-${kind}`;
+      box.replaceChildren(...line);
+    };
+    try {
+      const me = await getJson('/client-ip');
+      const n = Number(me.as);
+      const from = el('p', { class: 'v-from', text: `Seen from your address ${me.ip}${n > 0 ? `, which AS${n} originates in BGP (RIPE RIS)` : ''}.` });
+      if (!(n > 0)) {
+        say('unknown', el('p', { class: 'v-line', text: 'We cannot tell which network your address belongs to: no route of the RIPE RIS collectors covers it.' }), from);
+        return;
+      }
+      const as = `AS${n}`;
+      const d = await getJson(`/api/v1/as/${n}`);
+      const a = d.aspa || {};
+      const issues = Array.isArray(d.quality) ? d.quality.length : 0;
+      const page = el('a', { href: `/as/${as}`, text: `See the page of ${as}` });
+      if (a.published && a.no_providers) {
+        say('yes', el('p', { class: 'v-line' }, el('strong', { class: 'v-word', text: 'Yes.' }), ` Your network, ${as}, has an ASPA that declares it has no providers (AS0).`),
+          el('p', { class: 'v-links' }, page), from);
+      } else if (a.published) {
+        const k = (a.providers || []).length;
+        say('yes', el('p', { class: 'v-line' }, el('strong', { class: 'v-word', text: 'Yes.' }), ` Your network, ${as}, has an ASPA with ${k} provider${k === 1 ? '' : 's'}${issues ? `, and ${issues} thing${issues === 1 ? '' : 's'} to check` : ''}.`),
+          el('p', { class: 'v-links' }, page), from);
+      } else {
+        say('no', el('p', { class: 'v-line' }, el('strong', { class: 'v-word', text: 'Not yet.' }), ` Your network, ${as}, has no ASPA.`),
+          el('p', { class: 'v-links' }, el('a', { href: '/examples.html', text: 'How to publish one' }), ' · ', page), from);
+      }
+    } catch {
+      box.hidden = true;   // no answer: the search below is still there
+    }
   }
 
   // the table of the largest transit networks: the first 15, then all of them on request

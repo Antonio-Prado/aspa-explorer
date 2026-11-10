@@ -43,7 +43,7 @@ const server = http.createServer(async (req, res) => {
   try {
     const fx = FIXTURE_OF(p);
     if (fx) { try { return send(200, 'application/json', await readFile(join(FIX, fx))); } catch { return send(404, 'application/json', '{}'); } }
-    if (p === '/client-ip') return send(200, 'application/json', '{"ip":"192.0.2.1"}');
+    if (p === '/client-ip') return send(200, 'application/json', '{"ip":"192.0.2.1","as":12779}');
     if (/^\/r\/[0-9a-f]{12}$/.test(p)) return send(200, TYPES['.html'], await readFile(join(SITE, 'report.html')));
     if (/^\/as\/(AS)?\d+\/?$/.test(p)) return send(200, TYPES['.html'], await readFile(join(SITE, 'network.html')));
     const file = join(SITE, p === '/' ? 'index.html' : p);
