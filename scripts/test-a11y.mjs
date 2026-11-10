@@ -45,7 +45,7 @@ const server = http.createServer(async (req, res) => {
     if (fx) { try { return send(200, 'application/json', await readFile(join(FIX, fx))); } catch { return send(404, 'application/json', '{}'); } }
     if (p === '/client-ip') return send(200, 'application/json', '{"ip":"192.0.2.1"}');
     if (/^\/r\/[0-9a-f]{12}$/.test(p)) return send(200, TYPES['.html'], await readFile(join(SITE, 'report.html')));
-    if (/^\/as\/(AS)?\d+\/?$/.test(p)) return send(200, TYPES['.html'], await readFile(join(SITE, 'index.html')));
+    if (/^\/as\/(AS)?\d+\/?$/.test(p)) return send(200, TYPES['.html'], await readFile(join(SITE, 'network.html')));
     const file = join(SITE, p === '/' ? 'index.html' : p);
     if (!file.startsWith(SITE)) return send(403, 'text/plain', 'no');
     return send(200, TYPES[extname(file)] || 'application/octet-stream', await readFile(file));
@@ -55,10 +55,10 @@ await new Promise((r) => server.listen(0, '127.0.0.1', r));
 const base = `http://127.0.0.1:${server.address().port}`;
 
 const PAGES = [
-  ['home', '/'], ['as', '/#AS12779'], ['path', '/#path=3356+12779&from=up'], ['changes', '/#changes'], ['quality', '/#quality'],
+  ['home', '/'], ['network', '/network.html'], ['as', '/as/AS12779'], ['path', '/network.html#path=3356+12779&from=up'], ['changes', '/statistics.html#changes'], ['quality', '/statistics.html#quality'],
   ['statistics', '/statistics.html'], ['incidents', '/incidents.html'], ['guide', '/guide.html'], ['api', '/api.html'],
   ['examples', '/examples.html'], ['embed', '/embed.html?country=IT'], ['status', '/status.html'], ['subscription', '/subscription.html#confirm=abc'],
-  ['bulk', '/#path=3356+12779&from=up'], ['peek', '/#AS12779'], ['irr', '/#AS12779'], ['valley', '/#routes=AS12779'], ['ixp', '/#path=12779+1200+24796&from=up'], ['recent', '/#AS12779'], ['report', '/r/0123456789ab'],
+  ['bulk', '/network.html#path=3356+12779&from=up'], ['peek', '/as/AS12779'], ['irr', '/as/AS12779'], ['valley', '/network.html#routes=AS12779'], ['ixp', '/network.html#path=12779+1200+24796&from=up'], ['recent', '/as/AS12779'], ['report', '/r/0123456789ab'],
 ];
 const VIEWPORTS = [['desktop', { width: 1280, height: 800 }], ['narrow', { width: 320, height: 640 }]];
 const SCHEMES = ['light', 'dark'];

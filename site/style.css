@@ -741,3 +741,21 @@ a.tile:hover { box-shadow: 0 0 0 2px var(--accent); }
   .hero-tiles, .areas { grid-template-columns: 1fr; }
   .tools .hero-title { font-size: 1.5rem; }
 }
+
+/* 1.65: the home page as a hub: the search, three numbers, the three areas */
+.home .hero { max-width: 44rem; margin: 2.5rem auto 0; text-align: center; }
+.home .hero h2 { margin: 0 0 0.6rem; font-size: 2.3rem; line-height: 1.15; letter-spacing: -0.02em; }
+.home .hero-sub { margin: 0 0 1.5rem; color: var(--ink-2); font-size: 1.1rem; }
+.hero-search { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }
+.hero-search input { flex: 1 1 18rem; min-width: 0; height: 3.2rem; padding: 0 1rem; font-size: 1.1rem; }
+.hero-search button { height: 3.2rem; padding: 0 1.6rem; font-size: 1.05rem; }
+.home .hero .error { min-height: 1.2em; margin: 0.4rem 0 0; }
+.hero-links { margin: 0.3rem 0 0; color: var(--muted); font-size: 0.92rem; }
+.home .today { margin-top: 3rem; }
+.home .masthead { padding-bottom: 0.5rem; }
+.latest .tabs { margin-top: 0.5rem; }
+@media (max-width: 720px) {
+  .home .hero { margin-top: 1.25rem; }
+  .home .hero h2 { font-size: 1.7rem; }
+}
+.home .hero .error:empty { display: none; }

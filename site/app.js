@@ -95,7 +95,7 @@ function renderOverview(status) {
     label && el('div', { class: 'label', text: label }), el('div', { class: 'value', text: value }), note && el('div', { class: 'note', text: note }));
   // three numbers only on the home page: how many, what share of the networks in BGP, and how many of the largest
   // transit networks (the last two from the daily adoption numbers); the rest is on the State of ASPA page
-  $('tiles').replaceChildren(tile(null, fmt.format(aspas.length), 'networks have published an ASPA'));
+  if ($('tiles')) $('tiles').replaceChildren(tile(null, fmt.format(aspas.length), 'networks have published an ASPA'));
 
   const done = status && status.lastUpdateDone;
   $('meta').textContent = `${fmt.format(aspas.length)} ASPAs · last validation ${fmtDate(done)}` +
@@ -107,7 +107,7 @@ function renderOverview(status) {
 async function addCoverageTile() {
   try {
     const d = await getJson('/api/v1/adoption.json');
-    if (!d || !d.seen || !$('tiles').children.length) return;
+    if (!d || !d.seen || !$('tiles') || !$('tiles').children.length) return;
     for (const id of ['tile-coverage', 'tile-transit']) { const old = $(id); if (old) old.remove(); }
     $('tiles').append(el('div', { class: 'tile card', id: 'tile-coverage' },
       el('div', { class: 'value', text: `${d.pct.toFixed(1)}%` }),
@@ -135,6 +135,7 @@ function computeQuality() {
 function renderQuality() {
   const body = $('quality-body');
   const tiles = $('quality-tiles');
+  if (!body || !tiles) return;   // the list of all findings is on the State of ASPA page (latest.js); this page uses them for one AS
   const affected = (sev) => new Set(findings.filter((f) => f.severity === sev).map((f) => f.customer)).size;
   tiles.replaceChildren(...['error', 'warning', 'note'].map((sev) => el('div', { class: `tile card sev-${sev}` },
     el('div', { class: 'label', text: sev === 'note' ? 'Notes' : `${SEVERITY[sev]}s` }),
@@ -200,6 +201,7 @@ function changeText(e) {
 
 function renderChanges() {
   const body = $('changes-body');
+  if (!body) return;   // the recent changes are on the State of ASPA page (latest.js); this page uses them for the history of one AS
   const cut = new Date(Date.now() - CHANGE_DAYS * 86400000).toISOString().slice(0, 10);
   const recent = changes.filter((e) => e.date >= cut);
   if (!recent.length) {
@@ -256,7 +258,7 @@ async function loadEvents() {
     renderChanges();
     renderAsHistory(lookupAs);
   } catch (err) {
-    $('changes-body').replaceChildren(el('p', { class: 'error', text: `The changes are not available (${err.message}).` }));
+    if ($('changes-body')) $('changes-body').replaceChildren(el('p', { class: 'error', text: `The changes are not available (${err.message}).` }));
   }
 }
 
@@ -361,7 +363,7 @@ function pathReport(text, direction) {
     }
     sections.push({ heading: 'Hop by hop', table: { columns: down ? ['Hop', 'Up-ramp check', 'Down-ramp check'] : ['Hop', 'Up-ramp check'], rows } });
   }
-  return { kind: 'path', title: `AS path ${parsed.path.slice().reverse().join(' ')}: ${v.result}`, source: `/#${new URLSearchParams({ path: text.trim(), from: direction })}`, sections };
+  return { kind: 'path', title: `AS path ${parsed.path.slice().reverse().join(' ')}: ${v.result}`, source: `/network.html#${new URLSearchParams({ path: text.trim(), from: direction })}`, sections };
 }
 
 function renderPathCheck(text, direction) {
@@ -998,7 +1000,7 @@ function pairBlock(res, t4, t6, home, origin, atRegistered) {
     el('thead', {}, el('tr', {}, ['Probe', 'IPv4 networks', 'IPv4 net round trip', 'IPv6 networks', 'IPv6 net round trip', 'IPv6 − IPv4', 'Faster', 'Networks'].map((t, i) => el('th', { scope: 'col', class: i === 2 || i === 4 || i === 5 ? 'num' : undefined, text: t })))),
     el('tbody', {}, ...body)));
   const report = () => ({
-    kind: 'tromboning', title: `${as} from ${home}: ${headline}`, source: `/#routes=${as}`,
+    kind: 'tromboning', title: `${as} from ${home}: ${headline}`, source: `/network.html#routes=${as}`,
     sections: [{ heading: 'Tromboning', text: `${headline}. ${lines.join(' ')}` }, { heading: 'IPv4 against IPv6', text: `${compare} ${answered} ${notes.join(' ')}` },
       { heading: 'Probes', table: { columns: ['Probe', 'IPv4 networks', 'IPv4 ms', 'IPv6 networks', 'IPv6 ms', 'IPv6 − IPv4', 'Faster', 'Networks'],
         rows: rows.slice(0, 100).map((r) => [probeName(r), nets(r.v4), cell(r, 'v4', 'n4'), nets(r.v6), cell(r, 'v6', 'n6'), signed(r.delta), winner[r.winner], r.sameNetworks === null ? '–' : r.sameNetworks ? 'same' : 'different']) } }],
@@ -1994,13 +1996,14 @@ const decodeHash = (s) => { try { return decodeURIComponent(s); } catch { return
 function lookupFromHash() {
   const hash = location.hash.slice(1);
   // a new lookup on an AS page goes back to the plain address, so the address always matches what is shown
-  if (hash && location.pathname !== '/' && pathAs()) window.history.replaceState(null, '', '/' + location.hash);   // `history` is the daily series here
+  if (hash && pathAs()) window.history.replaceState(null, '', '/network.html' + location.hash);   // `history` is the daily series here
   // the table of all ASPAs became a download on the API page: old links to #all go there
   if (hash === 'all') { location.replace('/api.html#download'); return; }
-  // #overview was a tab of the data; its numbers are now right under the tools
-  if (hash === 'overview') { revealBox('tiles'); return; }
-  const tabs = { changes: 'tab-changes', quality: 'tab-quality' };
-  if (Object.hasOwn(tabs, hash)) { showTab(tabs[hash]); revealBox('data'); return; }
+  // the overview, the recent changes and the quality checks moved: the numbers to the home page, the lists to State of ASPA
+  if (hash === 'overview') { location.replace('/'); return; }
+  if (hash === 'changes' || hash === 'quality') { location.replace(`/statistics.html#${hash}`); return; }
+  // the home page opens a tool by name: /network.html#path, /network.html#routes
+  if (hash === 'path' || hash === 'routes') { showTab(hash === 'path' ? 'tab-path' : 'tab-routes'); $(hash === 'path' ? 'aspath' : 'liveq').focus(); return; }
   if (hash.startsWith('path=')) {
     showTab('tab-path');
     const q = new URLSearchParams(hash);

@@ -217,7 +217,7 @@
       el('td', {}, ...g.between.flatMap((a, i) => (i ? [' ', chip(a)] : [chip(a)]))),
       el('td', { text: CAIDA[g.caida] }),
       el('td', { class: 'num', text: fmt.format(g.routes) }), el('td', { class: 'num', text: fmt.format(g.feeders) }), el('td', { class: 'num', text: fmt.format(g.origins) }),
-      el('td', {}, el('a', { href: `/#path=${encodeURIComponent([...g.example].reverse().map((a) => a.slice(2)).join(' '))}&from=down`, text: 'open the path' })))) : [el('tr', {}, el('td', { colspan: '7', text: 'None.' }))]));
+      el('td', {}, el('a', { href: `/network.html#path=${encodeURIComponent([...g.example].reverse().map((a) => a.slice(2)).join(' '))}&from=down`, text: 'open the path' })))) : [el('tr', {}, el('td', { colspan: '7', text: 'None.' }))]));
 
     $('gap-rows').replaceChildren(...(d.gaps.length ? d.gaps.slice(0, 15).map((g) => el('tr', {},
       el('td', {}, chip(g.customer)), el('td', {}, chip(g.missing)),

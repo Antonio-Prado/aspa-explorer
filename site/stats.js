@@ -385,7 +385,7 @@ function renderStats(aspas) {
 
   const top = [...byProvider].map(([as, list]) => ({ as, n: list.length }))
     .sort((x, y) => y.n - x.n || asNum(x.as) - asNum(y.as)).slice(0, 10);
-  barChart($('chart-prov'), top.map((p) => ({ label: p.as, value: p.n, href: '/#' + p.as })),
+  barChart($('chart-prov'), top.map((p) => ({ label: p.as, value: p.n, href: '/as/' + p.as })),
     { mono: true, total: aspas.length, totalLabel: 'all ASPAs' });
 
   const bins = [];

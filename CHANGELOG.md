@@ -9,6 +9,11 @@ A few numbers were deployed and folded into the next release without a tag of th
 
 ## [Unreleased]
 
+## [1.65.0] - 2026-11-10
+
+### Changed
+- The home page is a hub, as light as a screen: the question it answers, a search that opens the page of an AS, a line to the path check, the routes seen in BGP and the examples, three numbers and the three areas. The tools moved to the *My network* page (`/network.html`), which also answers the page of an AS (`/as/AS680`); *Recent changes* and *ASPA quality* moved to the *State of ASPA* page, in a section of their own near the top (`latest.js`). Every old address still leads to the same thing: `/#AS680` to the page of the AS, `/#path=…` and `/#routes=…` to the tools, `/#changes` and `/#quality` to their tabs. How to cite moved from under the title of every page to the first row of the footer.
+
 ## [1.64.0] - 2026-11-10
 
 ### Changed

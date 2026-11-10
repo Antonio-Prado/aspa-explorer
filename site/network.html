@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>My network · ASPA Explorer</title>
+<meta name="description" content="Browse the validated ASPA (Autonomous System Provider Authorization) objects published in the RPKI.">
+<meta name="author" content="Antonio Prado">
+<meta name="theme-color" content="#2a78d6">
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="apple-touch-icon" href="/img/apple-touch-icon.png">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="ASPA Explorer">
+<meta property="og:locale" content="en_GB">
+<meta property="og:title" content="ASPA Explorer">
+<meta property="og:description" content="Browse the validated ASPA (Autonomous System Provider Authorization) objects published in the RPKI.">
+<meta property="og:url" content="https://aspa.ping6.it/network.html">
+<meta property="og:image" content="https://aspa.ping6.it/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="ASPA Explorer: explore, check and follow the ASPA objects of the RPKI">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="color-scheme" content="light dark">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="canonical" href="https://aspa.ping6.it/network.html">
+<link rel="alternate" type="application/atom+xml" title="ASPA Explorer: changes" href="/changes.atom">
+<link rel="stylesheet" href="/style.css?v=1.65.0">
+<script src="/verify.js?v=1.65.0" defer></script>
+<script src="/history.js?v=1.65.0" defer></script>
+<script src="/quality.js?v=1.65.0" defer></script>
+<script src="/evidence.js?v=1.65.0" defer></script>
+<script src="/whatif.js?v=1.65.0" defer></script>
+<script src="/traceroute.js?v=1.65.0" defer></script>
+<script src="/graph.js?v=1.65.0" defer></script>
+<script src="/live.js?v=1.65.0" defer></script>
+<script src="/bulk.js?v=1.65.0" defer></script>
+<script src="/irr.js?v=1.65.0" defer></script>
+<script src="/valley.js?v=1.65.0" defer></script>
+<script src="/recent.js?v=1.65.0" defer></script>
+<script src="/peek.js?v=1.65.0" defer></script>
+<script src="/share.js?v=1.65.0" defer></script>
+<script src="/app.js?v=1.65.0" defer></script>
+<script src="/status-checks.js?v=1.65.0" defer></script>
+<script src="/asnames.js?v=1.65.0" defer></script>
+<script src="/footer.js?v=1.65.0" defer></script>
+</head>
+<body>
+<a class="skip" href="#main">Skip to main content</a>
+<header class="wrap masthead">
+  <div class="top">
+    <h1><a class="homelink" href="/"><img class="brand" src="/img/logo-mark.svg?v=1.65.0" alt="" width="40" height="40"><span>ASPA Explorer</span></a></h1>
+    <nav class="topnav" aria-label="Main"><a href="/network.html" aria-current="page">My network</a><a href="/statistics.html">State of ASPA</a><a href="/incidents.html">Right now</a><a class="minor" href="/guide.html">Guide</a><a class="minor" href="/api.html">API</a><a class="minor" href="/status.html">Status</a></nav>
+  </div>
+  <p class="meta" id="meta"><span class="busy">Loading data</span></p>
+</header>
+
+<main class="wrap" id="main" tabindex="-1">
+  <section class="card tools" id="tools" aria-labelledby="tools-title">
+    <h2 id="tools-title" class="hero-title">My network</h2>
+    <p class="hero-sub">Look up an AS, check an AS path, or check the routes seen in BGP. To write or fix an ASPA, see the <a href="/examples.html">examples</a>.</p>
+    <div class="tabs" role="tablist" aria-label="Tools" data-group="tool">
+      <button type="button" role="tab" class="tab" id="tab-lookup" aria-controls="panel-lookup" aria-selected="true" tabindex="0">Look up an AS</button>
+      <button type="button" role="tab" class="tab" id="tab-path" aria-controls="panel-path" aria-selected="false" tabindex="-1">Check an AS path</button>
+      <button type="button" role="tab" class="tab" id="tab-routes" aria-controls="panel-routes" aria-selected="false" tabindex="-1">Routes seen in BGP</button>
+    </div>
+    <details class="recent" id="recent" hidden>
+      <summary>Recent checks <span id="recent-count"></span></summary>
+      <div class="recent-body">
+        <ul class="plain" id="recent-list"></ul>
+        <p class="hint">The ASes and paths that you checked lately, with what is different now. They are kept in this browser only (its local storage): nothing is sent anywhere, and nobody else sees them. <button type="button" class="linkish" id="recent-clear">Clear the list</button></p>
+      </div>
+    </details>
+    <div role="tabpanel" class="tabpanel" id="panel-lookup" aria-labelledby="tab-lookup">
+      <form id="lookup" autocomplete="off">
+        <label id="lookup-title" for="asn">Autonomous system</label>
+        <div class="field">
+          <input id="asn" name="asn" type="text" inputmode="text" spellcheck="false" placeholder="AS number, e.g. AS680" aria-describedby="lookup-hint">
+          <button type="submit">Look up</button>
+        </div>
+        <p class="hint" id="lookup-hint">Shows the AS's own ASPA and every ASPA that names it as a provider. Try
+          <a href="#AS680">AS680</a>, <a href="#AS12779">AS12779</a>, <a href="#AS1299">AS1299</a> or <a href="#AS6939">AS6939</a>.</p>
+      </form>
+      <div id="result" aria-live="polite"></div>
+    </div>
+    <div role="tabpanel" class="tabpanel" id="panel-path" aria-labelledby="tab-path" hidden>
+      <form id="pathform" autocomplete="off">
+        <label for="aspath">AS path, as your router shows it (neighbour first, origin last)</label>
+        <div class="field">
+          <input id="aspath" name="aspath" type="text" inputmode="text" spellcheck="false" placeholder="e.g. 3356 1299 680" aria-describedby="path-hint">
+        </div>
+        <div class="field">
+          <label for="from" class="inline">The route comes from</label>
+          <select id="from" name="from">
+            <option value="down">a provider (downstream check)</option>
+            <option value="up">a customer or a peer (upstream check)</option>
+          </select>
+          <button type="submit">Check path</button>
+        </div>
+        <p class="hint" id="path-hint">Applies the ASPA verification procedure of the IETF draft to the ASPA objects listed on this page. Try
+          <a href="#path=3356+680&amp;from=up">3356 680</a> or read <a href="/guide.html#path-check" target="_blank" rel="noopener">how it works<span class="sr-only"> (opens in a new tab)</span></a>.</p>
+      </form>
+      <div id="pathresult" aria-live="polite"></div>
+      <details class="embed" id="bulk">
+        <summary>Check many paths at once</summary>
+        <p class="hint">One path on each line, as your router prints them (neighbour first, origin last); a prefix in front of the path is kept in the table. Empty lines and lines that start with # are skipped; up to 5,000 lines.</p>
+        <form id="bulkform" autocomplete="off">
+          <label for="bulktext" class="sr-only">AS paths, one on each line</label>
+          <textarea id="bulktext" rows="8" spellcheck="false" placeholder="3356 1299 680&#10;193.0.0.0/21 3333 1299 680"></textarea>
+          <div class="field">
+            <label for="bulkfrom" class="inline">The routes come from</label>
+            <select id="bulkfrom" name="bulkfrom">
+              <option value="down">a provider (downstream check)</option>
+              <option value="up">a customer or a peer (upstream check)</option>
+            </select>
+            <button type="submit">Check all</button>
+          </div>
+        </form>
+        <div id="bulkresult" aria-live="polite"></div>
+      </details>
+    </div>
+    <div role="tabpanel" class="tabpanel" id="panel-routes" aria-labelledby="tab-routes" hidden>
+      <form id="liveform" autocomplete="off">
+        <label for="liveq">A prefix, an address or an AS number</label>
+        <div class="field">
+          <input id="liveq" name="liveq" type="text" inputmode="text" spellcheck="false" placeholder="e.g. 193.0.0.0/21 or AS3333" aria-describedby="live-hint">
+          <button type="submit">Check routes</button>
+        </div>
+        <p class="hint" id="live-hint">Fetches the routes that the RIPE RIS route collectors saw at the last reading of RIPEstat (a snapshot, whose age is shown), checks each prefix and origin against the ROAs, and applies the ASPA verification to every distinct AS path. For an AS, the routes it originates; for an address, the routes of the most specific prefix that covers it. Try
+          <a href="#routes=193.0.0.0%2F21">193.0.0.0/21</a> or <a href="#routes=AS3333">AS3333</a>.</p>
+      </form>
+      <div id="liveresult" aria-live="polite"></div>
+    </div>
+  </section>
+
+</main>
+
+<footer class="wrap foot">
+  <p>Data: Routinator, refreshed about every 10 minutes. Raw JSON: <a href="https://rpki.ping6.it/jsonext?exclude=routeOrigins,routerKeys" target="_blank" rel="noopener">jsonext<span class="sr-only"> (opens in a new tab)</span></a> · <a href="https://rpki.ping6.it/json?exclude=routeOrigins,routerKeys" target="_blank" rel="noopener">json<span class="sr-only"> (opens in a new tab)</span></a>.</p>
+</footer>
+
+</body>
+</html>

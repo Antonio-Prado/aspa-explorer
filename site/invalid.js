@@ -44,7 +44,7 @@
     table($('inv-share'), d.by_share.slice(0, TOP),
       (r) => el('tr', {}, el('td', {}, chip(r.asn)), n(`${r.share}%`), n(fmt.format(r.invalid)), n(fmt.format(r.announcements)), n(fmt.format(r.prefixes))));
     table($('inv-prefixes'), d.prefixes.slice(0, TOP),
-      (r) => el('tr', {}, el('td', {}, el('a', { class: 'aslink mono', href: `/#routes=${encodeURIComponent(r.prefix)}`, text: r.prefix })), el('td', {}, chip(r.origin)), n(fmt.format(r.invalid))));
+      (r) => el('tr', {}, el('td', {}, el('a', { class: 'aslink mono', href: `/network.html#routes=${encodeURIComponent(r.prefix)}`, text: r.prefix })), el('td', {}, chip(r.origin)), n(fmt.format(r.invalid))));
     $('inv-note').textContent = `Invalid means that the ASPAs prove a valley in the path of the announcement: ${pct(p.invalid, p.announcements, 2)} of what was read. An origin with few announcements can have a high share: the second table only counts those with at least 100. Most announcements are unknown because most networks have no ASPA yet, so the valid share is low by construction. One origin can show up here for a single bad path that many collectors repeat.`;
   }
   main();
