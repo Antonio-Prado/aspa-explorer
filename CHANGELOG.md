@@ -9,6 +9,11 @@ A few numbers were deployed and folded into the next release without a tag of th
 
 ## [Unreleased]
 
+## [1.63.2] - 2026-11-10
+
+### Fixed
+- The notifier still sent a high RTR anomaly for an ordinary churn: 23 VRPs withdrawn in one sync of the public cache of DaKnObNET in Zurich, against a usual 2, scored 7 deviations. The counts now have a floor as the times do: a thousand VRPs or twenty ASPAs announced or withdrawn in one sync (about 0.1% of the VRPs and 0.5% of the ASPAs).
+
 ## [1.63.1] - 2026-11-10
 
 ### Fixed

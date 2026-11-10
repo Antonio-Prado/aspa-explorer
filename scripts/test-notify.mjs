@@ -1136,6 +1136,11 @@ await test('rtr: a statistical anomaly is told only above its median and, for th
   const vrp = { at: fort.at, severity: 'high', category: 'statistical', trigger: 'vrp_announced', z: { vrp_announced: 161.2 }, raw: { vrp_announced: 1200 } };
   assert.equal(worthTelling(vrp), vrp);
   assert.equal(worthTelling({ ...vrp, z: { vrp_announced: -7 } }), null);                                    // fewer changes than usual: no fault
+  // DaKnObNET Zurich on 2026-11-10: 23 VRPs withdrawn against a median of 2, an ordinary churn
+  assert.equal(worthTelling({ at: fort.at, severity: 'high', category: 'statistical', trigger: 'vrp_withdrawn', z: { vrp_withdrawn: 7.1 }, raw: { vrp_announced: 23, vrp_withdrawn: 23 } }), null);
+  assert.equal(worthTelling({ ...vrp, trigger: 'aspa_withdrawn', z: { aspa_withdrawn: 9 }, raw: { aspa_withdrawn: 5 } }), null);
+  const aspas = { ...vrp, trigger: 'aspa_withdrawn', z: { aspa_withdrawn: 90 }, raw: { aspa_withdrawn: 400 } };
+  assert.equal(worthTelling(aspas), aspas);                                                                 // a tenth of the ASPAs gone at once
   const reset = { at: fort.at, severity: 'high', category: 'structural', trigger: 'reset' };
   assert.equal(worthTelling(reset), reset);                                                                 // the session itself: always told
   const saved = watchRtr({ anomalies: { list: [] } }, null).saved;
@@ -1144,7 +1149,7 @@ await test('rtr: a statistical anomaly is told only above its median and, for th
 });
 
 await test('rtr: the first poll takes note, a new anomaly is announced once, an old one never', () => {
-  const a1 = { at: '2026-11-09T14:00:00Z', severity: 'medium', category: 'statistical', trigger: 'correlated', z: { vrp_announced: 3.6, sync_duration_ns: 3.9 }, raw: { vrp_announced: 300, sync_duration_ns: 31000000000 } };
+  const a1 = { at: '2026-11-09T14:00:00Z', severity: 'medium', category: 'statistical', trigger: 'correlated', z: { vrp_announced: 3.6, sync_duration_ns: 3.9 }, raw: { vrp_announced: 3000, sync_duration_ns: 31000000000 } };
   const a2 = { at: '2026-11-09T15:00:00Z', severity: 'high', category: 'statistical', trigger: 'vrp_announced', z: { vrp_announced: 161.2 }, raw: { vrp_announced: 1200 } };
   const first = watchRtr({ anomalies: { list: [a1] } }, null);
   assert.deepEqual(first.events, []);

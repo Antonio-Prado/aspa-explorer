@@ -16,9 +16,11 @@ const at = (a) => Date.parse(a && a.at);
 
 // A statistical anomaly is told only when it means something for a router. RAVEN 0.4.0 scores both tails, and a cache that syncs every
 // 600 s to the millisecond has a deviation near zero, so a sync 9 s after the previous one (a Serial Notify) scores -90000 and one of
-// 0.7 s scores 341: neither is a fault. A measure counts only above its median (z > 0) and, for the times, above a floor that a fault
-// would cross: a gap of half an hour between syncs, a sync of 10 s. A correlated anomaly needs two measures that count.
-export const FLOOR = { interval_since_ns: 1800e9, sync_duration_ns: 10e9 };
+// 0.7 s scores 341: neither is a fault. The counts have the same trouble: a cache that changes 2 VRPs in a usual sync scores 7 for 23,
+// an ordinary churn out of a million. A measure counts only above its median (z > 0) and above a floor that a fault would cross: a gap
+// of half an hour between syncs, a sync of 10 s, a thousand VRPs or twenty ASPAs announced or withdrawn in one sync (about 0.1% of the
+// VRPs and 0.5% of the ASPAs). A correlated anomaly needs two measures that count.
+export const FLOOR = { interval_since_ns: 1800e9, sync_duration_ns: 10e9, vrp_announced: 1000, vrp_withdrawn: 1000, aspa_announced: 20, aspa_withdrawn: 20 };
 function counts(a, k) {
   const z = a.z && a.z[k], v = a.raw && a.raw[k];
   return Number.isFinite(z) && z > 0 && (!(k in FLOOR) || (Number.isFinite(v) && v >= FLOOR[k]));
