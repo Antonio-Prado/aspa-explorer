@@ -9,6 +9,11 @@ A few numbers were deployed and folded into the next release without a tag of th
 
 ## [Unreleased]
 
+## [1.62.4] - 2026-11-10
+
+### Fixed
+- The notifier sent a high RTR anomaly every ten or twenty minutes for Fort, which was working: a cache that syncs every 600 s to the millisecond gives RAVEN 0.4.0 a deviation near zero, so a sync 9 s after the previous one (after a Serial Notify) scored -90000 deviations and a sync of 0.7 s scored 341. A statistical anomaly is now told only when a measure is above its median and, for the times, above a floor that a fault would cross (half an hour between syncs, a sync of 10 s); a correlated anomaly needs two such measures, and the message names the one that counts. The statistics page still lists every anomaly that RAVEN writes.
+
 ## [1.62.3] - 2026-11-09
 
 ### Fixed

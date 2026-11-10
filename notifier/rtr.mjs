@@ -14,6 +14,29 @@ export const MAX_LINES = 10;
 
 const at = (a) => Date.parse(a && a.at);
 
+// A statistical anomaly is told only when it means something for a router. RAVEN 0.4.0 scores both tails, and a cache that syncs every
+// 600 s to the millisecond has a deviation near zero, so a sync 9 s after the previous one (a Serial Notify) scores -90000 and one of
+// 0.7 s scores 341: neither is a fault. A measure counts only above its median (z > 0) and, for the times, above a floor that a fault
+// would cross: a gap of half an hour between syncs, a sync of 10 s. A correlated anomaly needs two measures that count.
+export const FLOOR = { interval_since_ns: 1800e9, sync_duration_ns: 10e9 };
+function counts(a, k) {
+  const z = a.z && a.z[k], v = a.raw && a.raw[k];
+  return Number.isFinite(z) && z > 0 && (!(k in FLOOR) || (Number.isFinite(v) && v >= FLOOR[k]));
+}
+// the anomaly as it should be told (its trigger the strongest measure that counts), or null when it is not worth a message
+export function worthTelling(a) {
+  if (!a || a.category !== 'statistical') return a;
+  const z = a.z && typeof a.z === 'object' ? a.z : {};
+  const keep = Object.keys(z).filter((k) => counts(a, k)).sort((x, y) => z[y] - z[x]);
+  if (a.trigger === 'correlated') return keep.length >= 2 ? a : null;
+  if (!keep.length) {
+    // an anomaly without z scores (an older file) is judged on its trigger's value alone
+    const v = a.raw && a.raw[a.trigger];
+    return !Object.keys(z).length && (!(a.trigger in FLOOR) || (Number.isFinite(v) && v >= FLOOR[a.trigger])) ? a : null;
+  }
+  return keep.includes(a.trigger) ? a : { ...a, trigger: keep[0] };
+}
+
 // doc: rtr.json, with its `caches` (or the single cache of its top level); saved: what this function returned the previous time (null
 // the first time, which only takes note). Returns {events, saved}: the anomalies newer than the newest seen before on their cache,
 // oldest first, each with the `cache` it belongs to; `saved.last` keeps the newest time seen for each cache id.
@@ -28,7 +51,10 @@ export function watchRtr(doc, saved) {
     const list = c.anomalies && Array.isArray(c.anomalies.list) ? c.anomalies.list.filter((a) => Number.isFinite(at(a))) : [];
     const newest = list.reduce((m, a) => Math.max(m, at(a)), 0);
     const seen = old && Number.isFinite(old[c.id]) ? old[c.id] : null;
-    if (seen !== null) for (const a of list) if (at(a) > seen) events.push({ ...a, cache: c.name || c.id, cache_id: c.id });
+    if (seen !== null) for (const a of list) {
+      const t = at(a) > seen ? worthTelling(a) : null;
+      if (t) events.push({ ...t, cache: c.name || c.id, cache_id: c.id });
+    }
     next[c.id] = seen === null ? newest : Math.max(seen, newest);
     // the serial that stops advancing while the cache answers (and its recovery): the builder says so, the first poll only takes note.
     // The stall is told once for each serial that stalls (`since`): a session that drops and comes back with the same serial is the

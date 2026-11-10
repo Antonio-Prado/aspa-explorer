@@ -15,7 +15,7 @@ import { makeApi, httpHandler, parseAsn, limiter, clientKey } from '../notifier/
 import { dueInvalid, describeInvalid, COOLDOWN } from '../notifier/invalid.mjs';
 import { checkReport, shell, headTags, newId, ID_RE, LIMITS, legacyIdOk, LEGACY_ID_UNTIL } from '../notifier/reports.mjs';
 import { watchStatus, describeStatusEvent, statusSubject, MONITOR } from '../notifier/status.mjs';
-import { watchRtr, describeRtrEvent, describeRtrEvents, rtrSubject, MAX_LINES } from '../notifier/rtr.mjs';
+import { watchRtr, describeRtrEvent, describeRtrEvents, rtrSubject, MAX_LINES, worthTelling } from '../notifier/rtr.mjs';
 
 let passed = 0;
 const test = async (name, fn) => { await fn(); passed++; console.log('ok  ', name); };
@@ -1123,8 +1123,28 @@ await test('mail: no header value can carry a line break, whatever the configura
   for (const [, v] of m.headers) assert.ok(!/[\r\n]/.test(v), v);
 });
 
+await test('rtr: a statistical anomaly is told only above its median and, for the times, above a floor a fault would cross', () => {
+  // Fort on 2026-11-10: a sync 9 s after the previous one, of 0.7 s, against a baseline of 600 s to the millisecond
+  const fort = { at: '2026-11-10T07:48:54Z', severity: 'high', category: 'statistical', trigger: 'interval_since_ns', z: { interval_since_ns: -90638.4, sync_duration_ns: 341.5 }, raw: { interval_since_ns: 8906063216, sync_duration_ns: 738510280, vrp_announced: 783 } };
+  assert.equal(worthTelling(fort), null);
+  assert.equal(worthTelling({ ...fort, z: { interval_since_ns: 8.1 }, raw: { interval_since_ns: 600e9 } }), null);   // 600 s: the usual refresh
+  const gap = { ...fort, z: { interval_since_ns: 40 }, raw: { interval_since_ns: 3600e9 } };
+  assert.equal(worthTelling(gap), gap);                                                                     // an hour without a sync
+  const slow = worthTelling({ ...fort, z: { interval_since_ns: -5, sync_duration_ns: 50 }, raw: { interval_since_ns: 300e9, sync_duration_ns: 45e9 } });
+  assert.equal(slow.trigger, 'sync_duration_ns');                                                           // told on the measure that counts
+  assert.equal(worthTelling({ ...fort, trigger: 'correlated', severity: 'medium', z: { vrp_announced: 3.6, sync_duration_ns: 3.9 }, raw: { vrp_announced: 300, sync_duration_ns: 3e9 } }), null);
+  const vrp = { at: fort.at, severity: 'high', category: 'statistical', trigger: 'vrp_announced', z: { vrp_announced: 161.2 }, raw: { vrp_announced: 1200 } };
+  assert.equal(worthTelling(vrp), vrp);
+  assert.equal(worthTelling({ ...vrp, z: { vrp_announced: -7 } }), null);                                    // fewer changes than usual: no fault
+  const reset = { at: fort.at, severity: 'high', category: 'structural', trigger: 'reset' };
+  assert.equal(worthTelling(reset), reset);                                                                 // the session itself: always told
+  const saved = watchRtr({ anomalies: { list: [] } }, null).saved;
+  assert.deepEqual(watchRtr({ anomalies: { list: [fort] } }, saved).events, []);
+  assert.equal(watchRtr({ anomalies: { list: [fort] } }, saved).saved.last.routinator, Date.parse(fort.at)); // not told, but seen
+});
+
 await test('rtr: the first poll takes note, a new anomaly is announced once, an old one never', () => {
-  const a1 = { at: '2026-11-09T14:00:00Z', severity: 'medium', category: 'statistical', trigger: 'correlated', z: { vrp_announced: 3.6, sync_duration_ns: 3.9 }, raw: { vrp_announced: 300, sync_duration_ns: 3100000000 } };
+  const a1 = { at: '2026-11-09T14:00:00Z', severity: 'medium', category: 'statistical', trigger: 'correlated', z: { vrp_announced: 3.6, sync_duration_ns: 3.9 }, raw: { vrp_announced: 300, sync_duration_ns: 31000000000 } };
   const a2 = { at: '2026-11-09T15:00:00Z', severity: 'high', category: 'statistical', trigger: 'vrp_announced', z: { vrp_announced: 161.2 }, raw: { vrp_announced: 1200 } };
   const first = watchRtr({ anomalies: { list: [a1] } }, null);
   assert.deepEqual(first.events, []);
