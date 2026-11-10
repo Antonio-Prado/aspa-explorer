@@ -1,11 +1,11 @@
 'use strict';
 
 // The "Validators compared" section of the statistics page: /api/v1/validators.json, built every hour by
-// scripts/build-validators.mjs from the ASPAs of this site's Routinator and of two rpki-client validators.
+// scripts/build-validators.mjs from the ASPAs of the two validators of this site, Routinator and Fort, and of two rpki-client validators.
 (function () {
   const $ = (id) => document.getElementById(id);
   const fmt = new Intl.NumberFormat('en-US');
-  const SHORT = { routinator: 'Routinator (this site)', 'rpki-client': 'rpki-client', cloudflare: 'Cloudflare' };
+  const SHORT = { routinator: 'Routinator (this site)', fort: 'Fort (this site)', 'rpki-client': 'rpki-client', cloudflare: 'Cloudflare' };
 
   function el(tag, attrs, ...kids) {
     const n = document.createElement(tag);
@@ -35,7 +35,9 @@
       return;
     }
     const ids = d.sources.map((s) => s.id);
-    $('val-sub').textContent = `The ASPAs of ${d.sources.length} validators, read ${when(d.generated)}: this site's Routinator (NLnet Labs), rpki-client (OpenBSD, the console of the project) and the rpki-client that Cloudflare runs. Of ${fmt.format(d.customers)} customers, ${fmt.format(d.identical)} have the same providers in all of them.`;
+    const WHO = { routinator: "this site's Routinator (NLnet Labs)", fort: "this site's Fort (NIC México)", 'rpki-client': 'rpki-client (OpenBSD, the console of the project)', cloudflare: 'the rpki-client that Cloudflare runs' };
+    const who = ids.map((id) => WHO[id] || id);
+    $('val-sub').textContent = `The ASPAs of ${d.sources.length} validators, read ${when(d.generated)}: ${who.slice(0, -1).join(', ')} and ${who[who.length - 1]}. Of ${fmt.format(d.customers)} customers, ${fmt.format(d.identical)} have the same providers in all of them.`;
     $('val-tiles').replaceChildren(...d.sources.map((s) => el('div', { class: 'tile card' },
       el('div', { class: 'label', text: SHORT[s.id] || s.name }),
       el('div', { class: 'value', text: s.count === null ? '–' : fmt.format(s.count) }),
@@ -51,10 +53,10 @@
     $('val-rows').replaceChildren(...(d.differences.length ? d.differences.slice(0, 30).map((x) => el('tr', {},
       el('td', {}, el('a', { class: 'chip', href: `/as/${x.customer}`, text: x.customer })),
       ...ids.map((id) => el('td', {}, list(x.providers[id]))),
-      el('td', { text: note(x) }))) : [el('tr', {}, el('td', { colspan: String(ids.length + 2), text: 'None: the three agree.' }))]));
+      el('td', { text: note(x) }))) : [el('tr', {}, el('td', { colspan: String(ids.length + 2), text: 'None: they all agree.' }))]));
     $('val-head').replaceChildren(head);
     const pairs = d.pairs.map((p) => `${SHORT[p.a] || p.a} and ${SHORT[p.b] || p.b}: ${fmt.format(p.both)} in both, ${fmt.format(p.only_a)} only in the first, ${fmt.format(p.only_b)} only in the second, ${fmt.format(p.differ)} with other providers`).join('; ');
-    $('val-note').textContent = `${fmt.format(d.differences_total)} differ${d.differences_total > 30 ? ' (the first 30 are listed)' : ''}. By pair: ${pairs}. The three read the same repositories at different moments and each may reject objects that the others accept, so a few differences are normal; a difference that lasts is worth a report to the validator.`;
+    $('val-note').textContent = `${fmt.format(d.differences_total)} differ${d.differences_total > 30 ? ' (the first 30 are listed)' : ''}. By pair: ${pairs}. The validators read the same repositories at different moments and each may reject objects that the others accept, so a few differences are normal; a difference that lasts is worth a report to the validator.`;
   }
   main();
 })();

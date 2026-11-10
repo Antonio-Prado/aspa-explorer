@@ -1,0 +1,31 @@
+# nginx on the host of the validators: serves the ASPAs that Fort writes (output.aspa in fort-config.json) to the host of
+# the site, which compares them with the other validators and publishes them. Install as /usr/local/etc/nginx/nginx.conf
+# on that host. The port is open to the host of the site only (pf), as the API of Routinator; the certificate is the one
+# of Routinator, and the script that installs it on renewal must reload nginx too.
+user www;
+worker_processes 1;
+error_log /var/log/nginx/error.log warn;
+
+events { worker_connections 64; }
+
+http {
+    server_tokens off;
+    access_log off;
+    sendfile on;
+    types { application/json json; }
+    default_type application/octet-stream;
+
+    server {
+        listen 147.162.96.12:8324 ssl;
+        server_name rpki.ping6.it;
+        ssl_certificate /usr/local/etc/routinator/tls/fullchain.pem;
+        ssl_certificate_key /usr/local/etc/routinator/tls/key.pem;
+        ssl_protocols TLSv1.3;
+
+        location = /fort/aspa.json {
+            alias /var/db/fort/output/aspa.json;
+            add_header Cache-Control "no-cache" always;
+        }
+        location / { return 404; }
+    }
+}

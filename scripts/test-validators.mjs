@@ -1,6 +1,6 @@
 // Unit tests for scripts/build-validators.mjs (no dependencies). Run with: node scripts/test-validators.mjs
 import assert from 'node:assert/strict';
-import { extractArray, normalise, compare } from './build-validators.mjs';
+import { extractArray, normalise, compare, fortList, SOURCES } from './build-validators.mjs';
 
 let passed = 0;
 const test = (name, fn) => { fn(); passed++; console.log('ok  ', name); };
@@ -36,6 +36,15 @@ test('three validators: identical ASPAs, ones that only some have, and different
   assert.deepEqual(z.differences.map((d) => [d.customer, d.as0]), [['AS7', true]]);   // AS0 with another provider; AS0 alone is fine
   const rc = r.pairs.find((p) => p.a === 'r' && p.b === 'c');
   assert.deepEqual([rc.both, rc.only_a, rc.only_b, rc.differ], [3, 1, 0, 1]);
+});
+
+test('the ASPAs of Fort: an object by customer, read as the ones of rpki-client', () => {
+  const list = fortList({ aspa: { 174: [0], 266: [57974, 34927], x: [1], 300: 'bad' } });
+  assert.deepEqual(list, [{ customer_asid: 174, providers: [0] }, { customer_asid: 266, providers: [57974, 34927] }]);
+  assert.deepEqual(normalise(list).get(266), [34927, 57974]);
+  assert.throws(() => fortList({ roas: [] }), /no "aspa"/);
+  assert.throws(() => fortList(null), /no "aspa"/);
+  assert.deepEqual(SOURCES.map((s) => s.id), ['routinator', 'fort', 'rpki-client', 'cloudflare']);
 });
 
 console.log(`${passed} tests passed`);

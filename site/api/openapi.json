@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "ASPA Explorer API",
-    "version": "1.5.1",
+    "version": "1.5.2",
     "description": "ASPA objects validated by Routinator at rpki.ping6.it, their history and quality, for any AS. Open data, read-only, no key.",
     "contact": {
       "email": "antonio.prado@dei.unipd.it"
@@ -813,8 +813,8 @@
     },
     "/api/v1/validators.json": {
       "get": {
-        "summary": "The ASPAs of three validators compared",
-        "description": "Every hour: this site's Routinator, rpki-client (the console of the project) and the rpki-client of Cloudflare (scripts/build-validators.mjs).",
+        "summary": "The ASPAs of four validators compared",
+        "description": "Every hour: the two validators of this site, Routinator and Fort, rpki-client (the console of the project) and the rpki-client of Cloudflare (scripts/build-validators.mjs).",
         "responses": {
           "200": {
             "description": "The file",
@@ -912,6 +912,27 @@
                     }
                   },
                   "additionalProperties": true
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/fort-aspa.json": {
+      "get": {
+        "summary": "The ASPAs of the Fort of this site",
+        "description": "Fort's own output (output.aspa), as it writes it, copied every hour by scripts/build-validators.mjs: Fort has no web interface of its own.",
+        "responses": {
+          "200": {
+            "description": "The file: an object keyed by customer AS number, each with the list of its provider AS numbers",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "aspa": { "type": "object", "additionalProperties": { "type": "array", "items": { "type": "integer" } } }
+                  }
                 }
               }
             }

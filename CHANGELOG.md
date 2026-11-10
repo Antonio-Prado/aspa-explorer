@@ -9,6 +9,14 @@ A few numbers were deployed and folded into the next release without a tag of th
 
 ## [Unreleased]
 
+## [1.63.0] - 2026-11-10
+
+### Added
+- Fort, the second validator of the site, is the fourth validator of *Validators compared*: every hour its ASPAs are set next to the ones of Routinator, of rpki-client and of the rpki-client of Cloudflare, in the tiles, in the table of the differences and in the agreement of each pair. Fort has no web interface of its own, so the ASPAs it writes are also published as they are, as `/api/v1/fort-aspa.json` (OpenAPI 1.5.2). On the host of the validators a small nginx serves them to the host of the site only.
+
+### Changed
+- The home page says that a second validator, Fort, reads the same repositories and is compared every hour; the guide, the API page, the README and the description of the dataset speak of four validators.
+
 ## [1.62.5] - 2026-11-10
 
 ### Changed

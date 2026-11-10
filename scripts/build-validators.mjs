@@ -1,13 +1,15 @@
-// The ASPAs of three validators side by side: this site's Routinator, rpki-client (the console of the project)
-// and the one that Cloudflare runs (also rpki-client). Their exports are about 100 MB each, but the ASPAs are in
-// the last few kilobytes, so only the head and the tail of each file are fetched. Written as one JSON file
-// (served as /api/v1/validators.json).
+// The ASPAs of four validators side by side: the two of this site, Routinator and Fort, rpki-client (the console of
+// the project) and the one that Cloudflare runs (also rpki-client). The exports of rpki-client are about 100 MB each,
+// but the ASPAs are in the last few kilobytes, so only the head and the tail of each file are fetched. Written as one
+// JSON file (served as /api/v1/validators.json); the ASPAs of Fort, which has no web interface of its own, are also
+// copied as they are next to it (fort-aspa.json, served as /api/v1/fort-aspa.json).
 //
 //   node scripts/build-validators.mjs OUT_FILE
 //
-// Environment: ASPA_DATA, the URL or file of Routinator's jsonext (default http://127.0.0.1:8080/data/aspas.json).
+// Environment: ASPA_DATA, the URL or file of Routinator's jsonext (default http://127.0.0.1:8080/data/aspas.json);
+// FORT_ASPA, the URL or file of Fort's output.aspa (default https://rpki.ping6.it:8324/fort/aspa.json, open to this host only).
 import { readFile, writeFile, rename } from 'node:fs/promises';
-import { join } from 'node:path';
+import { join, dirname } from 'node:path';
 import net from 'node:net';
 
 if (net.setDefaultAutoSelectFamilyAttemptTimeout) net.setDefaultAutoSelectFamilyAttemptTimeout(3000);
@@ -15,6 +17,7 @@ const UA = 'aspa-explorer (https://aspa.ping6.it; antonio.prado@dei.unipd.it)';
 
 export const SOURCES = [
   { id: 'routinator', name: 'Routinator (this site)', url: 'https://rpki.ping6.it/' },
+  { id: 'fort', name: 'Fort (this site)', url: 'https://aspa.ping6.it/api/v1/fort-aspa.json' },
   { id: 'rpki-client', name: 'rpki-client (console.rpki-client.org)', url: 'https://console.rpki-client.org/rpki.json' },
   { id: 'cloudflare', name: 'rpki-client (Cloudflare)', url: 'https://rpki.cloudflare.com/rpki.json' },
 ];
@@ -101,6 +104,20 @@ async function fetchRpkiClient(url) {
   throw new Error(`${url}: the ASPAs were not found in the file`);
 }
 
+// Fort's output.aspa: {"aspa": {"<customer>": [providers]}}, as a list of rpki-client's objects. Its time is the one of the file.
+export function fortList(doc) {
+  const m = doc && doc.aspa && typeof doc.aspa === 'object' ? doc.aspa : null;
+  if (!m) throw new Error('no "aspa" object in the file');
+  return Object.entries(m).filter(([c, ps]) => /^\d+$/.test(c) && Array.isArray(ps)).map(([c, ps]) => ({ customer_asid: Number(c), providers: ps.map(Number).filter(Number.isFinite) }));
+}
+
+async function fetchFort(src) {
+  if (!/^https?:/.test(src)) return { text: await readFile(src, 'utf8'), built: null };
+  const r = await get(src);
+  const lm = Date.parse(r.headers.get('last-modified') || '');
+  return { text: await r.text(), built: Number.isFinite(lm) ? new Date(lm).toISOString().replace(/\.\d+Z$/, 'Z') : null };
+}
+
 async function main() {
   const out = process.argv[2];
   if (!out) { console.error('usage: build-validators.mjs OUT_FILE'); process.exit(2); }
@@ -108,7 +125,16 @@ async function main() {
   const ours = /^https?:/.test(dataUrl) ? await (await get(dataUrl)).json() : JSON.parse(await readFile(dataUrl, 'utf8'));
   const sets = { routinator: normalise(ours.aspas || []) };
   const sources = [{ id: 'routinator', name: SOURCES[0].name, built: (ours.metadata && ours.metadata.generatedTime) || null, count: sets.routinator.size, failed: null }];
-  for (const s of SOURCES.slice(1)) {
+  const fortSrc = process.env.FORT_ASPA || 'https://rpki.ping6.it:8324/fort/aspa.json';
+  try {
+    const f = await fetchFort(fortSrc);
+    sets.fort = normalise(fortList(JSON.parse(f.text)));
+    sources.push({ id: 'fort', name: SOURCES[1].name, built: f.built, count: sets.fort.size, failed: null });
+    const copy = join(dirname(out), 'fort-aspa.json');
+    await writeFile(`${copy}.tmp`, f.text);
+    await rename(`${copy}.tmp`, copy);
+  } catch (err) { console.error(`fort: ${err.message}`); sources.push({ id: 'fort', name: SOURCES[1].name, built: null, count: null, failed: null, error: err.message }); }
+  for (const s of SOURCES.slice(2)) {
     try {
       const x = await fetchRpkiClient(s.url);
       sets[s.id] = normalise(x.list);
