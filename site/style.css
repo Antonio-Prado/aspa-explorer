@@ -829,4 +829,8 @@ details.deeper > summary h2 { display: inline; margin: 0; font-size: 1.15rem; }
 details.deeper[open] { background: none; box-shadow: 0 0 0 1px var(--grid); }
 details.deeper[open] > summary { border-bottom: 1px solid var(--grid); margin-bottom: 0.75rem; }
 details.deeper > section { padding: 0 0.9rem 0.9rem; }
+details.deeper > summary h3 { display: inline; margin: 0; font-size: 1.05rem; }
+details.deeper > .inner { padding: 0 0.9rem 0.9rem; }
+#now-tabs { margin: 0.5rem 0 1.25rem; }
+.nowpanel > h2 { margin-top: 0.5rem; }
 .jump { margin: 0 0 1.5rem; font-size: 0.95rem; color: var(--ink-2); }

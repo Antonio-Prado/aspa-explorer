@@ -3,6 +3,17 @@
 // The Incidents page: /api/v1/incidents.json, built by scripts/build-incidents.mjs from the incidents that the detectors of
 // data_scripts (incident.py) found, with the verdict of the ASPAs on the AS paths that each incident kept.
 (function () {
+  // the method (taxonomy, coverage, the five known incidents) moved to the guide in 1.69: an old link follows it there;
+  // "How to read this" is a closed box, opened by a link to it
+  const MOVED = ['inc-tax-title', 'inc-coverage-title', 'inc-known-title'];
+  const follow = () => {
+    const h = location.hash.slice(1);
+    if (MOVED.includes(h)) { location.replace(`/guide.html#${h}`); return true; }
+    if (h === 'inc-how-title') document.addEventListener('DOMContentLoaded', () => { document.getElementById('inc-how-box').open = true; document.getElementById(h).scrollIntoView({ block: 'start' }); }, { once: true });
+    return false;
+  };
+  if (follow()) return;
+  window.addEventListener('hashchange', () => { if (!follow() && location.hash === '#inc-how-title') { document.getElementById('inc-how-box').open = true; } });
   const $ = (id) => document.getElementById(id);
   const fmt = new Intl.NumberFormat('en-US');
   const NAMES = {

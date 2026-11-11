@@ -9,6 +9,12 @@ A few numbers were deployed and folded into the next release without a tag of th
 
 ## [Unreleased]
 
+## [1.69.0] - 2026-11-11
+
+### Changed
+- *Right now* (about 16 screens long) has four tabs, one for each of its parts: the invalid announcements, the valleys of the day, the validators compared and the RTR caches. The less used tables are in closed boxes (the highest shares and the prefixes of the invalid announcements; the valleys over time and the collectors compared; the records of the RTR caches hour by hour and the session events), and the anomalies of the RTR sessions show the ten most recent first. Each tab is one to three screens. A link to a part, or to anything inside one, selects its tab and opens its box; choosing a tab puts it in the address.
+- *Incidents* keeps the numbers and the chart; "How to read this" is a closed box, and the method (the taxonomy of the incidents, which of its types the detectors observe, and the check against five known incidents) moved to the guide, under *Incidents and ASPA*. The old links to those parts lead there. The page goes from about 14 screens to under 4.
+
 ## [1.68.0] - 2026-11-10
 
 ### Changed

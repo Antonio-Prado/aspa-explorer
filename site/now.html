@@ -13,7 +13,7 @@
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="ASPA Explorer">
 <meta property="og:locale" content="en_GB">
-<meta property="og:title" content="ASPA statistics">
+<meta property="og:title" content="Right now · ASPA Explorer">
 <meta property="og:description" content="What the routes, the validators and the RTR caches show now: invalid announcements as they happen, the valleys of the day, four validators compared, and the RTR sessions as a router sees them.">
 <meta property="og:url" content="https://aspa.ping6.it/now.html">
 <meta property="og:image" content="https://aspa.ping6.it/og.png">
@@ -23,22 +23,23 @@
 <meta name="twitter:card" content="summary_large_image">
 <meta name="color-scheme" content="light dark">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
-<link rel="stylesheet" href="/style.css?v=1.68.0">
-<script src="/ui.js?v=1.68.0" defer></script>
-<script src="/leaks.js?v=1.68.0" defer></script>
-<script src="/invalid.js?v=1.68.0" defer></script>
-<script src="/validators.js?v=1.68.0" defer></script>
-<script src="/rtr.js?v=1.68.0" defer></script>
-<script src="/status-checks.js?v=1.68.0" defer></script>
-<script src="/peek.js?v=1.68.0" defer></script>
-<script src="/asnames.js?v=1.68.0" defer></script>
-<script src="/footer.js?v=1.68.0" defer></script>
+<link rel="stylesheet" href="/style.css?v=1.69.0">
+<script src="/ui.js?v=1.69.0" defer></script>
+<script src="/leaks.js?v=1.69.0" defer></script>
+<script src="/invalid.js?v=1.69.0" defer></script>
+<script src="/validators.js?v=1.69.0" defer></script>
+<script src="/rtr.js?v=1.69.0" defer></script>
+<script src="/status-checks.js?v=1.69.0" defer></script>
+<script src="/peek.js?v=1.69.0" defer></script>
+<script src="/asnames.js?v=1.69.0" defer></script>
+<script src="/now.js?v=1.69.0" defer></script>
+<script src="/footer.js?v=1.69.0" defer></script>
 </head>
 <body>
 <a class="skip" href="#main">Skip to main content</a>
 <header class="wrap masthead">
   <div class="top">
-    <p class="back"><a class="brandlink" href="/" title="Back to ASPA Explorer"><img class="brand" src="/img/logo-mark.svg?v=1.68.0" alt="" width="40" height="40"><span>ASPA Explorer</span></a></p>
+    <p class="back"><a class="brandlink" href="/" title="Back to ASPA Explorer"><img class="brand" src="/img/logo-mark.svg?v=1.69.0" alt="" width="40" height="40"><span>ASPA Explorer</span></a></p>
     <nav class="topnav" aria-label="Main"><a href="/network.html">My network</a><a href="/statistics.html">State of ASPA</a><a href="/now.html" aria-current="page">Right now</a><a class="minor" href="/guide.html">Guide</a><a class="minor" href="/api.html">API</a><a class="minor" href="/status.html">Status</a></nav>
   </div>
   <h1>Right now</h1>
@@ -46,24 +47,32 @@
 </header>
 
 <main class="wrap" id="main" tabindex="-1">
-  <nav class="jump" aria-label="On this page"><a href="#inv-title">Invalid announcements</a> · <a href="#leaks-title">Valleys today</a> · <a href="#val-title">Validators compared</a> · <a href="#rtr-title">RTR caches</a> · <a href="/incidents.html">Incidents</a></nav>
+  <nav class="jump" id="now-jump" aria-label="On this page"><a href="#inv-title">Invalid announcements</a> · <a href="#leaks-title">Valleys today</a> · <a href="#val-title">Validators compared</a> · <a href="#rtr-title">RTR caches</a></nav>
+  <div class="tabs" role="tablist" aria-label="Right now" id="now-tabs" hidden>
+    <button type="button" role="tab" class="tab" id="tab-inv" aria-controls="now-inv" aria-selected="true" tabindex="0">Invalid announcements</button>
+    <button type="button" role="tab" class="tab" id="tab-leaks" aria-controls="now-leaks" aria-selected="false" tabindex="-1">Valleys today</button>
+    <button type="button" role="tab" class="tab" id="tab-val" aria-controls="now-val" aria-selected="false" tabindex="-1">Validators compared</button>
+    <button type="button" role="tab" class="tab" id="tab-rtr" aria-controls="now-rtr" aria-selected="false" tabindex="-1">RTR caches</button>
+  </div>
 
-  <section aria-labelledby="inv-title">
+  <section class="nowpanel" id="now-inv" role="tabpanel" aria-labelledby="inv-title">
     <h2 id="inv-title">Invalid announcements, as they happen</h2>
     <p class="hint" id="inv-sub"><span class="busy">Loading</span></p>
     <div class="tiles" id="inv-tiles"></div>
     <div class="card pad"><h3 class="subhead">Share of invalid announcements, by hour</h3><div class="linechart" id="inv-chart"></div></div>
     <h3 class="subhead">Origins with the most invalid announcements</h3>
     <section class="card table-wrap" tabindex="0" aria-label="Origins with the most invalid announcements"><table class="checks live"><caption class="sr-only">The 20 origin ASes with the most invalid announcements in the days recorded (the last 14 at most)</caption><thead><tr><th scope="col">Origin</th><th scope="col" class="num">Invalid</th><th scope="col" class="num">Announcements</th><th scope="col" class="num">Share</th><th scope="col" class="num">Prefixes</th></tr></thead><tbody id="inv-origins"></tbody></table></section>
+    <details class="deeper" id="inv-more"><summary><h3>The highest shares, and the prefixes</h3></summary><div class="inner">
     <h3 class="subhead">Origins with the highest share of invalid announcements</h3>
     <section class="card table-wrap" tabindex="0" aria-label="Origins with the highest share of invalid announcements"><table class="checks live"><caption class="sr-only">The 20 origin ASes with the highest share of invalid announcements, among those with at least 100 announcements</caption><thead><tr><th scope="col">Origin</th><th scope="col" class="num">Share</th><th scope="col" class="num">Invalid</th><th scope="col" class="num">Announcements</th><th scope="col" class="num">Prefixes</th></tr></thead><tbody id="inv-share"></tbody></table></section>
     <h3 class="subhead">Prefixes with the most invalid announcements</h3>
     <section class="card table-wrap" tabindex="0" aria-label="Prefixes with the most invalid announcements"><table class="checks live"><caption class="sr-only">The 20 prefixes with the most invalid announcements in the days recorded (the last 14 at most)</caption><thead><tr><th scope="col">Prefix</th><th scope="col">Origin</th><th scope="col" class="num">Invalid</th></tr></thead><tbody id="inv-prefixes"></tbody></table></section>
+    </div></details>
     <p class="hint" id="inv-note"></p>
     <p class="hint">The report as JSON: <a href="/api/v1/invalid.json">/api/v1/invalid.json</a>.</p>
   </section>
 
-  <section aria-labelledby="leaks-title">
+  <section class="nowpanel" id="now-leaks" role="tabpanel" aria-labelledby="leaks-title">
     <h2 id="leaks-title">Valleys today</h2>
     <p class="hint" id="leaks-sub"><span class="busy">Loading</span></p>
     <div class="tiles" id="leaks-tiles"></div>
@@ -85,6 +94,7 @@
         <tbody id="gap-rows"></tbody>
       </table>
     </section>
+    <details class="deeper" id="leaks-more"><summary><h3>Over time, and collector by collector</h3></summary><div class="inner">
     <h3 class="subhead">Places of valley over time</h3>
     <ul class="legend" id="leaks-history-legend"></ul>
     <div class="linechart" id="leaks-history"></div>
@@ -105,12 +115,13 @@
     <ul class="legend" id="cmp-legend"></ul>
     <div class="barchart" id="cmp-chart"></div>
     <p class="hint" id="cmp-note"></p>
+    </div></details>
     <p class="hint" id="leaks-note"></p>
   </section>
 
 
 
-  <section aria-labelledby="val-title">
+  <section class="nowpanel" id="now-val" role="tabpanel" aria-labelledby="val-title">
     <h2 id="val-title">Validators compared</h2>
     <p class="hint" id="val-sub"><span class="busy">Loading</span></p>
     <div class="tiles" id="val-tiles"></div>
@@ -124,7 +135,7 @@
     <p class="hint" id="val-note"></p>
   </section>
 
-  <section aria-labelledby="rtr-title">
+  <section class="nowpanel" id="now-rtr" role="tabpanel" aria-labelledby="rtr-title">
     <h2 id="rtr-title">The validator as a router sees it</h2>
     <p class="hint" id="rtr-sub"><span class="busy">Loading</span></p>
     <div class="tiles live-tiles" id="rtr-tiles"></div>
@@ -137,11 +148,12 @@
         <tbody id="rtr-caches"></tbody>
       </table>
     </section>
-    <h3 class="subhead">Records held and changed, hour by hour</h3>
+    <details class="deeper" id="rtr-more"><summary><h3>Records held and changed, hour by hour</h3></summary><div class="inner">
     <div class="histctl"><label>Show <select id="rtr-metric" aria-controls="rtr-chart rtr-changes"><option value="aspa">ASPAs</option><option value="vrp">VRPs</option></select></label></div>
     <div class="linechart" id="rtr-chart"></div>
     <div class="linechart" id="rtr-changes"></div>
     <p class="hint" id="rtr-chart-note"></p>
+    </div></details>
     <h3 class="subhead">Anomalies in the stream of syncs</h3>
     <section class="card table-wrap" tabindex="0" aria-label="Table of the anomalies found in the RTR session">
       <table class="checks live">
@@ -150,7 +162,7 @@
         <tbody id="rtr-anomalies"></tbody>
       </table>
     </section>
-    <h3 class="subhead">Session events of the cache of the site</h3>
+    <details class="deeper" id="rtr-events-box"><summary><h3>Session events of the cache of the site</h3></summary><div class="inner">
     <section class="card table-wrap" tabindex="0" aria-label="Table of the events of the RTR session">
       <table class="checks live">
         <caption class="sr-only">Events of the RTR session: when, the event and its detail</caption>
@@ -158,6 +170,7 @@
         <tbody id="rtr-events"></tbody>
       </table>
     </section>
+    </div></details>
     <p class="hint" id="rtr-note"></p>
   </section>
 </main>

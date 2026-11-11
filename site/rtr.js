@@ -94,12 +94,22 @@
     const values = (a) => Object.keys(a.raw || {}).filter((k) => k === a.trigger || (a.z && Math.abs(a.z[k] || 0) >= 3)).map((k) => `${WHAT[k] || k}: ${value(k, a.raw[k])}${a.z && Number.isFinite(a.z[k]) ? ` (z ${a.z[k]})` : ''}`).join('; ');
     const allAnomalies = caches.flatMap((c) => ((c.anomalies && c.anomalies.list) || []).map((a) => ({ ...a, cache: c.name || c.id }))).sort((a, b) => Date.parse(b.at) - Date.parse(a.at)).slice(0, 50);
     const seen = caches.map((c) => `${fmt.format(c.telemetry ? c.telemetry.syncs : 0)} on ${c.name || c.id}`).join(', ');
-    $('rtr-anomalies').replaceChildren(...(allAnomalies.length ? allAnomalies.map((a) => el('tr', {},
+    // the ten most recent anomalies, then all of them on request
+    const anomalyRow = (a) => el('tr', {},
       el('td', { text: when(a.at) }),
       el('td', { text: a.cache }),
       el('td', {}, el('span', { class: `badge ${a.severity === 'high' ? 'v-invalid' : 'v-unknown'}`, text: a.severity || 'unknown' })),
       el('td', { text: `${WHAT[a.trigger] || a.trigger || 'unknown'}${a.category === 'structural' ? ' (the session itself)' : ''}` }),
-      el('td', { text: values(a) || '–' }))) : [el('tr', {}, el('td', { colspan: '5', text: `None so far. The detector says nothing before it has seen 100 syncs on a cache and compares each sync with the last 500; it has seen ${seen}.` }))]));
+      el('td', { text: values(a) || '–' }));
+    const drawAnomalies = (n) => $('rtr-anomalies').replaceChildren(...(allAnomalies.length
+      ? [...allAnomalies.slice(0, n).map(anomalyRow), ...(allAnomalies.length > n ? [el('tr', {}, el('td', { colspan: '5' }, more(allAnomalies.length)))] : [])]
+      : [el('tr', {}, el('td', { colspan: '5', text: `None so far. The detector says nothing before it has seen 100 syncs on a cache and compares each sync with the last 500; it has seen ${seen}.` }))]));
+    function more(all) {
+      const b = el('button', { type: 'button', class: 'linkish', text: `Show all ${all}` });
+      b.addEventListener('click', () => drawAnomalies(all));
+      return b;
+    }
+    drawAnomalies(10);
 
     $('rtr-events').replaceChildren(...(doc.events && doc.events.length ? doc.events.map((e) => el('tr', {},
       el('td', { text: when(e.at) }),

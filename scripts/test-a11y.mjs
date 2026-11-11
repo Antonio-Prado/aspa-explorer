@@ -104,6 +104,16 @@ for (const [name, path] of PAGES) {
           await page.evaluate(() => { for (const d of document.querySelectorAll('details.deeper')) d.open = true; });
           await page.waitForTimeout(300);
         }
+        if (name === 'now') {
+          // four tabs, each with its closed boxes: show every panel and open every box, so that axe checks all of them
+          if ((await page.locator('#now-tabs [role="tab"]').count()) !== 4) extra.push('now: the page has not 4 tabs');
+          if (await page.locator('#now-tabs').isHidden()) extra.push('now: the tabs are not shown');
+          await page.evaluate(() => {
+            for (const p of document.querySelectorAll('[role="tabpanel"]')) p.hidden = false;
+            for (const d of document.querySelectorAll('details.deeper')) d.open = true;
+          });
+          await page.waitForTimeout(300);
+        }
         if (name === 'as') {
           if (!(await page.locator('.res-verdict').count())) extra.push('as: no answer at the top of the page of the AS');
           if ((await page.locator('.as-tabs [role="tab"]').count()) !== 5) extra.push('as: the page of the AS has not 5 tabs');
