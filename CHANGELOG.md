@@ -9,6 +9,12 @@ A few numbers were deployed and folded into the next release without a tag of th
 
 ## [Unreleased]
 
+## [1.70.0] - 2026-11-11
+
+### Changed
+- The guide follows the areas of the site. Its contents are grouped as the menu is (start here, My network, State of ASPA, Right now, data and API, help), and its sections are in that order. *The home page* is new: the answer for the network of the visitor, the sentence on where ASPA stands and the table of the largest transit networks. The charts of the overview are under *The state of ASPA*. *Right now* has a section of its own for its four tabs, and the parts that it took from the statistics page moved with it. The text no longer describes the line of numbers at the top of the old home page.
+- The API page starts with a *Quick start*: one AS, the whole list and a badge, each in one line, and the OpenAPI schema. Its contents are grouped (one network, everything, rules), and the line under the title no longer speaks of "this page".
+
 ## [1.69.0] - 2026-11-11
 
 ### Changed

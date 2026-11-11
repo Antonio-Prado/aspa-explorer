@@ -337,6 +337,14 @@ td.rir { color: var(--ink-2); white-space: nowrap; }
 .toc { padding: 0.75rem 1.25rem; }
 .toc ol { margin: 0; padding-left: 1.25rem; columns: 2; column-gap: 2rem; }
 .toc li { padding: 1px 0; break-inside: avoid; }
+/* a contents grouped by the areas of the site (the guide, the API page) */
+.toc-groups { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.75rem 1.75rem; padding: 1rem 1.25rem; }
+.toc-groups .toc-g { margin: 0 0 0.25rem; font-size: 0.8rem; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; color: var(--ink-2); }
+.toc-groups ul { margin: 0; padding: 0; list-style: none; }
+.toc-groups li { padding: 2px 0; }
+.quick dt { margin-top: 0.75rem; font-weight: 600; }
+.quick dd { margin: 0.25rem 0 0; }
+.quick pre { margin: 0; }
 
 /* footer: build line and credits */
 .build { margin: 0.75rem 0 0; max-width: none; color: var(--muted); }
@@ -358,6 +366,7 @@ td.rir { color: var(--ink-2); white-space: nowrap; }
 .credits code { font-size: inherit; color: inherit; }
 @media (max-width: 760px) {
   .toc ol { columns: 1; }
+  .toc-groups { grid-template-columns: 1fr; }
 }
 
 /* accessibility helpers */
