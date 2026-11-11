@@ -56,7 +56,7 @@ const base = `http://127.0.0.1:${server.address().port}`;
 
 const PAGES = [
   ['home', '/'], ['network', '/network.html'], ['as', '/as/AS12779'], ['path', '/network.html#path=3356+12779&from=up'], ['changes', '/statistics.html#changes'], ['quality', '/statistics.html#quality'],
-  ['statistics', '/statistics.html'], ['incidents', '/incidents.html'], ['guide', '/guide.html'], ['api', '/api.html'],
+  ['statistics', '/statistics.html'], ['now', '/now.html'], ['incidents', '/incidents.html'], ['guide', '/guide.html'], ['api', '/api.html'],
   ['examples', '/examples.html'], ['embed', '/embed.html?country=IT'], ['status', '/status.html'], ['subscription', '/subscription.html#confirm=abc'],
   ['bulk', '/network.html#path=3356+12779&from=up'], ['peek', '/as/AS12779'], ['irr', '/as/AS12779'], ['valley', '/network.html#routes=AS12779'], ['ixp', '/network.html#path=12779+1200+24796&from=up'], ['recent', '/as/AS12779'], ['report', '/r/0123456789ab'],
 ];
@@ -97,6 +97,13 @@ for (const [name, path] of PAGES) {
           await page.waitForTimeout(300);
         }
         const extra = [];
+        if (name === 'statistics') {
+          // the tables under "Go deeper" are closed: open them all, so that axe checks what is in them too
+          const boxes = await page.locator('details.deeper').count();
+          if (boxes < 8) extra.push(`statistics: ${boxes} sections under Go deeper, expected 8`);
+          await page.evaluate(() => { for (const d of document.querySelectorAll('details.deeper')) d.open = true; });
+          await page.waitForTimeout(300);
+        }
         if (name === 'as') {
           if (!(await page.locator('.res-verdict').count())) extra.push('as: no answer at the top of the page of the AS');
           if ((await page.locator('.as-tabs [role="tab"]').count()) !== 5) extra.push('as: the page of the AS has not 5 tabs');

@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Right now · ASPA Explorer</title>
+<meta name="description" content="What the routes, the validators and the RTR caches show now: invalid announcements as they happen, the valleys of the day, four validators compared, and the RTR sessions as a router sees them.">
+<meta name="author" content="Antonio Prado">
+<link rel="canonical" href="https://aspa.ping6.it/now.html">
+<meta name="theme-color" content="#2a78d6">
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="apple-touch-icon" href="/img/apple-touch-icon.png">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="ASPA Explorer">
+<meta property="og:locale" content="en_GB">
+<meta property="og:title" content="ASPA statistics">
+<meta property="og:description" content="What the routes, the validators and the RTR caches show now: invalid announcements as they happen, the valleys of the day, four validators compared, and the RTR sessions as a router sees them.">
+<meta property="og:url" content="https://aspa.ping6.it/now.html">
+<meta property="og:image" content="https://aspa.ping6.it/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="ASPA Explorer: explore, check and follow the ASPA objects of the RPKI">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="color-scheme" content="light dark">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/style.css?v=1.68.0">
+<script src="/ui.js?v=1.68.0" defer></script>
+<script src="/leaks.js?v=1.68.0" defer></script>
+<script src="/invalid.js?v=1.68.0" defer></script>
+<script src="/validators.js?v=1.68.0" defer></script>
+<script src="/rtr.js?v=1.68.0" defer></script>
+<script src="/status-checks.js?v=1.68.0" defer></script>
+<script src="/peek.js?v=1.68.0" defer></script>
+<script src="/asnames.js?v=1.68.0" defer></script>
+<script src="/footer.js?v=1.68.0" defer></script>
+</head>
+<body>
+<a class="skip" href="#main">Skip to main content</a>
+<header class="wrap masthead">
+  <div class="top">
+    <p class="back"><a class="brandlink" href="/" title="Back to ASPA Explorer"><img class="brand" src="/img/logo-mark.svg?v=1.68.0" alt="" width="40" height="40"><span>ASPA Explorer</span></a></p>
+    <nav class="topnav" aria-label="Main"><a href="/network.html">My network</a><a href="/statistics.html">State of ASPA</a><a href="/now.html" aria-current="page">Right now</a><a class="minor" href="/guide.html">Guide</a><a class="minor" href="/api.html">API</a><a class="minor" href="/status.html">Status</a></nav>
+  </div>
+  <h1>Right now</h1>
+  <p class="lede">What the routes, the validators and the RTR caches show at this moment. The routing incidents of the last days, classified, are on the <a href="/incidents.html">Incidents</a> page.</p>
+</header>
+
+<main class="wrap" id="main" tabindex="-1">
+  <nav class="jump" aria-label="On this page"><a href="#inv-title">Invalid announcements</a> · <a href="#leaks-title">Valleys today</a> · <a href="#val-title">Validators compared</a> · <a href="#rtr-title">RTR caches</a> · <a href="/incidents.html">Incidents</a></nav>
+
+  <section aria-labelledby="inv-title">
+    <h2 id="inv-title">Invalid announcements, as they happen</h2>
+    <p class="hint" id="inv-sub"><span class="busy">Loading</span></p>
+    <div class="tiles" id="inv-tiles"></div>
+    <div class="card pad"><h3 class="subhead">Share of invalid announcements, by hour</h3><div class="linechart" id="inv-chart"></div></div>
+    <h3 class="subhead">Origins with the most invalid announcements</h3>
+    <section class="card table-wrap" tabindex="0" aria-label="Origins with the most invalid announcements"><table class="checks live"><caption class="sr-only">The 20 origin ASes with the most invalid announcements in the days recorded (the last 14 at most)</caption><thead><tr><th scope="col">Origin</th><th scope="col" class="num">Invalid</th><th scope="col" class="num">Announcements</th><th scope="col" class="num">Share</th><th scope="col" class="num">Prefixes</th></tr></thead><tbody id="inv-origins"></tbody></table></section>
+    <h3 class="subhead">Origins with the highest share of invalid announcements</h3>
+    <section class="card table-wrap" tabindex="0" aria-label="Origins with the highest share of invalid announcements"><table class="checks live"><caption class="sr-only">The 20 origin ASes with the highest share of invalid announcements, among those with at least 100 announcements</caption><thead><tr><th scope="col">Origin</th><th scope="col" class="num">Share</th><th scope="col" class="num">Invalid</th><th scope="col" class="num">Announcements</th><th scope="col" class="num">Prefixes</th></tr></thead><tbody id="inv-share"></tbody></table></section>
+    <h3 class="subhead">Prefixes with the most invalid announcements</h3>
+    <section class="card table-wrap" tabindex="0" aria-label="Prefixes with the most invalid announcements"><table class="checks live"><caption class="sr-only">The 20 prefixes with the most invalid announcements in the days recorded (the last 14 at most)</caption><thead><tr><th scope="col">Prefix</th><th scope="col">Origin</th><th scope="col" class="num">Invalid</th></tr></thead><tbody id="inv-prefixes"></tbody></table></section>
+    <p class="hint" id="inv-note"></p>
+    <p class="hint">The report as JSON: <a href="/api/v1/invalid.json">/api/v1/invalid.json</a>.</p>
+  </section>
+
+  <section aria-labelledby="leaks-title">
+    <h2 id="leaks-title">Valleys today</h2>
+    <p class="hint" id="leaks-sub"><span class="busy">Loading</span></p>
+    <div class="tiles" id="leaks-tiles"></div>
+    <h3 class="subhead">Valleys through a peer or a customer</h3>
+    <p class="hint">Places of valley where the first AS after the climb is, for CAIDA, a peer or a customer of the AS before it. A route may have been passed on up when it should not have been, or an ASPA or a relationship may be missing: the operators are the ones who know.</p>
+    <section class="card table-wrap" tabindex="0" aria-label="Table of the valleys through a peer or a customer">
+      <table class="checks live">
+        <caption class="sr-only">Valleys through a peer or a customer: the place of the valley, the ASes inside it, and the feeders and origins that see it</caption>
+        <thead><tr><th scope="col">Valley between</th><th scope="col">ASes in the valley</th><th scope="col">CAIDA says of the first</th><th scope="col" class="num">Routes</th><th scope="col" class="num">Feeders</th><th scope="col" class="num">Origins</th><th scope="col">Example</th></tr></thead>
+        <tbody id="leak-rows"></tbody>
+      </table>
+    </section>
+    <h3 class="subhead">ASPAs that seem to miss a provider</h3>
+    <p class="hint">Places of valley where the first AS after the climb is, for CAIDA, a provider of the AS before it: the ASPA of that AS does not list it, so valid routes through it look like valleys. The owners are the ones to tell.</p>
+    <section class="card table-wrap" tabindex="0" aria-label="Table of the ASPAs that seem to miss a provider">
+      <table class="checks live">
+        <caption class="sr-only">ASPAs that do not list an AS that CAIDA gives as a provider of the customer, with the feeders that see routes through it</caption>
+        <thead><tr><th scope="col">ASPA of</th><th scope="col">seems to miss</th><th scope="col" class="num">Places</th><th scope="col" class="num">Routes</th><th scope="col" class="num">Feeders</th></tr></thead>
+        <tbody id="gap-rows"></tbody>
+      </table>
+    </section>
+    <h3 class="subhead">Places of valley over time</h3>
+    <ul class="legend" id="leaks-history-legend"></ul>
+    <div class="linechart" id="leaks-history"></div>
+    <p class="hint" id="leaks-history-note"></p>
+    <h3 class="subhead">Collectors compared</h3>
+    <p class="hint" id="coll-sub"></p>
+    <div class="histctl"><label>Show <select id="coll-metric" aria-controls="coll-chart">
+      <option value="places">Places of valley seen</option>
+      <option value="only">Places that only this collector sees</option>
+      <option value="invalid">Invalid routes, as a share of its routes</option>
+      <option value="feeders">Feeder networks</option>
+      <option value="routes">Routes read</option>
+    </select></label></div>
+    <ul class="legend" id="coll-legend"></ul>
+    <div class="barchart" id="coll-chart"></div>
+    <h3 class="subhead">RIS and RouteViews on the same places</h3>
+    <p class="hint" id="cmp-sub"></p>
+    <ul class="legend" id="cmp-legend"></ul>
+    <div class="barchart" id="cmp-chart"></div>
+    <p class="hint" id="cmp-note"></p>
+    <p class="hint" id="leaks-note"></p>
+  </section>
+
+
+
+  <section aria-labelledby="val-title">
+    <h2 id="val-title">Validators compared</h2>
+    <p class="hint" id="val-sub"><span class="busy">Loading</span></p>
+    <div class="tiles" id="val-tiles"></div>
+    <section class="card table-wrap" tabindex="0" aria-label="Table of the ASPAs on which the validators differ">
+      <table class="checks live">
+        <caption class="sr-only">ASPAs on which the validators differ: the providers that each of them has, and a possible reason</caption>
+        <thead id="val-head"></thead>
+        <tbody id="val-rows"></tbody>
+      </table>
+    </section>
+    <p class="hint" id="val-note"></p>
+  </section>
+
+  <section aria-labelledby="rtr-title">
+    <h2 id="rtr-title">The validator as a router sees it</h2>
+    <p class="hint" id="rtr-sub"><span class="busy">Loading</span></p>
+    <div class="tiles live-tiles" id="rtr-tiles"></div>
+    <h3 class="subhead">The caches side by side</h3>
+    <p class="hint" id="rtr-caches-sub"></p>
+    <section class="card table-wrap" tabindex="0" aria-label="Table of the RTR caches followed, side by side">
+      <table class="checks live">
+        <caption class="sr-only">The caches followed: session, RTR version, VRPs, ASPAs, last sync, syncs in 24 hours and anomalies in 7 days</caption>
+        <thead><tr><th scope="col">Cache</th><th scope="col">Session</th><th scope="col">RTR</th><th scope="col" class="num">VRPs</th><th scope="col" class="num">ASPAs</th><th scope="col">Last sync</th><th scope="col" class="num">Syncs, 24 h</th><th scope="col" class="num">Anomalies, 7 days</th></tr></thead>
+        <tbody id="rtr-caches"></tbody>
+      </table>
+    </section>
+    <h3 class="subhead">Records held and changed, hour by hour</h3>
+    <div class="histctl"><label>Show <select id="rtr-metric" aria-controls="rtr-chart rtr-changes"><option value="aspa">ASPAs</option><option value="vrp">VRPs</option></select></label></div>
+    <div class="linechart" id="rtr-chart"></div>
+    <div class="linechart" id="rtr-changes"></div>
+    <p class="hint" id="rtr-chart-note"></p>
+    <h3 class="subhead">Anomalies in the stream of syncs</h3>
+    <section class="card table-wrap" tabindex="0" aria-label="Table of the anomalies found in the RTR session">
+      <table class="checks live">
+        <caption class="sr-only">Anomalies found by the detector: when, severity, what was off and the values</caption>
+        <thead><tr><th scope="col">When</th><th scope="col">Cache</th><th scope="col">Severity</th><th scope="col">What was off</th><th scope="col">Values</th></tr></thead>
+        <tbody id="rtr-anomalies"></tbody>
+      </table>
+    </section>
+    <h3 class="subhead">Session events of the cache of the site</h3>
+    <section class="card table-wrap" tabindex="0" aria-label="Table of the events of the RTR session">
+      <table class="checks live">
+        <caption class="sr-only">Events of the RTR session: when, the event and its detail</caption>
+        <thead><tr><th scope="col">When</th><th scope="col">Event</th><th scope="col">Detail</th></tr></thead>
+        <tbody id="rtr-events"></tbody>
+      </table>
+    </section>
+    <p class="hint" id="rtr-note"></p>
+  </section>
+</main>
+
+<footer class="wrap foot">
+  <p>Routes: the RIPE RIS and RouteViews collectors. Validators: the Routinator and the Fort of this site, rpki-client and the rpki-client of Cloudflare. RTR: RAVEN.</p>
+</footer>
+
+</body>
+</html>

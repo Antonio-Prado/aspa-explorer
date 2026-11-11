@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>ASPA statistics</title>
+<title>The state of ASPA · ASPA Explorer</title>
 <meta name="description" content="Statistics of the ASPAs: how many over time, by RIR, providers per ASPA, the most-named providers, and who has published one, by size of the network, RIR and country.">
 <meta name="author" content="Antonio Prado">
 <link rel="canonical" href="https://aspa.ping6.it/statistics.html">
@@ -23,34 +23,30 @@
 <meta name="twitter:card" content="summary_large_image">
 <meta name="color-scheme" content="light dark">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
-<link rel="stylesheet" href="/style.css?v=1.67.0">
-<script src="/history.js?v=1.67.0" defer></script>
-<script src="/quality.js?v=1.67.0" defer></script>
-<script src="/latest.js?v=1.67.0" defer></script>
-<script src="/stats.js?v=1.67.0" defer></script>
-<script src="/adoption.js?v=1.67.0" defer></script>
-<script src="/trends.js?v=1.67.0" defer></script>
-<script src="/ui.js?v=1.67.0" defer></script>
-<script src="/resources.js?v=1.67.0" defer></script>
-<script src="/coverage.js?v=1.67.0" defer></script>
-<script src="/invalid.js?v=1.67.0" defer></script>
-<script src="/leaks.js?v=1.67.0" defer></script>
-<script src="/validators.js?v=1.67.0" defer></script>
-<script src="/rtr.js?v=1.67.0" defer></script>
-<script src="/status-checks.js?v=1.67.0" defer></script>
-<script src="/peek.js?v=1.67.0" defer></script>
-<script src="/asnames.js?v=1.67.0" defer></script>
-<script src="/footer.js?v=1.67.0" defer></script>
+<link rel="stylesheet" href="/style.css?v=1.68.0">
+<script src="/history.js?v=1.68.0" defer></script>
+<script src="/quality.js?v=1.68.0" defer></script>
+<script src="/latest.js?v=1.68.0" defer></script>
+<script src="/stats.js?v=1.68.0" defer></script>
+<script src="/adoption.js?v=1.68.0" defer></script>
+<script src="/trends.js?v=1.68.0" defer></script>
+<script src="/ui.js?v=1.68.0" defer></script>
+<script src="/resources.js?v=1.68.0" defer></script>
+<script src="/coverage.js?v=1.68.0" defer></script>
+<script src="/status-checks.js?v=1.68.0" defer></script>
+<script src="/peek.js?v=1.68.0" defer></script>
+<script src="/asnames.js?v=1.68.0" defer></script>
+<script src="/footer.js?v=1.68.0" defer></script>
 </head>
 <body>
 <a class="skip" href="#main">Skip to main content</a>
 <header class="wrap masthead">
   <div class="top">
-    <p class="back"><a class="brandlink" href="/" title="Back to ASPA Explorer"><img class="brand" src="/img/logo-mark.svg?v=1.67.0" alt="" width="40" height="40"><span>ASPA Explorer</span></a></p>
-    <nav class="topnav" aria-label="Main"><a href="/">My network</a><a href="/statistics.html" aria-current="page">State of ASPA</a><a href="/incidents.html">Right now</a><a class="minor" href="/guide.html">Guide</a><a class="minor" href="/api.html">API</a><a class="minor" href="/status.html">Status</a></nav>
+    <p class="back"><a class="brandlink" href="/" title="Back to ASPA Explorer"><img class="brand" src="/img/logo-mark.svg?v=1.68.0" alt="" width="40" height="40"><span>ASPA Explorer</span></a></p>
+    <nav class="topnav" aria-label="Main"><a href="/network.html">My network</a><a href="/statistics.html" aria-current="page">State of ASPA</a><a href="/now.html">Right now</a><a class="minor" href="/guide.html">Guide</a><a class="minor" href="/api.html">API</a><a class="minor" href="/status.html">Status</a></nav>
   </div>
-  <h1>Statistics</h1>
-  <p class="lede">How many ASPAs there are and how they are made up, and which networks have published one, by size, RIR and country.</p>
+  <h1>The state of ASPA</h1>
+  <p class="lede">How many networks have published an ASPA, how it grew, and who they are: by registry, size and country.</p>
   <p class="meta" id="meta"><span class="busy">Loading data</span></p>
   <p class="meta" id="numbers"></p>
   <p class="meta" id="numbers-routes"></p>
@@ -59,25 +55,6 @@
 <main class="wrap" id="main" tabindex="-1">
   <div class="tiles" id="tiles" aria-live="polite"></div>
 
-  <nav class="toc card" aria-label="Contents">
-    <ol>
-      <li><a href="#aspas-title">The ASPAs over time</a></li>
-      <li><a href="#latest-title">Latest changes and quality</a></li>
-      <li><a href="#adoption-title">Adoption by size and by RIR</a></li>
-      <li><a href="#top-title">The largest transit networks</a></li>
-      <li><a href="#tr-title">Networks with an ASPA over time</a></li>
-      <li><a href="#cc-title">By country</a></li>
-      <li><a href="#res-title">From allocation to ASPA</a></li>
-      <li><a href="#age-title">By age of the AS number</a></li>
-      <li><a href="#bogus-title">ASPAs that name AS numbers that should not be there</a></li>
-      <li><a href="#leaks-title">Valleys today</a></li>
-      <li><a href="#cov-title">Valid routes by address space</a></li>
-      <li><a href="#fam-title">IPv6 and IPv4 side by side</a></li>
-      <li><a href="#inv-title">Invalid announcements, as they happen</a></li>
-      <li><a href="#val-title">Validators compared</a></li>
-      <li><a href="#rtr-title">The validator as a router sees it</a></li>
-    </ol>
-  </nav>
 
   <h2 class="sr-only" id="aspas-title">The ASPAs</h2>
 <div class="charts">
@@ -163,8 +140,38 @@
     <div class="bars cov" id="by-rir"></div>
   </section>
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  <p class="hint" id="sources"></p>
+  <p class="hint">The same numbers as JSON: <a href="/api/v1/adoption.json">/api/v1/adoption.json</a>. How the numbers are made: <a href="/guide.html#adoption">the guide</a>.</p>
+  <section class="go-deeper" aria-labelledby="deeper-title">
+    <h2 id="deeper-title">Go deeper</h2>
+    <p class="hint">Each of these opens in place; a link to one of them opens it too.</p>
+  <details class="deeper" id="top-box">
+    <summary><h2 id="top-title">The largest transit networks</h2></summary>
   <section aria-labelledby="top-title">
-    <h2 id="top-title">The largest transit networks</h2>
     <p class="hint" id="top-sub"></p>
     <p class="opts"><label class="chk"><input type="checkbox" id="top-missing"> Only those without an ASPA</label></p>
     <section class="card table-wrap" tabindex="0" aria-label="Table of the largest transit networks">
@@ -176,9 +183,10 @@
     </section>
     <button type="button" class="more" id="top-more" hidden>Show more</button>
   </section>
-
+  </details>
+  <details class="deeper" id="tr-box">
+    <summary><h2 id="tr-title">Networks with an ASPA over time</h2></summary>
   <section aria-labelledby="tr-title">
-    <h2 id="tr-title">Networks with an ASPA over time</h2>
     <p class="hint">How many networks have an ASPA, month by month since the first ASPA, for all of them, for a RIR or for a country (where the AS number was registered; an ASPA of a network that is not seen in BGP counts as unknown).</p>
     <p class="opts"><label>Show <select id="tr-group"></select></label></p>
     <div class="card pad">
@@ -189,9 +197,10 @@
     <div class="copy-row"><label class="copy-label" for="tr-code">Embed</label><input type="text" id="tr-code" class="copy-field" readonly spellcheck="false"><button type="button" class="linkish" id="tr-copy" aria-label="Copy the HTML to embed the chart">Copy</button></div>
     <p class="hint">The numbers as JSON: <a href="/api/v1/trends.json">/api/v1/trends.json</a>.</p>
   </section>
-
+  </details>
+  <details class="deeper" id="cc-box">
+    <summary><h2 id="cc-title">By country</h2></summary>
   <section aria-labelledby="cc-title">
-    <h2 id="cc-title">By country</h2>
     <p class="hint">The country where the AS number was registered, not necessarily where the network operates. The bar of the coverage is full at 50%.</p>
     <p class="opts">
       <label>Sort by <select id="cc-sort"><option value="seen">networks</option><option value="pct">coverage</option></select></label>
@@ -206,9 +215,10 @@
     </section>
     <button type="button" class="more" id="cc-more" hidden>Show more</button>
   </section>
-
+  </details>
+  <details class="deeper" id="res-box">
+    <summary><h2 id="res-title">From allocation to ASPA</h2></summary>
   <section aria-labelledby="res-title">
-    <h2 id="res-title">From allocation to ASPA</h2>
     <p class="hint">For each registry and region: the AS numbers that are allocated, how many of those are advertised in BGP, and how many have an ASPA.</p>
     <section class="card table-wrap" tabindex="0" aria-label="AS numbers by RIR: allocated, advertised and with an ASPA">
       <table class="checks live">
@@ -239,69 +249,27 @@
     <button type="button" class="more" id="eco-more" hidden>Show more</button>
     <p class="hint" id="res-note"><span class="busy">Loading</span></p>
   </section>
-
+  </details>
+  <details class="deeper" id="age-box">
+    <summary><h2 id="age-title">By age of the AS number</h2></summary>
   <section class="card pad" aria-labelledby="age-title">
-    <h2 id="age-title" class="subhead">By age of the AS number</h2>
     <p class="hint">The share of the advertised AS numbers that have an ASPA, by the year they were allocated. In each of the two charts the longest bar is its highest share.</p>
     <div id="age-years"></div>
     <h3 class="subhead">By width of the number</h3>
     <div id="age-width"></div>
     <p class="hint" id="age-note"></p>
   </section>
-
+  </details>
+  <details class="deeper" id="bogus-box">
+    <summary><h2 id="bogus-title">ASPAs that name AS numbers that should not be there</h2></summary>
   <section aria-labelledby="bogus-title">
-    <h2 id="bogus-title">ASPAs that name AS numbers that should not be there</h2>
     <p class="hint">A customer or a provider in an ASPA that no registry has allocated, or that is private, reserved or for documentation, is a mistake or a test left in the RPKI.</p>
     <div id="bogus-body"></div>
   </section>
-
-  <section aria-labelledby="leaks-title">
-    <h2 id="leaks-title">Valleys today</h2>
-    <p class="hint" id="leaks-sub"><span class="busy">Loading</span></p>
-    <div class="tiles" id="leaks-tiles"></div>
-    <h3 class="subhead">Valleys through a peer or a customer</h3>
-    <p class="hint">Places of valley where the first AS after the climb is, for CAIDA, a peer or a customer of the AS before it. A route may have been passed on up when it should not have been, or an ASPA or a relationship may be missing: the operators are the ones who know.</p>
-    <section class="card table-wrap" tabindex="0" aria-label="Table of the valleys through a peer or a customer">
-      <table class="checks live">
-        <caption class="sr-only">Valleys through a peer or a customer: the place of the valley, the ASes inside it, and the feeders and origins that see it</caption>
-        <thead><tr><th scope="col">Valley between</th><th scope="col">ASes in the valley</th><th scope="col">CAIDA says of the first</th><th scope="col" class="num">Routes</th><th scope="col" class="num">Feeders</th><th scope="col" class="num">Origins</th><th scope="col">Example</th></tr></thead>
-        <tbody id="leak-rows"></tbody>
-      </table>
-    </section>
-    <h3 class="subhead">ASPAs that seem to miss a provider</h3>
-    <p class="hint">Places of valley where the first AS after the climb is, for CAIDA, a provider of the AS before it: the ASPA of that AS does not list it, so valid routes through it look like valleys. The owners are the ones to tell.</p>
-    <section class="card table-wrap" tabindex="0" aria-label="Table of the ASPAs that seem to miss a provider">
-      <table class="checks live">
-        <caption class="sr-only">ASPAs that do not list an AS that CAIDA gives as a provider of the customer, with the feeders that see routes through it</caption>
-        <thead><tr><th scope="col">ASPA of</th><th scope="col">seems to miss</th><th scope="col" class="num">Places</th><th scope="col" class="num">Routes</th><th scope="col" class="num">Feeders</th></tr></thead>
-        <tbody id="gap-rows"></tbody>
-      </table>
-    </section>
-    <h3 class="subhead">Places of valley over time</h3>
-    <ul class="legend" id="leaks-history-legend"></ul>
-    <div class="linechart" id="leaks-history"></div>
-    <p class="hint" id="leaks-history-note"></p>
-    <h3 class="subhead">Collectors compared</h3>
-    <p class="hint" id="coll-sub"></p>
-    <div class="histctl"><label>Show <select id="coll-metric" aria-controls="coll-chart">
-      <option value="places">Places of valley seen</option>
-      <option value="only">Places that only this collector sees</option>
-      <option value="invalid">Invalid routes, as a share of its routes</option>
-      <option value="feeders">Feeder networks</option>
-      <option value="routes">Routes read</option>
-    </select></label></div>
-    <ul class="legend" id="coll-legend"></ul>
-    <div class="barchart" id="coll-chart"></div>
-    <h3 class="subhead">RIS and RouteViews on the same places</h3>
-    <p class="hint" id="cmp-sub"></p>
-    <ul class="legend" id="cmp-legend"></ul>
-    <div class="barchart" id="cmp-chart"></div>
-    <p class="hint" id="cmp-note"></p>
-    <p class="hint" id="leaks-note"></p>
-  </section>
-
+  </details>
+  <details class="deeper" id="cov-box">
+    <summary><h2 id="cov-title">Valid routes by address space and by length of the path</h2></summary>
   <section aria-labelledby="cov-title">
-    <h2 id="cov-title">Valid routes by address space and by length of the path</h2>
     <p class="hint" id="cov-sub"><span class="busy">Loading</span></p>
     <section class="card table-wrap" tabindex="0" aria-label="Verdicts of the routes and of the address space">
       <table class="checks live">
@@ -327,9 +295,10 @@
       </table>
     </section>
   </section>
-
+  </details>
+  <details class="deeper" id="fam-box">
+    <summary><h2 id="fam-title">IPv6 and IPv4 side by side</h2></summary>
   <section aria-labelledby="fam-title">
-    <h2 id="fam-title">IPv6 and IPv4 side by side</h2>
     <p class="hint" id="fam-sub"><span class="busy">Loading</span></p>
     <section class="card table-wrap" tabindex="0" aria-label="IPv6 and IPv4 compared">
       <table class="checks live">
@@ -339,75 +308,8 @@
       </table>
     </section>
   </section>
-
-  <section aria-labelledby="inv-title">
-    <h2 id="inv-title">Invalid announcements, as they happen</h2>
-    <p class="hint" id="inv-sub"><span class="busy">Loading</span></p>
-    <div class="tiles" id="inv-tiles"></div>
-    <div class="card pad"><h3 class="subhead">Share of invalid announcements, by hour</h3><div class="linechart" id="inv-chart"></div></div>
-    <h3 class="subhead">Origins with the most invalid announcements</h3>
-    <section class="card table-wrap" tabindex="0" aria-label="Origins with the most invalid announcements"><table class="checks live"><caption class="sr-only">The 20 origin ASes with the most invalid announcements in the days recorded (the last 14 at most)</caption><thead><tr><th scope="col">Origin</th><th scope="col" class="num">Invalid</th><th scope="col" class="num">Announcements</th><th scope="col" class="num">Share</th><th scope="col" class="num">Prefixes</th></tr></thead><tbody id="inv-origins"></tbody></table></section>
-    <h3 class="subhead">Origins with the highest share of invalid announcements</h3>
-    <section class="card table-wrap" tabindex="0" aria-label="Origins with the highest share of invalid announcements"><table class="checks live"><caption class="sr-only">The 20 origin ASes with the highest share of invalid announcements, among those with at least 100 announcements</caption><thead><tr><th scope="col">Origin</th><th scope="col" class="num">Share</th><th scope="col" class="num">Invalid</th><th scope="col" class="num">Announcements</th><th scope="col" class="num">Prefixes</th></tr></thead><tbody id="inv-share"></tbody></table></section>
-    <h3 class="subhead">Prefixes with the most invalid announcements</h3>
-    <section class="card table-wrap" tabindex="0" aria-label="Prefixes with the most invalid announcements"><table class="checks live"><caption class="sr-only">The 20 prefixes with the most invalid announcements in the days recorded (the last 14 at most)</caption><thead><tr><th scope="col">Prefix</th><th scope="col">Origin</th><th scope="col" class="num">Invalid</th></tr></thead><tbody id="inv-prefixes"></tbody></table></section>
-    <p class="hint" id="inv-note"></p>
-    <p class="hint">The report as JSON: <a href="/api/v1/invalid.json">/api/v1/invalid.json</a>.</p>
+  </details>
   </section>
-
-  <section aria-labelledby="val-title">
-    <h2 id="val-title">Validators compared</h2>
-    <p class="hint" id="val-sub"><span class="busy">Loading</span></p>
-    <div class="tiles" id="val-tiles"></div>
-    <section class="card table-wrap" tabindex="0" aria-label="Table of the ASPAs on which the validators differ">
-      <table class="checks live">
-        <caption class="sr-only">ASPAs on which the validators differ: the providers that each of them has, and a possible reason</caption>
-        <thead id="val-head"></thead>
-        <tbody id="val-rows"></tbody>
-      </table>
-    </section>
-    <p class="hint" id="val-note"></p>
-  </section>
-
-  <section aria-labelledby="rtr-title">
-    <h2 id="rtr-title">The validator as a router sees it</h2>
-    <p class="hint" id="rtr-sub"><span class="busy">Loading</span></p>
-    <div class="tiles live-tiles" id="rtr-tiles"></div>
-    <h3 class="subhead">The caches side by side</h3>
-    <p class="hint" id="rtr-caches-sub"></p>
-    <section class="card table-wrap" tabindex="0" aria-label="Table of the RTR caches followed, side by side">
-      <table class="checks live">
-        <caption class="sr-only">The caches followed: session, RTR version, VRPs, ASPAs, last sync, syncs in 24 hours and anomalies in 7 days</caption>
-        <thead><tr><th scope="col">Cache</th><th scope="col">Session</th><th scope="col">RTR</th><th scope="col" class="num">VRPs</th><th scope="col" class="num">ASPAs</th><th scope="col">Last sync</th><th scope="col" class="num">Syncs, 24 h</th><th scope="col" class="num">Anomalies, 7 days</th></tr></thead>
-        <tbody id="rtr-caches"></tbody>
-      </table>
-    </section>
-    <h3 class="subhead">Records held and changed, hour by hour</h3>
-    <div class="histctl"><label>Show <select id="rtr-metric" aria-controls="rtr-chart rtr-changes"><option value="aspa">ASPAs</option><option value="vrp">VRPs</option></select></label></div>
-    <div class="linechart" id="rtr-chart"></div>
-    <div class="linechart" id="rtr-changes"></div>
-    <p class="hint" id="rtr-chart-note"></p>
-    <h3 class="subhead">Anomalies in the stream of syncs</h3>
-    <section class="card table-wrap" tabindex="0" aria-label="Table of the anomalies found in the RTR session">
-      <table class="checks live">
-        <caption class="sr-only">Anomalies found by the detector: when, severity, what was off and the values</caption>
-        <thead><tr><th scope="col">When</th><th scope="col">Cache</th><th scope="col">Severity</th><th scope="col">What was off</th><th scope="col">Values</th></tr></thead>
-        <tbody id="rtr-anomalies"></tbody>
-      </table>
-    </section>
-    <h3 class="subhead">Session events of the cache of the site</h3>
-    <section class="card table-wrap" tabindex="0" aria-label="Table of the events of the RTR session">
-      <table class="checks live">
-        <caption class="sr-only">Events of the RTR session: when, the event and its detail</caption>
-        <thead><tr><th scope="col">When</th><th scope="col">Event</th><th scope="col">Detail</th></tr></thead>
-        <tbody id="rtr-events"></tbody>
-      </table>
-    </section>
-    <p class="hint" id="rtr-note"></p>
-  </section>
-
-  <p class="hint" id="sources"></p>
-  <p class="hint">The same numbers as JSON: <a href="/api/v1/adoption.json">/api/v1/adoption.json</a>. How the numbers are made: <a href="/guide.html#adoption">the guide</a>.</p>
 </main>
 
 <div class="tip" id="tip" role="tooltip" hidden></div>

@@ -136,7 +136,12 @@ async function main() {
   } catch (err) { console.error(`fort: ${err.message}`); sources.push({ id: 'fort', name: SOURCES[1].name, built: null, count: null, failed: null, error: err.message }); }
   for (const s of SOURCES.slice(2)) {
     try {
-      const x = await fetchRpkiClient(s.url);
+      // the console of rpki-client is slow at times and drops a connection now and then: up to three tries, a pause between them
+      let x, last;
+      for (let i = 0; i < 3 && !x; i++) {
+        try { x = await fetchRpkiClient(s.url); } catch (err) { last = err; if (i < 2) await new Promise((r) => setTimeout(r, 20000)); }
+      }
+      if (!x) throw last;
       sets[s.id] = normalise(x.list);
       sources.push({ id: s.id, name: s.name, built: x.built, count: sets[s.id].size, failed: x.failed });
     } catch (err) { console.error(`${s.id}: ${err.message}`); sources.push({ id: s.id, name: s.name, built: null, count: null, failed: null, error: err.message }); }

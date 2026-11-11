@@ -42,7 +42,7 @@ html-validate:
   stage: lint
   image: node:22-alpine
   script:
-    - npx --yes html-validate@9.7.1 site/index.html site/network.html site/guide.html site/api.html site/subscription.html site/statistics.html site/status.html site/examples.html site/embed.html site/report.html site/incidents.html
+    - npx --yes html-validate@9.7.1 site/index.html site/network.html site/guide.html site/api.html site/subscription.html site/statistics.html site/now.html site/status.html site/examples.html site/embed.html site/report.html site/incidents.html
 
 nginx-config:
   extends: .regular

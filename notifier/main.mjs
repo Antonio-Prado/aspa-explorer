@@ -139,13 +139,13 @@ async function send(sub, job, row) {
     if (sub.kind === 'email') {
       await mailTo(sub.target, rtrSubject(job.events), [
         ...text, '',
-        `Details: ${SITE}/statistics.html#rtr-title`, '',
+        `Details: ${SITE}/now.html#rtr-title`, '',
         'You receive this because you subscribed to the status alerts of ASPA Explorer. To stop:',
         unsubPage, '',
         'An independent RTR client follows the validator of the site as a router would; its detector compares each sync with the ones before it. An anomaly is a sync out of the ordinary, not a verdict on the data.',
       ].join('\n'), unsub);
     } else {
-      ok(await post(sub.target, { event_id, type: 'aspa.rtr', text: text.join(' '), time: new Date().toISOString(), anomalies: job.events.map((a) => ({ at: a.at, cache: a.cache || null, cache_id: a.cache_id || null, severity: a.severity, category: a.category, trigger: a.trigger, values: a.raw || {}, z: a.z || {} })), page: `${SITE}/statistics.html#rtr-title`, unsubscribe: unsub }, { secret: sub.secret }));
+      ok(await post(sub.target, { event_id, type: 'aspa.rtr', text: text.join(' '), time: new Date().toISOString(), anomalies: job.events.map((a) => ({ at: a.at, cache: a.cache || null, cache_id: a.cache_id || null, severity: a.severity, category: a.category, trigger: a.trigger, values: a.raw || {}, z: a.z || {} })), page: `${SITE}/now.html#rtr-title`, unsubscribe: unsub }, { secret: sub.secret }));
     }
   } else if (job.type === 'status') {
     const text = job.events.map(describeStatusEvent);

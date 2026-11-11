@@ -9,6 +9,15 @@ A few numbers were deployed and folded into the next release without a tag of th
 
 ## [Unreleased]
 
+## [1.68.0] - 2026-11-10
+
+### Changed
+- *State of ASPA* (the statistics page, about 30 screens long) keeps open what tells how ASPA grows: the numbers, the ASPAs over time and by registry, the providers per ASPA, the latest changes and quality, and the adoption by size and by registry. The other tables are under *Go deeper* at the end, each opened in place (the largest transit networks, networks with an ASPA over time, by country, from allocation to ASPA, by age, AS numbers that should not be there, valid routes by address space, IPv6 and IPv4); a link to one of them opens it. The table of contents is gone.
+- *Right now* is a page of its own, `/now.html`: the invalid announcements as they happen, the valleys of the day, the validators compared and the RTR sessions, moved from the statistics page, with a link to the incidents. An old link to those sections of the statistics page follows them there, and the messages about the RTR sessions link the new page.
+
+### Fixed
+- The comparison of the validators was marked late whenever the console of rpki-client, slow at times, dropped a connection: the builder now tries it three times before giving up.
+
 ## [1.67.0] - 2026-11-10
 
 ### Changed

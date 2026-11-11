@@ -4,6 +4,11 @@
 // 14 days (events.json of the history, classified by history.js) and the checks of quality.js on the ASPAs listed now.
 // They were tabs of the home page until 1.64; #changes and #quality open them here.
 (function () {
+  // the sections that moved to the Right now page in 1.68: an old link (from a message, a bookmark) follows them there
+  const moved = ['leaks-title', 'inv-title', 'val-title', 'rtr-title', 'leaks', 'invalid', 'validators', 'rtr'];
+  const follow = () => { if (moved.includes(location.hash.slice(1))) { location.replace(`/now.html${location.hash}`); return true; } return false; };
+  if (follow()) return;
+  window.addEventListener('hashchange', follow);
   const $ = (id) => document.getElementById(id);
   const fmt = new Intl.NumberFormat('en-US');
   const DAYS = 14;
@@ -131,7 +136,19 @@
     fromHash();
   }
 
+  // the tables under "Go deeper" are closed: a link to one of them, or to anything inside one, opens it
+  function openTarget() {
+    const id = location.hash.slice(1);
+    const t = id && document.getElementById(id);
+    const box = t && t.closest('details.deeper');
+    if (!box) return;
+    box.open = true;
+    t.scrollIntoView({ block: 'start' });
+  }
+
   document.addEventListener('DOMContentLoaded', () => {
+    openTarget();
+    window.addEventListener('hashchange', openTarget);
     if (!$('latest')) return;
     tabs();
     changes();

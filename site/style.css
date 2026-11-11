@@ -819,3 +819,14 @@ mark.hl { background: var(--ok-bg); color: var(--ok-ink); padding: 0 0.25em; bor
 .as-view #result { font-size: 1.0625rem; line-height: 1.6; }
 .as-view .res-head h3 { font-size: 2rem; letter-spacing: -0.01em; }
 .as-view .res-verdict .v-line { font-size: 1.3rem; }
+
+/* 1.68: State of ASPA keeps the main charts open and folds the other tables under "Go deeper"; Right now has a line of jumps */
+.go-deeper { margin-top: 2.5rem; }
+.go-deeper > h2 { font-size: 1.6rem; margin: 0 0 0.3rem; }
+details.deeper { background: var(--track); border-radius: 8px; margin: 0.6rem 0; }
+details.deeper > summary { padding: 0.6rem 0.9rem; cursor: pointer; }
+details.deeper > summary h2 { display: inline; margin: 0; font-size: 1.15rem; }
+details.deeper[open] { background: none; box-shadow: 0 0 0 1px var(--grid); }
+details.deeper[open] > summary { border-bottom: 1px solid var(--grid); margin-bottom: 0.75rem; }
+details.deeper > section { padding: 0 0.9rem 0.9rem; }
+.jump { margin: 0 0 1.5rem; font-size: 0.95rem; color: var(--ink-2); }
