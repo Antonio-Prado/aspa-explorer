@@ -9,6 +9,13 @@ A few numbers were deployed and folded into the next release without a tag of th
 
 ## [Unreleased]
 
+## [1.71.1] - 2026-11-11
+
+### Changed
+- The RTR monitors run a later RAVEN (main of 11 November 2026, after 0.4.0), whose detector measures each sync in the deviation of the previous ones with a minimum for each measure (a second, or 1% of the usual time; 0.01% of the VRPs held; 0.1% of the ASPAs held): a cache polled on a fixed timer no longer has an anomaly for a sync a little slower than the others, and a few records changed out of a million are not one either. The anomalies recorded before stay in the telemetry and in the counts.
+- A cache that refuses RTR version 2 is recorded by the later monitor as a `version_downgrade` event, with no anomaly: the session events show it as a version probe refused, with the version the monitor goes on with (`next_protocol` in `/api/v1/rtr.json`), and leave out the closing of the session that was refused. The anomalies that the earlier monitor wrote for the same thing are still left out of the counts.
+- The guide says the minimum deviation of the detector, and that the monitor asks for version 2 at the start of each session and again every hour. The alerts to the subscribers keep their own floors (half an hour between syncs, a sync of 10 s, a thousand VRPs or twenty ASPAs changed at once).
+
 ## [1.71.0] - 2026-11-11
 
 ### Changed

@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "ASPA Explorer API",
-    "version": "1.5.2",
+    "version": "1.5.3",
     "description": "ASPA objects validated by Routinator at rpki.ping6.it, their history and quality, for any AS. Open data, read-only, no key.",
     "contact": {
       "email": "antonio.prado@dei.unipd.it"
@@ -1149,7 +1149,7 @@
                         },
                         "probes": {
                           "type": "integer",
-                          "description": "version probes refused by the cache, left out"
+                          "description": "anomalies that a monitor up to RAVEN 0.4.0 wrote for a version probe refused by the cache, left out; later monitors write none"
                         },
                         "list": {
                           "type": "array",
@@ -1217,6 +1217,10 @@
                           },
                           "probe": {
                             "type": "boolean"
+                          },
+                          "next_protocol": {
+                            "type": "integer",
+                            "description": "on a version probe refused, the version the monitor goes on with"
                           }
                         },
                         "additionalProperties": true
@@ -1998,7 +2002,7 @@
     "/api/v1/rtr/{cache}.ndjson": {
       "get": {
         "summary": "The raw telemetry of one RTR monitor",
-        "description": "The NDJSON that RAVEN's rtr monitor writes for the cache: one record a line for each session event (connected, disconnected, reset, error, cache_not_ready), each sync (with vrp_total, aspa_total, the records announced and withdrawn, sync_type and the duration) and each anomaly of its detector (category, trigger, severity, z_scores, raw). Since the monitor started; a few hundred lines a day.",
+        "description": "The NDJSON that RAVEN's rtr monitor writes for the cache: one record a line for each session event (connected, disconnected, reset, error, cache_not_ready, version_downgrade), each sync (with vrp_total, aspa_total, the records announced and withdrawn, sync_type and the duration) and each anomaly of its detector (category, trigger, severity, z_scores, raw). Since the monitor started; a few hundred lines a day.",
         "parameters": [
           {
             "name": "cache",

@@ -133,6 +133,31 @@ await test('a cache that refuses RTR version 2: the probe is an event, not an an
   assert.equal(v2.session.carries_aspa, true);
 });
 
+await test('a later monitor writes the refusal as a version_downgrade: one probe event, no anomaly, the refused session left out', () => {
+  const lines = [
+    JSON.stringify({ timestamp: at(0), cache: 'c', event_type: 'version_downgrade', schema_version: 1, error_text: 'Bad protocol version\u0000', error_code: 4, proto_version: 2, next_proto_version: 0, downgrade_reason: 'unsupported_version' }),
+    JSON.stringify({ timestamp: at(0.001), cache: 'c', event_type: 'disconnected', schema_version: 1, error_text: 'cache does not support this RTR protocol version', error_code: 4, proto_version: 2, disconnect_reason: 'error_report' }),
+    JSON.stringify({ timestamp: at(0.01), cache: 'c', event_type: 'connected', schema_version: 1, proto_version: 0 }),
+    sync(0.2, { sync_type: 'full', aspa_total: 0, vrp_announced: 1000, proto_version: 0 }),
+    sync(2, { serial: 3, aspa_total: 0, proto_version: 0 }),
+    JSON.stringify({ timestamp: at(3), cache: 'c', event_type: 'disconnected', schema_version: 1, proto_version: 0, disconnect_reason: 'eof' }),
+    JSON.stringify({ timestamp: at(3.1), cache: 'c', event_type: 'connected', schema_version: 1, proto_version: 0 }),
+  ];
+  const d = summarise(parseLines(lines.join('\n')), T0 + 5 * 60e3, { session_state: 1, protocol_version: 0 });
+  assert.equal(d.anomalies.total, 0);
+  assert.equal(d.anomalies.probes, 0);
+  assert.equal(d.session.protocol, 0);
+  assert.equal(d.session.carries_aspa, false);
+  assert.deepEqual(d.events.map((e) => e.type), ['connected', 'disconnected', 'connected', 'version_downgrade']);   // newest first
+  const down = d.events[3];
+  assert.equal(down.probe, true);
+  assert.equal(down.reason, 'Bad protocol version');
+  assert.equal(down.code, 4);
+  assert.equal(down.protocol, 2);
+  assert.equal(down.next_protocol, 0);
+  assert.equal(d.events[1].reason, 'eof');                             // a session that drops later is still an event
+});
+
 await test('a serial that does not advance: stale after three hours of syncs without a change, not when the session is down or the syncs stopped', () => {
   const lines = [JSON.stringify({ timestamp: at(0), cache: 'c', event_type: 'connected', proto_version: 2 }), sync(0, { sync_type: 'full' }), sync(10, { serial: 7 })];
   for (let m = 20; m <= 200; m += 10) lines.push(sync(m, { serial: 7, serial_changed: false }));

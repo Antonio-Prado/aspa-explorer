@@ -74,14 +74,18 @@ const syncOf = (r) => ({
 // session event of the file is used, which cannot tell a monitor that stopped from one that is quiet.
 export function summarise(records, now = Date.now(), metrics = null) {
   const syncs = records.filter((r) => r.event_type === 'sync');
-  // The monitor asks for RTR version 2 and, when the cache refuses it with error 4 (Bad protocol version), goes on with a lower one and
-  // writes a structural anomaly: that is the probe, repeated every hour, not a fault of the cache. Such errors are kept among the events
-  // as probes and their anomalies are left out of the counts.
+  // The monitor asks for RTR version 2 and, when the cache refuses it with error 4 (Bad protocol version), goes on with a lower one: that
+  // is the negotiation of the version, not a fault of the cache. RAVEN up to 0.4.0 wrote it as an `error` event and a structural anomaly:
+  // such errors are kept among the events as probes and their anomalies are left out of the counts. Later versions write a
+  // `version_downgrade` event and no anomaly, followed by the `disconnected` of the session that was refused, which says nothing more
+  // and is left out of the events.
   const probeTimes = new Set(records.filter((r) => r.event_type === 'error' && r.error_code === 4).map((r) => r.t));
   const isProbe = (r) => r.category === 'structural' && r.trigger === 'error_report' && [...probeTimes].some((t) => Math.abs(t - r.t) <= 1000);
   const anomalies = records.filter((r) => r.event_type === 'anomaly' && !isProbe(r));
   const probes = records.filter((r) => r.event_type === 'anomaly' && isProbe(r)).length;
-  const events = records.filter((r) => r.event_type !== 'sync' && r.event_type !== 'anomaly');
+  const downgradeTimes = records.filter((r) => r.event_type === 'version_downgrade').map((r) => r.t);
+  const isRefusedSession = (r) => r.event_type === 'disconnected' && r.error_code === 4 && downgradeTimes.some((t) => r.t >= t && r.t - t <= 1000);
+  const events = records.filter((r) => r.event_type !== 'sync' && r.event_type !== 'anomaly' && !isRefusedSession(r));
   const last = syncs.length ? syncs[syncs.length - 1] : null;
   const lastConn = [...events].reverse().find((e) => e.event_type === 'connected' || e.event_type === 'disconnected') || null;
   const connected = metrics && 'session_state' in metrics ? metrics.session_state === 1 : Boolean(lastConn && lastConn.event_type === 'connected');
@@ -139,8 +143,9 @@ export function summarise(records, now = Date.now(), metrics = null) {
     anomalies: { total: anomalies.length, high: count('high'), medium: count('medium'), last_7_days: anomalies.filter((a) => a.t > now - 7 * DAY).length, probes, list },
     events: events.slice(-MAX_EVENTS).reverse().map((e) => ({
       at: iso(e.t), type: e.event_type, reason: (e.reset_reason || e.disconnect_reason || e.error_text || null) && String(e.reset_reason || e.disconnect_reason || e.error_text).replace(/\0+$/, ''),
-      ...(e.event_type === 'error' && e.error_code === 4 ? { probe: true } : {}),
+      ...((e.event_type === 'error' && e.error_code === 4) || e.event_type === 'version_downgrade' ? { probe: true } : {}),
       ...(Number.isFinite(e.error_code) ? { code: e.error_code } : {}), ...(e.proto_version ? { protocol: e.proto_version } : {}),
+      ...(e.event_type === 'version_downgrade' && Number.isFinite(e.next_proto_version) ? { next_protocol: e.next_proto_version } : {}),
     })),
     telemetry: { from: records.length ? iso(records[0].t) : null, records: records.length, syncs: syncs.length },
   };
