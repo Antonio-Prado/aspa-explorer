@@ -9,6 +9,14 @@ A few numbers were deployed and folded into the next release without a tag of th
 
 ## [Unreleased]
 
+## [1.71.0] - 2026-11-11
+
+### Changed
+- *Status* gives the answer first, as the home page does, in a coloured band: *All good*, *A little late* or *A problem*, with when the browser checked. The chart over time keeps its percentages; its table with the late and down stretches is in a closed box, the last problems show the five most recent and a button for the others, and *Availability by month* is a closed box. The parts are no longer in frames, and the first column of the months reads as in the other tables.
+
+### Added
+- The job that keeps the history of the status writes why a part was late or down (`status-problems.log`, next to the history, the last 2,000 lines, not served): the history says only which state it found.
+
 ## [1.70.0] - 2026-11-11
 
 ### Changed

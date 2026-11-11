@@ -36,8 +36,11 @@
       el('td', { text: c.expected }))));
     const down = results.filter(({ r }) => r.state === 'down').length, late = results.filter(({ r }) => r.state === 'late').length;
     const msg = down ? `${down} part${down === 1 ? ' is' : 's are'} not working or very old.` : late ? `${late} part${late === 1 ? ' is' : 's are'} a little late.` : 'Everything is up to date.';
-    $('summary').replaceChildren(el('p', {}, el('span', { class: 'badge ' + (down ? 'v-invalid' : late ? 'v-unknown' : 'v-valid'), text: down ? 'Problem' : late ? 'Late' : 'OK' }), ' ', msg));
-    $('checked').textContent = `Checked ${utc(now)}; the page checks again every minute.`;
+    // the answer first, as on the home page: green, amber or red, in one line
+    const box = $('summary');
+    box.className = `you res-verdict ${down ? 'v-no' : late ? 'v-late' : 'v-yes'}`;
+    box.replaceChildren(el('p', { class: 'v-line' }, el('strong', { class: 'v-word', text: down ? 'A problem.' : late ? 'A little late.' : 'All good.' }), ' ', msg),
+      el('p', { class: 'v-from', text: `Checked ${utc(now)} from your browser; the page checks again every minute.` }));
   }
   // alerts: the same subscription as for an AS (e-mail confirmed by a link, webhook by a challenge), for the topic "status"
   function alertsForm() {

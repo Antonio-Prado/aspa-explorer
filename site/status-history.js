@@ -141,9 +141,19 @@
     $('upchart').replaceChildren(...rows, el('div', { class: 'up-row' }, el('div'), axis, el('div')));
     $('uptable').replaceChildren(...body);
     list.sort((a, b) => b.from - a.from);
-    const shown = list.slice(0, 12);
-    $('upproblems').replaceChildren(...(shown.length ? shown.map((p) => el('li', {}, el('span', { class: 'badge ' + (p.state === 'd' ? 'v-invalid' : 'v-unknown'), text: NAME[p.state] }), ` ${p.name}: ${at(p.from)}, about ${duration(p.to - p.from)}`)) : [el('li', { text: `No problem in the ${period}.` })]));
-    $('upmore').textContent = list.length > shown.length ? `${list.length - shown.length} older stretches are not listed.` : '';
+    // the five most recent stretches, then all of them on request
+    const item = (p) => el('li', {}, el('span', { class: 'badge ' + (p.state === 'd' ? 'v-invalid' : 'v-unknown'), text: NAME[p.state] }), ` ${p.name}: ${at(p.from)}, about ${duration(p.to - p.from)}`);
+    const drawProblems = (n) => {
+      $('upproblems').replaceChildren(...(list.length ? list.slice(0, n).map(item) : [el('li', { text: `No problem in the ${period}.` })]));
+      const more = $('upmore');
+      more.replaceChildren();
+      if (list.length > n) {
+        const btn = el('button', { type: 'button', class: 'linkish', text: `Show all ${list.length}` });
+        btn.addEventListener('click', () => drawProblems(list.length));
+        more.append(btn);
+      }
+    };
+    drawProblems(5);
     const as = doc.assumed ? ` Samples from ${at(doc.assumed.from)} to ${at(doc.assumed.to)} were not measured: all the parts are taken as OK in that period.` : '';
     $('upsub').textContent = `${doc.samples.length ? `${doc.samples.length.toLocaleString('en-US')} checks since ${at(doc.samples[0][0])}` : 'No check recorded yet'}; one is made every ${Math.round(doc.interval / 60)} minutes. A cell shows the worst state in its stretch of time.${as}`;
     for (const b of document.querySelectorAll('[data-range]')) b.setAttribute('aria-pressed', String(b.dataset.range === range));

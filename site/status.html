@@ -23,17 +23,17 @@
 <meta name="twitter:card" content="summary_large_image">
 <meta name="color-scheme" content="light dark">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
-<link rel="stylesheet" href="/style.css?v=1.70.0">
-<script src="/status-checks.js?v=1.70.0" defer></script>
-<script src="/status.js?v=1.70.0" defer></script>
-<script src="/status-history.js?v=1.70.0" defer></script>
-<script src="/footer.js?v=1.70.0" defer></script>
+<link rel="stylesheet" href="/style.css?v=1.71.0">
+<script src="/status-checks.js?v=1.71.0" defer></script>
+<script src="/status.js?v=1.71.0" defer></script>
+<script src="/status-history.js?v=1.71.0" defer></script>
+<script src="/footer.js?v=1.71.0" defer></script>
 </head>
 <body>
 <a class="skip" href="#main">Skip to main content</a>
 <header class="wrap masthead">
   <div class="top">
-    <p class="back"><a class="brandlink" href="/" title="Back to ASPA Explorer"><img class="brand" src="/img/logo-mark.svg?v=1.70.0" alt="" width="40" height="40"><span>ASPA Explorer</span></a></p>
+    <p class="back"><a class="brandlink" href="/" title="Back to ASPA Explorer"><img class="brand" src="/img/logo-mark.svg?v=1.71.0" alt="" width="40" height="40"><span>ASPA Explorer</span></a></p>
     <nav class="topnav" aria-label="Main"><a href="/network.html">My network</a><a href="/statistics.html">State of ASPA</a><a href="/now.html">Right now</a><a class="minor" href="/guide.html">Guide</a><a class="minor" href="/api.html">API</a><a class="minor" href="/status.html" aria-current="page">Status</a></nav>
   </div>
   <h1>Status</h1>
@@ -41,7 +41,7 @@
 </header>
 
 <main class="wrap" id="main" tabindex="-1">
-  <div class="card pad" id="summary" aria-live="polite"><p><span class="busy">Checking</span></p></div>
+  <div class="you res-verdict" id="summary" aria-live="polite"><p class="v-line"><span class="busy">Checking</span></p></div>
   <section class="card table-wrap" tabindex="0" aria-label="Status of each part">
     <table class="checks live">
       <caption class="sr-only">Each part of the service, its state and when it was last updated</caption>
@@ -49,8 +49,7 @@
       <tbody id="rows"></tbody>
     </table>
   </section>
-  <p class="hint" id="checked"></p>
-  <section class="card pad" aria-labelledby="over-time">
+  <section class="status-part" aria-labelledby="over-time">
     <h2 id="over-time">Over time</h2>
     <p class="hint" id="upsub">Reading the history</p>
     <div class="histctl" role="group" aria-label="Period shown">
@@ -65,6 +64,7 @@
     <h3 class="up-h">Last problems</h3>
     <ul class="timeline" id="upproblems"></ul>
     <p class="hint" id="upmore"></p>
+    <details class="deeper" id="up-table-box"><summary><h3 class="up-h">The same, as a table, with the stretches</h3></summary><div class="inner">
     <div class="table-wrap" tabindex="0" aria-label="Share of the time each part was OK">
       <table class="checks live">
         <caption class="sr-only">Share of the checks that found each part OK, and the stretches that were late or down</caption>
@@ -72,20 +72,20 @@
         <tbody id="uptable"></tbody>
       </table>
     </div>
+    </div></details>
   </section>
-  <section class="card pad" aria-labelledby="months-title">
-    <h2 id="months-title">Availability by month</h2>
+  <details class="deeper" id="months-box"><summary><h2 id="months-title">Availability by month</h2></summary><section aria-labelledby="months-title">
     <p class="hint" id="mo-sub">Reading the months</p>
     <div class="table-wrap" tabindex="0" aria-label="Share of the checks that found each part OK, by month">
-      <table class="checks" id="mo-table">
+      <table class="checks live" id="mo-table">
         <caption class="sr-only">Share of the checks that found each part OK in each of the last months, and how many checks were recorded</caption>
         <thead><tr id="mo-head"></tr></thead>
         <tbody id="mo-rows"></tbody>
       </table>
     </div>
     <p class="hint"><a href="/api/v1/status-months.json">The numbers as JSON</a>.</p>
-  </section>
-  <section class="card pad" aria-labelledby="alerts-title">
+  </section></details>
+  <section class="status-part" aria-labelledby="alerts-title">
     <h2 id="alerts-title">Alerts</h2>
     <p class="hint">Get a message when a part becomes late or down, and when it is back to OK. A change is announced when two checks in a row, 15 minutes apart, show it. An e-mail address has to be confirmed through a link; a webhook has to repeat a challenge. <a href="/guide.html#notify">How it works and what is kept</a>. <a href="https://www.unipd.it/en/privacy" target="_blank" rel="noopener">Privacy information<span class="sr-only"> (opens in a new tab)</span></a>.</p>
     <div id="alerts-form"></div>

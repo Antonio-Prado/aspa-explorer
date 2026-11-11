@@ -799,6 +799,8 @@ mark.hl { background: var(--ok-bg); color: var(--ok-ink); padding: 0 0.25em; bor
 .you.v-yes .v-line, .you.v-yes .v-word { color: var(--ok-ink); }
 .you.v-no { background: var(--bad-bg); border-color: transparent; }
 .you.v-no .v-line, .you.v-no .v-word { color: var(--bad-ink); }
+.you.v-late { background: var(--warn-bg); border-color: transparent; }
+.you.v-late .v-line, .you.v-late .v-word { color: var(--warn-ink); }
 .you .v-links { margin-top: 0.5rem; font-size: 1rem; }
 .you .v-from { margin-top: 0.5rem; font-size: 0.85rem; color: var(--ink-2); }
 .hero-band .hero-sub.small { font-size: 1rem; margin-bottom: 0.9rem; }
@@ -843,3 +845,10 @@ details.deeper > .inner { padding: 0 0.9rem 0.9rem; }
 #now-tabs { margin: 0.5rem 0 1.25rem; }
 .nowpanel > h2 { margin-top: 0.5rem; }
 .jump { margin: 0 0 1.5rem; font-size: 0.95rem; color: var(--ink-2); }
+
+/* 1.71: the status page, the answer first and the details on demand */
+.status-part { margin: 2rem 0 1rem; }
+.status-part > h2 { margin-top: 0; }
+#months-box { margin-top: 1.5rem; }
+#months-box > section { padding: 0 0.9rem 0.9rem; }
+#up-table-box { margin-top: 1rem; }

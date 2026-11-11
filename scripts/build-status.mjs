@@ -60,6 +60,15 @@ export function addMonths(prev, doc, now = Math.floor(Date.now() / 1000)) {
   return { generated: new Date(now * 1000).toISOString(), interval: doc.interval || INTERVAL, last, ...(doc.assumed ? { assumed: doc.assumed } : {}), checks: doc.checks.map(({ id, name }) => ({ id, name })), months };
 }
 
+// appends lines to a small log and keeps only the last `keep` of them
+export async function keepLines(file, lines, keep) {
+  let old = [];
+  try { old = (await readFile(file, 'utf8')).split('\n').filter(Boolean); } catch { /* a new log */ }
+  const all = [...old, ...lines.map((l) => l.replace(/\n|\r/g, ''))].slice(-keep);
+  await writeFile(`${file}.${process.pid}.tmp`, all.join('\n') + '\n');
+  await rename(`${file}.${process.pid}.tmp`, file);
+}
+
 async function main() {
   const out = process.argv[2];
   if (!out) { console.error('usage: node scripts/build-status.mjs OUT_FILE [BASE_URL]'); process.exit(2); }
@@ -72,9 +81,12 @@ async function main() {
   const checks = makeChecks(get);
   const nowMs = Date.now();
   const results = await Promise.all(checks.map(async (c) => {
-    try { return (await c.run(nowMs)).state; } catch { return 'down'; }
+    try { const r = await c.run(nowMs); return { state: r.state, why: r.extra || '' }; } catch (err) { return { state: 'down', why: `no answer (${err.message})` }; }
   }));
-  const letters = results.map((s) => LETTER[s] || 'd').join('');
+  const letters = results.map((r) => LETTER[r.state] || 'd').join('');
+  // why a part was not OK, kept next to the history (not served): the sample says only late or down
+  const bad = results.map((r, i) => (r.state === 'ok' ? null : `${new Date(nowMs).toISOString()} ${checks[i].id} ${r.state}: ${r.why}`)).filter(Boolean);
+  if (bad.length) await keepLines(join(dirname(out), 'status-problems.log'), bad, 2000);
   let doc = null;
   try { doc = JSON.parse(await readFile(out, 'utf8')); } catch { /* the first run */ }
   const t = Math.floor(nowMs / 1000);

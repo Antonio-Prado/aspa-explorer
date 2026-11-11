@@ -104,6 +104,11 @@ for (const [name, path] of PAGES) {
           await page.evaluate(() => { for (const d of document.querySelectorAll('details.deeper')) d.open = true; });
           await page.waitForTimeout(300);
         }
+        if (name === 'status' || name === 'incidents') {
+          // the closed boxes (the table of the stretches, the months; how to read the incidents): open them for axe
+          await page.evaluate(() => { for (const d of document.querySelectorAll('details.deeper')) d.open = true; });
+          await page.waitForTimeout(300);
+        }
         if (name === 'now') {
           // four tabs, each with its closed boxes: show every panel and open every box, so that axe checks all of them
           if ((await page.locator('#now-tabs [role="tab"]').count()) !== 4) extra.push('now: the page has not 4 tabs');
