@@ -22,8 +22,14 @@ const at = (a) => Date.parse(a && a.at);
 // so a cache that syncs every 600 s to the millisecond scored -90000 for a sync 9 s after the previous one and 341 for one of 0.7 s;
 // later versions score the upper tail only, with a minimum deviation for each measure, and the floors here are the policy of the alerts.
 export const FLOOR = { interval_since_ns: 1800e9, sync_duration_ns: 10e9, vrp_announced: 1000, vrp_withdrawn: 1000, aspa_announced: 20, aspa_withdrawn: 20 };
+// A sync that brought nothing (no VRP and no ASPA announced or withdrawn) and came late is the refresh timer of a cache with nothing
+// new to say: a cache whose serial stands still is asked again only when its refresh interval ends, an hour on some. That is the
+// stall, which is told once when the serial has stood still for hours, not a fault of its own every hour for as long as it lasts.
+const CHANGES = ['vrp_announced', 'vrp_withdrawn', 'aspa_announced', 'aspa_withdrawn'];
+const empty = (a) => Boolean(a.raw) && CHANGES.every((k) => a.raw[k] === 0);
 function counts(a, k) {
   const z = a.z && a.z[k], v = a.raw && a.raw[k];
+  if (k === 'interval_since_ns' && empty(a)) return false;
   return Number.isFinite(z) && z > 0 && (!(k in FLOOR) || (Number.isFinite(v) && v >= FLOOR[k]));
 }
 // the anomaly as it should be told (its trigger the strongest measure that counts), or null when it is not worth a message
@@ -35,7 +41,7 @@ export function worthTelling(a) {
   if (!keep.length) {
     // an anomaly without z scores (an older file) is judged on its trigger's value alone
     const v = a.raw && a.raw[a.trigger];
-    return !Object.keys(z).length && (!(a.trigger in FLOOR) || (Number.isFinite(v) && v >= FLOOR[a.trigger])) ? a : null;
+    return !Object.keys(z).length && !(a.trigger === 'interval_since_ns' && empty(a)) && (!(a.trigger in FLOOR) || (Number.isFinite(v) && v >= FLOOR[a.trigger])) ? a : null;
   }
   return keep.includes(a.trigger) ? a : { ...a, trigger: keep[0] };
 }

@@ -1130,6 +1130,12 @@ await test('rtr: a statistical anomaly is told only above its median and, for th
   assert.equal(worthTelling({ ...fort, z: { interval_since_ns: 8.1 }, raw: { interval_since_ns: 600e9 } }), null);   // 600 s: the usual refresh
   const gap = { ...fort, z: { interval_since_ns: 40 }, raw: { interval_since_ns: 3600e9 } };
   assert.equal(worthTelling(gap), gap);                                                                     // an hour without a sync
+  // Cloudflare on 2026-11-12: a node stalled on its serial is asked again every hour, and each empty sync was an anomaly of its own
+  const idle = { at: '2026-11-12T05:49:43Z', severity: 'high', category: 'statistical', trigger: 'interval_since_ns', z: { interval_since_ns: 11.8 }, raw: { aspa_announced: 0, aspa_withdrawn: 0, interval_since_ns: 3600368042763, sync_duration_ns: 345748743, vrp_announced: 0, vrp_withdrawn: 0 } };
+  assert.equal(worthTelling(idle), null);                                                                   // nothing new, an hour later: the stall says it
+  assert.equal(worthTelling({ ...idle, z: {} }), null);
+  const late = { ...idle, raw: { ...idle.raw, vrp_announced: 12 } };
+  assert.equal(worthTelling(late), late);                                                                   // an hour late with changes: told
   const slow = worthTelling({ ...fort, z: { interval_since_ns: -5, sync_duration_ns: 50 }, raw: { interval_since_ns: 300e9, sync_duration_ns: 45e9 } });
   assert.equal(slow.trigger, 'sync_duration_ns');                                                           // told on the measure that counts
   assert.equal(worthTelling({ ...fort, trigger: 'correlated', severity: 'medium', z: { vrp_announced: 3.6, sync_duration_ns: 3.9 }, raw: { vrp_announced: 300, sync_duration_ns: 3e9 } }), null);

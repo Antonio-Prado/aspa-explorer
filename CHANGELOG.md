@@ -9,6 +9,11 @@ A few numbers were deployed and folded into the next release without a tag of th
 
 ## [Unreleased]
 
+## [1.71.2] - 2026-11-12
+
+### Fixed
+- A cache stalled on its serial sent an alert every hour to the subscribers of the status alerts. A cache whose serial stands still is asked again only when its refresh interval ends (an hour on the public server of Cloudflare), and the detector saw each of those empty syncs as one that came late. A sync that announces and withdraws nothing is no longer told for the time since the previous one: the stall itself is told once, when the serial has stood still for three hours. The anomalies stay on the page and in `/api/v1/rtr.json`.
+
 ## [1.71.1] - 2026-11-11
 
 ### Changed
