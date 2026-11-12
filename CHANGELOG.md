@@ -9,6 +9,11 @@ A few numbers were deployed and folded into the next release without a tag of th
 
 ## [Unreleased]
 
+## [1.72.0] - 2026-11-13
+
+### Changed
+- The home page has a look of its own. It opens on the search and on one line about the network of the visitor (whether it has an ASPA, with a link to its page or to what it should publish), then shows the count of ASPAs of the validator of the site over a chart of their growth since October 2023, with three numbers under it: the share of the networks seen in BGP that have an ASPA, how many of the 100 largest transit networks have one, and the validators compared. The three areas of the site are rows of text, and a few lines with links to the guide are for who is new to ASPA. The question with a highlighted word, the coloured table of the largest transit networks (still on the State of ASPA page) and the questions that opened one at a time are gone.
+
 ## [1.71.3] - 2026-11-12
 
 ### Changed

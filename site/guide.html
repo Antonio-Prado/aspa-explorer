@@ -23,16 +23,16 @@
 <meta name="twitter:card" content="summary_large_image">
 <meta name="color-scheme" content="light dark">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
-<link rel="stylesheet" href="/style.css?v=1.71.3">
-<script src="/status-checks.js?v=1.71.3" defer></script>
-<script src="/asnames.js?v=1.71.3" defer></script>
-<script src="/footer.js?v=1.71.3" defer></script>
+<link rel="stylesheet" href="/style.css?v=1.72.0">
+<script src="/status-checks.js?v=1.72.0" defer></script>
+<script src="/asnames.js?v=1.72.0" defer></script>
+<script src="/footer.js?v=1.72.0" defer></script>
 </head>
 <body>
 <a class="skip" href="#main">Skip to main content</a>
 <header class="wrap masthead">
   <div class="top">
-    <p class="back"><a class="brandlink" href="/" title="Back to ASPA Explorer"><img class="brand" src="/img/logo-mark.svg?v=1.71.3" alt="" width="40" height="40"><span>ASPA Explorer</span></a></p>
+    <p class="back"><a class="brandlink" href="/" title="Back to ASPA Explorer"><img class="brand" src="/img/logo-mark.svg?v=1.72.0" alt="" width="40" height="40"><span>ASPA Explorer</span></a></p>
     <nav class="topnav" aria-label="Main"><a href="/network.html">My network</a><a href="/statistics.html">State of ASPA</a><a href="/now.html">Right now</a><a class="minor" href="/guide.html" aria-current="page">Guide</a><a class="minor" href="/api.html">API</a><a class="minor" href="/status.html">Status</a></nav>
   </div>
   <h1>Guide</h1>
@@ -59,8 +59,8 @@
 
   <section aria-labelledby="home">
     <h2 id="home">The home page</h2>
-    <p>The home page asks one question: is your network protected by ASPA? It answers it for the network you are on. The server looks up the address you come from in a map of the routes that the RIPE RIS collectors see (prefix and origin AS, rebuilt once a day from their public dumps, with only the routes seen by ten peers or more), and the page says <em>Yes</em> when that AS has an ASPA, with how many providers and how many things its quality checks find to look at, or <em>Not yet</em>, with a link to how to publish one. The lookup happens on the server of this site: your address is not sent to anybody else. An address that no route covers gets no answer, and the search under it opens the page of any AS.</p>
-    <p><em>Where ASPA stands</em> says in one sentence how many networks have published an ASPA (by the validator of this site), what share of the networks seen in BGP that is, and how many of the 100 largest transit networks have one (by customer cone, from CAIDA). The table under it lists those networks with their state, the first 15 and then all; the same list, with filters, is on the <em>State of ASPA</em> page. The questions at the end are answered in a few lines each, with links to this guide.</p>
+    <p>The home page opens on a search, which takes you to the page of an AS, and on a line about the network you are on. The server looks up the address you come from in a map of the routes that the RIPE RIS collectors see (prefix and origin AS, rebuilt once a day from their public dumps, with only the routes seen by ten peers or more), and the line says whether that AS has an ASPA, with how many providers and how many things its quality checks find to look at, or that it has none yet, with a link to what it should publish. The lookup happens on the server of this site: your address is not sent to anybody else. An address that no route covers gets no line.</p>
+    <p><em>ASPAs validated today</em> is the count of the validator of this site, over the chart of the networks with an ASPA at the end of each month since the first one, in October 2023. Three numbers follow: the share of the networks seen in BGP that have an ASPA, how many of the 100 largest transit networks have one (by customer cone, from CAIDA; the list is on the <em>State of ASPA</em> page) and how many validators the site compares every hour. The three areas of the site and a few lines for who is new to ASPA close the page.</p>
   </section>
 
   <section aria-labelledby="reading">

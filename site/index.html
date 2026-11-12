@@ -24,74 +24,59 @@
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <link rel="canonical" href="https://aspa.ping6.it/">
 <link rel="alternate" type="application/atom+xml" title="ASPA Explorer: changes" href="/changes.atom">
-<link rel="stylesheet" href="/style.css?v=1.71.3">
-<script src="/home.js?v=1.71.3" defer></script>
-<script src="/status-checks.js?v=1.71.3" defer></script>
-<script src="/footer.js?v=1.71.3" defer></script>
+<link rel="stylesheet" href="/style.css?v=1.72.0">
+<script src="/trends.js?v=1.72.0" defer></script>
+<script src="/home.js?v=1.72.0" defer></script>
+<script src="/status-checks.js?v=1.72.0" defer></script>
+<script src="/footer.js?v=1.72.0" defer></script>
 </head>
 <body class="home">
 <a class="skip" href="#main">Skip to main content</a>
 <header class="wrap masthead">
   <div class="top">
-    <h1><a class="homelink" href="/"><img class="brand" src="/img/logo-mark.svg?v=1.71.3" alt="" width="40" height="40"><span>ASPA Explorer</span></a></h1>
+    <h1><a class="homelink" href="/"><img class="brand" src="/img/logo-mark.svg?v=1.72.0" alt="" width="40" height="40"><span>ASPA Explorer</span></a></h1>
     <nav class="topnav" aria-label="Main"><a href="/network.html">My network</a><a href="/statistics.html">State of ASPA</a><a href="/now.html">Right now</a><a class="minor" href="/guide.html">Guide</a><a class="minor" href="/api.html">API</a><a class="minor" href="/status.html">Status</a></nav>
   </div>
 </header>
 
-<main id="main" tabindex="-1">
-  <section class="hero-band" aria-labelledby="hero-title">
-    <div class="column">
-      <h2 id="hero-title">Is your network <mark class="hl">protected</mark> by ASPA?</h2>
-      <p class="hero-sub">An ASPA tells the routers of the Internet which networks may carry your routes.</p>
-      <div class="you" id="home-verdict" aria-live="polite"><p class="v-line"><span class="busy">Checking the network you are on</span></p></div>
-      <p class="hero-sub small">Or look up any AS: whether it has an ASPA, whether its routes are valid, and what to fix.</p>
-      <form class="hero-search" id="home-search" autocomplete="off" novalidate>
-        <label for="home-asn" class="sr-only">AS number</label>
-        <input id="home-asn" name="asn" type="text" inputmode="text" spellcheck="false" placeholder="AS number, e.g. AS680" aria-describedby="home-error">
-        <button type="submit">Look up</button>
-      </form>
-      <p class="error" id="home-error" aria-live="polite"></p>
-      <p class="hero-links">Or <a href="/network.html#path">check an AS path</a> · <a href="/network.html#routes">check the routes seen in BGP</a> · <a href="/examples.html">write your first ASPA</a></p>
+<main id="main" tabindex="-1" class="home-main">
+  <section class="home-top" aria-labelledby="home-title">
+    <h2 id="home-title">The ASPAs of the Internet, validated and measured</h2>
+    <p class="home-lede">An ASPA says which networks may carry the routes of an AS. Look one up, check a path against them, and see how far the adoption has come.</p>
+    <form class="home-search" id="home-search" autocomplete="off" novalidate>
+      <label for="home-asn" class="sr-only">AS number</label>
+      <input id="home-asn" name="asn" type="text" inputmode="text" spellcheck="false" placeholder="AS number, e.g. AS680" aria-describedby="home-error">
+      <button type="submit">Look up</button>
+    </form>
+    <p class="error" id="home-error" aria-live="polite"></p>
+    <p class="home-you" id="home-verdict" aria-live="polite"><span class="busy">Checking the network you are on</span></p>
+    <p class="home-also">Also: <a href="/network.html#path">check an AS path</a> · <a href="/network.html#routes">check the routes seen in BGP</a></p>
+  </section>
+
+  <section class="home-data" aria-labelledby="home-data-title">
+    <div class="home-data-head">
+      <h2 id="home-data-title">ASPAs validated today</h2>
+      <a href="/statistics.html">The state of ASPA, in full</a>
     </div>
-  </section>
-
-  <section class="column prose" aria-labelledby="where-title">
-    <h2 id="where-title">Where ASPA stands</h2>
-    <p class="answer" id="home-answer"><span class="busy">Counting the ASPAs</span></p>
-    <p class="home-more"><a href="/statistics.html">Adoption over time, by registry, size and country</a> · <a href="/statistics.html#changes">what changed this week</a></p>
-  </section>
-
-  <section class="column prose" aria-labelledby="transit-title">
-    <h2 id="transit-title">The largest transit networks</h2>
-    <p>The networks that carry the routes of most others, by the size of their customer cone. When they publish an ASPA, a leak through them can be told from a real route.</p>
-    <div class="status-wrap" tabindex="0" aria-label="Table of the largest transit networks">
-      <table class="status-table">
-        <caption class="sr-only">The largest transit networks and whether they have an ASPA</caption>
-        <thead><tr><th scope="col">#</th><th scope="col">Network</th><th scope="col">Country</th><th scope="col" class="num">Customer cone</th><th scope="col">ASPA</th></tr></thead>
-        <tbody id="transit-rows"><tr><td colspan="5"><span class="busy">Loading</span></td></tr></tbody>
-      </table>
+    <div class="home-count">
+      <p class="home-number" id="home-number"><span class="busy">Counting</span></p>
+      <p class="home-since" id="home-since"></p>
     </div>
-    <p class="home-more" id="transit-more"></p>
+    <div class="linechart home-chart" id="home-chart"></div>
+    <p class="home-caption" id="home-caption"></p>
+    <dl class="home-figs" id="home-figs"></dl>
   </section>
 
-  <section class="column prose faq" aria-labelledby="faq-title">
-    <h2 id="faq-title">Questions</h2>
-    <details>
-      <summary>What is an ASPA?</summary>
-      <p>An ASPA (Autonomous System Provider Authorization) is a signed object of the RPKI in which a network, an AS, lists the networks allowed to carry its routes upstream: its providers. A network with no provider lists only <code>AS0</code>. <a href="/guide.html#what">More in the guide</a></p>
-    </details>
-    <details>
-      <summary>What does it protect against?</summary>
-      <p>A router that checks ASPAs can refuse a route that went up through a network that is not a provider of the one before it: a route leak, and some forged paths. It adds to the ROAs, which check only who originates a prefix. <a href="/incidents.html">The incidents seen in BGP</a></p>
-    </details>
-    <details>
-      <summary>How do I publish one?</summary>
-      <p>Where you manage your ROAs: the RPKI portal of your registry, or your own certificate authority. List every network that carries your routes upstream, and none of your peers or customers. <a href="/examples.html">Examples and common mistakes</a></p>
-    </details>
-    <details>
-      <summary>Where do these numbers come from?</summary>
-      <p>The ASPAs are those validated by the Routinator of this site, compared every hour with its Fort and with two rpki-client validators; the routes are those of the RIPE RIS and RouteViews collectors, and the sizes of the networks those of CAIDA. <a href="/guide.html#data">Sources and method</a></p>
-    </details>
+  <section class="home-areas" aria-labelledby="home-areas-title">
+    <h2 id="home-areas-title">What you can do here</h2>
+    <a class="home-area" href="/network.html"><span class="area-name">My network</span><span class="area-what">The ASPA of an AS and what is wrong with it, its routes as the collectors see them, an AS path checked hop by hop.</span></a>
+    <a class="home-area" href="/statistics.html"><span class="area-name">State of ASPA</span><span class="area-what">Adoption over time, by registry, country and size of the network, and what changed this week.</span></a>
+    <a class="home-area" href="/now.html"><span class="area-name">Right now</span><span class="area-what">Invalid routes and valleys in today's tables, the validators side by side, the RTR caches as a router sees them, the incidents.</span></a>
+  </section>
+
+  <section class="home-new" aria-labelledby="home-new-title">
+    <h2 id="home-new-title">New to ASPA?</h2>
+    <p>An ASPA (Autonomous System Provider Authorization) is a signed object of the RPKI in which a network lists its providers. A router that checks ASPAs can refuse a route that went up through a network that is not one of them: a route leak, and some forged paths. <a href="/guide.html#what">What an ASPA is</a> · <a href="/examples.html">Write your first one</a> · <a href="/guide.html#data">Where the numbers come from</a></p>
   </section>
 </main>
 
