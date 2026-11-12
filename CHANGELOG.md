@@ -9,6 +9,11 @@ A few numbers were deployed and folded into the next release without a tag of th
 
 ## [Unreleased]
 
+## [1.71.3] - 2026-11-12
+
+### Changed
+- The alerts on the RTR session leave out the counts of VRPs announced and withdrawn by Fort. The deltas of Fort 1.7.0 announce and then withdraw records that did not change ([FORT-validator #204](https://github.com/NICMx/FORT-validator/issues/204)), so a few of its syncs every day looked like thousands of VRPs changed at once and each was an alert. The anomalies stay on the page and in `/api/v1/rtr.json`, where a cache says the measures left out of the alerts in `alerts_muted`; the list of the caches sets them for each cache (`mute`), and the note under the name of Fort says why.
+
 ## [1.71.2] - 2026-11-12
 
 ### Fixed

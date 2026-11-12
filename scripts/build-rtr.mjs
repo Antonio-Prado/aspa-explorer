@@ -12,7 +12,8 @@
 //   node scripts/build-rtr.mjs OUT_FILE
 //
 // Environment: RTR_CACHES, the caches as a JSON array or the path of a file with one, each {id, name, host, telemetry (the NDJSON file
-// of its monitor), metrics (its Prometheus endpoint, or none)}; without it one cache, from RTR_TELEMETRY (default
+// of its monitor), metrics (its Prometheus endpoint, or none), note (shown under its name), mute (the measures of its syncs that the
+// alerts leave out, as `alerts_muted` in the file: for a cache with a known fault that would be told every day)}; without it one cache, from RTR_TELEMETRY (default
 // /var/db/raven/rtr-telemetry.ndjson), RTR_METRICS (default http://127.0.0.1:9595/metrics; empty to do without) and RTR_CACHE (the name
 // of the cache shown on the page, default rpki.ping6.it). ASPA_DATA, the URL or file of Routinator's jsonext (default
 // http://127.0.0.1:8080/data/aspas.json), whose count of ASPAs is put next to the one of the first cache.
@@ -157,7 +158,8 @@ export async function cachesFromEnv(env = process.env) {
     const text = env.RTR_CACHES.trim().startsWith('[') ? env.RTR_CACHES : await readFile(env.RTR_CACHES, 'utf8');
     const list = JSON.parse(text);
     if (!Array.isArray(list) || !list.length || list.some((c) => !c || typeof c.id !== 'string' || typeof c.telemetry !== 'string')) throw new Error('RTR_CACHES: an array of {id, name, host, telemetry, metrics} is expected');
-    return list.map((c) => ({ id: c.id, name: c.name || c.id, host: c.host || c.id, telemetry: c.telemetry, metrics: c.metrics || null, note: c.note || null }));
+    return list.map((c) => ({ id: c.id, name: c.name || c.id, host: c.host || c.id, telemetry: c.telemetry, metrics: c.metrics || null, note: c.note || null,
+      mute: Array.isArray(c.mute) ? c.mute.filter((m) => typeof m === 'string') : [] }));
   }
   return [{
     id: 'routinator', name: 'Routinator of this site', host: env.RTR_CACHE || 'rpki.ping6.it',
@@ -179,7 +181,7 @@ async function readCache(c, now) {
     } catch (err) { console.error(`${c.id}: metrics not read: ${err.message}`); }
   }
   return {
-    id: c.id, name: c.name, host: c.host, ...(c.note ? { note: c.note } : {}),
+    id: c.id, name: c.name, host: c.host, ...(c.note ? { note: c.note } : {}), ...(c.mute && c.mute.length ? { alerts_muted: c.mute } : {}),
     ...summarise(parseLines(text), now, metrics),
     metrics: metrics && Object.keys(metrics).length ? {
       vrp: metrics.vrp_count ?? null, aspa: metrics.aspa_count ?? null,

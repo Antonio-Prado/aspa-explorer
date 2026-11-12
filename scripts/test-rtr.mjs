@@ -192,6 +192,8 @@ await test('the caches from the environment: one by default, several from JSON, 
   assert.equal(two[0].name, 'a');
   assert.equal(two[0].metrics, null);
   assert.equal(two[1].note, 'n');
+  assert.deepEqual(two[1].mute, []);
+  assert.deepEqual((await cachesFromEnv({ RTR_CACHES: '[{"id":"a","telemetry":"/a.ndjson","mute":["vrp_announced",3]}]' }))[0].mute, ['vrp_announced']);
   await assert.rejects(cachesFromEnv({ RTR_CACHES: '[{"name":"no id"}]' }));
   await assert.rejects(cachesFromEnv({ RTR_CACHES: '[]' }));
 });

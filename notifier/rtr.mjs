@@ -27,21 +27,23 @@ export const FLOOR = { interval_since_ns: 1800e9, sync_duration_ns: 10e9, vrp_an
 // stall, which is told once when the serial has stood still for hours, not a fault of its own every hour for as long as it lasts.
 const CHANGES = ['vrp_announced', 'vrp_withdrawn', 'aspa_announced', 'aspa_withdrawn'];
 const empty = (a) => Boolean(a.raw) && CHANGES.every((k) => a.raw[k] === 0);
-function counts(a, k) {
+// `muted` are the measures that the alerts leave out for the cache of the anomaly (`alerts_muted` in rtr.json, from the list of the
+// caches): a cache with a known fault, which would be told every day, keeps its anomalies on the page and stays quiet in the alerts.
+function counts(a, k, muted) {
   const z = a.z && a.z[k], v = a.raw && a.raw[k];
-  if (k === 'interval_since_ns' && empty(a)) return false;
+  if (muted.includes(k) || (k === 'interval_since_ns' && empty(a))) return false;
   return Number.isFinite(z) && z > 0 && (!(k in FLOOR) || (Number.isFinite(v) && v >= FLOOR[k]));
 }
 // the anomaly as it should be told (its trigger the strongest measure that counts), or null when it is not worth a message
-export function worthTelling(a) {
+export function worthTelling(a, muted = []) {
   if (!a || a.category !== 'statistical') return a;
   const z = a.z && typeof a.z === 'object' ? a.z : {};
-  const keep = Object.keys(z).filter((k) => counts(a, k)).sort((x, y) => z[y] - z[x]);
+  const keep = Object.keys(z).filter((k) => counts(a, k, muted)).sort((x, y) => z[y] - z[x]);
   if (a.trigger === 'correlated') return keep.length >= 2 ? a : null;
   if (!keep.length) {
     // an anomaly without z scores (an older file) is judged on its trigger's value alone
     const v = a.raw && a.raw[a.trigger];
-    return !Object.keys(z).length && !(a.trigger === 'interval_since_ns' && empty(a)) && (!(a.trigger in FLOOR) || (Number.isFinite(v) && v >= FLOOR[a.trigger])) ? a : null;
+    return !Object.keys(z).length && !muted.includes(a.trigger) && !(a.trigger === 'interval_since_ns' && empty(a)) && (!(a.trigger in FLOOR) || (Number.isFinite(v) && v >= FLOOR[a.trigger])) ? a : null;
   }
   return keep.includes(a.trigger) ? a : { ...a, trigger: keep[0] };
 }
@@ -61,7 +63,7 @@ export function watchRtr(doc, saved) {
     const newest = list.reduce((m, a) => Math.max(m, at(a)), 0);
     const seen = old && Number.isFinite(old[c.id]) ? old[c.id] : null;
     if (seen !== null) for (const a of list) {
-      const t = at(a) > seen ? worthTelling(a) : null;
+      const t = at(a) > seen ? worthTelling(a, Array.isArray(c.alerts_muted) ? c.alerts_muted : []) : null;
       if (t) events.push({ ...t, cache: c.name || c.id, cache_id: c.id });
     }
     next[c.id] = seen === null ? newest : Math.max(seen, newest);

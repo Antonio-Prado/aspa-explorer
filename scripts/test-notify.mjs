@@ -1136,6 +1136,17 @@ await test('rtr: a statistical anomaly is told only above its median and, for th
   assert.equal(worthTelling({ ...idle, z: {} }), null);
   const late = { ...idle, raw: { ...idle.raw, vrp_announced: 12 } };
   assert.equal(worthTelling(late), late);                                                                   // an hour late with changes: told
+  // Fort on 2026-11-12: its deltas announce and withdraw records that did not change, so its counts of VRPs are muted in the alerts
+  const churn = { at: '2026-11-12T19:20:01Z', severity: 'high', category: 'statistical', trigger: 'vrp_announced', z: { vrp_announced: 34.8, vrp_withdrawn: 34.7 }, raw: { aspa_announced: 0, aspa_withdrawn: 0, interval_since_ns: 600e9, sync_duration_ns: 7e8, vrp_announced: 5330, vrp_withdrawn: 5316 } };
+  const MUTE = ['vrp_announced', 'vrp_withdrawn'];
+  assert.equal(worthTelling(churn), churn);
+  assert.equal(worthTelling(churn, MUTE), null);
+  assert.equal(worthTelling({ ...churn, z: {} }, MUTE), null);
+  assert.equal(worthTelling({ ...churn, z: { ...churn.z, aspa_withdrawn: 90 }, raw: { ...churn.raw, aspa_withdrawn: 400 } }, MUTE).trigger, 'aspa_withdrawn');   // the rest is still told
+  const quiet = { caches: [{ id: 'fort', name: 'Fort', alerts_muted: MUTE, anomalies: { list: [] } }, { id: 'routinator', name: 'Routinator', anomalies: { list: [] } }] };
+  const q0 = watchRtr(quiet, null).saved;
+  const q1 = watchRtr({ caches: [{ ...quiet.caches[0], anomalies: { list: [churn] } }, { ...quiet.caches[1], anomalies: { list: [churn] } }] }, q0);
+  assert.deepEqual(q1.events.map((e) => e.cache_id), ['routinator']);                                       // muted on the cache that says so only
   const slow = worthTelling({ ...fort, z: { interval_since_ns: -5, sync_duration_ns: 50 }, raw: { interval_since_ns: 300e9, sync_duration_ns: 45e9 } });
   assert.equal(slow.trigger, 'sync_duration_ns');                                                           // told on the measure that counts
   assert.equal(worthTelling({ ...fort, trigger: 'correlated', severity: 'medium', z: { vrp_announced: 3.6, sync_duration_ns: 3.9 }, raw: { vrp_announced: 300, sync_duration_ns: 3e9 } }), null);
