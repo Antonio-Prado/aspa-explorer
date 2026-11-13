@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>My network · ASPA Explorer</title>
+<title>Look up · ASPA Explorer</title>
 <meta name="description" content="Browse the validated ASPA (Autonomous System Provider Authorization) objects published in the RPKI.">
 <meta name="author" content="Antonio Prado">
 <meta name="theme-color" content="#2a78d6">
@@ -24,43 +24,46 @@
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <link rel="canonical" href="https://aspa.ping6.it/network.html">
 <link rel="alternate" type="application/atom+xml" title="ASPA Explorer: changes" href="/changes.atom">
-<link rel="stylesheet" href="/style.css?v=1.72.1">
-<script src="/verify.js?v=1.72.1" defer></script>
-<script src="/history.js?v=1.72.1" defer></script>
-<script src="/quality.js?v=1.72.1" defer></script>
-<script src="/evidence.js?v=1.72.1" defer></script>
-<script src="/whatif.js?v=1.72.1" defer></script>
-<script src="/traceroute.js?v=1.72.1" defer></script>
-<script src="/graph.js?v=1.72.1" defer></script>
-<script src="/live.js?v=1.72.1" defer></script>
-<script src="/bulk.js?v=1.72.1" defer></script>
-<script src="/irr.js?v=1.72.1" defer></script>
-<script src="/valley.js?v=1.72.1" defer></script>
-<script src="/recent.js?v=1.72.1" defer></script>
-<script src="/peek.js?v=1.72.1" defer></script>
-<script src="/share.js?v=1.72.1" defer></script>
-<script src="/app.js?v=1.72.1" defer></script>
-<script src="/status-checks.js?v=1.72.1" defer></script>
-<script src="/asnames.js?v=1.72.1" defer></script>
-<script src="/footer.js?v=1.72.1" defer></script>
+<link rel="stylesheet" href="/style.css?v=1.73.0">
+<script src="/verify.js?v=1.73.0" defer></script>
+<script src="/history.js?v=1.73.0" defer></script>
+<script src="/quality.js?v=1.73.0" defer></script>
+<script src="/evidence.js?v=1.73.0" defer></script>
+<script src="/whatif.js?v=1.73.0" defer></script>
+<script src="/traceroute.js?v=1.73.0" defer></script>
+<script src="/graph.js?v=1.73.0" defer></script>
+<script src="/live.js?v=1.73.0" defer></script>
+<script src="/bulk.js?v=1.73.0" defer></script>
+<script src="/irr.js?v=1.73.0" defer></script>
+<script src="/valley.js?v=1.73.0" defer></script>
+<script src="/recent.js?v=1.73.0" defer></script>
+<script src="/peek.js?v=1.73.0" defer></script>
+<script src="/share.js?v=1.73.0" defer></script>
+<script src="/app.js?v=1.73.0" defer></script>
+<script src="/status-checks.js?v=1.73.0" defer></script>
+<script src="/asnames.js?v=1.73.0" defer></script>
+<script src="/footer.js?v=1.73.0" defer></script>
 </head>
-<body class="network">
+<body class="network area-look">
 <a class="skip" href="#main">Skip to main content</a>
 <header class="wrap masthead">
   <div class="top">
-    <h1><a class="homelink" href="/"><img class="brand" src="/img/logo-mark.svg?v=1.72.1" alt="" width="40" height="40"><span>ASPA Explorer</span></a></h1>
-    <nav class="topnav" aria-label="Main"><a href="/network.html" aria-current="page">My network</a><a href="/statistics.html">State of ASPA</a><a href="/now.html">Right now</a><a class="minor" href="/guide.html">Guide</a><a class="minor" href="/api.html">API</a><a class="minor" href="/status.html">Status</a></nav>
+    <p class="back"><a class="brandlink" href="/" title="Back to ASPA Explorer"><img class="brand" src="/img/logo-mark.svg?v=1.73.0" alt="" width="40" height="40"><span>ASPA Explorer</span></a></p>
+    <nav class="topnav" aria-label="Main"><a class="sect a-look" href="/network.html" aria-current="page">Look up</a><a class="sect a-adopt" href="/statistics.html">Adoption</a><a class="sect a-now" href="/now.html">Right now</a><a class="sect a-inc" href="/incidents.html">Incidents</a><a class="minor" href="/guide.html">Guide</a><a class="minor" href="/examples.html">Examples</a><a class="minor" href="/api.html">API</a><a class="minor" href="/status.html">Status</a></nav>
+  </div>
+  <div class="pagetop">
+    <h1 id="tools-title">Look up</h1>
+    <p class="lede">Look up an AS, check an AS path hop by hop, or see the routes of an AS in BGP.</p>
   </div>
 </header>
 
 <main class="wrap" id="main" tabindex="-1">
   <section class="card tools" id="tools" aria-labelledby="tools-title">
-    <h2 id="tools-title" class="hero-title">My network</h2>
-    <p class="hero-sub">Look up an AS, check an AS path, or check the routes seen in BGP. To write or fix an ASPA, see the <a href="/examples.html">examples</a>.</p>
+    <h2 class="sr-only">The three tools</h2>
     <div class="tabs" role="tablist" aria-label="Tools" data-group="tool">
-      <button type="button" role="tab" class="tab" id="tab-lookup" aria-controls="panel-lookup" aria-selected="true" tabindex="0">Look up an AS</button>
-      <button type="button" role="tab" class="tab" id="tab-path" aria-controls="panel-path" aria-selected="false" tabindex="-1">Check an AS path</button>
-      <button type="button" role="tab" class="tab" id="tab-routes" aria-controls="panel-routes" aria-selected="false" tabindex="-1">Routes seen in BGP</button>
+      <button type="button" role="tab" class="tab" id="tab-lookup" aria-controls="panel-lookup" aria-selected="true" tabindex="0">An AS</button>
+      <button type="button" role="tab" class="tab" id="tab-path" aria-controls="panel-path" aria-selected="false" tabindex="-1">An AS path</button>
+      <button type="button" role="tab" class="tab" id="tab-routes" aria-controls="panel-routes" aria-selected="false" tabindex="-1">Routes in BGP</button>
     </div>
     <details class="recent" id="recent" hidden>
       <summary>Recent checks <span id="recent-count"></span></summary>
@@ -76,7 +79,6 @@
           <input id="asn" name="asn" type="text" inputmode="text" spellcheck="false" placeholder="AS number, e.g. AS680" aria-describedby="lookup-hint">
           <button type="submit">Look up</button>
         </div>
-        <p class="hint as-also">Also: <a href="#path">check an AS path</a> · <a href="#routes">check the routes seen in BGP</a></p>
         <p class="hint" id="lookup-hint">Shows the AS's own ASPA and every ASPA that names it as a provider. Try
           <a href="#AS680">AS680</a>, <a href="#AS12779">AS12779</a>, <a href="#AS1299">AS1299</a> or <a href="#AS6939">AS6939</a>.</p>
       </form>
@@ -131,10 +133,11 @@
       <div id="liveresult" aria-live="polite"></div>
     </div>
   </section>
-
+  <p class="elsewhere">Writing or fixing an ASPA? <a href="/examples.html">See the examples</a></p>
 </main>
 
 <footer class="wrap foot">
+  <nav class="footnav" aria-label="All pages"><a href="/network.html">Look up</a><a href="/statistics.html">Adoption</a><a href="/now.html">Right now</a><a href="/incidents.html">Incidents</a><a href="/guide.html">Guide</a><a href="/examples.html">Examples</a><a href="/api.html">API</a><a href="/api.html#badge">Badge for your site</a><a href="/status.html#alerts-title">Alerts on the service</a><a href="/status.html">Status</a></nav>
   <p class="meta" id="meta"><span class="busy">Loading data</span></p>
   <p>Data: Routinator, refreshed about every 10 minutes. Raw JSON: <a href="https://rpki.ping6.it/jsonext?exclude=routeOrigins,routerKeys" target="_blank" rel="noopener">jsonext<span class="sr-only"> (opens in a new tab)</span></a> · <a href="https://rpki.ping6.it/json?exclude=routeOrigins,routerKeys" target="_blank" rel="noopener">json<span class="sr-only"> (opens in a new tab)</span></a>.</p>
 </footer>

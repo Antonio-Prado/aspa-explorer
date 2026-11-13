@@ -9,6 +9,14 @@ A few numbers were deployed and folded into the next release without a tag of th
 
 ## [Unreleased]
 
+## [1.73.0] - 2026-11-13
+
+### Changed
+- The menu names what a visitor comes to do: *Look up* (it was *My network*: an AS, an AS path, the routes of an AS in BGP), *Adoption* (it was *State of ASPA*), *Right now* and *Incidents*, which had no entry of its own. The guide, the examples, the API and the status follow, lighter, and every page ends with the list of the pages.
+- Each of the four areas has a colour (blue, violet, teal, plum), in the light and in the dark theme. It marks the area in the menu, the top of its pages, where the title and one line on what the page is for stand on a tint of that colour, and its card in the home page. It is used for nothing else: links and buttons stay blue, the verdicts green, amber and red.
+- The home page opens on the network of the visitor, larger, with a link to its page; the search follows, with the check of a path, the routes of an AS and the examples next to it; the ASPAs of today are a number, a sentence and a bar (the chart of their growth is on the Adoption page); the four areas are cards.
+- The page of an AS keeps the title, the tabs of the three tools and the full width of the other pages. The lines "Also: check an AS path, check the routes seen in BGP", repeated in three places, are gone. The Adoption page has the links to its parts under its title.
+
 ## [1.72.1] - 2026-11-13
 
 ### Fixed

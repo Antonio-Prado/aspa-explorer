@@ -135,7 +135,7 @@ function computeQuality() {
 function renderQuality() {
   const body = $('quality-body');
   const tiles = $('quality-tiles');
-  if (!body || !tiles) return;   // the list of all findings is on the State of ASPA page (latest.js); this page uses them for one AS
+  if (!body || !tiles) return;   // the list of all findings is on the Adoption page (latest.js); this page uses them for one AS
   const affected = (sev) => new Set(findings.filter((f) => f.severity === sev).map((f) => f.customer)).size;
   tiles.replaceChildren(...['error', 'warning', 'note'].map((sev) => el('div', { class: `tile card sev-${sev}` },
     el('div', { class: 'label', text: sev === 'note' ? 'Notes' : `${SEVERITY[sev]}s` }),

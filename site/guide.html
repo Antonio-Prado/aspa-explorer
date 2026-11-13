@@ -23,17 +23,17 @@
 <meta name="twitter:card" content="summary_large_image">
 <meta name="color-scheme" content="light dark">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
-<link rel="stylesheet" href="/style.css?v=1.72.1">
-<script src="/status-checks.js?v=1.72.1" defer></script>
-<script src="/asnames.js?v=1.72.1" defer></script>
-<script src="/footer.js?v=1.72.1" defer></script>
+<link rel="stylesheet" href="/style.css?v=1.73.0">
+<script src="/status-checks.js?v=1.73.0" defer></script>
+<script src="/asnames.js?v=1.73.0" defer></script>
+<script src="/footer.js?v=1.73.0" defer></script>
 </head>
 <body>
 <a class="skip" href="#main">Skip to main content</a>
 <header class="wrap masthead">
   <div class="top">
-    <p class="back"><a class="brandlink" href="/" title="Back to ASPA Explorer"><img class="brand" src="/img/logo-mark.svg?v=1.72.1" alt="" width="40" height="40"><span>ASPA Explorer</span></a></p>
-    <nav class="topnav" aria-label="Main"><a href="/network.html">My network</a><a href="/statistics.html">State of ASPA</a><a href="/now.html">Right now</a><a class="minor" href="/guide.html" aria-current="page">Guide</a><a class="minor" href="/api.html">API</a><a class="minor" href="/status.html">Status</a></nav>
+    <p class="back"><a class="brandlink" href="/" title="Back to ASPA Explorer"><img class="brand" src="/img/logo-mark.svg?v=1.73.0" alt="" width="40" height="40"><span>ASPA Explorer</span></a></p>
+    <nav class="topnav" aria-label="Main"><a class="sect a-look" href="/network.html">Look up</a><a class="sect a-adopt" href="/statistics.html">Adoption</a><a class="sect a-now" href="/now.html">Right now</a><a class="sect a-inc" href="/incidents.html">Incidents</a><a class="minor" href="/guide.html" aria-current="page">Guide</a><a class="minor" href="/examples.html">Examples</a><a class="minor" href="/api.html">API</a><a class="minor" href="/status.html">Status</a></nav>
   </div>
   <h1>Guide</h1>
   <p class="lede">How the ASPA Explorer interface works, what each number means and where the data comes from.</p>
@@ -53,14 +53,14 @@
     <h2 id="what">What you are looking at</h2>
     <p>An <strong>ASPA</strong> (Autonomous System Provider Authorization) is a signed object published in the RPKI. In it, a <em>customer</em> AS lists the ASes that are allowed to act as its upstream <em>providers</em>. Routers that validate AS paths use these lists to spot route leaks and some forged paths.</p>
     <p>ASPA Explorer shows every ASPA that a Routinator validator currently considers valid. The ASPAs are shown as the validator gives them, with no edits, so you can search them and see the big picture. The checks built on them, such as the evidence about the providers, the valleys and the quality findings, are readings, and each is explained below.</p>
-    <p>The menu has three areas, one page each: <em>My network</em> (the tools for one network), <em>State of ASPA</em> (how ASPA grows: the numbers and the charts first, the long tables under <em>Go deeper</em>) and <em>Right now</em> (four tabs: the invalid announcements as they happen, the valleys of the day, the validators compared and the RTR sessions; from there the incidents). Then come the guide, the API and the status. This guide follows the same order.</p>
-    <p>Every address keeps working, old ones too: <code>/#AS680</code> opens the page of the AS, <code>/#path=…</code> and <code>/#routes=…</code> open those tools on the <em>My network</em> page, <code>/#changes</code> and <code>/#quality</code> open their tabs on the <em>State of ASPA</em> page, the parts that moved from the statistics page to <em>Right now</em> follow there, and the method of the incidents is in this guide. The full list of ASPAs is a download on the <a href="/api.html#download">API page</a> (an old <code>#all</code> link goes there).</p>
+    <p>The menu has four areas, one page each, named after what you do there: <em>Look up</em> (an AS, an AS path, the routes of an AS in BGP), <em>Adoption</em> (the state of ASPA: the numbers and the charts first, the long tables under <em>Go deeper</em>), <em>Right now</em> (four tabs: the invalid announcements as they happen, the valleys of the day, the validators compared and the RTR sessions) and <em>Incidents</em>. Each area has a colour, which marks it in the menu, at the top of its pages and on its card in the home page, and is used for nothing else. Then come the guide, the examples, the API and the status, and every page ends with the list of the pages. This guide follows the same order.</p>
+    <p>Every address keeps working, old ones too: <code>/#AS680</code> opens the page of the AS, <code>/#path=…</code> and <code>/#routes=…</code> open those tools on the <em>Look up</em> page, <code>/#changes</code> and <code>/#quality</code> open their tabs on the <em>Adoption</em> page, the parts that moved from the statistics page to <em>Right now</em> follow there, and the method of the incidents is in this guide. The full list of ASPAs is a download on the <a href="/api.html#download">API page</a> (an old <code>#all</code> link goes there).</p>
   </section>
 
   <section aria-labelledby="home">
     <h2 id="home">The home page</h2>
-    <p>The home page opens on a search, which takes you to the page of an AS, and on a line about the network you are on. The server looks up the address you come from in a map of the routes that the RIPE RIS collectors see (prefix and origin AS, rebuilt once a day from their public dumps, with only the routes seen by ten peers or more), and the line says whether that AS has an ASPA, with how many providers and how many things its quality checks find to look at, or that it has none yet, with a link to what it should publish. The lookup happens on the server of this site: your address is not sent to anybody else. An address that no route covers gets no line.</p>
-    <p><em>ASPAs validated today</em> is the count of the validator of this site, over the chart of the networks with an ASPA at the end of each month since the first one, in October 2023. Three numbers follow: the share of the networks seen in BGP that have an ASPA, how many of the 100 largest transit networks have one (by customer cone, from CAIDA; the list is on the <em>State of ASPA</em> page) and how many validators the site compares every hour. The three areas of the site and a few lines for who is new to ASPA close the page.</p>
+    <p>The home page opens on the network you are on. The server looks up the address you come from in a map of the routes that the RIPE RIS collectors see (prefix and origin AS, rebuilt once a day from their public dumps, with only the routes seen by ten peers or more), and the page says whether that AS has an ASPA, with how many providers and how many things its quality checks find to look at, or that it has none yet, with a link to its page and to what it should publish. The lookup happens on the server of this site: your address is not sent to anybody else. An address that no route covers gets no answer, and the page starts from the search.</p>
+    <p>The search takes you to the page of an AS, and the links next to it to the check of an AS path, to the routes of an AS in BGP and to the examples of how to write an ASPA. <em>ASPAs validated today</em> is the count of the validator of this site, with how many of the networks seen in BGP have one, as a sentence and as a bar; the chart of their growth is on the <em>Adoption</em> page. The four areas of the site, each with a line on what is there, and a line for who is new to ASPA close the page.</p>
   </section>
 
   <section aria-labelledby="reading">
@@ -509,6 +509,7 @@
 </main>
 
 <footer class="wrap foot">
+  <nav class="footnav" aria-label="All pages"><a href="/network.html">Look up</a><a href="/statistics.html">Adoption</a><a href="/now.html">Right now</a><a href="/incidents.html">Incidents</a><a href="/guide.html">Guide</a><a href="/examples.html">Examples</a><a href="/api.html">API</a><a href="/api.html#badge">Badge for your site</a><a href="/status.html#alerts-title">Alerts on the service</a><a href="/status.html">Status</a></nav>
   <p><a href="/">&larr; Back to ASPA Explorer</a></p>
 </footer>
 </body>

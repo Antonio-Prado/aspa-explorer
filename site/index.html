@@ -24,63 +24,64 @@
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <link rel="canonical" href="https://aspa.ping6.it/">
 <link rel="alternate" type="application/atom+xml" title="ASPA Explorer: changes" href="/changes.atom">
-<link rel="stylesheet" href="/style.css?v=1.72.1">
-<script src="/trends.js?v=1.72.1" defer></script>
-<script src="/home.js?v=1.72.1" defer></script>
-<script src="/status-checks.js?v=1.72.1" defer></script>
-<script src="/footer.js?v=1.72.1" defer></script>
+<link rel="stylesheet" href="/style.css?v=1.73.0">
+<script src="/home.js?v=1.73.0" defer></script>
+<script src="/status-checks.js?v=1.73.0" defer></script>
+<script src="/footer.js?v=1.73.0" defer></script>
 </head>
 <body class="home">
 <a class="skip" href="#main">Skip to main content</a>
 <header class="wrap masthead">
   <div class="top">
-    <h1><a class="homelink" href="/"><img class="brand" src="/img/logo-mark.svg?v=1.72.1" alt="" width="40" height="40"><span>ASPA Explorer</span></a></h1>
-    <nav class="topnav" aria-label="Main"><a href="/network.html">My network</a><a href="/statistics.html">State of ASPA</a><a href="/now.html">Right now</a><a class="minor" href="/guide.html">Guide</a><a class="minor" href="/api.html">API</a><a class="minor" href="/status.html">Status</a></nav>
+    <h1><a class="homelink" href="/"><img class="brand" src="/img/logo-mark.svg?v=1.73.0" alt="" width="40" height="40"><span>ASPA Explorer</span></a></h1>
+    <nav class="topnav" aria-label="Main"><a class="sect a-look" href="/network.html">Look up</a><a class="sect a-adopt" href="/statistics.html">Adoption</a><a class="sect a-now" href="/now.html">Right now</a><a class="sect a-inc" href="/incidents.html">Incidents</a><a class="minor" href="/guide.html">Guide</a><a class="minor" href="/examples.html">Examples</a><a class="minor" href="/api.html">API</a><a class="minor" href="/status.html">Status</a></nav>
   </div>
 </header>
 
 <main id="main" tabindex="-1" class="home-main">
-  <section class="home-top" aria-labelledby="home-title">
-    <h2 id="home-title">The ASPAs of the Internet, validated and measured</h2>
-    <p class="home-lede">An ASPA says which networks may carry the routes of an AS. Look one up, check a path against them, and see how far the adoption has come.</p>
+  <p class="home-lede">ASPA Explorer shows which networks have declared their providers in the RPKI, and checks routes against those declarations.</p>
+
+  <section class="home-you" id="home-you" aria-labelledby="you-title">
+    <h2 id="you-title" class="home-kicker">The network you are on</h2>
+    <div id="home-verdict" aria-live="polite"><p class="you-wait"><span class="busy">Checking the network you are on</span></p></div>
+  </section>
+
+  <section class="home-find" aria-labelledby="home-title">
+    <h2 id="home-title">Look up any network</h2>
     <form class="home-search" id="home-search" autocomplete="off" novalidate>
       <label for="home-asn" class="sr-only">AS number</label>
       <input id="home-asn" name="asn" type="text" inputmode="text" spellcheck="false" placeholder="AS number, e.g. AS680" aria-describedby="home-error">
       <button type="submit">Look up</button>
     </form>
     <p class="error" id="home-error" aria-live="polite"></p>
-    <p class="home-you" id="home-verdict" aria-live="polite"><span class="busy">Checking the network you are on</span></p>
-    <p class="home-also">Also: <a href="/network.html#path">check an AS path</a> · <a href="/network.html#routes">check the routes seen in BGP</a></p>
+    <p class="home-or"><span>or</span> <a href="/network.html#path">Check an AS path</a> <a href="/network.html#routes">See the routes of an AS in BGP</a> <a href="/examples.html">Write an ASPA</a></p>
   </section>
 
-  <section class="home-data" aria-labelledby="home-data-title">
-    <div class="home-data-head">
-      <h2 id="home-data-title">ASPAs validated today</h2>
-      <a href="/statistics.html">The state of ASPA, in full</a>
-    </div>
-    <div class="home-count">
+  <section class="home-count" aria-labelledby="home-data-title">
+    <div class="home-count-what">
+      <h2 id="home-data-title" class="home-kicker">ASPAs validated today</h2>
       <p class="home-number" id="home-number"><span class="busy">Counting</span></p>
-      <p class="home-since" id="home-since"></p>
+      <p class="home-share" id="home-share"></p>
+      <div class="home-bar" id="home-bar" hidden><div></div></div>
     </div>
-    <div class="linechart home-chart" id="home-chart"></div>
-    <p class="home-caption" id="home-caption"></p>
-    <dl class="home-figs" id="home-figs"></dl>
+    <a class="home-more" href="/statistics.html">How adoption grew, and who has one</a>
   </section>
 
   <section class="home-areas" aria-labelledby="home-areas-title">
-    <h2 id="home-areas-title">What you can do here</h2>
-    <a class="home-area" href="/network.html"><span class="area-name">My network</span><span class="area-what">The ASPA of an AS and what is wrong with it, its routes as the collectors see them, an AS path checked hop by hop.</span></a>
-    <a class="home-area" href="/statistics.html"><span class="area-name">State of ASPA</span><span class="area-what">Adoption over time, by registry, country and size of the network, and what changed this week.</span></a>
-    <a class="home-area" href="/now.html"><span class="area-name">Right now</span><span class="area-what">Invalid routes and valleys in today's tables, the validators side by side, the RTR caches as a router sees them, the incidents.</span></a>
+    <h2 id="home-areas-title">Where to find what</h2>
+    <div class="home-cards">
+      <a class="home-area a-look" href="/network.html"><span class="area-name">Look up</span><span class="area-what">The ASPA of an AS and what is wrong with it, an AS path checked hop by hop, the routes of an AS in BGP.</span></a>
+      <a class="home-area a-adopt" href="/statistics.html"><span class="area-name">Adoption</span><span class="area-what">How many networks have an ASPA, how it grew, by registry, country and size, and what changed this week.</span></a>
+      <a class="home-area a-now" href="/now.html"><span class="area-name">Right now</span><span class="area-what">Invalid routes and valleys in today's tables, the validators side by side, the RTR caches as a router sees them.</span></a>
+      <a class="home-area a-inc" href="/incidents.html"><span class="area-name">Incidents</span><span class="area-what">The routing incidents of the last days, classified by type, and what the ASPAs say about each.</span></a>
+    </div>
   </section>
 
-  <section class="home-new" aria-labelledby="home-new-title">
-    <h2 id="home-new-title">New to ASPA?</h2>
-    <p>An ASPA (Autonomous System Provider Authorization) is a signed object of the RPKI in which a network lists its providers. A router that checks ASPAs can refuse a route that went up through a network that is not one of them: a route leak, and some forged paths. <a href="/guide.html#what">What an ASPA is</a> · <a href="/examples.html">Write your first one</a> · <a href="/guide.html#data">Where the numbers come from</a></p>
-  </section>
+  <p class="home-new"><strong>New to ASPA?</strong> A network lists its providers in a signed object of the RPKI, and a router can then refuse a route that went up through anyone else. <a href="/guide.html#what">What an ASPA is</a></p>
 </main>
 
 <footer class="wrap foot">
+  <nav class="footnav" aria-label="All pages"><a href="/network.html">Look up</a><a href="/statistics.html">Adoption</a><a href="/now.html">Right now</a><a href="/incidents.html">Incidents</a><a href="/guide.html">Guide</a><a href="/examples.html">Examples</a><a href="/api.html">API</a><a href="/api.html#badge">Badge for your site</a><a href="/status.html#alerts-title">Alerts on the service</a><a href="/status.html">Status</a></nav>
   <p>Validated by the Routinator and the Fort of the site, at the Department of Information Engineering of the University of Padova.</p>
 </footer>
 
