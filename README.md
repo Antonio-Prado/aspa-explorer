@@ -47,7 +47,7 @@
   </tr>
   <tr>
     <td width="50%"><img src="assets/screenshots/pathcheck-dark.jpg" alt="Checking the AS path 3356 1299 680: the verdict and the hop-by-hop table"></td>
-    <td width="50%"><img src="assets/screenshots/routes-dark.jpg" alt="The routes seen in BGP for AS3333: its prefixes checked against the ROAs (two invalid, longer than the ROA allows), then the distinct AS paths checked against the ASPAs"></td>
+    <td width="50%"><img src="assets/screenshots/routes-dark.jpg" alt="The routes seen in BGP for AS3333: its seven prefixes checked against the ROAs (all valid), then the distinct AS paths checked against the ASPAs"></td>
   </tr>
   <tr>
     <td align="center"><sub>AS path check: verdict and hop-by-hop reasons</sub></td>
@@ -55,14 +55,14 @@
   </tr>
   <tr>
     <td width="50%"><img src="assets/screenshots/quality-dark.jpg" alt="The ASPA quality section: errors, warnings and notes, with the ASPAs of each check"></td>
-    <td width="50%"><img src="assets/screenshots/share-light.jpg" alt="Share and follow: links to the page, feed and JSON of an AS, the form to be notified by e-mail or webhook, and the badge with the Markdown and HTML to paste"></td>
+    <td width="50%"><img src="assets/screenshots/share-light.jpg" alt="Share and follow: links to the page, feed and JSON of an AS, and the form to be notified by e-mail or webhook"></td>
   </tr>
   <tr>
     <td align="center"><sub>ASPA quality: what looks wrong in the ASPAs</sub></td>
     <td align="center"><sub>Share and follow: feed, notifications, badge, API</sub></td>
   </tr>
   <tr>
-    <td width="50%"><img src="assets/screenshots/adoption-dark.jpg" alt="The adoption page: the largest transit networks without an ASPA, with their customer cone and country"></td>
+    <td width="50%"><img src="assets/screenshots/adoption-dark.jpg" alt="The Adoption page: the largest transit networks without an ASPA, with their customer cone and country"></td>
     <td width="50%"><img src="assets/screenshots/examples-light.jpg" alt="The examples page: a checker that reviews a list of providers and compares it with the published ASPA"><br><img src="assets/screenshots/status-light.jpg" alt="The status page: each part of the service with its state and the time of its last update"></td>
   </tr>
   <tr>
@@ -73,7 +73,7 @@
     <td colspan="2" align="center"><img src="assets/screenshots/neighbours-dark.jpg" width="60%" alt="The neighbours of AS41327 in the routes seen in BGP, after the button that reads the registry: which are confirmed as providers by its IRR object and CAIDA, and which are not listed in its ASPA and are declared as peers"><br><sub>Neighbours of an origin, read against its IRR object and CAIDA: confirmed, probably missing, or declared as something else</sub></td>
   </tr>
   <tr>
-    <td colspan="2" align="center"><img src="assets/screenshots/valley-why-dark.jpg" width="60%" alt="The table of valleys seen now for AS41327, with the why? button opened on one place: the reading says possibly a gap in an ASPA, who to ask, and the hops with what the ASPAs, the IRR objects and CAIDA say"><br><sub>Valleys seen now: <i>why?</i> reads the registry, CAIDA and RIPEstat for the hops the ASPAs refuse</sub></td>
+    <td colspan="2" align="center"><img src="assets/screenshots/valley-why-dark.jpg" width="60%" alt="The table of valleys seen now for AS41327, with the why? button opened on one place: the reading says that an exchange-point AS is in the valley, and the hops with what the ASPAs, the IRR objects and CAIDA say"><br><sub>Valleys seen now: <i>why?</i> reads the registry, CAIDA and RIPEstat for the hops the ASPAs refuse</sub></td>
   </tr>
   <tr>
     <td width="50%"><img src="assets/screenshots/graph-dark.jpg" alt="The neighbourhood graph of AS12779: the providers of its ASPA above, the ASes that name it below, and on the right the neighbours that the routes show, with AS60798 marked as a likely provider"></td>
@@ -100,13 +100,13 @@
     <td align="center"><sub>Compare two dates for an AS</sub></td>
   </tr>
   <tr>
-    <td colspan="2" align="center"><img src="assets/screenshots/rtr-dark.jpg" width="70%" alt="The validator as a router sees it: the session, the last sync, the VRPs and ASPAs over RTR, the syncs and the anomalies, and the table of the four caches side by side: Routinator and Fort of the site, Level66 and Cloudflare"></td>
+    <td colspan="2" align="center"><img src="assets/screenshots/rtr-dark.jpg" width="70%" alt="The validator as a router sees it: the session, the last sync, the VRPs and ASPAs over RTR, the syncs and the anomalies, and the table of the six caches side by side: Routinator and Fort of the site, Level66, DaKnObNET in Zurich and in Amsterdam, and Cloudflare"></td>
   </tr>
   <tr>
     <td colspan="2" align="center"><sub>The validator as a router sees it, with the caches side by side</sub></td>
   </tr>
   <tr>
-    <td colspan="2" align="center"><img src="assets/screenshots/collectors-dark.jpg" width="70%" alt="Collectors compared: a bar for each of the 33 collectors of RIPE RIS and RouteViews with the places of valley it sees, and the same places told apart by who sees them"></td>
+    <td colspan="2" align="center"><img src="assets/screenshots/collectors-dark.jpg" width="70%" alt="Collectors compared: a bar for each of the 33 collectors of RIPE RIS and RouteViews with the places of valley it sees"></td>
   </tr>
   <tr>
     <td colspan="2" align="center"><sub>The collectors compared, and RIPE RIS against RouteViews on the same places</sub></td>
@@ -137,7 +137,7 @@
   </tr>
   <tr>
     <td width="50%"><img src="assets/screenshots/report-dark.jpg" alt="A shared result: the summary, the table of paths and the note that the report is unverified"></td>
-    <td width="50%"><img src="assets/screenshots/peek-light.jpg" alt="The quick look at AS3356: no ASPA, named as a provider by 196 ASPAs, seen in BGP"></td>
+    <td width="50%"><img src="assets/screenshots/peek-light.jpg" alt="The quick look at AS3356: no ASPA, named as a provider by 229 ASPAs, seen in BGP"></td>
   </tr>
   <tr>
     <td align="center"><sub>A shared result, at a link of its own</sub></td>
@@ -150,13 +150,13 @@
     <td colspan="2" align="center"><sub>Availability by month and the alerts on the status page</sub></td>
   </tr>
   <tr>
-    <td colspan="2" align="center"><img src="assets/screenshots/tromboning-dark.jpg" width="60%" alt="Tromboning of AS41327: the reading first (no trombone seen, one probe not where it is said to be), then a row for each probe of Globalping and RIPE Atlas in Italy with the networks on the way and the round trip"></td>
+    <td colspan="2" align="center"><img src="assets/screenshots/tromboning-dark.jpg" width="60%" alt="Tromboning of AS41327: the reading first (no trombone seen, and the probes whose place could be checked are where they are said to be), then a row for each probe of Globalping and RIPE Atlas in Italy with the networks on the way and the round trip"></td>
   </tr>
   <tr>
     <td colspan="2" align="center"><sub>Tromboning, measured: probes of Globalping and RIPE Atlas in the country, each checked for its place, the reading first</sub></td>
   </tr>
   <tr>
-    <td colspan="2" align="center"><img src="assets/screenshots/tromboning-pair-dark.jpg" width="70%" alt="Tromboning of AS41327 over IPv4 and IPv6 on the same probes: the reading of each family first (no trombone seen), the comparison of the two and a row for each probe"></td>
+    <td colspan="2" align="center"><img src="assets/screenshots/tromboning-pair-dark.jpg" width="70%" alt="Tromboning of AS41327 over IPv4 and IPv6 on the same probes: the reading of each family first (no trombone seen), the comparison of the two, a probe that is not where it is said to be and a row for each probe"></td>
   </tr>
   <tr>
     <td colspan="2" align="center"><sub>Tromboning, IPv4 and IPv6 on the same probes: the reading of each family first, the comparison after</sub></td>
