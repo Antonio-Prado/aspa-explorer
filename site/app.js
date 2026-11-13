@@ -962,6 +962,11 @@ function pairBlock(res, t4, t6, home, origin, atRegistered) {
     else if (v4 && v6 && worst !== 'ok' && (v4 === 'ok' || v6 === 'ok')) headline = `${worst === 'trombone' ? 'Trombone' : 'Longer than it should be'} over ${fams[0]} only`;
     else if (v4 && v6) headline = `IPv4: ${word[v4]}. IPv6: ${word[v6]}`;
     else headline = `Over ${v4 ? 'IPv4' : 'IPv6'}: ${word[worst]}; the other family could not be read`;
+    // a family whose median is normal can still have a probe or two with a trombone: said as the single measurement says it
+    if (worst === 'ok' && ((a4 && a4.counts.trombone) || (a6 && a6.counts.trombone))) {
+      kind = 'long';
+      headline = v4 && v6 ? 'No trombone on most paths, over IPv4 or IPv6' : `Over ${v4 ? 'IPv4' : 'IPv6'}: no trombone on most paths; the other family could not be read`;
+    }
   }
   const family = (name, a, key) => {
     if (!a) return `${name}: no probe got into ${as}${stopped(key === 'n4' ? 'v4' : 'v6', key) ? ` (${stopped(key === 'n4' ? 'v4' : 'v6', key)} traceroutes stop earlier)` : ''}.`;

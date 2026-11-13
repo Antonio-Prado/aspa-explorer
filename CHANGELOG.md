@@ -9,6 +9,11 @@ A few numbers were deployed and folded into the next release without a tag of th
 
 ## [Unreleased]
 
+## [1.75.6] - 2026-11-13
+
+### Fixed
+- Tromboning over IPv4 and IPv6: the headline said "No trombone seen, over IPv4 or IPv6" when the median of each family was normal, even if the line of a family under it counted a probe with a trombone. It now says "No trombone on most paths", as the measurement of one family already did.
+
 ## [1.75.5] - 2026-11-13
 
 ### Changed
