@@ -360,6 +360,7 @@ assets/                        logo, screenshots and credit logos used in this R
 .gitlab/, .gitlab-ci.yml       issue and merge request templates, and the CI pipeline
 eslint.config.mjs              security rules for the browser code (no innerHTML, eval, ...)
 redocly.yaml                   rules for the validation of the OpenAPI schema (site/api/openapi.json)
+.redocly.lint-ignore.yaml      the exceptions to those rules, one by one
 ```
 
 ## Deploy

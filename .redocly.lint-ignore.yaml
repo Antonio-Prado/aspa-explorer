@@ -1,0 +1,5 @@
+# The two addresses that nginx passes to the validator as they are: there is no request that gets a 4xx answer from them.
+site/api/openapi.json:
+  operation-4xx-response:
+    - '#/paths/~1data~1aspas.json/get/responses'
+    - '#/paths/~1data~1status.json/get/responses'

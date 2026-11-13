@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "ASPA Explorer API",
-    "version": "1.75.3",
+    "version": "1.75.4",
     "description": "ASPA objects validated by Routinator at rpki.ping6.it, their history and quality, for any AS. Open data, read-only, no key.",
     "contact": {
       "email": "antonio.prado@dei.unipd.it"
@@ -151,6 +151,9 @@
                 }
               }
             }
+          },
+          "404": {
+            "$ref": "#/components/responses/NotBuilt"
           }
         }
       }
@@ -298,6 +301,12 @@
         "responses": {
           "200": {
             "description": "Cancelled (also when it already was)"
+          },
+          "403": {
+            "description": "A request from the page of another site"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
           }
         }
       }
@@ -444,6 +453,9 @@
                 }
               }
             }
+          },
+          "404": {
+            "$ref": "#/components/responses/NotBuilt"
           }
         }
       }
@@ -496,6 +508,9 @@
                 }
               }
             }
+          },
+          "404": {
+            "$ref": "#/components/responses/NotBuilt"
           }
         }
       }
@@ -514,6 +529,9 @@
                 }
               }
             }
+          },
+          "404": {
+            "$ref": "#/components/responses/NotBuilt"
           }
         }
       }
@@ -737,6 +755,9 @@
                 }
               }
             }
+          },
+          "404": {
+            "$ref": "#/components/responses/NotBuilt"
           }
         }
       }
@@ -787,6 +808,9 @@
                 }
               }
             }
+          },
+          "404": {
+            "$ref": "#/components/responses/NotBuilt"
           }
         }
       }
@@ -822,6 +846,9 @@
                 }
               }
             }
+          },
+          "404": {
+            "$ref": "#/components/responses/NotBuilt"
           }
         }
       }
@@ -931,6 +958,9 @@
                 }
               }
             }
+          },
+          "404": {
+            "$ref": "#/components/responses/NotBuilt"
           }
         }
       }
@@ -961,6 +991,9 @@
                 }
               }
             }
+          },
+          "404": {
+            "$ref": "#/components/responses/NotBuilt"
           }
         }
       }
@@ -1294,6 +1327,9 @@
                 }
               }
             }
+          },
+          "404": {
+            "$ref": "#/components/responses/NotBuilt"
           }
         }
       }
@@ -1348,6 +1384,9 @@
                 }
               }
             }
+          },
+          "404": {
+            "$ref": "#/components/responses/NotBuilt"
           }
         }
       }
@@ -1431,6 +1470,9 @@
                 }
               }
             }
+          },
+          "404": {
+            "$ref": "#/components/responses/NotBuilt"
           }
         }
       }
@@ -1576,6 +1618,9 @@
                 }
               }
             }
+          },
+          "404": {
+            "$ref": "#/components/responses/NotBuilt"
           }
         }
       }
@@ -1677,6 +1722,9 @@
                 }
               }
             }
+          },
+          "404": {
+            "$ref": "#/components/responses/NotBuilt"
           }
         }
       }
@@ -1748,6 +1796,9 @@
                 }
               }
             }
+          },
+          "404": {
+            "$ref": "#/components/responses/NotBuilt"
           }
         }
       }
@@ -1801,6 +1852,9 @@
                 }
               }
             }
+          },
+          "404": {
+            "$ref": "#/components/responses/NotBuilt"
           }
         }
       }
@@ -1839,6 +1893,9 @@
                 }
               }
             }
+          },
+          "404": {
+            "$ref": "#/components/responses/NotBuilt"
           }
         }
       }
@@ -1871,6 +1928,9 @@
                 }
               }
             }
+          },
+          "404": {
+            "$ref": "#/components/responses/NotBuilt"
           }
         }
       }
@@ -1916,6 +1976,9 @@
                 }
               }
             }
+          },
+          "404": {
+            "$ref": "#/components/responses/NotBuilt"
           }
         }
       }
@@ -1946,6 +2009,9 @@
                 }
               }
             }
+          },
+          "404": {
+            "$ref": "#/components/responses/NotBuilt"
           }
         }
       }
@@ -1982,6 +2048,9 @@
                 }
               }
             }
+          },
+          "404": {
+            "$ref": "#/components/responses/NotBuilt"
           }
         }
       }
@@ -2033,6 +2102,9 @@
                 }
               }
             }
+          },
+          "404": {
+            "$ref": "#/components/responses/NotBuilt"
           }
         }
       }
@@ -2152,6 +2224,9 @@
                 }
               }
             }
+          },
+          "404": {
+            "description": "No such cache"
           }
         }
       }
@@ -2207,6 +2282,9 @@
                 }
               }
             }
+          },
+          "404": {
+            "$ref": "#/components/responses/NotBuilt"
           }
         }
       }
@@ -2456,6 +2534,9 @@
                 }
               }
             }
+          },
+          "404": {
+            "$ref": "#/components/responses/NotBuilt"
           }
         }
       }
@@ -2492,6 +2573,9 @@
                 }
               }
             }
+          },
+          "404": {
+            "$ref": "#/components/responses/NotBuilt"
           }
         }
       }
@@ -2510,6 +2594,15 @@
                 }
               }
             }
+          },
+          "400": {
+            "description": "Not a valid prefix"
+          },
+          "404": {
+            "description": "Not an AS number and a prefix"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
           }
         },
         "parameters": [
@@ -2869,6 +2962,9 @@
                 }
               }
             }
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
           }
         }
       }
@@ -2941,6 +3037,9 @@
                 }
               }
             }
+          },
+          "404": {
+            "$ref": "#/components/responses/NotBuilt"
           }
         }
       }
@@ -3027,6 +3126,9 @@
                 }
               }
             }
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
           }
         }
       }
@@ -3224,6 +3326,14 @@
             }
           }
         }
+      }
+    },
+    "responses": {
+      "NotBuilt": {
+        "description": "The file is not there yet: the job that writes it has not run on this host"
+      },
+      "TooManyRequests": {
+        "description": "Too many requests from this address: try again later"
       }
     }
   }

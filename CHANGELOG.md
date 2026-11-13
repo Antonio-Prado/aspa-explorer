@@ -9,6 +9,11 @@ A few numbers were deployed and folded into the next release without a tag of th
 
 ## [Unreleased]
 
+## [1.75.4] - 2026-11-13
+
+### Changed
+- The OpenAPI schema says the error answers of every operation: a 404 for a file that the job of the host has not written yet, a 429 where there is a limit for each address (the unsubscribe request, the health of the notifications, the feed of the changes, the origin validation of a route), a 400 for a prefix that is not valid, a 404 for a cache that does not exist. The rule of the validator that asks for them is on again; the two addresses passed to the validator as they are, which have no such answer, are the only exceptions (`.redocly.lint-ignore.yaml`).
+
 ## [1.75.3] - 2026-11-13
 
 ### Changed
