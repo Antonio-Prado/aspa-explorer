@@ -293,7 +293,7 @@ flowchart LR
     V -->|"routes"| P["RIPEstat"]
     N -->|"/api/v1/archive/*"| H["history branch,<br>copied every 10 minutes"]
     M["RTR monitors<br>RAVEN"] -.->|"RTR"| R
-    M -.->|"RTR"| C["Fort, Level66,<br>Cloudflare caches"]
+    M -.->|"RTR"| C["Fort and the<br>reference caches"]
     M --> F
     click V "https://github.com/Antonio-Prado/aspa-explorer#features"
     click N "https://github.com/Antonio-Prado/aspa-explorer/wiki/Deployment#what-the-nginx-configuration-does"
@@ -415,7 +415,7 @@ The downstream verification implemented by the path check is analysed in the fol
 
 Thanks to Leo Vegoda of PeeringDB for suggesting the names of the ASes as tooltips (1.52.0).
 
-The RTR monitors are [RAVEN](https://github.com/nokia/bgp-routing-security-monitor) by Ritesh Mukherjee (Nokia, BSD-3-Clause), whose RIPE Labs article [*Your Router Trusts Its Validator. But Who's Watching the Validator?*](https://labs.ripe.net/author/ritesh-mukherjee/your-router-trusts-its-validator-but-whos-watching-the-validator/) prompted them (1.58.0); the [documentation of the monitor](https://ritmukhe.github.io/raven-docs/user-guide/cli-reference/#raven-rtr-monitor) links this site as a running instance. The reference caches are public RTR servers offered to the community: the ones of Level66 Network and of DaKnObNET in Zurich and in Amsterdam, which turned the ASPAs on in Zurich at our request, and the one of Cloudflare, whose JSON export is also one of the three validators compared. The second validator of the site is [Fort](https://github.com/NICMx/FORT-validator) by NIC México.
+The RTR monitors are [RAVEN](https://github.com/nokia/bgp-routing-security-monitor) by Ritesh Mukherjee (Nokia, BSD-3-Clause), whose RIPE Labs article [*Your Router Trusts Its Validator. But Who's Watching the Validator?*](https://labs.ripe.net/author/ritesh-mukherjee/your-router-trusts-its-validator-but-whos-watching-the-validator/) prompted them (1.58.0); the [documentation of the monitor](https://ritmukhe.github.io/raven-docs/user-guide/cli-reference/#raven-rtr-monitor) links this site as a running instance. The reference caches are public RTR servers offered to the community: the ones of Level66 Network and of DaKnObNET in Zurich and in Amsterdam, which turned the ASPAs on in Zurich at our request, and the one of Cloudflare, whose JSON export is also one of the four validators compared. The second validator of the site is [Fort](https://github.com/NICMx/FORT-validator) by NIC México.
 
 ## License
 
