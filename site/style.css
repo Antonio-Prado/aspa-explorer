@@ -918,3 +918,19 @@ body { overflow-x: clip; }
 .footnav { display: flex; flex-wrap: wrap; gap: 0 1.25rem; margin: 0 0 0.75rem; padding-top: 0.75rem; border-top: 1px solid var(--grid); font-size: 0.875rem; }
 .footnav a { padding: 0.45rem 0; }
 
+
+/* 1.74: less to read before the first choice. Adoption: the chart of the ASPAs is lower, by size and by RIR are two tabs,
+   each box under "Go deeper" says the question it answers. Right now: one number for each part above the tabs */
+#chart-history { min-height: 200px; }
+.who .tabs { margin-bottom: 0.75rem; }
+details.deeper > summary .q { margin-left: 0.6rem; color: var(--ink-2); font-size: 0.95rem; }
+.glance { margin: 0.25rem 0 0.75rem; }
+.glance button.tile { display: flex; flex-direction: column; align-items: flex-start; border: 1px solid var(--grid); background: var(--surface); color: var(--ink); font-weight: 400; border-radius: 10px; }
+.glance button.tile:hover { background: var(--surface); box-shadow: 0 0 0 2px var(--area, var(--accent)); }
+.glance button.tile .value { font-size: 1.35rem; font-weight: 600; margin-top: 0.15rem; }
+@media (max-width: 640px) { details.deeper > summary .q { display: block; margin: 0.15rem 0 0 1rem; } }
+/* the box that follows the pointer on a line chart: the value of the nearest point and its time */
+.linechart .ctip { position: absolute; z-index: 2; pointer-events: none; max-width: 18rem; padding: 0.4rem 0.6rem; border-radius: 8px; background: var(--surface); color: var(--ink); box-shadow: 0 0 0 1px var(--grid), 0 4px 14px rgba(0, 0, 0, 0.18); font-size: 0.8125rem; line-height: 1.4; }
+.linechart .ctip strong { display: block; font-size: 0.95rem; font-variant-numeric: tabular-nums; }
+.linechart .ctip span { display: block; color: var(--ink-2); font-variant-numeric: tabular-nums; }
+#inv-chart, #rtr-chart, #rtr-changes { min-height: 0; }

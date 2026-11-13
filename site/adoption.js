@@ -108,5 +108,39 @@
 
     $('sources').textContent = `Sources: ASPAs from ${d.sources.aspas}; networks seen: ${d.sources.bgp}; country and registry: ${d.sources.registry}; size: ${d.sources.size} (The CAIDA AS Relationships Dataset, www.caida.org/catalog/datasets/as-relationships/). ${fmt.format(d.aspa_not_seen)} ASPA customers are not seen in BGP and are not counted.`;
   }
+
+  // "Who has an ASPA": by size and by RIR are two tabs, with the arrow keys, Home and End; the old addresses of the two
+  // charts (#size-title, #rir-title) select their tab
+  function whoTabs() {
+    const list = [...document.querySelectorAll('#who [role="tab"]')];
+    if (!list.length) return;
+    const select = (t, focus) => {
+      for (const x of list) {
+        const on = x === t;
+        x.setAttribute('aria-selected', String(on));
+        x.tabIndex = on ? 0 : -1;
+        $(x.getAttribute('aria-controls')).hidden = !on;
+      }
+      if (focus) t.focus();
+    };
+    list.forEach((t, i) => {
+      t.addEventListener('click', () => select(t));
+      t.addEventListener('keydown', (e) => {
+        const to = { ArrowRight: i + 1, ArrowLeft: i - 1, Home: 0, End: list.length - 1 }[e.key];
+        if (to === undefined) return;
+        e.preventDefault();
+        select(list[(to + list.length) % list.length], true);
+      });
+    });
+    const fromHash = () => {
+      const want = { 'size-title': 'tab-size', 'rir-title': 'tab-rir' }[location.hash.slice(1)];
+      if (!want) return;
+      select($(want));
+      $('who').scrollIntoView({ block: 'start' });
+    };
+    window.addEventListener('hashchange', fromHash);
+    fromHash();
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', whoTabs); else whoTabs();
   main();
 })();

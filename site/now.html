@@ -23,23 +23,23 @@
 <meta name="twitter:card" content="summary_large_image">
 <meta name="color-scheme" content="light dark">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
-<link rel="stylesheet" href="/style.css?v=1.73.1">
-<script src="/ui.js?v=1.73.1" defer></script>
-<script src="/leaks.js?v=1.73.1" defer></script>
-<script src="/invalid.js?v=1.73.1" defer></script>
-<script src="/validators.js?v=1.73.1" defer></script>
-<script src="/rtr.js?v=1.73.1" defer></script>
-<script src="/status-checks.js?v=1.73.1" defer></script>
-<script src="/peek.js?v=1.73.1" defer></script>
-<script src="/asnames.js?v=1.73.1" defer></script>
-<script src="/now.js?v=1.73.1" defer></script>
-<script src="/footer.js?v=1.73.1" defer></script>
+<link rel="stylesheet" href="/style.css?v=1.74.0">
+<script src="/ui.js?v=1.74.0" defer></script>
+<script src="/leaks.js?v=1.74.0" defer></script>
+<script src="/invalid.js?v=1.74.0" defer></script>
+<script src="/validators.js?v=1.74.0" defer></script>
+<script src="/rtr.js?v=1.74.0" defer></script>
+<script src="/status-checks.js?v=1.74.0" defer></script>
+<script src="/peek.js?v=1.74.0" defer></script>
+<script src="/asnames.js?v=1.74.0" defer></script>
+<script src="/now.js?v=1.74.0" defer></script>
+<script src="/footer.js?v=1.74.0" defer></script>
 </head>
 <body class="area-now">
 <a class="skip" href="#main">Skip to main content</a>
 <header class="wrap masthead">
   <div class="top">
-    <p class="back"><a class="brandlink" href="/" title="Back to ASPA Explorer"><img class="brand" src="/img/logo-mark.svg?v=1.73.1" alt="" width="40" height="40"><span>ASPA Explorer</span></a></p>
+    <p class="back"><a class="brandlink" href="/" title="Back to ASPA Explorer"><img class="brand" src="/img/logo-mark.svg?v=1.74.0" alt="" width="40" height="40"><span>ASPA Explorer</span></a></p>
     <nav class="topnav" aria-label="Main"><a class="sect a-look" href="/network.html">Look up</a><a class="sect a-adopt" href="/statistics.html">Adoption</a><a class="sect a-now" href="/now.html" aria-current="page">Right now</a><a class="sect a-inc" href="/incidents.html">Incidents</a><a class="minor" href="/guide.html">Guide</a><a class="minor" href="/examples.html">Examples</a><a class="minor" href="/api.html">API</a><a class="minor" href="/status.html">Status</a></nav>
   </div>
   <div class="pagetop">
@@ -50,6 +50,7 @@
 
 <main class="wrap" id="main" tabindex="-1">
   <nav class="jump" id="now-jump" aria-label="On this page"><a href="#inv-title">Invalid announcements</a> · <a href="#leaks-title">Valleys today</a> · <a href="#val-title">Validators compared</a> · <a href="#rtr-title">RTR caches</a></nav>
+  <div class="tiles glance" id="now-glance" hidden></div>
   <div class="tabs" role="tablist" aria-label="Right now" id="now-tabs" hidden>
     <button type="button" role="tab" class="tab" id="tab-inv" aria-controls="now-inv" aria-selected="true" tabindex="0">Invalid announcements</button>
     <button type="button" role="tab" class="tab" id="tab-leaks" aria-controls="now-leaks" aria-selected="false" tabindex="-1">Valleys today</button>

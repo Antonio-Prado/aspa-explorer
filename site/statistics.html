@@ -23,32 +23,32 @@
 <meta name="twitter:card" content="summary_large_image">
 <meta name="color-scheme" content="light dark">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
-<link rel="stylesheet" href="/style.css?v=1.73.1">
-<script src="/history.js?v=1.73.1" defer></script>
-<script src="/quality.js?v=1.73.1" defer></script>
-<script src="/latest.js?v=1.73.1" defer></script>
-<script src="/stats.js?v=1.73.1" defer></script>
-<script src="/adoption.js?v=1.73.1" defer></script>
-<script src="/trends.js?v=1.73.1" defer></script>
-<script src="/ui.js?v=1.73.1" defer></script>
-<script src="/resources.js?v=1.73.1" defer></script>
-<script src="/coverage.js?v=1.73.1" defer></script>
-<script src="/status-checks.js?v=1.73.1" defer></script>
-<script src="/peek.js?v=1.73.1" defer></script>
-<script src="/asnames.js?v=1.73.1" defer></script>
-<script src="/footer.js?v=1.73.1" defer></script>
+<link rel="stylesheet" href="/style.css?v=1.74.0">
+<script src="/history.js?v=1.74.0" defer></script>
+<script src="/quality.js?v=1.74.0" defer></script>
+<script src="/latest.js?v=1.74.0" defer></script>
+<script src="/stats.js?v=1.74.0" defer></script>
+<script src="/adoption.js?v=1.74.0" defer></script>
+<script src="/trends.js?v=1.74.0" defer></script>
+<script src="/ui.js?v=1.74.0" defer></script>
+<script src="/resources.js?v=1.74.0" defer></script>
+<script src="/coverage.js?v=1.74.0" defer></script>
+<script src="/status-checks.js?v=1.74.0" defer></script>
+<script src="/peek.js?v=1.74.0" defer></script>
+<script src="/asnames.js?v=1.74.0" defer></script>
+<script src="/footer.js?v=1.74.0" defer></script>
 </head>
 <body class="area-adopt">
 <a class="skip" href="#main">Skip to main content</a>
 <header class="wrap masthead">
   <div class="top">
-    <p class="back"><a class="brandlink" href="/" title="Back to ASPA Explorer"><img class="brand" src="/img/logo-mark.svg?v=1.73.1" alt="" width="40" height="40"><span>ASPA Explorer</span></a></p>
+    <p class="back"><a class="brandlink" href="/" title="Back to ASPA Explorer"><img class="brand" src="/img/logo-mark.svg?v=1.74.0" alt="" width="40" height="40"><span>ASPA Explorer</span></a></p>
     <nav class="topnav" aria-label="Main"><a class="sect a-look" href="/network.html">Look up</a><a class="sect a-adopt" href="/statistics.html" aria-current="page">Adoption</a><a class="sect a-now" href="/now.html">Right now</a><a class="sect a-inc" href="/incidents.html">Incidents</a><a class="minor" href="/guide.html">Guide</a><a class="minor" href="/examples.html">Examples</a><a class="minor" href="/api.html">API</a><a class="minor" href="/status.html">Status</a></nav>
   </div>
   <div class="pagetop">
     <h1>The state of ASPA</h1>
     <p class="lede">How many networks have published an ASPA, how it grew, and who they are: by registry, size and country.</p>
-    <nav class="pagenav" aria-label="On this page"><a href="#tiles">ASPAs over time</a><a href="#latest-title">Latest changes and quality</a><a href="#size-title">By size and by registry</a><a href="#deeper-title">Go deeper</a></nav>
+    <nav class="pagenav" aria-label="On this page"><a href="#tiles">ASPAs over time</a><a href="#latest-title">Latest changes and quality</a><a href="#who-title">By size and by registry</a><a href="#deeper-title">Go deeper</a></nav>
   </div>
   <p class="meta" id="meta"><span class="busy">Loading data</span></p>
   <p class="meta" id="numbers"></p>
@@ -131,41 +131,21 @@
 
   <h2 class="sr-only" id="adoption-title">Adoption</h2>
 
-  <section class="card pad" aria-labelledby="size-title">
-    <h2 id="size-title" class="subhead">By size of the network</h2>
-    <p class="hint">Size is the customer cone: the network itself and the networks that it reaches through its customers, from the CAIDA relationships; a network that CAIDA does not list counts as a stub. Larger networks are the ones that matter most for the routes of others. Each bar is the share of the networks of its size that have an ASPA; the longest bar is the highest share of this chart.</p>
-    <div class="bars cov" id="by-size"></div>
+  <section class="card pad who" id="who" aria-labelledby="who-title">
+    <h2 id="who-title" class="subhead">Who has an ASPA</h2>
+    <div class="tabs" role="tablist" aria-label="Who has an ASPA">
+      <button type="button" role="tab" class="tab" id="tab-size" aria-controls="panel-size" aria-selected="true" tabindex="0">By size of the network</button>
+      <button type="button" role="tab" class="tab" id="tab-rir" aria-controls="panel-rir" aria-selected="false" tabindex="-1">By RIR</button>
+    </div>
+    <div role="tabpanel" class="tabpanel" id="panel-size" aria-labelledby="tab-size">
+      <p class="hint">Size is the customer cone: the network itself and the networks that it reaches through its customers, from the CAIDA relationships; a network that CAIDA does not list counts as a stub. Larger networks are the ones that matter most for the routes of others. Each bar is the share of the networks of its size that have an ASPA; the longest bar is the highest share of this chart.</p>
+      <div class="bars cov" id="by-size"></div>
+    </div>
+    <div role="tabpanel" class="tabpanel" id="panel-rir" aria-labelledby="tab-rir" hidden>
+      <p class="hint">The registry where the AS number was registered, which is not always the one whose trust anchor holds the ASPA. The longest bar is the highest share of this chart.</p>
+      <div class="bars cov" id="by-rir"></div>
+    </div>
   </section>
-
-  <section class="card pad" aria-labelledby="rir-title">
-    <h2 id="rir-title" class="subhead">By RIR</h2>
-    <p class="hint">The registry where the AS number was registered, which is not always the one whose trust anchor holds the ASPA. The longest bar is the highest share of this chart.</p>
-    <div class="bars cov" id="by-rir"></div>
-  </section>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
   <p class="hint" id="sources"></p>
   <p class="hint">The same numbers as JSON: <a href="/api/v1/adoption.json">/api/v1/adoption.json</a>. How the numbers are made: <a href="/guide.html#adoption">the guide</a>.</p>
@@ -173,7 +153,7 @@
     <h2 id="deeper-title">Go deeper</h2>
     <p class="hint">Each of these opens in place; a link to one of them opens it too.</p>
   <details class="deeper" id="top-box">
-    <summary><h2 id="top-title">The largest transit networks</h2></summary>
+    <summary><h2 id="top-title">The largest transit networks</h2> <span class="q">Which of the largest have an ASPA?</span></summary>
   <section aria-labelledby="top-title">
     <p class="hint" id="top-sub"></p>
     <p class="opts"><label class="chk"><input type="checkbox" id="top-missing"> Only those without an ASPA</label></p>
@@ -188,7 +168,7 @@
   </section>
   </details>
   <details class="deeper" id="tr-box">
-    <summary><h2 id="tr-title">Networks with an ASPA over time</h2></summary>
+    <summary><h2 id="tr-title">Networks with an ASPA over time</h2> <span class="q">How did a registry or a country grow?</span></summary>
   <section aria-labelledby="tr-title">
     <p class="hint">How many networks have an ASPA, month by month since the first ASPA, for all of them, for a RIR or for a country (where the AS number was registered; an ASPA of a network that is not seen in BGP counts as unknown).</p>
     <p class="opts"><label>Show <select id="tr-group"></select></label></p>
@@ -202,7 +182,7 @@
   </section>
   </details>
   <details class="deeper" id="cc-box">
-    <summary><h2 id="cc-title">By country</h2></summary>
+    <summary><h2 id="cc-title">By country</h2> <span class="q">Which countries lead?</span></summary>
   <section aria-labelledby="cc-title">
     <p class="hint">The country where the AS number was registered, not necessarily where the network operates. The bar of the coverage is full at 50%.</p>
     <p class="opts">
@@ -220,7 +200,7 @@
   </section>
   </details>
   <details class="deeper" id="res-box">
-    <summary><h2 id="res-title">From allocation to ASPA</h2></summary>
+    <summary><h2 id="res-title">From allocation to ASPA</h2> <span class="q">How many allocated AS numbers get to an ASPA?</span></summary>
   <section aria-labelledby="res-title">
     <p class="hint">For each registry and region: the AS numbers that are allocated, how many of those are advertised in BGP, and how many have an ASPA.</p>
     <section class="card table-wrap" tabindex="0" aria-label="AS numbers by RIR: allocated, advertised and with an ASPA">
@@ -254,7 +234,7 @@
   </section>
   </details>
   <details class="deeper" id="age-box">
-    <summary><h2 id="age-title">By age of the AS number</h2></summary>
+    <summary><h2 id="age-title">By age of the AS number</h2> <span class="q">Do newer networks adopt more?</span></summary>
   <section class="card pad" aria-labelledby="age-title">
     <p class="hint">The share of the advertised AS numbers that have an ASPA, by the year they were allocated. In each of the two charts the longest bar is its highest share.</p>
     <div id="age-years"></div>
@@ -264,14 +244,14 @@
   </section>
   </details>
   <details class="deeper" id="bogus-box">
-    <summary><h2 id="bogus-title">ASPAs that name AS numbers that should not be there</h2></summary>
+    <summary><h2 id="bogus-title">ASPAs that name AS numbers that should not be there</h2> <span class="q">Which ASPAs name private or reserved numbers?</span></summary>
   <section aria-labelledby="bogus-title">
     <p class="hint">A customer or a provider in an ASPA that no registry has allocated, or that is private, reserved or for documentation, is a mistake or a test left in the RPKI.</p>
     <div id="bogus-body"></div>
   </section>
   </details>
   <details class="deeper" id="cov-box">
-    <summary><h2 id="cov-title">Valid routes by address space and by length of the path</h2></summary>
+    <summary><h2 id="cov-title">Valid routes by address space and by length of the path</h2> <span class="q">How much of the address space is on valid routes?</span></summary>
   <section aria-labelledby="cov-title">
     <p class="hint" id="cov-sub"><span class="busy">Loading</span></p>
     <section class="card table-wrap" tabindex="0" aria-label="Verdicts of the routes and of the address space">
@@ -300,7 +280,7 @@
   </section>
   </details>
   <details class="deeper" id="fam-box">
-    <summary><h2 id="fam-title">IPv6 and IPv4 side by side</h2></summary>
+    <summary><h2 id="fam-title">IPv6 and IPv4 side by side</h2> <span class="q">Does IPv6 differ from IPv4?</span></summary>
   <section aria-labelledby="fam-title">
     <p class="hint" id="fam-sub"><span class="busy">Loading</span></p>
     <section class="card table-wrap" tabindex="0" aria-label="IPv6 and IPv4 compared">

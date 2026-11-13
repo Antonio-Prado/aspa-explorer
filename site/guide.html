@@ -23,16 +23,16 @@
 <meta name="twitter:card" content="summary_large_image">
 <meta name="color-scheme" content="light dark">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
-<link rel="stylesheet" href="/style.css?v=1.73.1">
-<script src="/status-checks.js?v=1.73.1" defer></script>
-<script src="/asnames.js?v=1.73.1" defer></script>
-<script src="/footer.js?v=1.73.1" defer></script>
+<link rel="stylesheet" href="/style.css?v=1.74.0">
+<script src="/status-checks.js?v=1.74.0" defer></script>
+<script src="/asnames.js?v=1.74.0" defer></script>
+<script src="/footer.js?v=1.74.0" defer></script>
 </head>
 <body>
 <a class="skip" href="#main">Skip to main content</a>
 <header class="wrap masthead">
   <div class="top">
-    <p class="back"><a class="brandlink" href="/" title="Back to ASPA Explorer"><img class="brand" src="/img/logo-mark.svg?v=1.73.1" alt="" width="40" height="40"><span>ASPA Explorer</span></a></p>
+    <p class="back"><a class="brandlink" href="/" title="Back to ASPA Explorer"><img class="brand" src="/img/logo-mark.svg?v=1.74.0" alt="" width="40" height="40"><span>ASPA Explorer</span></a></p>
     <nav class="topnav" aria-label="Main"><a class="sect a-look" href="/network.html">Look up</a><a class="sect a-adopt" href="/statistics.html">Adoption</a><a class="sect a-now" href="/now.html">Right now</a><a class="sect a-inc" href="/incidents.html">Incidents</a><a class="minor" href="/guide.html" aria-current="page">Guide</a><a class="minor" href="/examples.html">Examples</a><a class="minor" href="/api.html">API</a><a class="minor" href="/status.html">Status</a></nav>
   </div>
   <h1>Guide</h1>
@@ -203,7 +203,7 @@
 
   <section aria-labelledby="statistics">
     <h2 id="statistics">The state of ASPA</h2>
-    <p>The <a href="/statistics.html">statistics page</a> holds the numbers behind the ASPAs. First the charts of the ASPAs that this validator considers valid: <strong>ASPAs over time</strong> (daily since October 2023; stacked by RIR, or the total, the provider ASes, the median providers per ASPA, the no-provider ASPAs or the coverage, over the whole history, the last 12 months or the last 90 days, with a logarithmic scale and a download of the daily data as CSV or JSON), <strong>ASPAs by RIR</strong>, <strong>providers per ASPA</strong> and the <strong>most-named providers</strong>, each of which opens its lookup. Then the latest changes and the quality checks, and the adoption by size and by RIR. The other tables (the largest transit networks, networks with an ASPA over time, by country, from allocation to ASPA, by age of the AS number, AS numbers that should not be there, valid routes by address space, IPv6 and IPv4) are under <em>Go deeper</em> at the end, each opened in place; a link to one of them opens it.</p>
+    <p>The <a href="/statistics.html">statistics page</a> holds the numbers behind the ASPAs. First the charts of the ASPAs that this validator considers valid: <strong>ASPAs over time</strong> (daily since October 2023; stacked by RIR, or the total, the provider ASes, the median providers per ASPA, the no-provider ASPAs or the coverage, over the whole history, the last 12 months or the last 90 days, with a logarithmic scale and a download of the daily data as CSV or JSON), <strong>ASPAs by RIR</strong>, <strong>providers per ASPA</strong> and the <strong>most-named providers</strong>, each of which opens its lookup. Then the latest changes and the quality checks, and who has an ASPA, by size and by RIR, in two tabs. The links under the title of the page go to each of these parts. The other tables (the largest transit networks, networks with an ASPA over time, by country, from allocation to ASPA, by age of the AS number, AS numbers that should not be there, valid routes by address space, IPv6 and IPv4) are under <em>Go deeper</em> at the end, each opened in place; a link to one of them opens it.</p>
     <h3 id="overview">The charts at the top</h3>
     <dl>
       <dt>ASPAs over time</dt>
@@ -238,7 +238,7 @@
 
   <section aria-labelledby="right-now">
     <h2 id="right-now">Right now</h2>
-    <p>The <a href="/now.html">Right now</a> page shows what the routes, the validators and the RTR caches say at this moment, in four tabs. The less used tables of each tab are in closed boxes; a link to a part, or to anything inside one, selects its tab and opens its box, and choosing a tab puts it in the address, so that it can be shared. The routing incidents of the last days are on the <a href="/incidents.html">Incidents</a> page, described after this section.</p>
+    <p>The <a href="/now.html">Right now</a> page shows what the routes, the validators and the RTR caches say at this moment, in four tabs. Above the tabs there is one number for each part (the share of invalid announcements, the places of valley, how many ASPAs are the same in all the validators, how many RTR caches are connected), and pressing one opens its tab. On the line charts of this page, the pointer marks the nearest hour and a small box says its value and its time. The less used tables of each tab are in closed boxes; a link to a part, or to anything inside one, selects its tab and opens its box, and choosing a tab puts it in the address, so that it can be shared. The routing incidents of the last days are on the <a href="/incidents.html">Incidents</a> page, described after this section.</p>
     <h3 id="invalid">Invalid announcements, as they happen</h3>
     <p>Every ten minutes the site listens for about nine minutes to the stream of BGP updates of all the RIPE RIS collectors (RIS Live), checks every announcement with the downstream verification and keeps the counts by hour, origin AS and prefix for 14 days. The section shows the share of invalid announcements by hour, the profile (announcements per second, peaks) and the origins with the most invalid announcements, the ones with the highest share (at least 100 announcements) and the prefixes with the most, in the manner of an instability report. It is a sample of the stream, from the collectors and the feeders that RIPE has; a bad path that many feeders repeat shows up many times. The report is <a href="/api/v1/invalid.json">/api/v1/invalid.json</a>.</p>
 

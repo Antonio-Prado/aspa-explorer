@@ -36,6 +36,7 @@
       const values = rows.map((h) => (100 * h.invalid) / h.announcements);
       lineChart($('inv-chart'), rows.map((h) => at(h.at).split(',')[0]), values, {
         fmtY: (v) => `${v.toFixed(v < 1 ? 2 : 1)}%`, yTitle: 'Invalid announcements (%)',
+        tips: rows.map((h) => `the hour from ${at(h.at)}`), detail: (i) => `${fmt.format(rows[i].invalid)} of ${fmt.format(rows[i].announcements)} announcements`,
         label: `Share of invalid announcements by hour, from ${at(rows[0].at)} to ${at(rows[rows.length - 1].at)}: from ${values[0].toFixed(2)}% to ${values[values.length - 1].toFixed(2)}%, highest ${Math.max(...values).toFixed(2)}%.`,
       });
     } else $('inv-chart').replaceChildren(el('p', { class: 'hint', text: 'The chart needs a few hours of data.' }));

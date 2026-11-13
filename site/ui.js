@@ -32,7 +32,9 @@
 
   // A line chart of one series: values with a label for each (the first, the middle and the last are written on the axis).
   // fmtY writes a value of the axis; label describes the chart for a screen reader; yTitle is the title of the vertical axis.
-  function lineChart(box, labels, values, { fmtY = (v) => fmt.format(v), label = '', height = 200, yTitle = '' } = {}) {
+  // With the pointer on the chart, a line marks the nearest point and a small box says its time and its value together
+  // (`tips`: the time of each point in full, otherwise its label; `detail(i)`: a second line for the point).
+  function lineChart(box, labels, values, { fmtY = (v) => fmt.format(v), label = '', height = 200, yTitle = '', tips = null, detail = null } = {}) {
     const W = Math.max(280, box.clientWidth || 640), H = height, m = { l: yTitle ? 68 : 52, r: 10, t: 10, b: 24 };
     const iw = W - m.l - m.r, ih = H - m.t - m.b;
     const top = niceTop(Math.max(...values, 0));
@@ -48,7 +50,32 @@
     idx.forEach((i) => g.append(svg('text', { class: 'tick', x: x(i), y: H - 6, 'text-anchor': i === 0 ? 'start' : i === values.length - 1 ? 'end' : 'middle' }, labels[i])));
     const pts = values.map((v, i) => `${x(i).toFixed(1)},${y(v).toFixed(1)}`).join(' ');
     g.append(svg('polygon', { class: 'fillarea s1', points: `${pts} ${x(values.length - 1).toFixed(1)},${y(0)} ${x(0).toFixed(1)},${y(0)}` }), svg('polyline', { class: 'line s1', points: pts }));
-    box.replaceChildren(g);
+    const cross = svg('line', { class: 'crossline', y1: m.t, y2: m.t + ih, visibility: 'hidden' });
+    const dot = svg('circle', { class: 'dot s1', r: 3.5, visibility: 'hidden' });
+    g.append(cross, dot);
+    const tip = el('div', { class: 'ctip', hidden: '' }, el('strong', {}), el('span', {}), el('span', {}));
+    box.replaceChildren(g, tip);
+    const [tValue, tWhen, tMore] = tip.children;
+    const hide = () => { tip.hidden = true; cross.setAttribute('visibility', 'hidden'); dot.setAttribute('visibility', 'hidden'); };
+    const show = (e) => {
+      const r = g.getBoundingClientRect();
+      if (!r.width) return;
+      const px = ((e.clientX - r.left) / r.width) * W;          // the pointer in the units of the drawing
+      const i = Math.max(0, Math.min(values.length - 1, Math.round(((px - m.l) / iw) * (values.length - 1))));
+      cross.setAttribute('x1', x(i)); cross.setAttribute('x2', x(i)); cross.setAttribute('visibility', 'visible');
+      dot.setAttribute('cx', x(i)); dot.setAttribute('cy', y(values[i])); dot.setAttribute('visibility', 'visible');
+      tValue.textContent = fmtY(values[i]);
+      tWhen.textContent = tips ? tips[i] : labels[i];
+      tMore.textContent = detail ? detail(i) : '';
+      tMore.hidden = !detail;
+      tip.hidden = false;
+      const at = (x(i) / W) * r.width, w = tip.offsetWidth;
+      tip.style.left = `${Math.max(0, Math.min(r.width - w, at + 12 + w > r.width ? at - 12 - w : at + 12))}px`;
+      tip.style.top = `${Math.max(0, (y(values[i]) / H) * r.height - tip.offsetHeight - 8)}px`;
+    };
+    box.onpointermove = show;
+    box.onpointerdown = show;
+    box.onpointerleave = hide;
   }
 
   root.AspaUI = { el, svg, fmt, pct, chip, when, niceTop, country, lineChart };

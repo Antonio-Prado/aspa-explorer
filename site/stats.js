@@ -182,7 +182,7 @@ function drawHistory() {
     return;
   }
   const log = histOpt.log && !mt.stacked && !mt.nolog;
-  const W = Math.max(280, box.clientWidth), H = W < 520 ? 240 : 290;
+  const W = Math.max(280, box.clientWidth), H = W < 520 ? 220 : 240;
   const m = { l: mt.pct ? 68 : 60, r: 10, t: 10, b: 24 };
   const iw = W - m.l - m.r, ih = H - m.t - m.b;
   const t0 = dayMs(rows[0].date), t1 = dayMs(rows[rows.length - 1].date);

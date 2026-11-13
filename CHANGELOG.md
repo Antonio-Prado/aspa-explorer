@@ -9,6 +9,13 @@ A few numbers were deployed and folded into the next release without a tag of th
 
 ## [Unreleased]
 
+## [1.74.0] - 2026-11-13
+
+### Changed
+- The Right now page has one number for each of its four parts above the tabs: the share of invalid announcements, the places of valley of the day, how many ASPAs are the same in all the validators, how many RTR caches are connected. Pressing one opens its tab.
+- With the pointer on the chart of the share of invalid announcements by hour, a line marks the nearest hour and a small box says the share, the hour and how many announcements of that hour were invalid. The two charts of the RTR caches say the value and the hour in the same way. The empty space under these charts is gone.
+- On the Adoption page the adoption by size of the network and by RIR are two tabs of one box, *Who has an ASPA*, instead of two boxes one after the other (the old addresses `#size-title` and `#rir-title` select their tab); each box under *Go deeper* says the question it answers next to its title; the chart of the ASPAs over time is a little lower.
+
 ## [1.73.1] - 2026-11-13
 
 ### Fixed
