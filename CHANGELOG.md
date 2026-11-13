@@ -9,6 +9,12 @@ A few numbers were deployed and folded into the next release without a tag of th
 
 ## [Unreleased]
 
+## [1.74.1] - 2026-11-13
+
+### Changed
+- On the Adoption page the three charts *ASPAs by RIR*, *Providers per ASPA* and *Most-named providers* are the first box under *Go deeper*, *The ASPAs by RIR and by provider*, instead of standing between the chart of the ASPAs over time and the latest changes: the page now goes from the numbers and the history straight to what changed and who has an ASPA.
+- The guide, the README and the note on the incidents of the RPKI chain call the pages by the names of the menu, *Adoption* and *Right now*, where they still said "statistics page".
+
 ## [1.74.0] - 2026-11-13
 
 ### Changed
