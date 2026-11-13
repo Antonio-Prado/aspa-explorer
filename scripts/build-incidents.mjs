@@ -7,11 +7,13 @@
 //   - with a part of the ASes publishing those complete ASPAs, from 0 to 100%, in a random order and the largest networks first.
 // The result is an aggregate (no AS number; `period` is the time, in UTC, of the first incident and of the last), served as /api/v1/incidents.json; with --detail the verdict of each incident goes to a
 // file that is not published.
+// The incident files are read twice, a line at a time, and no incident is kept: a month of them is gigabytes. The first reading
+// only looks at the leaks, to know which ASes leak to many neighbours or all day; the second gives each incident its verdicts.
 //   node scripts/build-incidents.mjs OUT_FILE [FILE_OR_DIR ...] [--detail=FILE] [--caida=FILE] [--cache=DIR]
 // Environment:
 //   INCIDENTS_EVENTS   URL or file of the history of changes (the events.json of the history branch), default as build-leaks.mjs
 //   ASPA_DATA          URL or file of today's ASPAs, used for a day that the history does not cover
-import { readFile, writeFile, rename, readdir, stat } from 'node:fs/promises';
+import { readFile, writeFile, rename, readdir, stat, rm } from 'node:fs/promises';
 import { createReadStream, createWriteStream } from 'node:fs';
 import { once } from 'node:events';
 import { createInterface } from 'node:readline';
@@ -67,21 +69,20 @@ function parseLine(line) {
   try { const o = JSON.parse(line); return o && typeof o === 'object' && o.incident_type ? o : null; } catch { return null; /* a cut line */ }
 }
 
-// What the analysis keeps of an incident: the fields it reads and the paths, not the prefixes and the messages (a day of
-// incidents is hundreds of thousands of them, in a file of hundreds of megabytes).
-export const slim = (o) => ({ incident_type: o.incident_type, actor_key: o.actor_key, start: o.start, end: o.end, end_reason: o.end_reason, details: o.details, paths: pathsOf(o) });
-
-// The incidents of a file (plain or gzipped), read line by line, each reduced by `slim`.
-export async function readIncidents(file) {
-  const out = [];
-  let input = createReadStream(file);
-  if (file.endsWith('.gz')) input = input.pipe(createGunzip());
-  for await (const line of createInterface({ input, crlfDelay: Infinity })) {
-    const o = parseLine(line);
-    if (o) out.push(slim(o));
+// The incidents of the files (plain or gzipped), one at a time and in the order of the files: nothing is kept. With `only`,
+// a line that does not match it is not even parsed (the first reading wants the leaks alone, a tenth of the lines).
+export async function* readIncidents(list, only = null) {
+  for (const file of list) {
+    let input = createReadStream(file);
+    if (file.endsWith('.gz')) input = input.pipe(createGunzip());
+    for await (const line of createInterface({ input, crlfDelay: Infinity })) {
+      if (only && !only.test(line)) continue;
+      const o = parseLine(line);
+      if (o) yield o;
+    }
   }
-  return out;
 }
+const LEAKS_ONLY = /"incident_type"\s*:\s*"RLK"/;
 
 // The paths that an incident carries, origin first and without prepending, as the ASPA procedure wants them: the path of the
 // valley (RLK) and the ones of the announcements it kept. incident.py has them neighbour first.
@@ -160,41 +161,56 @@ const epoch = (t) => { const ms = Date.parse(`${(t || '').slice(0, 19).replace('
 // neighbours or more within FP_WINDOW_SECONDS; `persistent`, the ones with leaks beginning in PERSISTENT_MIN_HOURS different
 // hours or more (persistent wins over fp).
 export function leakers(incidents) {
+  const tracker = leakTracker();
+  for (const inc of incidents) tracker.add(inc);
+  return tracker.result();
+}
+// The same, an incident at a time: of each leak only the time and the neighbour are kept.
+export function leakTracker() {
   const byAs = new Map();
-  for (const inc of incidents) {
+  const add = (inc) => {
     const d = inc.details || {};
-    if (inc.incident_type !== 'RLK' || d.by === undefined || d.to === undefined) continue;
+    if (inc.incident_type !== 'RLK' || d.by === undefined || d.to === undefined) return;
     if (!byAs.has(d.by)) byAs.set(d.by, []);
     byAs.get(d.by).push({ t: epoch(inc.start), to: d.to });
-  }
-  const fp = new Set(), persistent = new Set();
-  for (const [as, list] of byAs) {
-    const hours = new Set(list.filter((x) => x.t !== null).map((x) => Math.floor(x.t / 3600)));
-    if (hours.size >= PERSISTENT_MIN_HOURS) { persistent.add(as); continue; }
-    const timed = list.filter((x) => x.t !== null).sort((a, b) => a.t - b.t);
-    const untimed = new Set(list.filter((x) => x.t === null).map((x) => x.to));
-    for (let i = 0; i < timed.length; i++) {
-      const seen = new Set(untimed);
-      for (let j = i; j < timed.length && timed[j].t - timed[i].t <= FP_WINDOW_SECONDS; j++) seen.add(timed[j].to);
-      if (seen.size >= FP_MIN_NEIGHBOURS) { fp.add(as); break; }
+  };
+  const result = () => {
+    const fp = new Set(), persistent = new Set();
+    for (const [as, list] of byAs) {
+      const hours = new Set(list.filter((x) => x.t !== null).map((x) => Math.floor(x.t / 3600)));
+      if (hours.size >= PERSISTENT_MIN_HOURS) { persistent.add(as); continue; }
+      const timed = list.filter((x) => x.t !== null).sort((a, b) => a.t - b.t);
+      const untimed = new Set(list.filter((x) => x.t === null).map((x) => x.to));
+      for (let i = 0; i < timed.length; i++) {
+        const seen = new Set(untimed);
+        for (let j = i; j < timed.length && timed[j].t - timed[i].t <= FP_WINDOW_SECONDS; j++) seen.add(timed[j].to);
+        if (seen.size >= FP_MIN_NEIGHBOURS) { fp.add(as); break; }
+      }
+      if (!timed.length && untimed.size >= FP_MIN_NEIGHBOURS) fp.add(as);
     }
-    if (!timed.length && untimed.size >= FP_MIN_NEIGHBOURS) fp.add(as);
-  }
-  return { fp, persistent };
+    return { fp, persistent };
+  };
+  return { add, result };
 }
 const stamp = (t) => (/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}/.test(t || '') ? t.slice(0, 19) : null);
 
 // incidents: parsed; aspasOf(day): the ASPA lookup of a day (Map AS number -> Set of providers); ideal, degree: complete ASPAs
 export function analyse(incidents, aspasOf, ideal, degree, detail = null) {
+  const a = analyser(aspasOf, ideal, degree, leakers(incidents));
+  for (const inc of incidents) { const row = a.add(inc); detail?.push(row); }
+  return a.result();
+}
+// The same, an incident at a time: add(incident) counts it and gives back its line of the detail file, result() the aggregate.
+// lk: the leaking ASes of all the incidents (leakers, leakTracker), which have to be known before the first one is counted.
+export function analyser(aspasOf, ideal, degree, lk) {
   const ord = orders(ideal, degree);
   const byType = {}, bySub = {}, adoption = { random: {}, largest: {} };
-  const lk = leakers(incidents);
   const bucket = (t) => (byType[t] ||= empty());
   const curve = (o, t) => (adoption[o][t] ||= new Array(LEVELS.length).fill(0));
   const base = {};     // the incidents with a path that the curves of adoption are a share of: the persistent valleys (RLK-PV) are left out, they would be Invalid by construction
   const total = empty();
   let from = null, to = null;
-  for (const inc of incidents) {
+  const add = (inc) => {
     const t = TYPES.includes(inc.incident_type) ? inc.incident_type : 'other';
     const b = bucket(t);
     const sub = subtypeOf(inc, lk);
@@ -206,7 +222,7 @@ export function analyse(incidents, aspasOf, ideal, degree, detail = null) {
     if (t0 && (!from || t0 < from)) from = t0;
     if (t1 && (!to || t1 > to)) to = t1;
     const paths = pathsOf(inc);
-    if (!paths.length) { detail?.push({ type: t, subtype: sub, actor: inc.actor_key, start: inc.start, end: inc.end, end_reason: inc.end_reason, paths: 0 }); continue; }
+    if (!paths.length) return { type: t, subtype: sub, actor: inc.actor_key, start: inc.start, end: inc.end, end_reason: inc.end_reason, paths: 0 };
     const real = verdictOf(aspasOf(s), paths), full = verdictOf(ideal, paths);
     for (const x of all) { x.with_path++; x.real[real]++; x.ideal[full]++; }
     if (sub !== 'RLK-PV') {
@@ -218,11 +234,14 @@ export function analyse(incidents, aspasOf, ideal, degree, detail = null) {
         });
       }
     }
-    detail?.push({ type: t, subtype: sub, actor: inc.actor_key, start: inc.start, end: inc.end, end_reason: inc.end_reason, paths: paths.length,
-      real: ['valid', 'unknown', 'invalid'][real], complete: ['valid', 'unknown', 'invalid'][full] });
-  }
-  for (const o of ['random', 'largest']) for (const t of [...Object.keys(byType), 'total']) curve(o, t);
-  return { period: { from, to }, total, by_type: byType, subtypes: bySub, adoption: { levels: LEVELS, ases: ord.n, base, ...adoption } };
+    return { type: t, subtype: sub, actor: inc.actor_key, start: inc.start, end: inc.end, end_reason: inc.end_reason, paths: paths.length,
+      real: ['valid', 'unknown', 'invalid'][real], complete: ['valid', 'unknown', 'invalid'][full] };
+  };
+  const result = () => {
+    for (const o of ['random', 'largest']) for (const t of [...Object.keys(byType), 'total']) curve(o, t);
+    return { period: { from, to }, total, by_type: byType, subtypes: bySub, adoption: { levels: LEVELS, ases: ord.n, base, ...adoption } };
+  };
+  return { add, result };
 }
 
 async function files(args) {
@@ -247,17 +266,18 @@ async function caidaText(flag, cache) {
 }
 
 // One JSON object for each line, written as it goes and renamed at the end: the file of a month of incidents is longer
-// than the longest string that Node can hold, so it cannot be built in memory and written at once.
+// than the longest string that Node can hold, so it cannot be built in memory and written at once. `items` can be a list or
+// a generator, also an asynchronous one; if it fails, or the file cannot be written, the file of before stays as it was.
 export async function writeLines(file, items) {
   const tmp = `${file}.tmp`;
   const out = createWriteStream(tmp);
   const failed = new Promise((_, reject) => out.once('error', reject));
   const lines = async () => {
-    for (const item of items) if (!out.write(JSON.stringify(item) + '\n')) await once(out, 'drain');
+    for await (const item of items) if (!out.write(JSON.stringify(item) + '\n')) await once(out, 'drain');
     out.end();
     await once(out, 'finish');
   };
-  await Promise.race([lines(), failed]);
+  try { await Promise.race([lines(), failed]); } catch (err) { out.destroy(); await rm(tmp, { force: true }); throw err; }
   await rename(tmp, file);
 }
 
@@ -267,9 +287,6 @@ async function main() {
   const [outFile, ...inputs] = argv.filter((a) => !a.startsWith('--'));
   if (!outFile || !inputs.length) { console.error('usage: build-incidents.mjs OUT_FILE FILE_OR_DIR ... [--detail=FILE] [--caida=FILE] [--cache=DIR]'); process.exit(2); }
   const list = await files(inputs);
-  const incidents = [];
-  for (const f of list) for (const inc of await readIncidents(f)) incidents.push(inc);
-  if (!incidents.length) throw new Error('no incident in the input: not publishing');
 
   const cache = flag('cache') || join(dirname(outFile), 'cache');
   const rel = await caidaText(flag('caida'), cache);
@@ -290,8 +307,18 @@ async function main() {
   const current = await readJson(process.env.ASPA_DATA || 'http://127.0.0.1:8080/data/aspas.json');
   today = aspaMap(current.aspas);
 
-  const detail = flag('detail') ? [] : null;
-  const res = analyse(incidents, aspasOf, ideal, degree, detail);
+  // first reading: the leaking ASes; second reading: the verdicts, each line of the detail file written as soon as it is known
+  const tracker = leakTracker();
+  for await (const inc of readIncidents(list, LEAKS_ONLY)) tracker.add(inc);
+  const a = analyser(aspasOf, ideal, degree, tracker.result());
+  let count = 0;
+  const rows = async function* () {
+    for await (const inc of readIncidents(list)) { count++; yield a.add(inc); }
+    if (!count) throw new Error('no incident in the input: not publishing');
+  };
+  if (flag('detail')) await writeLines(flag('detail'), rows());
+  else { const it = rows(); while (!(await it.next()).done); }
+  const res = a.result();
   const doc = {
     generated: new Date().toISOString().replace(/\.\d+Z$/, 'Z'),
     files: list.length,
@@ -301,7 +328,6 @@ async function main() {
   };
   const write = async (file, text) => { const tmp = `${file}.tmp`; await writeFile(tmp, text); await rename(tmp, file); };
   await write(outFile, JSON.stringify(doc) + '\n');
-  if (detail) await writeLines(flag('detail'), detail);
   console.log(`${doc.generated}: ${doc.total.incidents} incidents (${doc.total.with_path} with a path) from ${doc.period.from} to ${doc.period.to} UTC`);
 }
 

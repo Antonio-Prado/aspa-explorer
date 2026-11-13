@@ -9,6 +9,12 @@ A few numbers were deployed and folded into the next release without a tag of th
 
 ## [Unreleased]
 
+## [1.75.5] - 2026-11-13
+
+### Changed
+- The builder of the Incidents page (`scripts/build-incidents.mjs`) no longer holds the incidents of the whole period in memory: it reads the incident files twice, a line at a time, first for the ASes that leak to many neighbours or all day and then for the verdicts, and writes each line of the detail file as soon as it is known. On the forty days of today (4,267,431 incidents) the result is the same byte for byte, with 1.4 GB of memory in place of 6.2 GB and about the same time. The job of the night no longer asks Node for a larger heap (`INCIDENTS_HEAP_MB` is gone).
+- If the detail file cannot be completed, the one of before stays and no temporary file is left.
+
 ## [1.75.4] - 2026-11-13
 
 ### Changed

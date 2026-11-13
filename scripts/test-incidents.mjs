@@ -1,7 +1,8 @@
 // Unit tests for scripts/build-incidents.mjs (no dependencies). Run with: node scripts/test-incidents.mjs
 import assert from 'node:assert/strict';
-import { relationSets, parseIncidents, pathsOf, verdictOf, orders, analyse, subtypeOf, leakers, LEVELS, FP_MIN_NEIGHBOURS, PERSISTENT_MIN_HOURS, writeLines } from './build-incidents.mjs';
-import { mkdtemp, readFile, readdir, rm } from 'node:fs/promises';
+import { relationSets, parseIncidents, pathsOf, verdictOf, orders, analyse, analyser, subtypeOf, leakers, leakTracker, readIncidents, LEVELS, FP_MIN_NEIGHBOURS, PERSISTENT_MIN_HOURS, writeLines } from './build-incidents.mjs';
+import { mkdtemp, readFile, writeFile, readdir, rm } from 'node:fs/promises';
+import { gzipSync } from 'node:zlib';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
@@ -140,6 +141,46 @@ await test('the detail file: one line for each incident, written as it goes, no 
     await writeLines(file, []);
     assert.equal(await readFile(file, 'utf8'), '');
     await assert.rejects(writeLines(join(dir, 'missing', 'detail.jsonl'), items.slice(0, 2)));
+  } finally { await rm(dir, { recursive: true, force: true }); }
+});
+
+await test('a generator that fails leaves the detail file of before and no temporary file', async () => {
+  const dir = await mkdtemp(join(tmpdir(), 'incidents-'));
+  try {
+    const file = join(dir, 'detail.jsonl');
+    await writeLines(file, [{ a: 1 }]);
+    const broken = async function* () { yield { a: 2 }; throw new Error('no incident in the input'); };
+    await assert.rejects(writeLines(file, broken()), /no incident/);
+    assert.equal(await readFile(file, 'utf8'), '{"a":1}\n');
+    assert.deepEqual(await readdir(dir), ['detail.jsonl']);
+  } finally { await rm(dir, { recursive: true, force: true }); }
+});
+
+await test('the files read an incident at a time, plain and gzipped, give the same aggregate and the same detail as the list in memory', async () => {
+  const dir = await mkdtemp(join(tmpdir(), 'incidents-'));
+  try {
+    const at = (h) => `2026-10-22 ${String(h).padStart(2, '0')}:05:00`;
+    const rlk = (by, to, h) => inc('RLK', { start: at(h), details: { by, to, rlk_type: 'UL', path: [to, by, 1, 100] }, messages: [ann([to, by, 1, 100])] });
+    const list = [LEAK, FINE, inc('VOL', { messages: [{ type: 'W', compressed_path: null }] })];
+    for (let h = 0; h < PERSISTENT_MIN_HOURS; h++) list.push(rlk(12, 3, h));                       // persistent: known only after the last line
+    for (let to = 10; to < 10 + FP_MIN_NEIGHBOURS; to++) list.push(rlk(9, to, 20));                // full propagation
+    const lines = list.map((o) => JSON.stringify(o));
+    const half = Math.floor(lines.length / 2);
+    const files = [join(dir, 'incidents_1.jsonl'), join(dir, 'incidents_2.jsonl.gz')];
+    await writeFile(files[0], `${lines.slice(0, half).join('\n')}\nnot json\n`);
+    await writeFile(files[1], gzipSync(`${lines.slice(half).join('\n')}\n{"incident_type":"VOL"`));
+    const tracker = leakTracker();
+    let leaks = 0;
+    for await (const o of readIncidents(files, /"incident_type"\s*:\s*"RLK"/)) { leaks++; tracker.add(o); }
+    assert.equal(leaks, list.filter((o) => o.incident_type === 'RLK').length);                    // the other lines are not parsed
+    const lk = tracker.result();
+    assert.deepEqual([[...lk.fp], [...lk.persistent]], [[9], [12]]);
+    const a = analyser(() => NO_ASPAS, IDEAL, DEGREE, lk), rows = [];
+    for await (const o of readIncidents(files)) rows.push(a.add(o));
+    const detail = [];
+    assert.deepEqual(a.result(), analyse(list, () => NO_ASPAS, IDEAL, DEGREE, detail));
+    assert.deepEqual(rows, detail);
+    assert.equal(rows.length, list.length);
   } finally { await rm(dir, { recursive: true, force: true }); }
 });
 

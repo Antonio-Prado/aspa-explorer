@@ -20,8 +20,6 @@ NODE=${NODE:-/usr/local/bin/node}
 ROAS_URL=${INCIDENTS_ROAS_URL:-https://rpki.ping6.it/json}
 KEEP_DAYS=${INCIDENTS_KEEP_DAYS:-3}
 KEEP_INCIDENT_DAYS=${INCIDENTS_KEEP_INCIDENT_DAYS:-30}
-# the builder of the page holds the incidents of all those days at once: more than the 4 GB that node gives itself
-HEAP_MB=${INCIDENTS_HEAP_MB:-8192}
 
 mkdir -p "$BASE/incoming" "$BASE/work/data" "$BASE/work/roas" "$BASE/work/delegations" "$BASE/work/links"
 cd "$BASE/work"
@@ -65,7 +63,7 @@ find data -name 'records_*.jsonl.gz' -mtime +"$KEEP_DAYS" -delete
 # 4. the page: the incident files of the last KEEP_INCIDENT_DAYS days (the period shown is the one of these)
 find . -maxdepth 1 -name 'incidents_*.jsonl' -mtime +"$KEEP_INCIDENT_DAYS" -delete
 if ls incidents_*.jsonl >/dev/null 2>&1; then
-  "$NODE" --max-old-space-size="$HEAP_MB" "$SCRIPTS/build-incidents.mjs" "$GEN/incidents.json" . --cache="$GEN/cache" --detail="$BASE/incidents-detail.jsonl"
+  "$NODE" "$SCRIPTS/build-incidents.mjs" "$GEN/incidents.json" . --cache="$GEN/cache" --detail="$BASE/incidents-detail.jsonl"
   # the detail file is public (/api/v1/incidents-detail.jsonl) and weighs hundreds of megabytes: a compressed copy for nginx (gzip_static)
   gzip -kf "$BASE/incidents-detail.jsonl"
 else
