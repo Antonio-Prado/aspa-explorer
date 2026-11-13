@@ -9,6 +9,11 @@ A few numbers were deployed and folded into the next release without a tag of th
 
 ## [Unreleased]
 
+## [1.75.2] - 2026-11-13
+
+### Changed
+- The OpenAPI schema passes a validator (Redocly) with no error: it says at the top that no operation needs a key (`security: []`), and every operation has an `operationId`, which the generators of clients use for the names of the functions.
+
 ## [1.75.1] - 2026-11-13
 
 ### Changed

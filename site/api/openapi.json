@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "ASPA Explorer API",
-    "version": "1.75.1",
+    "version": "1.75.2",
     "description": "ASPA objects validated by Routinator at rpki.ping6.it, their history and quality, for any AS. Open data, read-only, no key.",
     "contact": {
       "email": "antonio.prado@dei.unipd.it"
@@ -17,9 +17,11 @@
       "url": "https://aspa.ping6.it"
     }
   ],
+  "security": [],
   "paths": {
     "/api/v1/as/{number}": {
       "get": {
+        "operationId": "getAsByNumber",
         "summary": "The ASPA, history and quality of one AS",
         "parameters": [
           {
@@ -54,6 +56,7 @@
     },
     "/badge/AS{number}.svg": {
       "get": {
+        "operationId": "getBadgeASbyNumberSvg",
         "summary": "A badge with the number of providers in the ASPA of the AS",
         "parameters": [
           {
@@ -87,6 +90,7 @@
     },
     "/feed/AS{number}.atom": {
       "get": {
+        "operationId": "getFeedASbyNumberAtom",
         "summary": "Atom feed of the latest 100 changes that concern the AS",
         "parameters": [
           {
@@ -120,6 +124,7 @@
     },
     "/api/v1/meta.json": {
       "get": {
+        "operationId": "getMetaJson",
         "summary": "When the per-AS files were built",
         "responses": {
           "200": {
@@ -152,6 +157,7 @@
     },
     "/data/aspas.json": {
       "get": {
+        "operationId": "getDataAspasJson",
         "summary": "All valid ASPAs (Routinator jsonext, route origins and router keys left out)",
         "responses": {
           "200": {
@@ -169,6 +175,7 @@
     },
     "/api/v1/subscriptions": {
       "post": {
+        "operationId": "postSubscriptions",
         "summary": "Subscribe an e-mail address or a webhook to the changes of one AS",
         "description": "E-mail: a confirmation message is sent and the subscription starts when its link is confirmed (the answer is the same whether or not the address was already subscribed). Webhook: the address is called with a verification challenge it must repeat; on success the answer carries the signing secret, once.",
         "requestBody": {
@@ -245,6 +252,7 @@
     },
     "/api/v1/subscriptions/confirm": {
       "post": {
+        "operationId": "postSubscriptionsConfirm",
         "summary": "Confirm an e-mail subscription with the token of the link",
         "requestBody": {
           "required": true,
@@ -276,6 +284,7 @@
     },
     "/api/v1/subscriptions/unsubscribe": {
       "post": {
+        "operationId": "postSubscriptionsUnsubscribe",
         "summary": "Cancel a subscription (also the target of List-Unsubscribe and of the unsubscribe field of a webhook)",
         "parameters": [
           {
@@ -295,6 +304,7 @@
     },
     "/api/v1/adoption.json": {
       "get": {
+        "operationId": "getAdoptionJson",
         "summary": "Adoption of ASPA by RIR, country and size of the network",
         "description": "Built once a day from the validator, the RIPE RIS collectors, the RIR delegation files and the CAIDA AS Relationships dataset.",
         "responses": {
@@ -440,6 +450,7 @@
     },
     "/api/v1/aspas.json": {
       "get": {
+        "operationId": "getAspasJson",
         "summary": "The whole list of ASPAs, one object per ASPA",
         "responses": {
           "200": {
@@ -491,6 +502,7 @@
     },
     "/api/v1/aspas.csv": {
       "get": {
+        "operationId": "getAspasCsv",
         "summary": "The whole list of ASPAs as CSV (providers separated by spaces in one cell)",
         "responses": {
           "200": {
@@ -508,6 +520,7 @@
     },
     "/api/v1/leaks.json": {
       "get": {
+        "operationId": "getLeaksJson",
         "summary": "The places of valley of today in the routes of the collectors",
         "description": "Built once a day from the 00:00 UTC table dumps of 33 collectors of RIPE RIS and RouteViews (scripts/build-leaks.mjs): every route is checked with the downstream ASPA verification and the paths that the ASPAs prove to contain a valley are grouped by the place of the valley.",
         "responses": {
@@ -730,6 +743,7 @@
     },
     "/api/v1/leaks-history.json": {
       "get": {
+        "operationId": "getLeaksHistoryJson",
         "summary": "The daily totals of the places of valley",
         "description": "One row a day since 1 September 2026, written by the valley job.",
         "responses": {
@@ -779,6 +793,7 @@
     },
     "/api/v1/leaks-by-as.json": {
       "get": {
+        "operationId": "getLeaksByAsJson",
         "summary": "The places of valley that involve each AS",
         "description": "Places seen by at least min_feeders feeders, by AS, for the page of an AS and for the notifier.",
         "responses": {
@@ -813,6 +828,7 @@
     },
     "/api/v1/validators.json": {
       "get": {
+        "operationId": "getValidatorsJson",
         "summary": "The ASPAs of four validators compared",
         "description": "Every hour: the two validators of this site, Routinator and Fort, rpki-client (the console of the project) and the rpki-client of Cloudflare (scripts/build-validators.mjs).",
         "responses": {
@@ -921,6 +937,7 @@
     },
     "/api/v1/fort-aspa.json": {
       "get": {
+        "operationId": "getFortAspaJson",
         "summary": "The ASPAs of the Fort of this site",
         "description": "Fort's own output (output.aspa), as it writes it, copied every hour by scripts/build-validators.mjs: Fort has no web interface of its own.",
         "responses": {
@@ -950,6 +967,7 @@
     },
     "/api/v1/rtr.json": {
       "get": {
+        "operationId": "getRtrJson",
         "summary": "The RTR session with the validator, as independent RTR clients see it",
         "description": "Every five minutes (scripts/build-rtr.mjs) from the telemetry of RAVEN's rtr monitor, one monitor for each cache: the validator of the site (the top-level fields) and every cache followed, references included (caches). The anomalies are those of the adaptive detector of the monitor on the stream of syncs.",
         "responses": {
@@ -1282,6 +1300,7 @@
     },
     "/api/v1/trends.json": {
       "get": {
+        "operationId": "getTrendsJson",
         "summary": "Networks with an ASPA month by month",
         "description": "Built once a day (scripts/build-trends.mjs): for all of them and for each RIR and country.",
         "responses": {
@@ -1335,6 +1354,7 @@
     },
     "/api/v1/incidents.json": {
       "get": {
+        "operationId": "getIncidentsJson",
         "summary": "What the ASPAs say about the routing incidents of the detectors",
         "description": "Built once a day (scripts/build-incidents.mjs) from the incidents that the detectors of the project find in the RIS Live stream.",
         "responses": {
@@ -1417,6 +1437,7 @@
     },
     "/api/v1/invalid.json": {
       "get": {
+        "operationId": "getInvalidJson",
         "summary": "The invalid announcements of the last 14 days, as the collectors receive them",
         "description": "RIS Live, about nine minutes in every ten (scripts/watch-invalid.mjs): by hour, by origin AS and by prefix.",
         "responses": {
@@ -1561,6 +1582,7 @@
     },
     "/api/v1/resources.json": {
       "get": {
+        "operationId": "getResourcesJson",
         "summary": "AS numbers from allocation to ASPA",
         "description": "Built once a day (scripts/build-resources.mjs) from the RIR delegation files, the collectors, the validator and the World Bank: by RIR, region, economy, year of allocation and width of the number.",
         "responses": {
@@ -1661,6 +1683,7 @@
     },
     "/api/v1/status-history.json": {
       "get": {
+        "operationId": "getStatusHistoryJson",
         "summary": "The checks of the status page, every 15 minutes, for 90 days",
         "description": "scripts/build-status.mjs: a sample is [seconds since the epoch, one letter for each check: o OK, l late, d down, - not checked], in the order of checks.",
         "responses": {
@@ -1731,6 +1754,7 @@
     },
     "/api/v1/status-months.json": {
       "get": {
+        "operationId": "getStatusMonthsJson",
         "summary": "The availability of each part of the service by month",
         "description": "The tallies of the samples of the status history, kept for good.",
         "responses": {
@@ -1783,6 +1807,7 @@
     },
     "/api/v1/relations.json": {
       "get": {
+        "operationId": "getRelationsJson",
         "summary": "The providers that the CAIDA relationships infer for each AS",
         "description": "Built once a day with the adoption numbers.",
         "responses": {
@@ -1820,6 +1845,7 @@
     },
     "/api/v1/asn-registry.json": {
       "get": {
+        "operationId": "getAsnRegistryJson",
         "summary": "The registry and the country of each AS number",
         "description": "From the delegation files of the five RIRs, once a day.",
         "responses": {
@@ -1851,6 +1877,7 @@
     },
     "/api/v1/archive/history.json": {
       "get": {
+        "operationId": "getArchiveHistoryJson",
         "summary": "The daily history of the ASPAs since 12 October 2023",
         "description": "A copy of the history branch, refreshed every ten minutes: one row a day.",
         "responses": {
@@ -1895,6 +1922,7 @@
     },
     "/api/v1/archive/events.json": {
       "get": {
+        "operationId": "getArchiveEventsJson",
         "summary": "Every change of an ASPA since 12 October 2023",
         "description": "A copy of the history branch: [date, customer, providers or null when the ASPA was removed].",
         "responses": {
@@ -1924,6 +1952,7 @@
     },
     "/api/v1/archive/visibility.json": {
       "get": {
+        "operationId": "getArchiveVisibilityJson",
         "summary": "The ASes with an ASPA that the collectors do not see",
         "description": "A copy of the history branch, written by the daily snapshot.",
         "responses": {
@@ -1959,6 +1988,7 @@
     },
     "/datasets/index.json": {
       "get": {
+        "operationId": "getDatasetsIndexJson",
         "summary": "The dated snapshots for research",
         "description": "One .tar.gz a month with the files of the API, a manifest of SHA-256 sums and a README; CC BY 4.0.",
         "responses": {
@@ -2009,6 +2039,7 @@
     },
     "/api/v1/rtr/{cache}.ndjson": {
       "get": {
+        "operationId": "getRtrByCacheNdjson",
         "summary": "The raw telemetry of one RTR monitor",
         "description": "The NDJSON that RAVEN's rtr monitor writes for the cache: one record a line for each session event (connected, disconnected, reset, error, cache_not_ready, version_downgrade), each sync (with vrp_total, aspa_total, the records announced and withdrawn, sync_type and the duration) and each anomaly of its detector (category, trigger, severity, z_scores, raw). Since the monitor started; a few hundred lines a day.",
         "parameters": [
@@ -2049,6 +2080,7 @@
     },
     "/api/v1/rtr/{cache}-baseline.json": {
       "get": {
+        "operationId": "getRtrByCacheBaselineJson",
         "summary": "The baseline of the anomaly detector of one RTR monitor",
         "description": "The snapshot that RAVEN's rtr monitor saves every few minutes: the windows of the six measures (interval since the previous sync, duration, VRPs and ASPAs announced and withdrawn) that the detector compares each sync with.",
         "parameters": [
@@ -2089,6 +2121,7 @@
     },
     "/api/v1/rtr/{cache}.metrics": {
       "get": {
+        "operationId": "getRtrByCacheMetrics",
         "summary": "The Prometheus metrics of one RTR monitor",
         "description": "The raven_rtr_* gauges and counters of the monitor (session state, VRP and ASPA counts, last sync, last serial change, data expired, protocol version, anomalies by severity), in the Prometheus text format.",
         "parameters": [
@@ -2125,6 +2158,7 @@
     },
     "/api/v1/invalid-days/{day}.json": {
       "get": {
+        "operationId": "getInvalidDaysByDayJson",
         "summary": "The invalid announcements of one day",
         "description": "The daily file of watch-invalid.mjs for one of the last fourteen days: the runs of the day with their counts, and the origins and prefixes with most invalid announcements.",
         "parameters": [
@@ -2159,6 +2193,7 @@
     },
     "/api/v1/incidents-detail.jsonl": {
       "get": {
+        "operationId": "getIncidentsDetailJsonl",
         "summary": "Every incident of the detectors, one record a line",
         "description": "The file that the aggregates of incidents.json come from, written once a day: for each incident its type and subtype, actor, start and end (UTC), why it ended, the number of AS paths kept, and the verdicts of the downstream ASPA verification with the ASPAs of the day (real) and with complete ASPAs (complete). Tens of megabytes.",
         "responses": {
@@ -2178,6 +2213,7 @@
     },
     "/api/v1/verify": {
       "get": {
+        "operationId": "getVerify",
         "summary": "The verdict of the ASPAs on an AS path (the procedure of draft-ietf-sidrops-aspa-verification)",
         "parameters": [
           {
@@ -2342,6 +2378,7 @@
     },
     "/api/v1/quality.json": {
       "get": {
+        "operationId": "getQualityJson",
         "summary": "Every finding of the quality checks on the ASPAs",
         "responses": {
           "200": {
@@ -2425,6 +2462,7 @@
     },
     "/data/status.json": {
       "get": {
+        "operationId": "getDataStatusJson",
         "summary": "The state of the validator (Routinator's /api/v1/status)",
         "responses": {
           "200": {
@@ -2442,6 +2480,7 @@
     },
     "/data/root-sites.json": {
       "get": {
+        "operationId": "getDataRootSitesJson",
         "summary": "Where the instances of the DNS root servers are, for the check of the place of RIPE Atlas probes",
         "responses": {
           "200": {
@@ -2459,6 +2498,7 @@
     },
     "/data/validity/AS{number}/{prefix}": {
       "get": {
+        "operationId": "getDataValidityASbyNumberByPrefix",
         "summary": "Origin validation of one route by Routinator (ROAs, not ASPAs)",
         "responses": {
           "200": {
@@ -2497,6 +2537,7 @@
     },
     "/api/v1/reports": {
       "post": {
+        "operationId": "postReports",
         "summary": "Freeze a result into a link, kept for 30 days",
         "description": "Plain text only, 200 KB at most; 20 reports an hour and 100 a day from one address.",
         "requestBody": {
@@ -2674,6 +2715,7 @@
     },
     "/api/v1/reports/{id}": {
       "get": {
+        "operationId": "getReportsById",
         "summary": "A shared result",
         "parameters": [
           {
@@ -2815,6 +2857,7 @@
     },
     "/changes.atom": {
       "get": {
+        "operationId": "getChangesAtom",
         "summary": "Atom feed of the changes to all ASPAs",
         "responses": {
           "200": {
@@ -2832,6 +2875,7 @@
     },
     "/api/v1/invalid-last.json": {
       "get": {
+        "operationId": "getInvalidLastJson",
         "summary": "The invalid announcements of the last ten-minute run of the watcher, by origin AS",
         "description": "Only the origins with at least `min` invalid announcements; the notifier reads it for the alerts.",
         "responses": {
@@ -2903,6 +2947,7 @@
     },
     "/api/v1/leaks-by-as/{day}.json": {
       "get": {
+        "operationId": "getLeaksByAsByDayJson",
         "summary": "The places of valley that involve each AS, on one of the last 60 days",
         "description": "Places seen by at least min_feeders feeders, by AS, for the page of an AS and for the notifier.",
         "responses": {
@@ -2952,6 +2997,7 @@
     },
     "/api/v1/subscriptions/health": {
       "get": {
+        "operationId": "getSubscriptionsHealth",
         "summary": "Whether the service that sends the notifications is working",
         "responses": {
           "200": {
