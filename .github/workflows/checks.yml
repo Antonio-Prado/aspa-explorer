@@ -1,4 +1,4 @@
-# The checks of `make check` (JavaScript syntax, HTML validation, the version, the security lint of the browser code and the unit tests) on each
+# The checks of `make check` (JavaScript syntax, HTML validation, the OpenAPI schema, the version, the security lint of the browser code and the unit tests) on each
 # push to the main branch and on each pull request. The check of the nginx configuration is left out: the nginx of the runner is too old for
 # the configuration of the site (`http2 on;`), and the pipeline of the GitLab project runs it. This is for the people who send a pull request.
 name: Checks
@@ -25,4 +25,4 @@ jobs:
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: 22
-      - run: make js html version lint-security test
+      - run: make js html openapi version lint-security test

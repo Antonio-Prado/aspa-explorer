@@ -9,6 +9,11 @@ A few numbers were deployed and folded into the next release without a tag of th
 
 ## [Unreleased]
 
+## [1.75.3] - 2026-11-13
+
+### Changed
+- The OpenAPI schema is validated at every change: `make openapi` (part of `make check`), a job of the pipeline and the *Checks* workflow on GitHub run Redocly on it with the rules of `redocly.yaml`, and an error stops the release. The API page says so.
+
 ## [1.75.2] - 2026-11-13
 
 ### Changed

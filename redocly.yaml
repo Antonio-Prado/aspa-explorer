@@ -1,0 +1,6 @@
+# Rules for the check of site/api/openapi.json (`make openapi`): the recommended ones of Redocly.
+# A 4xx answer is not asked of every operation: most of them are files that nginx serves as they are, with nothing to say but 404.
+extends:
+  - recommended
+rules:
+  operation-4xx-response: off

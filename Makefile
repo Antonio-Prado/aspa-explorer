@@ -1,12 +1,16 @@
-.PHONY: check js html nginx version lint-security secrets test a11y
+.PHONY: check js html openapi nginx version lint-security secrets test a11y
 
-check: js html nginx version lint-security test
+check: js html openapi nginx version lint-security test
 
 js:
 	sh scripts/check-js.sh
 
 html:
 	npx --yes html-validate@9.7.1 site/index.html site/network.html site/guide.html site/api.html site/subscription.html site/statistics.html site/now.html site/incidents.html site/status.html site/examples.html site/embed.html site/report.html
+
+# Validates the OpenAPI schema of the API (the rules are in redocly.yaml).
+openapi:
+	npx --yes @redocly/cli@1.34.5 lint --config redocly.yaml site/api/openapi.json
 
 # Validates the nginx configuration with a throwaway certificate.
 nginx:

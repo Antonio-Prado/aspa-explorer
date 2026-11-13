@@ -359,6 +359,7 @@ deploy/freebsd/                rc scripts of the notifier, of the Atlas service 
 assets/                        logo, screenshots and credit logos used in this README
 .gitlab/, .gitlab-ci.yml       issue and merge request templates, and the CI pipeline
 eslint.config.mjs              security rules for the browser code (no innerHTML, eval, ...)
+redocly.yaml                   rules for the validation of the OpenAPI schema (site/api/openapi.json)
 ```
 
 ## Deploy
@@ -374,7 +375,7 @@ eslint.config.mjs              security rules for the browser code (no innerHTML
 
 ## Development
 
-No build step and no dependencies. `make check` runs the same checks as the CI pipeline: JavaScript syntax, HTML validation, nginx configuration test, version consistency, a security lint of the browser code and the unit tests (`make test`: the ASPA path verification, the API and adoption builders, the evidence and traceroute readings, the status checks and the notifier). The pipeline also scans the git history for secrets (`make secrets`). Scheduled jobs audit the packages of the host weekly, log a daily snapshot of the ASPA data to the project's *Model experiments*, refresh the history branch every hour and copy the wiki to the public GitLab project and to the GitHub wiki; the builders and the notifier run on the host itself. See [CONTRIBUTING.md](CONTRIBUTING.md).
+No build step and no dependencies. `make check` runs the same checks as the CI pipeline: JavaScript syntax, HTML validation, the validation of the OpenAPI schema, nginx configuration test, version consistency, a security lint of the browser code and the unit tests (`make test`: the ASPA path verification, the API and adoption builders, the evidence and traceroute readings, the status checks and the notifier). The pipeline also scans the git history for secrets (`make secrets`). Scheduled jobs audit the packages of the host weekly, log a daily snapshot of the ASPA data to the project's *Model experiments*, refresh the history branch every hour and copy the wiki to the public GitLab project and to the GitHub wiki; the builders and the notifier run on the host itself. See [CONTRIBUTING.md](CONTRIBUTING.md).
 
 Releases follow [Semantic Versioning](https://semver.org/); the version shown in the footer lives in <a href="site/version.json" target="_blank" rel="noopener"><code>site/version.json</code></a> and must match the latest entry of the <a href="CHANGELOG.md" target="_blank" rel="noopener">changelog</a>.
 

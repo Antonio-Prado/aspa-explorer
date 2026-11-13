@@ -44,6 +44,14 @@ html-validate:
   script:
     - npx --yes html-validate@9.7.1 site/index.html site/network.html site/guide.html site/api.html site/subscription.html site/statistics.html site/now.html site/status.html site/examples.html site/embed.html site/report.html site/incidents.html
 
+# The OpenAPI schema of the API is a valid OpenAPI document (the rules are in redocly.yaml).
+openapi-validate:
+  extends: .regular
+  stage: lint
+  image: node:22-alpine
+  script:
+    - npx --yes @redocly/cli@1.34.5 lint --config redocly.yaml site/api/openapi.json
+
 nginx-config:
   extends: .regular
   stage: lint
