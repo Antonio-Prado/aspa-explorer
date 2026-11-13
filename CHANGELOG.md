@@ -9,6 +9,12 @@ A few numbers were deployed and folded into the next release without a tag of th
 
 ## [Unreleased]
 
+## [1.72.1] - 2026-11-13
+
+### Fixed
+- The Incidents page stopped at 11 November: with the incidents of 27 days the builder of the page ran out of the memory that Node gives itself, and the job of the night ended there. The job now gives it more (`INCIDENTS_HEAP_MB`, 8 GB by default).
+- The file with the verdict of each incident (`/api/v1/incidents-detail.jsonl`) had not been written since 5 November: it had grown past the longest string that Node can hold, and it was built in memory before being written. It is now written line by line.
+
 ## [1.72.0] - 2026-11-13
 
 ### Changed

@@ -3,7 +3,7 @@
 #   1. takes the record files that stream.py has closed (every one but the newest, which it is still writing);
 #   2. refreshes the ROAs (Routinator, rpki.ping6.it) and points incident.py at the newest CAIDA relationships and at the delegation files of the adoption job;
 #   3. runs incident.py, which keeps its state between runs and writes incidents_<file>.jsonl for each file;
-#   4. builds /api/v1/incidents.json (scripts/build-incidents.mjs) and a file with the verdict of each incident, that is not published.
+#   4. builds /api/v1/incidents.json (scripts/build-incidents.mjs) and the file with the verdict of each incident (/api/v1/incidents-detail.jsonl).
 # Everything is in $BASE: incoming/ (stream.py), work/ (incident.py, with its state), incidents-detail.jsonl.
 #   30 2 * * * /usr/bin/lockf -t 0 /var/db/aspa-data/run.lock /bin/sh -c '/bin/sh /usr/local/libexec/aspa-data/run-incidents.sh >/var/db/aspa-data/run.log 2>&1'
 # (02:30 local time: 00:30 UTC in summer, 01:30 UTC in winter; lockf: a day of data takes hours to read, and two runs at once would corrupt the state of incident.py;
@@ -20,6 +20,8 @@ NODE=${NODE:-/usr/local/bin/node}
 ROAS_URL=${INCIDENTS_ROAS_URL:-https://rpki.ping6.it/json}
 KEEP_DAYS=${INCIDENTS_KEEP_DAYS:-3}
 KEEP_INCIDENT_DAYS=${INCIDENTS_KEEP_INCIDENT_DAYS:-30}
+# the builder of the page holds the incidents of all those days at once: more than the 4 GB that node gives itself
+HEAP_MB=${INCIDENTS_HEAP_MB:-8192}
 
 mkdir -p "$BASE/incoming" "$BASE/work/data" "$BASE/work/roas" "$BASE/work/delegations" "$BASE/work/links"
 cd "$BASE/work"
@@ -63,7 +65,7 @@ find data -name 'records_*.jsonl.gz' -mtime +"$KEEP_DAYS" -delete
 # 4. the page: the incident files of the last KEEP_INCIDENT_DAYS days (the period shown is the one of these)
 find . -maxdepth 1 -name 'incidents_*.jsonl' -mtime +"$KEEP_INCIDENT_DAYS" -delete
 if ls incidents_*.jsonl >/dev/null 2>&1; then
-  "$NODE" "$SCRIPTS/build-incidents.mjs" "$GEN/incidents.json" . --cache="$GEN/cache" --detail="$BASE/incidents-detail.jsonl"
+  "$NODE" --max-old-space-size="$HEAP_MB" "$SCRIPTS/build-incidents.mjs" "$GEN/incidents.json" . --cache="$GEN/cache" --detail="$BASE/incidents-detail.jsonl"
   # the detail file is public (/api/v1/incidents-detail.jsonl) and weighs hundreds of megabytes: a compressed copy for nginx (gzip_static)
   gzip -kf "$BASE/incidents-detail.jsonl"
 else

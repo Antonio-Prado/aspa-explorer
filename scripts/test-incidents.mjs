@@ -1,6 +1,9 @@
 // Unit tests for scripts/build-incidents.mjs (no dependencies). Run with: node scripts/test-incidents.mjs
 import assert from 'node:assert/strict';
-import { relationSets, parseIncidents, pathsOf, verdictOf, orders, analyse, subtypeOf, leakers, LEVELS, FP_MIN_NEIGHBOURS, PERSISTENT_MIN_HOURS } from './build-incidents.mjs';
+import { relationSets, parseIncidents, pathsOf, verdictOf, orders, analyse, subtypeOf, leakers, LEVELS, FP_MIN_NEIGHBOURS, PERSISTENT_MIN_HOURS, writeLines } from './build-incidents.mjs';
+import { mkdtemp, readFile, readdir, rm } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 
 let passed = 0;
 const test = async (name, fn) => { await fn(); passed++; console.log('ok  ', name); };
@@ -120,6 +123,24 @@ await test('the aggregate has no AS number and no actor', () => {
   const text = JSON.stringify(res);
   assert.ok(!/actor|RLK_x/.test(text));
   assert.ok(!/"(by|path|paths|prefixes)"/.test(text));
+});
+
+await test('the detail file: one line for each incident, written as it goes, no temporary file left; a file that cannot be written is an error', async () => {
+  const dir = await mkdtemp(join(tmpdir(), 'incidents-'));
+  try {
+    const file = join(dir, 'detail.jsonl');
+    const items = Array.from({ length: 50000 }, (_, i) => ({ type: 'RLK', actor: `RLK_${i}`, pad: 'x'.repeat(40) }));
+    await writeLines(file, items);
+    const lines = (await readFile(file, 'utf8')).split('\n');
+    assert.equal(lines.length, items.length + 1);
+    assert.equal(lines.at(-1), '');
+    assert.deepEqual(JSON.parse(lines[0]), items[0]);
+    assert.deepEqual(JSON.parse(lines.at(-2)), items.at(-1));
+    assert.deepEqual(await readdir(dir), ['detail.jsonl']);
+    await writeLines(file, []);
+    assert.equal(await readFile(file, 'utf8'), '');
+    await assert.rejects(writeLines(join(dir, 'missing', 'detail.jsonl'), items.slice(0, 2)));
+  } finally { await rm(dir, { recursive: true, force: true }); }
 });
 
 console.log(`${passed} tests passed`);

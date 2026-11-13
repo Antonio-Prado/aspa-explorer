@@ -12,7 +12,8 @@
 //   INCIDENTS_EVENTS   URL or file of the history of changes (the events.json of the history branch), default as build-leaks.mjs
 //   ASPA_DATA          URL or file of today's ASPAs, used for a day that the history does not cover
 import { readFile, writeFile, rename, readdir, stat } from 'node:fs/promises';
-import { createReadStream } from 'node:fs';
+import { createReadStream, createWriteStream } from 'node:fs';
+import { once } from 'node:events';
 import { createInterface } from 'node:readline';
 import { join, dirname } from 'node:path';
 import { createGunzip } from 'node:zlib';
@@ -245,6 +246,21 @@ async function caidaText(flag, cache) {
   return { text: await unbz(join(cache, last)), source: `CAIDA AS Relationships, serial-2, ${last.slice(8, 16)}` };
 }
 
+// One JSON object for each line, written as it goes and renamed at the end: the file of a month of incidents is longer
+// than the longest string that Node can hold, so it cannot be built in memory and written at once.
+export async function writeLines(file, items) {
+  const tmp = `${file}.tmp`;
+  const out = createWriteStream(tmp);
+  const failed = new Promise((_, reject) => out.once('error', reject));
+  const lines = async () => {
+    for (const item of items) if (!out.write(JSON.stringify(item) + '\n')) await once(out, 'drain');
+    out.end();
+    await once(out, 'finish');
+  };
+  await Promise.race([lines(), failed]);
+  await rename(tmp, file);
+}
+
 async function main() {
   const argv = process.argv.slice(2);
   const flag = (n) => (argv.find((a) => a.startsWith(`--${n}=`)) || '').slice(n.length + 3);
@@ -285,7 +301,7 @@ async function main() {
   };
   const write = async (file, text) => { const tmp = `${file}.tmp`; await writeFile(tmp, text); await rename(tmp, file); };
   await write(outFile, JSON.stringify(doc) + '\n');
-  if (detail) await write(flag('detail'), detail.map((d) => JSON.stringify(d)).join('\n') + '\n');
+  if (detail) await writeLines(flag('detail'), detail);
   console.log(`${doc.generated}: ${doc.total.incidents} incidents (${doc.total.with_path} with a path) from ${doc.period.from} to ${doc.period.to} UTC`);
 }
 
