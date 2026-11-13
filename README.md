@@ -179,7 +179,7 @@ ASPA Explorer shows every ASPA that the validator currently considers valid, so 
 
 <sub>In numbers, on 29 October 2026: 3,519 of 88,495 networks seen in BGP have an ASPA (3.98%); 599 M routes of 30 collectors (33 since 9 November 2026) were checked every day: 59 M valid (9.9%), 539 M with no ASPA to say about some hop and 580 k invalid; 11,026 places of valley, with a daily history since 1 September 2026. The [Adoption page](https://aspa.ping6.it/statistics.html) has the numbers of today.</sub>
 
-The validator is a [Routinator](https://github.com/NLnetLabs/routinator) instance run at **[rpki.ping6.it](https://rpki.ping6.it/)**, which also publishes its own web UI (<https://rpki.ping6.it/ui/>) and the raw ASPA data (<https://rpki.ping6.it/jsonext?exclude=routeOrigins,routerKeys>).
+The ASPAs shown here come from a [Routinator](https://github.com/NLnetLabs/routinator) instance run at **[rpki.ping6.it](https://rpki.ping6.it/)**, which also publishes its own web UI (<https://rpki.ping6.it/ui/>) and the raw ASPA data (<https://rpki.ping6.it/jsonext?exclude=routeOrigins,routerKeys>). A second validator, [Fort](https://github.com/NICMx/FORT-validator), runs on the same host for comparison.
 
 ## Features
 
