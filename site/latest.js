@@ -1,6 +1,6 @@
 'use strict';
 
-// "Latest changes and quality" on the State of ASPA page: the ASPAs that appeared, changed or disappeared in the last
+// "Latest changes and quality" on the Adoption page: the ASPAs that appeared, changed or disappeared in the last
 // 14 days (events.json of the history, classified by history.js) and the checks of quality.js on the ASPAs listed now.
 // They were tabs of the home page until 1.64; #changes and #quality open them here.
 (function () {

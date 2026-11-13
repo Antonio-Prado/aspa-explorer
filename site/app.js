@@ -94,7 +94,7 @@ function renderOverview(status) {
   const tile = (label, value, note) => el('div', { class: 'tile card' },
     label && el('div', { class: 'label', text: label }), el('div', { class: 'value', text: value }), note && el('div', { class: 'note', text: note }));
   // three numbers only on the home page: how many, what share of the networks in BGP, and how many of the largest
-  // transit networks (the last two from the daily adoption numbers); the rest is on the State of ASPA page
+  // transit networks (the last two from the daily adoption numbers); the rest is on the Adoption page
   if ($('tiles')) $('tiles').replaceChildren(tile(null, fmt.format(aspas.length), 'networks have published an ASPA'));
 
   const done = status && status.lastUpdateDone;
@@ -200,7 +200,7 @@ function changeText(e) {
 
 function renderChanges() {
   const body = $('changes-body');
-  if (!body) return;   // the recent changes are on the State of ASPA page (latest.js); this page uses them for the history of one AS
+  if (!body) return;   // the recent changes are on the Adoption page (latest.js); this page uses them for the history of one AS
   const cut = new Date(Date.now() - CHANGE_DAYS * 86400000).toISOString().slice(0, 10);
   const recent = changes.filter((e) => e.date >= cut);
   if (!recent.length) {
@@ -2033,7 +2033,7 @@ function lookupFromHash() {
   if (hash && pathAs()) window.history.replaceState(null, '', '/network.html' + location.hash);   // `history` is the daily series here
   // the table of all ASPAs became a download on the API page: old links to #all go there
   if (hash === 'all') { location.replace('/api.html#download'); return; }
-  // the overview, the recent changes and the quality checks moved: the numbers to the home page, the lists to State of ASPA
+  // the overview, the recent changes and the quality checks moved: the numbers to the home page, the lists to Adoption
   if (hash === 'overview') { location.replace('/'); return; }
   if (hash === 'changes' || hash === 'quality') { location.replace(`/statistics.html#${hash}`); return; }
   // the home page opens a tool by name: /network.html#path, /network.html#routes

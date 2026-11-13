@@ -9,6 +9,11 @@ A few numbers were deployed and folded into the next release without a tag of th
 
 ## [Unreleased]
 
+## [1.73.1] - 2026-11-13
+
+### Fixed
+- The guide still had the old names of two areas, *My network* and *State of ASPA*, in its table of contents and in one paragraph: they are *Look up* and *Adoption*, as in the menu.
+
 ## [1.73.0] - 2026-11-13
 
 ### Changed

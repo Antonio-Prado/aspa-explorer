@@ -23,16 +23,16 @@
 <meta name="twitter:card" content="summary_large_image">
 <meta name="color-scheme" content="light dark">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
-<link rel="stylesheet" href="/style.css?v=1.73.0">
-<script src="/status-checks.js?v=1.73.0" defer></script>
-<script src="/asnames.js?v=1.73.0" defer></script>
-<script src="/footer.js?v=1.73.0" defer></script>
+<link rel="stylesheet" href="/style.css?v=1.73.1">
+<script src="/status-checks.js?v=1.73.1" defer></script>
+<script src="/asnames.js?v=1.73.1" defer></script>
+<script src="/footer.js?v=1.73.1" defer></script>
 </head>
 <body>
 <a class="skip" href="#main">Skip to main content</a>
 <header class="wrap masthead">
   <div class="top">
-    <p class="back"><a class="brandlink" href="/" title="Back to ASPA Explorer"><img class="brand" src="/img/logo-mark.svg?v=1.73.0" alt="" width="40" height="40"><span>ASPA Explorer</span></a></p>
+    <p class="back"><a class="brandlink" href="/" title="Back to ASPA Explorer"><img class="brand" src="/img/logo-mark.svg?v=1.73.1" alt="" width="40" height="40"><span>ASPA Explorer</span></a></p>
     <nav class="topnav" aria-label="Main"><a class="sect a-look" href="/network.html">Look up</a><a class="sect a-adopt" href="/statistics.html">Adoption</a><a class="sect a-now" href="/now.html">Right now</a><a class="sect a-inc" href="/incidents.html">Incidents</a><a class="minor" href="/guide.html" aria-current="page">Guide</a><a class="minor" href="/examples.html">Examples</a><a class="minor" href="/api.html">API</a><a class="minor" href="/status.html">Status</a></nav>
   </div>
   <h1>Guide</h1>
@@ -42,8 +42,8 @@
 <main class="wrap prose" id="main" tabindex="-1">
   <nav class="toc toc-groups card" aria-label="Contents">
     <div><p class="toc-g">Start here</p><ul><li><a href="#what">What you are looking at</a></li><li><a href="#home">The home page</a></li><li><a href="#reading">Reading the results</a></li></ul></div>
-    <div><p class="toc-g">My network</p><ul><li><a href="#lookup">Looking up an AS</a></li><li><a href="#path-check">Checking an AS path</a></li><li><a href="#live-routes">Checking the routes seen in BGP</a></li><li><a href="#changes">Recent changes and the history of an AS</a></li><li><a href="#quality">ASPA quality</a></li><li><a href="#examples">Writing your ASPA</a></li><li><a href="#notify">Notifications by e-mail and webhook</a></li><li><a href="#share-result">Sharing a result</a></li></ul></div>
-    <div><p class="toc-g">State of ASPA</p><ul><li><a href="#statistics">The state of ASPA</a></li><li><a href="#overview">The charts at the top</a></li><li><a href="#trends">Networks with an ASPA over time</a></li><li><a href="#adoption">Adoption</a></li><li><a href="#resources">From allocation to ASPA</a></li><li><a href="#coverage">Valid routes by address space, and IPv6 and IPv4 side by side</a></li></ul></div>
+    <div><p class="toc-g">Look up</p><ul><li><a href="#lookup">Looking up an AS</a></li><li><a href="#path-check">Checking an AS path</a></li><li><a href="#live-routes">Checking the routes seen in BGP</a></li><li><a href="#changes">Recent changes and the history of an AS</a></li><li><a href="#quality">ASPA quality</a></li><li><a href="#examples">Writing your ASPA</a></li><li><a href="#notify">Notifications by e-mail and webhook</a></li><li><a href="#share-result">Sharing a result</a></li></ul></div>
+    <div><p class="toc-g">Adoption</p><ul><li><a href="#statistics">The state of ASPA</a></li><li><a href="#overview">The charts at the top</a></li><li><a href="#trends">Networks with an ASPA over time</a></li><li><a href="#adoption">Adoption</a></li><li><a href="#resources">From allocation to ASPA</a></li><li><a href="#coverage">Valid routes by address space, and IPv6 and IPv4 side by side</a></li></ul></div>
     <div><p class="toc-g">Right now</p><ul><li><a href="#right-now">The four tabs</a></li><li><a href="#invalid">Invalid announcements, as they happen</a></li><li><a href="#leaks">Valleys today</a></li><li><a href="#validators">Validators compared</a></li><li><a href="#rtr">The validator as a router sees it</a></li><li><a href="#incidents">Incidents and ASPA</a></li></ul></div>
     <div><p class="toc-g">Data and API</p><ul><li><a href="#share">Sharing, badges, feeds and the API</a></li><li><a href="#data">Where the data comes from</a></li><li><a href="#status">Status</a></li></ul></div>
     <div><p class="toc-g">Help and about</p><ul><li><a href="#links">Links and keyboard use</a></li><li><a href="#trouble">If something does not load</a></li><li><a href="#accessibility">Accessibility</a></li><li><a href="#about">About this page</a></li><li><a href="#credits">Credits</a></li></ul></div>
@@ -454,7 +454,7 @@
 
     <p><strong>Back to the top.</strong> On a long page, once you have scrolled down a screen, a round button with an up arrow appears at the bottom right. It takes you back to the top of the page and puts the keyboard focus there, so the next <kbd>Tab</kbd> reaches the skip link and the menu. It scrolls without animation if your system asks for less motion, and it is not printed.</p>
 
-    <p><strong>A quick look at any AS.</strong> On the My network page and the statistics page, a click on an AS number, in a table, a list of providers or a path, opens a small window with what the site knows about it: whether it publishes an ASPA and with which providers, how many ASPAs name it as a provider, whether the route collectors see it, the findings on its ASPA and its last change, with a link to its page. The AS numbers in the window open the next one. Escape closes it; a click with Ctrl, Cmd or Shift goes straight to the page of the AS, as before. The window asks this site for one small file (<code>/api/v1/as/&lt;number&gt;</code>) and nothing else.</p>
+    <p><strong>A quick look at any AS.</strong> On the Look up page and the Adoption page, a click on an AS number, in a table, a list of providers or a path, opens a small window with what the site knows about it: whether it publishes an ASPA and with which providers, how many ASPAs name it as a provider, whether the route collectors see it, the findings on its ASPA and its last change, with a link to its page. The AS numbers in the window open the next one. Escape closes it; a click with Ctrl, Cmd or Shift goes straight to the page of the AS, as before. The window asks this site for one small file (<code>/api/v1/as/&lt;number&gt;</code>) and nothing else.</p>
     <p><strong>The name of an AS.</strong> Rest the pointer on an AS number, or reach it with the keyboard, and its name in the registry of its RIR shows as a tooltip (for instance <em>AS41327: FIBERTELECOM-AS Fiber Telecom S.p.A.</em>). The name comes from RIPEstat: the page asks for it only for the ASes you look at, once in a visit, and this sends the AS number to RIPEstat. Thanks to Leo Vegoda of PeeringDB for suggesting it.</p>
   </section>
 
