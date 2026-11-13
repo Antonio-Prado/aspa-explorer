@@ -30,12 +30,20 @@
 
 <table>
   <tr>
-    <td width="50%"><img src="assets/screenshots/lookup-light.jpg" alt="Looking up AS680: its own ASPA and the ASPAs that name it as a provider, with its history"></td>
-    <td width="50%"><img src="assets/screenshots/statistics-dark.jpg" alt="The statistics page in the dark theme: ASPAs over time, stacked by RIR, and the other charts"></td>
+    <td width="50%"><img src="assets/screenshots/home-light.jpg" alt="The home page: the network of the visitor first (here AS3333, no ASPA yet), the search with the other tools next to it, the ASPAs validated today and the four areas of the site"></td>
+    <td width="50%"><img src="assets/screenshots/now-dark.jpg" alt="The Right now page in the dark theme: one number for each of its four parts above the tabs, and the share of invalid announcements by hour with the value of the hour under the pointer"></td>
   </tr>
   <tr>
-    <td align="center"><sub>Look up an AS, with its history</sub></td>
-    <td align="center"><sub>Statistics, in the dark theme</sub></td>
+    <td align="center"><sub>Home: the network you are on, then the search and the four areas</sub></td>
+    <td align="center"><sub>Right now, in the dark theme</sub></td>
+  </tr>
+  <tr>
+    <td width="50%"><img src="assets/screenshots/lookup-light.jpg" alt="Looking up AS680: the answer first (it has an ASPA with 6 providers, and no issue), then the tabs with its ASPA, its routes, its history, the registry and the alerts"></td>
+    <td width="50%"><img src="assets/screenshots/statistics-dark.jpg" alt="The Adoption page in the dark theme: the links to its parts under the title, the tiles and the ASPAs over time, stacked by RIR"></td>
+  </tr>
+  <tr>
+    <td align="center"><sub>Look up an AS: the answer first</sub></td>
+    <td align="center"><sub>Adoption, in the dark theme</sub></td>
   </tr>
   <tr>
     <td width="50%"><img src="assets/screenshots/pathcheck-dark.jpg" alt="Checking the AS path 3356 1299 680: the verdict and the hop-by-hop table"></td>
@@ -154,7 +162,7 @@
     <td colspan="2" align="center"><sub>Tromboning, IPv4 and IPv6 on the same probes: the reading of each family first, the comparison after</sub></td>
   </tr>
   <tr>
-    <td width="50%"><img src="assets/screenshots/incidents-dark.jpg" alt="The Incidents page: 1,136,208 incidents in seven days of rrc00, the tiles (Invalid with the ASPAs of the day 0.6%, Unknown 95%) and the table by type, with the types of the survey under each class"></td>
+    <td width="50%"><img src="assets/screenshots/incidents-dark.jpg" alt="The Incidents page: 4,267,431 incidents in forty days of rrc00, the tiles (Invalid with the ASPAs of the day 0.7%, Unknown 95%) and the table by type, with the types of the survey under each class"></td>
     <td width="50%"><img src="assets/screenshots/incidents-chart-dark.jpg" alt="The chart of the Incidents page: the share of the incidents that would be Invalid against the share of the networks that publish an ASPA, the networks with the most customers first or in random order, without the persistent valleys"></td>
   </tr>
   <tr>
