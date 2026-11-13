@@ -9,6 +9,12 @@ A few numbers were deployed and folded into the next release without a tag of th
 
 ## [Unreleased]
 
+## [1.75.1] - 2026-11-13
+
+### Changed
+- The API page describes the confirmation of a subscription by a program (`POST /api/v1/subscriptions/confirm`), the unsubscribe request and `GET /api/v1/subscriptions/health`, and says which addresses serve the pages only and are not part of the API (`/client-ip`, `/api/v1/atlas/`).
+- The OpenAPI schema has what the page described and the schema did not: the shared results (`/api/v1/reports`, `/api/v1/reports/{id}`), `/changes.atom`, `/api/v1/invalid-last.json`, `/api/v1/leaks-by-as/{day}.json` and `/api/v1/subscriptions/health`. Its version, which had stayed at 1.5.3, is now the version of the site, and `scripts/check-version.sh` checks that it is.
+
 ## [1.75.0] - 2026-11-13
 
 ### Added

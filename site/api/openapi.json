@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "ASPA Explorer API",
-    "version": "1.5.3",
+    "version": "1.75.1",
     "description": "ASPA objects validated by Routinator at rpki.ping6.it, their history and quality, for any AS. Open data, read-only, no key.",
     "contact": {
       "email": "antonio.prado@dei.unipd.it"
@@ -2493,6 +2493,496 @@
             }
           }
         ]
+      }
+    },
+    "/api/v1/reports": {
+      "post": {
+        "summary": "Freeze a result into a link, kept for 30 days",
+        "description": "Plain text only, 200 KB at most; 20 reports an hour and 100 a day from one address.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "kind",
+                  "title",
+                  "sections"
+                ],
+                "properties": {
+                  "kind": {
+                    "type": "string",
+                    "enum": [
+                      "path",
+                      "bulk",
+                      "routes",
+                      "whatif",
+                      "tromboning",
+                      "other"
+                    ]
+                  },
+                  "title": {
+                    "type": "string",
+                    "maxLength": 140
+                  },
+                  "source": {
+                    "type": "string",
+                    "maxLength": 600,
+                    "description": "The address on the site that runs the same check again"
+                  },
+                  "sections": {
+                    "type": "array",
+                    "minItems": 1,
+                    "maxItems": 12,
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "heading": {
+                          "type": "string",
+                          "maxLength": 120
+                        },
+                        "text": {
+                          "type": "string",
+                          "maxLength": 2000
+                        },
+                        "table": {
+                          "type": "object",
+                          "properties": {
+                            "columns": {
+                              "type": "array",
+                              "maxItems": 8,
+                              "items": {
+                                "type": "string"
+                              }
+                            },
+                            "rows": {
+                              "type": "array",
+                              "maxItems": 500,
+                              "items": {
+                                "type": "array",
+                                "items": {
+                                  "oneOf": [
+                                    {
+                                      "type": "string"
+                                    },
+                                    {
+                                      "type": "array",
+                                      "prefixItems": [
+                                        {
+                                          "type": "string"
+                                        },
+                                        {
+                                          "type": "string",
+                                          "enum": [
+                                            "valid",
+                                            "unknown",
+                                            "invalid",
+                                            "provider",
+                                            "not-provider",
+                                            "none"
+                                          ]
+                                        }
+                                      ],
+                                      "minItems": 2,
+                                      "maxItems": 2
+                                    }
+                                  ]
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    },
+                    "url": {
+                      "type": "string",
+                      "format": "uri"
+                    },
+                    "expires_days": {
+                      "type": "integer"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "The report cannot be accepted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too many reports from this address",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "The service is busy",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/reports/{id}": {
+      "get": {
+        "summary": "A shared result",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^([0-9a-f]{32}|[0-9a-f]{12})$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The report as it was stored",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "kind": {
+                      "type": "string",
+                      "enum": [
+                        "path",
+                        "bulk",
+                        "routes",
+                        "whatif",
+                        "tromboning",
+                        "other"
+                      ]
+                    },
+                    "title": {
+                      "type": "string",
+                      "maxLength": 140
+                    },
+                    "source": {
+                      "type": "string",
+                      "maxLength": 600,
+                      "description": "The address on the site that runs the same check again"
+                    },
+                    "sections": {
+                      "type": "array",
+                      "minItems": 1,
+                      "maxItems": 12,
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "heading": {
+                            "type": "string",
+                            "maxLength": 120
+                          },
+                          "text": {
+                            "type": "string",
+                            "maxLength": 2000
+                          },
+                          "table": {
+                            "type": "object",
+                            "properties": {
+                              "columns": {
+                                "type": "array",
+                                "maxItems": 8,
+                                "items": {
+                                  "type": "string"
+                                }
+                              },
+                              "rows": {
+                                "type": "array",
+                                "maxItems": 500,
+                                "items": {
+                                  "type": "array",
+                                  "items": {
+                                    "oneOf": [
+                                      {
+                                        "type": "string"
+                                      },
+                                      {
+                                        "type": "array",
+                                        "prefixItems": [
+                                          {
+                                            "type": "string"
+                                          },
+                                          {
+                                            "type": "string",
+                                            "enum": [
+                                              "valid",
+                                              "unknown",
+                                              "invalid",
+                                              "provider",
+                                              "not-provider",
+                                              "none"
+                                            ]
+                                          }
+                                        ],
+                                        "minItems": 2,
+                                        "maxItems": 2
+                                      }
+                                    ]
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    },
+                    "id": {
+                      "type": "string"
+                    },
+                    "created": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "expires": {
+                      "type": "string",
+                      "format": "date-time"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "It does not exist or has expired",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/changes.atom": {
+      "get": {
+        "summary": "Atom feed of the changes to all ASPAs",
+        "responses": {
+          "200": {
+            "description": "Atom 1.0 feed",
+            "content": {
+              "application/atom+xml": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/invalid-last.json": {
+      "get": {
+        "summary": "The invalid announcements of the last ten-minute run of the watcher, by origin AS",
+        "description": "Only the origins with at least `min` invalid announcements; the notifier reads it for the alerts.",
+        "responses": {
+          "200": {
+            "description": "The file",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "generated": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "from": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "to": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "min": {
+                      "type": "integer"
+                    },
+                    "omitted": {
+                      "type": "integer"
+                    },
+                    "collected": {
+                      "type": "object",
+                      "description": "How the run listened to RIS Live: whether it could, for how long, messages and announcements received"
+                    },
+                    "origins": {
+                      "type": "object",
+                      "description": "AS number (ASnnn) -> what was seen",
+                      "additionalProperties": {
+                        "type": "object",
+                        "properties": {
+                          "invalid": {
+                            "type": "integer"
+                          },
+                          "announcements": {
+                            "type": "integer"
+                          },
+                          "prefixes": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "prefix": {
+                                  "type": "string"
+                                },
+                                "invalid": {
+                                  "type": "integer"
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/leaks-by-as/{day}.json": {
+      "get": {
+        "summary": "The places of valley that involve each AS, on one of the last 60 days",
+        "description": "Places seen by at least min_feeders feeders, by AS, for the page of an AS and for the notifier.",
+        "responses": {
+          "200": {
+            "description": "The file",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "generated": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "min_feeders": {
+                      "type": "integer"
+                    },
+                    "as": {
+                      "type": "object",
+                      "properties": {},
+                      "description": "AS number (ASnnn) -> array of places {role, kind, from, to, between, feeders, routes}",
+                      "additionalProperties": true
+                    }
+                  },
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No file for that day"
+          }
+        },
+        "parameters": [
+          {
+            "name": "day",
+            "in": "path",
+            "required": true,
+            "description": "YYYYMMDD",
+            "schema": {
+              "type": "string",
+              "pattern": "^[0-9]{8}$"
+            }
+          }
+        ]
+      }
+    },
+    "/api/v1/subscriptions/health": {
+      "get": {
+        "summary": "Whether the service that sends the notifications is working",
+        "responses": {
+          "200": {
+            "description": "The state of the service",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "ok": {
+                      "type": "boolean"
+                    },
+                    "last_poll": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "format": "date-time"
+                    },
+                    "failures_in_a_row": {
+                      "type": "integer"
+                    },
+                    "poll_seconds": {
+                      "type": "integer"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
       }
     }
   },
