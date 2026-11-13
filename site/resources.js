@@ -1,6 +1,6 @@
 'use strict';
 
-// The sections of the statistics page that follow an AS number from its allocation to its ASPA: /api/v1/resources.json, built once a day
+// The sections of the Adoption page that follow an AS number from its allocation to its ASPA: /api/v1/resources.json, built once a day
 // by scripts/build-resources.mjs. By RIR, region and economy (with the figures per million Internet users), by the year of the
 // allocation and the width of the number, and the ASPAs that name AS numbers that should not be there.
 (function () {

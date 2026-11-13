@@ -9,6 +9,16 @@ A few numbers were deployed and folded into the next release without a tag of th
 
 ## [Unreleased]
 
+## [1.75.0] - 2026-11-13
+
+### Added
+- `GET /api/v1/verify?path=3356+1299+680` answers with the verdict of the ASPAs on an AS path, upstream (the default) or downstream with `direction=downstream`: the result, each hop with what the two ASPAs say about it, the lengths of the ramps, the ASes without an ASPA and the time of the ASPAs used. It is the procedure of the page (`site/verify.js`), run by the notifier on the ASPAs it already reads from the validator; open to other sites, up to 64 ASes in a path, 1,200 requests an hour from one address. The service needs `site/verify.js` next to `site/history.js`, and nginx the new location `/api/v1/verify`.
+- `/api/v1/quality.json`: every finding of the quality checks on the ASPAs, with the kinds of finding, their meaning and their counts; the list of the tab *ASPA quality* of the Adoption page, which until now was only computed in the browser. Written by `scripts/build-api.mjs` with the per-AS files; nginx has a location for it.
+- The API page and the OpenAPI schema describe three files that were served and not documented: `/data/status.json` (the state of the validator), `/data/validity/AS<n>/<prefix>` (the origin validation of one route) and `/data/root-sites.json` (the places of the instances of the DNS root servers).
+
+### Changed
+- No text says "statistics page" any more: the notification of many RTR anomalies ends with "on the Right now page", and the README, a note in `docs/`, the guide and the comments of the scripts name the Adoption or the Right now page.
+
 ## [1.74.1] - 2026-11-13
 
 ### Changed

@@ -2,6 +2,7 @@
 //   POST /api/v1/subscriptions               {kind: "email"|"webhook", target, asn, leaks?: true, invalid?: 5..100000}  or  {kind, target, topic: "status"}
 //   POST /api/v1/subscriptions/confirm       {token}
 //   POST /api/v1/subscriptions/unsubscribe   {token}   (also ?token= with a form body, for List-Unsubscribe-Post)
+//   GET  /api/v1/verify?path=3356+1299+680&direction=upstream|downstream   the verdict of the ASPAs on an AS path (verify.mjs)
 // Everything the handlers need from outside is passed in, so the tests can fake it.
 import { randomBytes } from 'node:crypto';
 import { makeToken, readToken } from './tokens.mjs';
@@ -206,7 +207,7 @@ const readBody = (req, limit = 2048) => new Promise((resolve, reject) => {
 });
 
 // node:http request handler around makeApi
-export function httpHandler(api, { site, perIpUnsub = limiter(60, HOUR), health = null, template = () => null } = {}) {
+export function httpHandler(api, { site, perIpUnsub = limiter(60, HOUR), health = null, template = () => null, verifier = null, perIpVerify = limiter(1200, HOUR) } = {}) {
   return async (req, res) => {
     const send = ({ status, body }, cache = 'no-store') => {
       res.writeHead(status, { ...(status === 413 ? { Connection: 'close' } : {}), 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': cache, 'X-Content-Type-Options': 'nosniff' });
@@ -226,6 +227,13 @@ export function httpHandler(api, { site, perIpUnsub = limiter(60, HOUR), health 
         const local = !req.socket.remoteAddress || /^(127\.|::1$|::ffff:127\.)/.test(String(req.socket.remoteAddress));
         if (!req.headers['x-real-ip'] && local) return send({ status: 200, body: h });
         return send({ status: 200, body: { ok: h.ok, last_poll: h.last_poll, failures_in_a_row: h.failures_in_a_row, poll_seconds: h.poll_seconds } });
+      }
+      // the check of an AS path: read-only and open to other sites (nginx adds the CORS header), with a limit for each visitor
+      if (url.pathname === '/api/v1/verify' && verifier) {
+        if (req.method !== 'GET') return send({ status: 405, body: { error: 'GET only' } });
+        if (!perIpVerify(ip)) return send({ status: 429, body: { error: 'too many requests from this address, try again later' } });
+        const r = verifier.check(url.searchParams);
+        return send(r, r.status === 200 ? 'public, max-age=60' : 'no-store');
       }
       const rep = /^\/api\/v1\/reports\/([^/]+)$/.exec(url.pathname);
       if (req.method === 'GET' && rep) { const r = api.getReport(rep[1]); return send(r, 'no-store'); }

@@ -325,11 +325,12 @@ The main same-origin endpoints (the [API page](https://aspa.ping6.it/api.html) l
 | `/data/aspas.json`, `/data/status.json` | Routinator's `/jsonext?exclude=routeOrigins,routerKeys` and `/api/v1/status`, proxied and cached for 2 minutes |
 | `/data/validity/AS<n>/<prefix>` | Routinator's origin validation of one route |
 | `/api/v1/as/<n>`, `/badge/AS<n>.svg`, `/feed/AS<n>.atom` | files built every 15 minutes for each AS; any other AS gets a generic answer |
-| `/api/v1/aspas.json`, `/api/v1/aspas.csv`, `/api/v1/meta.json` | the whole list, and when it was built |
+| `/api/v1/aspas.json`, `/api/v1/aspas.csv`, `/api/v1/quality.json`, `/api/v1/meta.json` | the whole list, every finding of the quality checks, and when they were built |
 | `/api/v1/adoption.json`, `/api/v1/asn-registry.json`, `/api/v1/leaks.json`, `/api/v1/resources.json`, … | numbers built once a day or every hour (the API page says which) |
 | `/api/v1/archive/history.json`, `events.json`, `visibility.json` | the history branch, copied every 10 minutes |
 | `/api/v1/subscriptions…` | subscriptions, confirmations, unsubscribe and health, served by the notifier |
 | `/api/v1/reports`, `/r/<id>` | shared results, kept 30 days, served by the notifier |
+| `/api/v1/verify?path=…` | the verdict of the ASPAs on an AS path, upstream or downstream, computed by the notifier from the ASPAs it holds |
 | `/api/v1/atlas/…` | the tests of the tromboning box on RIPE Atlas, served by the Atlas service |
 | `/changes.atom` | the Atom feed of the changes, proxied from the history branch |
 
@@ -366,8 +367,8 @@ eslint.config.mjs              security rules for the browser code (no innerHTML
 2. Copy `deploy/nginx/aspa.conf` into nginx's `conf.d/`, and `deploy/nginx/rpki-proxy.conf` and `deploy/nginx/security-headers.conf` next to `nginx.conf`. Adjust the listen IP, server name, TLS certificate paths and the Routinator host in `rpki-proxy.conf`.
 3. Write the build information shown in the footer next to `index.html`: `sh scripts/build-info.sh > build.json`.
 4. For the per-AS API, badges and feeds, run `node scripts/build-api.mjs /var/db/aspa-gen` (Node.js 18+, with `site/history.js` and `site/quality.js` next to its `../site`) every 15 minutes as an unprivileged user; it builds into a new directory and switches a `current` symlink that nginx serves. Without it the AS endpoints still answer, with "no ASPA".
-5. Notifications and shared results (optional): run `notifier/main.mjs` as an unprivileged user with the `deploy/freebsd/aspa_notify` rc script (Node.js 22.13 or later, for `node:sqlite`; the environment variables are listed at the top of `notifier/main.mjs`, and `site/history.js` must be in its `../site`), route `/api/v1/subscriptions`, `/api/v1/reports` and `/r/` to it as in `deploy/nginx/aspa.conf`, and publish SPF and DKIM records for the sending domain; see the wiki, Deployment.
-6. Adoption numbers (optional): run `node scripts/build-adoption.mjs /var/db/aspa-gen/adoption.json` once a day (Node.js 18+ and `bunzip2`; it downloads the RIR delegation files and the CAIDA relationships into a cache next to the output). The other builders of the statistics page are described in the wiki, Deployment.
+5. Notifications and shared results (optional): run `notifier/main.mjs` as an unprivileged user with the `deploy/freebsd/aspa_notify` rc script (Node.js 22.13 or later, for `node:sqlite`; the environment variables are listed at the top of `notifier/main.mjs`, and `site/history.js` and `site/verify.js` must be in its `../site`), route `/api/v1/subscriptions`, `/api/v1/reports`, `/api/v1/verify` and `/r/` to it as in `deploy/nginx/aspa.conf`, and publish SPF and DKIM records for the sending domain; see the wiki, Deployment.
+6. Adoption numbers (optional): run `node scripts/build-adoption.mjs /var/db/aspa-gen/adoption.json` once a day (Node.js 18+ and `bunzip2`; it downloads the RIR delegation files and the CAIDA relationships into a cache next to the output). The other builders of the Adoption and Right now pages are described in the wiki, Deployment.
 7. Tromboning on RIPE Atlas (optional): run `atlas/main.mjs` as an unprivileged user with the `deploy/freebsd/aspa_atlas` rc script, with `site/traceroute.js` in its `../site` and the key of a RIPE Atlas account (permission to schedule measurements, which spend the credits of that account) in a file that only that user can read, and route `/api/v1/atlas/` to it as in `deploy/nginx/aspa.conf`. Without it the box uses Globalping only.
 8. Make sure the Routinator HTTP(S) port is reachable from the web server (it must expose `/jsonext`, `/api/v1/status` and `/api/v1/validity`), then `nginx -t && nginx -s reload`.
 

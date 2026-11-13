@@ -1,6 +1,6 @@
 'use strict';
 
-// The "Invalid announcements" section of the statistics page: /api/v1/invalid.json, kept by scripts/watch-invalid.mjs from the
+// The "Invalid announcements" section of the Right now page: /api/v1/invalid.json, kept by scripts/watch-invalid.mjs from the
 // stream of RIPE RIS Live, every ten minutes. The last 14 days: the share of invalid announcements by hour, the profile and the
 // origins and prefixes with the most invalid announcements.
 (function () {

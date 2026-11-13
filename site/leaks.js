@@ -1,6 +1,6 @@
 'use strict';
 
-// The "Valleys today" section of the statistics page: /api/v1/leaks.json, built once a day by
+// The "Valleys today" section of the Right now page: /api/v1/leaks.json, built once a day by
 // scripts/build-leaks.mjs from the table dumps of collectors of RIPE RIS and RouteViews.
 (function () {
   const $ = (id) => document.getElementById(id);

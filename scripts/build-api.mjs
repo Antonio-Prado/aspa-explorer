@@ -160,6 +160,27 @@ export function toCsv(rows) {
   return [cols.join(','), ...rows.map((r) => cols.map((c) => csvCell(c === 'providers' ? r.providers.join(' ') : r[c])).join(','))].join('\n') + '\n';
 }
 
+// ---------- the quality checks, all of them ----------
+
+// What the tab "ASPA quality" of the Adoption page shows, as one document: the kinds of finding with their meaning and count, and every
+// finding. Without the BGP visibility the two checks that need it are left out, and `bgp_visibility` says so.
+export function qualityDoc(ctx) {
+  const all = [...ctx.findings.values()].flat();
+  const rank = new Map(Quality.ORDER.map((k, i) => [k, i]));
+  all.sort((a, b) => rank.get(a.kind) - rank.get(b.kind) || asNum(a.customer) - asNum(b.customer));
+  const kinds = {};
+  for (const k of Quality.ORDER) kinds[k] = { severity: Quality.KINDS[k].severity, title: Quality.KINDS[k].title, why: Quality.KINDS[k].why, count: 0 };
+  for (const f of all) kinds[f.kind].count++;
+  return {
+    generated: ctx.generated,
+    aspas: ctx.byCustomer.size,
+    with_findings: ctx.findings.size,
+    bgp_visibility: Boolean(ctx.unseen),
+    kinds,
+    findings: all.map((f) => ({ customer: f.customer, kind: f.kind, severity: f.severity, detail: f.detail, providers: f.providers })),
+  };
+}
+
 // ---------- the context ----------
 
 // The AS numbers become file names (badge/AS<n>.svg) and markup: only "AS" and digits are taken. Routinator and the history branch write
@@ -253,6 +274,7 @@ async function main() {
   const list = aspaRows(ctx);
   await writeFile(join(dir, 'api/v1/aspas.json'), JSON.stringify(list) + '\n');
   await writeFile(join(dir, 'api/v1/aspas.csv'), toCsv(list));
+  await writeFile(join(dir, 'api/v1/quality.json'), JSON.stringify(qualityDoc(ctx)) + '\n');
   await writeFile(join(dir, 'api/v1/meta.json'), JSON.stringify({ generated, aspas: ctx.byCustomer.size, ases: n, events: events.length }) + '\n');
 
   if (!process.argv.includes('--no-switch')) {

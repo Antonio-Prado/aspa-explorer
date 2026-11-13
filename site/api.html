@@ -23,18 +23,18 @@
 <meta name="twitter:card" content="summary_large_image">
 <meta name="color-scheme" content="light dark">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
-<link rel="stylesheet" href="/style.css?v=1.74.1">
-<script src="/download.js?v=1.74.1" defer></script>
-<script src="/datasets.js?v=1.74.1" defer></script>
-<script src="/status-checks.js?v=1.74.1" defer></script>
-<script src="/asnames.js?v=1.74.1" defer></script>
-<script src="/footer.js?v=1.74.1" defer></script>
+<link rel="stylesheet" href="/style.css?v=1.75.0">
+<script src="/download.js?v=1.75.0" defer></script>
+<script src="/datasets.js?v=1.75.0" defer></script>
+<script src="/status-checks.js?v=1.75.0" defer></script>
+<script src="/asnames.js?v=1.75.0" defer></script>
+<script src="/footer.js?v=1.75.0" defer></script>
 </head>
 <body>
 <a class="skip" href="#main">Skip to main content</a>
 <header class="wrap masthead">
   <div class="top">
-    <p class="back"><a class="brandlink" href="/" title="Back to ASPA Explorer"><img class="brand" src="/img/logo-mark.svg?v=1.74.1" alt="" width="40" height="40"><span>ASPA Explorer</span></a></p>
+    <p class="back"><a class="brandlink" href="/" title="Back to ASPA Explorer"><img class="brand" src="/img/logo-mark.svg?v=1.75.0" alt="" width="40" height="40"><span>ASPA Explorer</span></a></p>
     <nav class="topnav" aria-label="Main"><a class="sect a-look" href="/network.html">Look up</a><a class="sect a-adopt" href="/statistics.html">Adoption</a><a class="sect a-now" href="/now.html">Right now</a><a class="sect a-inc" href="/incidents.html">Incidents</a><a class="minor" href="/guide.html">Guide</a><a class="minor" href="/examples.html">Examples</a><a class="minor" href="/api.html" aria-current="page">API</a><a class="minor" href="/status.html">Status</a></nav>
   </div>
   <h1>API</h1>
@@ -47,6 +47,8 @@
     <dl class="quick">
       <dt>The ASPA of one AS, and who names it as a provider</dt>
       <dd><pre tabindex="0"><code>curl https://aspa.ping6.it/api/v1/as/8283</code></pre></dd>
+      <dt>What the ASPAs say about an AS path</dt>
+      <dd><pre tabindex="0"><code>curl 'https://aspa.ping6.it/api/v1/verify?path=3356+1299+680'</code></pre></dd>
       <dt>Every valid ASPA, one per row</dt>
       <dd><pre tabindex="0"><code>curl -O https://aspa.ping6.it/api/v1/aspas.csv</code></pre></dd>
       <dt>A badge for a README or a web page</dt>
@@ -56,7 +58,7 @@
   </section>
 
   <nav class="toc toc-groups card" aria-label="Contents">
-    <div><p class="toc-g">One network</p><ul><li><a href="#as">One AS</a></li><li><a href="#badge">Badge</a></li><li><a href="#feed">Atom feed</a></li><li><a href="#subscriptions">Subscriptions and webhooks</a></li><li><a href="#reports">Shared results</a></li></ul></div>
+    <div><p class="toc-g">One network</p><ul><li><a href="#as">One AS</a></li><li><a href="#verify">One AS path</a></li><li><a href="#badge">Badge</a></li><li><a href="#feed">Atom feed</a></li><li><a href="#subscriptions">Subscriptions and webhooks</a></li><li><a href="#reports">Shared results</a></li></ul></div>
     <div><p class="toc-g">Everything</p><ul><li><a href="#download">Download the whole list</a></li><li><a href="#datasets">Dated snapshots, for research</a></li><li><a href="#all">Everything at once</a></li></ul></div>
     <div><p class="toc-g">Rules</p><ul><li><a href="#rules">Freshness and fair use</a></li></ul></div>
   </nav>
@@ -84,6 +86,38 @@
       </tbody>
     </table>
     <p>The schema is also available as <a href="/api/openapi.json">OpenAPI 3.1</a>.</p>
+  </section>
+
+  <section aria-labelledby="verify">
+    <h2 id="verify">One AS path</h2>
+    <p><code>GET https://aspa.ping6.it/api/v1/verify?path=3356+1299+680</code> checks an AS path against the ASPAs of the moment, with the same procedure as the <a href="/network.html#path=3356+1299+680&amp;from=up">AS path check</a> of the site (the one of <a href="https://datatracker.ietf.org/doc/draft-ietf-sidrops-aspa-verification/" target="_blank" rel="noopener">draft-ietf-sidrops-aspa-verification<span class="sr-only"> (opens in a new tab)</span></a>). The path is written as routers print it, the neighbour first and the origin last, with spaces or commas between the AS numbers (<code>3356</code> or <code>AS3356</code>); repeated ASes (prepending) are removed, and a path may have up to 64 of them. <code>direction=upstream</code>, the default, is for a route that comes from a customer or a peer; <code>direction=downstream</code> for one that comes from a provider. Cross-origin requests are allowed.</p>
+    <pre tabindex="0"><code>{
+  "result": "Invalid",
+  "direction": "upstream",
+  "as_path": ["AS3356", "AS1299", "AS680"],
+  "origin": "AS680",
+  "neighbour": "AS3356",
+  "hops": [
+    {"from": "AS680", "to": "AS1299", "from_lists_to": "Provider+", "to_lists_from": "Not Provider+"},
+    {"from": "AS1299", "to": "AS3356", "from_lists_to": "Not Provider+", "to_lists_from": "No Attestation"}
+  ],
+  "ramps": {"max_up": 2, "min_up": 2, "max_down": 2, "min_down": 1},
+  "without_aspa": [],
+  "aspas": {"generated": "2026-11-13T12:57:29Z", "count": 4091}
+}</code></pre>
+    <dl>
+      <dt><code>result</code></dt>
+      <dd><code>Valid</code>, <code>Invalid</code> or <code>Unknown</code>.</dd>
+      <dt><code>hops</code></dt>
+      <dd>One entry for each pair of neighbouring ASes, from the origin to the neighbour. <code>from_lists_to</code> says whether the ASPA of <code>from</code> lists <code>to</code> as a provider: <code>Provider+</code>, <code>Not Provider+</code> or <code>No Attestation</code> when <code>from</code> has no ASPA. <code>to_lists_from</code> is the same question the other way round, which only the downstream check reads.</dd>
+      <dt><code>ramps</code></dt>
+      <dd>The lengths of the up-ramp and of the down-ramp, at most and at least, as the procedure names them; the numbers that the verdict comes from.</dd>
+      <dt><code>without_aspa</code></dt>
+      <dd>The ASes of the path with no ASPA, among those whose ASPA the procedure reads: with an <code>Unknown</code> they are the ones that would settle it.</dd>
+      <dt><code>aspas</code></dt>
+      <dd>When the validator wrote the ASPAs that the answer was computed with, and how many customers have one. The service reads them again every few minutes.</dd>
+    </dl>
+    <p>A path that cannot be read is a 400 with an <code>error</code> that says why; so is a path with an AS_SET or a confederation segment, which the procedure treats as Invalid and this service does not parse. The answer may be cached for a minute. For many paths at once, read <a href="/data/aspas.json">/data/aspas.json</a> and run the procedure yourself: <a href="/verify.js">verify.js</a>, the file that the site and this service use, has no dependency.</p>
   </section>
 
   <section aria-labelledby="badge">
@@ -155,7 +189,11 @@ X-ASPA-Signature: sha256=…      HMAC-SHA256(secret, timestamp + "." + body), h
     <h2 id="all">Everything at once</h2>
     <ul>
       <li><a href="/data/aspas.json">/data/aspas.json</a>: all valid ASPAs, as Routinator's <code>jsonext</code> (route origins and router keys left out), with every detail of the signed objects.</li>
+      <li><a href="/api/v1/quality.json">/api/v1/quality.json</a>: every finding of the quality checks on the ASPAs, the list behind the tab <em>ASPA quality</em> of the Adoption page: for each kind of finding its severity, its meaning and how many ASPAs have it (<code>kinds</code>), and every finding with the customer, the kind, a sentence and the providers involved (<code>findings</code>). <code>bgp_visibility</code> is false when the build could not read which ASes are seen in BGP, and the two checks that need it are then missing. Built every 15 minutes with the per-AS files.</li>
       <li><a href="/api/v1/meta.json">/api/v1/meta.json</a>: when the per-AS files were built and how many there are.</li>
+      <li><a href="/data/status.json">/data/status.json</a>: the state of the validator, as Routinator gives it (<code>/api/v1/status</code>): its version, the serial, when the last validation started and ended, the objects of each trust anchor and the state of every repository. Cached for two minutes.</li>
+      <li><code>/data/validity/AS{number}/{prefix}</code>, for example <a href="/data/validity/AS3333/193.0.0.0/21">/data/validity/AS3333/193.0.0.0/21</a>: the origin validation of one route (the ROAs, not the ASPAs) by Routinator, in its own format, with the VRPs that match and those that do not. The page uses it in the box of the routes of an AS; please keep to a few requests a second.</li>
+      <li><a href="/data/root-sites.json">/data/root-sites.json</a>: where the instances of the DNS root servers are (latitude, longitude and a place code for each instance name), which the page uses to tell a RIPE Atlas probe that is not where it says. Built by hand from RIPE Atlas measurements and OurAirports, a few times a year; the file names its sources.</li>
       <li><a href="/api/v1/resources.json">/api/v1/resources.json</a>: AS numbers allocated, advertised and with an ASPA by RIR, region, economy, year of allocation and width, per million Internet users, and the ASPAs that name numbers that are not allocated. Built once a day.</li>
       <li><a href="/api/v1/incidents.json">/api/v1/incidents.json</a>: what the ASPAs say about the routing incidents found by the detectors of the project, by type: how many, the verdicts of the ASPAs of the day and of complete ASPAs, and the share that would be Invalid when a part of the networks publish an ASPA. Aggregates only, no AS number. Built from the incident files by <code>scripts/build-incidents.mjs</code>.</li>
       <li><a href="/api/v1/incidents-detail.jsonl">/api/v1/incidents-detail.jsonl</a>: every incident of the detectors in the study period, one JSON record a line (type, subtype, actor, start, end, paths, the verdicts of the ASPAs of the day and of complete ASPAs), the file that the aggregates come from; tens of megabytes, written once a day.</li>

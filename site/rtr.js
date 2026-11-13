@@ -1,6 +1,6 @@
 'use strict';
 
-// The "validator as a router sees it" section of the statistics page: /api/v1/rtr.json, built every five minutes by scripts/build-rtr.mjs
+// The "validator as a router sees it" section of the Right now page: /api/v1/rtr.json, built every five minutes by scripts/build-rtr.mjs
 // from the telemetry of independent RTR clients (RAVEN's `rtr monitor`): one follows the Routinator of this site over RTR version 2,
 // the others reference caches; the charts and the session events are those of the first, the anomalies those of all.
 (function () {

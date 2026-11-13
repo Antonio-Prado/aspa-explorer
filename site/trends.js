@@ -1,7 +1,7 @@
 'use strict';
 
 // The number of networks with an ASPA over time, by RIR and by country: /api/v1/trends.json, built once a day by
-// scripts/build-trends.mjs. The same chart is on the statistics page (with a menu and the code to embed it) and, alone,
+// scripts/build-trends.mjs. The same chart is on the Adoption page (with a menu and the code to embed it) and, alone,
 // on /embed.html?country=IT (or ?rir=ripe), meant for another site's iframe.
 (function (root) {
   // the values of one series of the file: 'all', 'rir:ripe' or 'cc:IT' (zeros when it has none)

@@ -87,7 +87,7 @@ function chipList(list, limit) {
 
 
 
-/* ---------- overview: the tiles (the charts are on the statistics page) ---------- */
+/* ---------- overview: the tiles (the charts are on the Adoption page) ---------- */
 const fmtDayLong = (iso) => new Date(iso + 'T00:00:00Z').toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' });
 
 function renderOverview(status) {

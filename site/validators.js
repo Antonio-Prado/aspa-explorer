@@ -1,6 +1,6 @@
 'use strict';
 
-// The "Validators compared" section of the statistics page: /api/v1/validators.json, built every hour by
+// The "Validators compared" section of the Right now page: /api/v1/validators.json, built every hour by
 // scripts/build-validators.mjs from the ASPAs of the two validators of this site, Routinator and Fort, and of two rpki-client validators.
 (function () {
   const $ = (id) => document.getElementById(id);

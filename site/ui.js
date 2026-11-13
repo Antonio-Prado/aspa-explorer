@@ -1,6 +1,6 @@
 'use strict';
 
-// Small helpers shared by the sections of the statistics page that were added later (resources.js, coverage.js, invalid.js):
+// Small helpers shared by the sections of the Adoption and Right now pages that were added later (resources.js, coverage.js, invalid.js):
 // building elements without innerHTML, number formats and a line chart.
 (function (root) {
   const fmt = new Intl.NumberFormat('en-US');

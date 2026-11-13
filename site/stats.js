@@ -1,6 +1,6 @@
 'use strict';
 
-// The statistics page: the charts of the ASPA data (over time, by RIR, providers per ASPA, most-named
+// The Adoption page: the charts of the ASPA data (over time, by RIR, providers per ASPA, most-named
 // providers). The data are the same as on the home page: the validator's ASPAs through the same-origin
 // proxy, and the daily history from the `history` branch of the public project.
 const DATA_ASPAS = '/data/aspas.json';

@@ -105,7 +105,7 @@ export const describeRtrEvent = (a) => {
 // the lines of a message for a set of events: at most MAX_LINES, then how many more
 export const describeRtrEvents = (events) => {
   const lines = events.slice(0, MAX_LINES).map(describeRtrEvent);
-  if (events.length > MAX_LINES) lines.push(`And ${events.length - MAX_LINES} more, on the statistics page.`);
+  if (events.length > MAX_LINES) lines.push(`And ${events.length - MAX_LINES} more, on the Right now page.`);
   return lines;
 };
 

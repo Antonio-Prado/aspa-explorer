@@ -931,7 +931,15 @@
                 "schema": {
                   "type": "object",
                   "properties": {
-                    "aspa": { "type": "object", "additionalProperties": { "type": "array", "items": { "type": "integer" } } }
+                    "aspa": {
+                      "type": "object",
+                      "additionalProperties": {
+                        "type": "array",
+                        "items": {
+                          "type": "integer"
+                        }
+                      }
+                    }
                   }
                 }
               }
@@ -2166,6 +2174,325 @@
             }
           }
         }
+      }
+    },
+    "/api/v1/verify": {
+      "get": {
+        "summary": "The verdict of the ASPAs on an AS path (the procedure of draft-ietf-sidrops-aspa-verification)",
+        "parameters": [
+          {
+            "name": "path",
+            "in": "query",
+            "required": true,
+            "description": "The AS path as routers print it: the neighbour first, the origin last, AS numbers separated by spaces or commas; 64 ASes at most",
+            "schema": {
+              "type": "string",
+              "maxLength": 1024
+            },
+            "example": "3356 1299 680"
+          },
+          {
+            "name": "direction",
+            "in": "query",
+            "required": false,
+            "description": "upstream (the route comes from a customer or a peer) or downstream (it comes from a provider)",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "upstream",
+                "downstream"
+              ],
+              "default": "upstream"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The verdict and what it comes from",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "result": {
+                      "type": "string",
+                      "enum": [
+                        "Valid",
+                        "Invalid",
+                        "Unknown"
+                      ]
+                    },
+                    "direction": {
+                      "type": "string",
+                      "enum": [
+                        "upstream",
+                        "downstream"
+                      ]
+                    },
+                    "as_path": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      },
+                      "description": "The path as given, without prepending"
+                    },
+                    "origin": {
+                      "type": "string"
+                    },
+                    "neighbour": {
+                      "type": "string"
+                    },
+                    "hops": {
+                      "type": "array",
+                      "description": "From the origin to the neighbour",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "from": {
+                            "type": "string"
+                          },
+                          "to": {
+                            "type": "string"
+                          },
+                          "from_lists_to": {
+                            "type": "string",
+                            "enum": [
+                              "Provider+",
+                              "Not Provider+",
+                              "No Attestation"
+                            ]
+                          },
+                          "to_lists_from": {
+                            "type": "string",
+                            "enum": [
+                              "Provider+",
+                              "Not Provider+",
+                              "No Attestation"
+                            ]
+                          }
+                        }
+                      }
+                    },
+                    "ramps": {
+                      "type": "object",
+                      "properties": {
+                        "max_up": {
+                          "type": "integer"
+                        },
+                        "min_up": {
+                          "type": "integer"
+                        },
+                        "max_down": {
+                          "type": "integer"
+                        },
+                        "min_down": {
+                          "type": "integer"
+                        }
+                      }
+                    },
+                    "without_aspa": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    },
+                    "aspas": {
+                      "type": "object",
+                      "properties": {
+                        "generated": {
+                          "type": [
+                            "string",
+                            "null"
+                          ],
+                          "format": "date-time"
+                        },
+                        "count": {
+                          "type": "integer"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "The path or the direction cannot be read",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too many requests"
+          },
+          "503": {
+            "description": "The ASPAs have not been read yet"
+          }
+        }
+      }
+    },
+    "/api/v1/quality.json": {
+      "get": {
+        "summary": "Every finding of the quality checks on the ASPAs",
+        "responses": {
+          "200": {
+            "description": "The kinds of finding and the findings",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "generated": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "aspas": {
+                      "type": "integer"
+                    },
+                    "with_findings": {
+                      "type": "integer"
+                    },
+                    "bgp_visibility": {
+                      "type": "boolean"
+                    },
+                    "kinds": {
+                      "type": "object",
+                      "additionalProperties": {
+                        "type": "object",
+                        "properties": {
+                          "severity": {
+                            "type": "string",
+                            "enum": [
+                              "error",
+                              "warning",
+                              "note"
+                            ]
+                          },
+                          "title": {
+                            "type": "string"
+                          },
+                          "why": {
+                            "type": "string"
+                          },
+                          "count": {
+                            "type": "integer"
+                          }
+                        }
+                      }
+                    },
+                    "findings": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "customer": {
+                            "type": "string"
+                          },
+                          "kind": {
+                            "type": "string"
+                          },
+                          "severity": {
+                            "type": "string"
+                          },
+                          "detail": {
+                            "type": "string"
+                          },
+                          "providers": {
+                            "type": "array",
+                            "items": {
+                              "type": "string"
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/data/status.json": {
+      "get": {
+        "summary": "The state of the validator (Routinator's /api/v1/status)",
+        "responses": {
+          "200": {
+            "description": "Routinator JSON",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/data/root-sites.json": {
+      "get": {
+        "summary": "Where the instances of the DNS root servers are, for the check of the place of RIPE Atlas probes",
+        "responses": {
+          "200": {
+            "description": "{letter: {instance name: [latitude, longitude, place code]}}",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/data/validity/AS{number}/{prefix}": {
+      "get": {
+        "summary": "Origin validation of one route by Routinator (ROAs, not ASPAs)",
+        "responses": {
+          "200": {
+            "description": "Routinator JSON",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "number",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 4294967295
+            }
+          },
+          {
+            "name": "prefix",
+            "in": "path",
+            "required": true,
+            "description": "An IPv4 or IPv6 prefix, for example 193.0.0.0/21",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ]
       }
     }
   },

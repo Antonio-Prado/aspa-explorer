@@ -1,6 +1,6 @@
 // Unit tests for scripts/build-api.mjs (no dependencies). Run with: node scripts/test-api.mjs
 import assert from 'node:assert/strict';
-import { makeContext, describe, badge, badgeFor, feed, subjects, aspaRows, toCsv } from './build-api.mjs';
+import { makeContext, describe, badge, badgeFor, feed, subjects, aspaRows, toCsv, qualityDoc } from './build-api.mjs';
 
 let passed = 0;
 const test = (name, fn) => { fn(); passed++; console.log('ok  ', name); };
@@ -98,6 +98,24 @@ test('AS numbers that are not AS and digits are dropped before they become file 
   ] }, [['2026-10-01', 'AS../z', ['AS1']], ['2026-10-02', 'AS8', ['AS2', '<b>']], ['2026-10-03', 'AS9', 'nope']], null, '2026-10-17T00:00:00Z');
   assert.deepEqual(subjects(bad), ['AS1', 'AS2', 'AS7', 'AS8']);
   assert.deepEqual(bad.byCustomer.get('AS7').providers, ['AS1']);
+});
+
+test('the quality checks as one document: the kinds with their counts, every finding in the order of the page', () => {
+  const q = qualityDoc(ctx);
+  assert.equal(q.generated, ctx.generated);
+  assert.equal(q.aspas, ctx.byCustomer.size);
+  assert.equal(q.bgp_visibility, true);
+  assert.equal(q.findings.length, Object.values(q.kinds).reduce((n, k) => n + k.count, 0));
+  assert.equal(q.with_findings, new Set(q.findings.map((f) => f.customer)).size);
+  assert.ok(q.kinds['as0-mixed'].count >= 1 && q.kinds['as0-mixed'].severity === 'error' && q.kinds['as0-mixed'].why);
+  assert.deepEqual(Object.keys(q.findings[0]), ['customer', 'kind', 'severity', 'detail', 'providers']);
+  const order = Object.keys(q.kinds);
+  const ranks = q.findings.map((f) => order.indexOf(f.kind));
+  assert.deepEqual(ranks, ranks.slice().sort((a, b) => a - b));
+  // without the visibility the checks that need it are not there, and the document says so
+  const blind = qualityDoc(makeContext(data, events, null, 'x'));
+  assert.equal(blind.bgp_visibility, false);
+  assert.equal(blind.kinds['provider-unseen'].count, 0);
 });
 
 console.log(`${passed} tests passed`);

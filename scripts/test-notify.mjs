@@ -15,6 +15,7 @@ import { makeApi, httpHandler, parseAsn, limiter, clientKey } from '../notifier/
 import { dueInvalid, describeInvalid, COOLDOWN } from '../notifier/invalid.mjs';
 import { checkReport, shell, headTags, newId, ID_RE, LIMITS, legacyIdOk, LEGACY_ID_UNTIL } from '../notifier/reports.mjs';
 import { watchStatus, describeStatusEvent, statusSubject, MONITOR } from '../notifier/status.mjs';
+import { makeVerifier, MAX_PATH, MAX_TEXT } from '../notifier/verify.mjs';
 import { watchRtr, describeRtrEvent, describeRtrEvents, rtrSubject, MAX_LINES, worthTelling } from '../notifier/rtr.mjs';
 
 let passed = 0;
@@ -1240,8 +1241,79 @@ await test('rtr: the first poll takes note, a new anomaly is announced once, an 
   assert.equal(rtrSubject([a1, a2]), 'ASPA Explorer: 2 anomalies in the RTR session with the validator (high)');
   const many = Array.from({ length: MAX_LINES + 4 }, () => a1);
   assert.equal(describeRtrEvents(many).length, MAX_LINES + 1);
-  assert.equal(describeRtrEvents(many)[MAX_LINES], 'And 4 more, on the statistics page.');
+  assert.equal(describeRtrEvents(many)[MAX_LINES], 'And 4 more, on the Right now page.');
   assert.equal(describeRtrEvents([a1]).length, 1);
+});
+
+const verifyAspas = [
+  { customer: 'AS680', providers: ['AS1299', 'AS3356'] },
+  { customer: 'AS680', providers: ['AS20965'] },                    // a second object of the same customer: merged
+  { customer: 'AS1299', providers: ['AS0'] },
+  { customer: 'AS64500', providers: ['AS64501', 'not an AS'] },
+  { customer: 'bad', providers: ['AS1'] },
+];
+const q = (s) => new URLSearchParams(s);
+
+await test('verify: the verdict, the hops and what the answer says about the data', () => {
+  const v = makeVerifier();
+  assert.equal(v.check(q('path=1299+680')).status, 503);              // nothing read yet
+  v.set(verifyAspas, '2026-11-13T10:00:00Z');
+  const up = v.check(q('path=3356 1299 1299 680')).body;              // neighbour first, prepending removed
+  assert.equal(up.result, 'Invalid');                                // AS1299 says it has no provider, so AS3356 is not one
+  assert.equal(up.direction, 'upstream');
+  assert.deepEqual(up.as_path, ['AS3356', 'AS1299', 'AS680']);
+  assert.equal(up.origin, 'AS680'); assert.equal(up.neighbour, 'AS3356');
+  assert.deepEqual(up.hops, [
+    { from: 'AS680', to: 'AS1299', from_lists_to: 'Provider+', to_lists_from: 'Not Provider+' },
+    { from: 'AS1299', to: 'AS3356', from_lists_to: 'Not Provider+', to_lists_from: 'No Attestation' },
+  ]);
+  assert.deepEqual(up.aspas, { generated: '2026-11-13T10:00:00Z', count: 3 });
+  assert.equal(v.check(q('path=AS20965,AS680')).body.result, 'Valid');                  // the merged provider
+  const down = v.check(q('path=3356 1299 680&direction=downstream')).body;
+  assert.equal(down.result, 'Valid');                                                   // up one hop from the origin, then down
+  assert.equal(down.direction, 'downstream');
+  assert.deepEqual(down.ramps, { max_up: 2, min_up: 2, max_down: 2, min_down: 1 });
+  assert.deepEqual(down.without_aspa, ['AS3356']);
+  assert.equal(v.check(q('path=64501 64500 174&direction=up')).body.result, 'Unknown'); // AS174 has no ASPA
+  assert.equal(v.check(q('path=680')).body.result, 'Valid');
+  assert.deepEqual(v.check(q('path=680')).body.hops, []);
+});
+
+await test('verify: what is refused', () => {
+  const v = makeVerifier();
+  v.set(verifyAspas, null);
+  for (const bad of ['', 'path=', 'path=%20', 'path=abc', 'path=1299+0', 'path=1+4294967296', 'path={1,2}+3', 'path=1+2&direction=sideways',
+    `path=${'1 '.repeat(MAX_PATH + 1)}`, `path=${'1'.repeat(MAX_TEXT + 1)}`]) {
+    const r = v.check(q(bad));
+    assert.equal(r.status, 400, bad);
+    assert.equal(typeof r.body.error, 'string');
+  }
+  assert.equal(v.check(q(`path=${'1 '.repeat(MAX_PATH)}`)).status, 200);
+});
+
+await test('HTTP: the path check is GET only, cached for a minute, and limited for each visitor', async () => {
+  const { api } = setup();
+  const verifier = makeVerifier();
+  verifier.set(verifyAspas, '2026-11-13T10:00:00Z');
+  const server = http.createServer(httpHandler(api, { site: 'https://aspa.example.org', verifier, perIpVerify: limiter(3, 3600) }));
+  await new Promise((r) => server.listen(0, '127.0.0.1', r));
+  const base = `http://127.0.0.1:${server.address().port}`;
+  const ok = await fetch(`${base}/api/v1/verify?path=1299+680`, { headers: { Origin: 'https://other.example.net' } });   // another site may ask
+  assert.equal(ok.status, 200);
+  assert.equal(ok.headers.get('cache-control'), 'public, max-age=60');
+  assert.equal((await ok.json()).result, 'Valid');
+  const bad = await fetch(`${base}/api/v1/verify?path=x`);
+  assert.equal(bad.status, 400);
+  assert.equal(bad.headers.get('cache-control'), 'no-store');
+  assert.equal((await fetch(`${base}/api/v1/verify?path=1`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' })).status, 405);
+  assert.equal((await fetch(`${base}/api/v1/verify?path=1`)).status, 200);
+  assert.equal((await fetch(`${base}/api/v1/verify?path=1`)).status, 429);                 // the fourth counted request of the hour (the POST was not counted)
+  await new Promise((r) => server.close(r));
+  // without a verifier the route does not exist
+  const plain = http.createServer(httpHandler(api, { site: 'https://aspa.example.org' }));
+  await new Promise((r) => plain.listen(0, '127.0.0.1', r));
+  assert.equal((await fetch(`http://127.0.0.1:${plain.address().port}/api/v1/verify?path=1`)).status, 405);
+  await new Promise((r) => plain.close(r));
 });
 
 console.log(`${passed} tests passed`);

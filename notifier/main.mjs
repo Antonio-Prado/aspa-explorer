@@ -33,6 +33,7 @@ import { dueInvalid, describeInvalid } from './invalid.mjs';
 import { watchStatus, describeStatusEvent, statusSubject } from './status.mjs';
 import { watchRtr, describeRtrEvents, rtrSubject } from './rtr.mjs';
 import { makeApi, httpHandler, STATUS } from './server.mjs';
+import { makeVerifier } from './verify.mjs';
 
 const env = (k, d) => process.env[k] || d;
 const SITE = env('NOTIFY_SITE', 'https://aspa.ping6.it');
@@ -297,6 +298,7 @@ const health = () => {
   };
 };
 
+const verifier = makeVerifier();
 let busy = false;
 async function poll() {
   if (busy) return;
@@ -308,6 +310,7 @@ async function poll() {
     const data = await r.json();
     if (!Array.isArray(data.aspas) || !data.aspas.length) throw new Error('empty ASPA data, ignored');
     const current = stateOf(data.aspas);
+    verifier.set(data.aspas, (data.metadata && data.metadata.generatedTime) || null);      // the ASPAs that GET /api/v1/verify answers with
     const saved = store.getState('committed');
     pulse.lastOk = Date.now(); pulse.failures = 0; sources.ok('aspas', Date.parse(data.metadata && data.metadata.generatedTime));
     if (!saved) { store.setState('committed', [...current]); store.setState('pending', {}); log(`first run: ${current.size} ASPAs taken as the starting point`); return; }
@@ -328,7 +331,7 @@ const template = () => {
   if (Date.now() - tpl.at > 60000) { try { tpl = { at: Date.now(), html: readFileSync(`${SITE_DIR}/report.html`, 'utf8') }; } catch (err) { tpl = { at: Date.now(), html: null }; log(`report.html not read: ${err.message}`); } }
   return tpl.html;
 };
-const server = http.createServer(httpHandler(api, { site: SITE, health, template }));
+const server = http.createServer(httpHandler(api, { site: SITE, health, template, verifier }));
 server.requestTimeout = 15000; server.headersTimeout = 10000;
 // On a Unix socket, in a directory of the group of nginx (made by the rc script, setgid), readable and writable by the service and that group only:
 // no other local process can reach the service, so the X-Real-IP header that nginx sets is the only one it ever gets.
