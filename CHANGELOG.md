@@ -9,6 +9,11 @@ A few numbers were deployed and folded into the next release without a tag of th
 
 ## [Unreleased]
 
+## [1.76.2] - 2026-11-14
+
+### Fixed
+- The page of an AS shows the name of the network when the pointer rests on the AS number in its heading.
+
 ## [1.76.1] - 2026-11-14
 
 ### Fixed

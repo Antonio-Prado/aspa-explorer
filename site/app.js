@@ -1856,7 +1856,7 @@ function renderLookup(as) {
   const customers = byProvider.get(as) || [];
 
   const head = el('div', { class: 'res-head' },
-    el('h3', { text: as }),
+    el('h3', { 'data-asn': String(n), text: as }),
     el('span', { class: 'links' },
       el('a', { href: `https://bgpthingy.xindi.eu/asn/${n}`, rel: 'noopener', target: '_blank' }, 'bgpthingy', el('span', { class: 'sr-only', text: ' (opens in a new tab)' })), ' · ',
       el('a', { href: `https://stat.ripe.net/app/launchpad/AS${n}`, rel: 'noopener', target: '_blank' }, 'RIPEstat', el('span', { class: 'sr-only', text: ' (opens in a new tab)' }))));
