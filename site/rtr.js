@@ -19,9 +19,11 @@
   const ext = (href, text) => el('a', { href, target: '_blank', rel: 'noopener' }, text, el('span', { class: 'sr-only', text: ' (opens in a new tab)' }));
 
   let doc = null;
+  let hours = 168;                                             // the period of the charts: the pressed button of #rtr-range
   function drawCharts() {
     const key = $('rtr-metric').value;                        // aspa or vrp
-    const pts = doc.series.points;
+    const from = doc.series.points.length ? doc.series.points[doc.series.points.length - 1][0] - (hours - 1) * 3600 : 0;
+    const pts = doc.series.points.filter((p) => p[0] >= from);          // the period chosen, counted back from the last hour
     const word = key === 'aspa' ? 'ASPAs' : 'VRPs';
     if (pts.length < 2) {
       $('rtr-chart').replaceChildren(el('p', { class: 'hint', text: 'Not enough hours of telemetry for a chart yet.' }));
@@ -35,7 +37,7 @@
     lineChart($('rtr-chart'), labels, totals, { label: `${word} held by the RTR client, one point an hour`, yTitle: word });
     lineChart($('rtr-changes'), labels, changes, { label: `${word} announced or withdrawn in each hour`, yTitle: `${word} changed` });
     const lo = Math.min(...totals), hi = Math.max(...totals);
-    $('rtr-chart-note').textContent = `${fmt.format(pts.length)} hours from ${labels[0]} to ${labels[labels.length - 1]} UTC. ${lo === hi ? `The ${word} stayed at ${fmt.format(lo)}` : `The ${word} went from ${fmt.format(lo)} at least to ${fmt.format(hi)} at most`}; the second chart counts the records announced or withdrawn in each hour (a full resync, which announces everything again, is not counted). The vertical axis of the first chart starts at zero, as the other charts of the page.`;
+    $('rtr-chart-note').textContent = `${fmt.format(pts.length)} hours from ${labels[0]} to ${labels[labels.length - 1]} UTC${pts.length < hours && pts.length === doc.series.points.length ? ': all the telemetry there is so far' : ''}. ${lo === hi ? `The ${word} stayed at ${fmt.format(lo)}` : `The ${word} went from ${fmt.format(lo)} at least to ${fmt.format(hi)} at most`}; the second chart counts the records announced or withdrawn in each hour (a full resync, which announces everything again, is not counted). The vertical axis of the first chart starts at zero, as the other charts of the page.`;
   }
 
   async function main() {
@@ -89,6 +91,14 @@
     } else $('rtr-caches-sub').textContent = 'One cache is followed: the validator of this site.';
 
     $('rtr-metric').addEventListener('change', drawCharts);
+    const ranges = [...$('rtr-range').querySelectorAll('[data-range]')];
+    for (const b of ranges) {
+      b.addEventListener('click', () => {
+        hours = Number(b.dataset.range);
+        for (const o of ranges) o.setAttribute('aria-pressed', String(o === b));
+        drawCharts();
+      });
+    }
     drawCharts();
 
     const faults = (a) => [a.repeated ? `${fmt.format(a.repeated)} VRP${a.repeated === 1 ? '' : 's'} announced again while held` : null, a.unknown ? `${fmt.format(a.unknown)} record${a.unknown === 1 ? '' : 's'} withdrawn while not held` : null].filter(Boolean).join('; ');

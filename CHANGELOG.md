@@ -9,7 +9,10 @@ A few numbers were deployed and folded into the next release without a tag of th
 
 ## [Unreleased]
 
+## [1.77.0] - 2026-11-14
+
 ### Added
+- Right now, RTR caches: the two charts of the records held and changed hour by hour have a choice of period (24 hours, 3 days, 7 days, 30 days, which is all that is kept). They open on 7 days; the note under them says when the telemetry is shorter than the period.
 - The nightly job of the Incidents page keeps every incident file for good: `scripts/run-incidents.sh` copies each one, compressed with xz (about a sixteenth of its size), into `archive/` next to the working directory, so the days that leave the page are not lost.
 - `tools/backfill/`: the incidents of the days before the recorder was started (4 October 2026), from the archive of RIPE RIS. `backfill.py` reads a block of days in order: for each day it downloads the update files of `rrc00`, turns them into records, and runs `incident.py` with the CAIDA relationships of the month, the ROAs of the day (the daily export that RIPE NCC keeps for the five trust anchors), the delegation files of the day and the table of the collector at 00:00, keeping the state from one day to the next as the nightly job does; the incident file of each day goes compressed into an archive. A block starts with an empty state and reads two days before its first one to fill it. `worker.sh` reads a list of blocks, the newest first.
 
