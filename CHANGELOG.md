@@ -9,6 +9,16 @@ A few numbers were deployed and folded into the next release without a tag of th
 
 ## [Unreleased]
 
+## [1.76.0] - 2026-11-14
+
+### Added
+- The RTR monitor, from RAVEN's main of 13 November 2026 on, checks each delta against the records it holds: a VRP announced again while held and a record withdrawn while not held are errors 7 and 6 of RFC 8210, written as an error of the session found by the monitor and as a high structural anomaly, `protocol_error`, after which the monitor asks the cache for everything again on the same session. The RTR section shows them: *records against the protocol* among the anomalies, with how many VRPs were announced again and how many records withdrawn while not held, and among the session events. In `rtr.json`: `repeated` and `unknown` on an anomaly, `found_by_monitor` and `count` on an event, `vrp_repeated` on a sync and `vrp_repeated` and `protocol_errors` in `last_24h` (OpenAPI schema updated).
+- The status alerts tell a `protocol_error` with its counts and what it means for a router.
+
+### Changed
+- The VRPs announced again while held changed nothing, and each is withdrawn in the same delta by the cache that repeats them: they are left out of the VRPs announced and withdrawn of the last 24 hours and of the hourly chart, and the alerts judge a sync on the VRPs that did change. The values of an anomaly stay as the monitor measured them, with the repeated ones named next to them.
+- `mute` in the list of the caches also takes a fault of the session (`protocol_error`): until now a structural anomaly was told whatever the list said. On this site Fort no longer has its counts of VRPs muted: its deltas that repeat records ([FORT-validator #204](https://github.com/NICMx/FORT-validator/issues/204)) are now named as records against the protocol, shown on the page and left out of the alerts.
+
 ## [1.75.6] - 2026-11-13
 
 ### Fixed

@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "ASPA Explorer API",
-    "version": "1.75.6",
+    "version": "1.76.0",
     "description": "ASPA objects validated by Routinator at rpki.ping6.it, their history and quality, for any AS. Open data, read-only, no key.",
     "contact": {
       "email": "antonio.prado@dei.unipd.it"
@@ -1227,7 +1227,8 @@
                                 ]
                               },
                               "trigger": {
-                                "type": "string"
+                                "type": "string",
+                                "description": "statistical: the measure that was off (or correlated); structural: cache_reset, error_report, or protocol_error (records against the protocol in a delta)"
                               },
                               "severity": {
                                 "type": "string",
@@ -1241,6 +1242,14 @@
                               },
                               "raw": {
                                 "type": "object"
+                              },
+                              "repeated": {
+                                "type": "integer",
+                                "description": "the VRPs that the sync of the anomaly announced again while the monitor held them (error 7 of RFC 8210): they changed nothing; absent when none"
+                              },
+                              "unknown": {
+                                "type": "integer",
+                                "description": "on a protocol_error, the records withdrawn while the monitor did not hold them (error 6 of RFC 8210); absent when none"
                               }
                             },
                             "additionalProperties": true
@@ -1276,6 +1285,14 @@
                           },
                           "probe": {
                             "type": "boolean"
+                          },
+                          "found_by_monitor": {
+                            "type": "boolean",
+                            "description": "an error that the monitor found in what the cache sent (code 7, VRPs announced again while held; code 6, records withdrawn while not held), not an Error Report of the cache; the session goes on"
+                          },
+                          "count": {
+                            "type": "integer",
+                            "description": "with found_by_monitor, the records of the sync with that error"
                           },
                           "next_protocol": {
                             "type": "integer",

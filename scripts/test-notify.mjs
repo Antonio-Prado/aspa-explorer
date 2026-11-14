@@ -1161,6 +1161,19 @@ await test('rtr: a statistical anomaly is told only above its median and, for th
   assert.equal(worthTelling(aspas), aspas);                                                                 // a tenth of the ASPAs gone at once
   const reset = { at: fort.at, severity: 'high', category: 'structural', trigger: 'reset' };
   assert.equal(worthTelling(reset), reset);                                                                 // the session itself: always told
+  // a later monitor names the fault of Fort: a structural anomaly for the records against the protocol, which a cache can have muted,
+  // and the count of the VRPs announced again while held, which are not changes
+  const proto = { at: '2026-11-14T09:15:03Z', severity: 'high', category: 'structural', trigger: 'protocol_error', z: {}, raw: {}, repeated: 2255, unknown: 3 };
+  assert.equal(worthTelling(proto), proto);
+  assert.equal(worthTelling(proto, ['protocol_error']), null);
+  assert.equal(worthTelling(reset, ['protocol_error']), reset);                                             // the other faults of the session are still told
+  assert.match(describeRtrEvent({ ...proto, cache: 'Fort' }), /records against the protocol, 2255 VRPs announced again while held and 3 records withdrawn while not held\. A router/);
+  assert.match(describeRtrEvent({ ...proto, repeated: 1, unknown: undefined }), /, 1 VRP announced again while held\. /);
+  assert.match(describeRtrEvent({ ...proto, repeated: undefined, unknown: 1 }), /protocol, 1 record withdrawn while not held\. /);
+  assert.equal(worthTelling({ ...churn, repeated: 5300 }), null);                                           // 30 and 16 records did change: no fault
+  assert.equal(worthTelling({ ...churn, z: {}, repeated: 5300 }), null);
+  const real = { ...churn, repeated: 300 };
+  assert.equal(worthTelling(real), real);                                                                   // five thousand did change
   const saved = watchRtr({ anomalies: { list: [] } }, null).saved;
   assert.deepEqual(watchRtr({ anomalies: { list: [fort] } }, saved).events, []);
   assert.equal(watchRtr({ anomalies: { list: [fort] } }, saved).saved.last.routinator, Date.parse(fort.at)); // not told, but seen

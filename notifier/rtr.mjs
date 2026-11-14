@@ -7,6 +7,7 @@ export const WHAT = {
   vrp_announced: 'the number of VRPs announced', vrp_withdrawn: 'the number of VRPs withdrawn',
   aspa_announced: 'the number of ASPAs announced', aspa_withdrawn: 'the number of ASPAs withdrawn',
   correlated: 'several measures of the sync at once',
+  protocol_error: 'the cache sent records against the protocol',
   reset: 'the session was reset', error: 'an error in the session', disconnected: 'the session dropped', cache_not_ready: 'the cache was not ready',
   serial_stale: 'the cache answers but its serial has not advanced', serial_advancing: 'the serial of the cache advances again',
 };
@@ -29,20 +30,27 @@ const CHANGES = ['vrp_announced', 'vrp_withdrawn', 'aspa_announced', 'aspa_withd
 const empty = (a) => Boolean(a.raw) && CHANGES.every((k) => a.raw[k] === 0);
 // `muted` are the measures that the alerts leave out for the cache of the anomaly (`alerts_muted` in rtr.json, from the list of the
 // caches): a cache with a known fault, which would be told every day, keeps its anomalies on the page and stays quiet in the alerts.
+// The VRPs announced again while the monitor held them (`repeated`, error 7 of RFC 8210) changed nothing, and in the delta of a cache
+// that repeats records each is withdrawn as well: the floor is for the records that did change.
+const changed = (a, k) => {
+  const v = a.raw && a.raw[k];
+  return Number.isFinite(v) && (k === 'vrp_announced' || k === 'vrp_withdrawn') && Number.isFinite(a.repeated) ? Math.max(0, v - a.repeated) : v;
+};
 function counts(a, k, muted) {
-  const z = a.z && a.z[k], v = a.raw && a.raw[k];
+  const z = a.z && a.z[k], v = changed(a, k);
   if (muted.includes(k) || (k === 'interval_since_ns' && empty(a))) return false;
   return Number.isFinite(z) && z > 0 && (!(k in FLOOR) || (Number.isFinite(v) && v >= FLOOR[k]));
 }
 // the anomaly as it should be told (its trigger the strongest measure that counts), or null when it is not worth a message
 export function worthTelling(a, muted = []) {
+  if (a && a.category === 'structural' && muted.includes(a.trigger)) return null;
   if (!a || a.category !== 'statistical') return a;
   const z = a.z && typeof a.z === 'object' ? a.z : {};
   const keep = Object.keys(z).filter((k) => counts(a, k, muted)).sort((x, y) => z[y] - z[x]);
   if (a.trigger === 'correlated') return keep.length >= 2 ? a : null;
   if (!keep.length) {
     // an anomaly without z scores (an older file) is judged on its trigger's value alone
-    const v = a.raw && a.raw[a.trigger];
+    const v = changed(a, a.trigger);
     return !Object.keys(z).length && !muted.includes(a.trigger) && !(a.trigger === 'interval_since_ns' && empty(a)) && (!(a.trigger in FLOOR) || (Number.isFinite(v) && v >= FLOOR[a.trigger])) ? a : null;
   }
   return keep.includes(a.trigger) ? a : { ...a, trigger: keep[0] };
@@ -98,6 +106,7 @@ export const describeRtrEvent = (a) => {
   const where = a.cache ? ` on ${a.cache}` : '';
   if (a.trigger === 'serial_stale') return `${sev} anomaly${where} at ${utc(a.at)}: ${what}${a.since ? ` since ${utc(a.since)}` : ''}${a.hours ? ` (more than ${a.hours} hours)` : ''}. The validator behind it, or the node of it that answers this session, has stopped publishing or stalled: its routers keep old data without an alarm.`;
   if (a.trigger === 'serial_advancing') return `${sev} anomaly${where} at ${utc(a.at)}: ${what}.`;
+  if (a.trigger === 'protocol_error') return `${sev} anomaly${where} at ${utc(a.at)}: ${what}${a.repeated ? `, ${a.repeated} VRP${a.repeated === 1 ? '' : 's'} announced again while held` : ''}${a.unknown ? `${a.repeated ? ' and' : ','} ${a.unknown} record${a.unknown === 1 ? '' : 's'} withdrawn while not held` : ''}. A router that applies such a delta as it comes can lose valid records, or drops the session (RFC 8210, errors 6 and 7).`;
   if (a.category === 'structural') return `${sev} anomaly${where} at ${utc(a.at)}: ${what}. The session itself misbehaved.`;
   return `${sev} anomaly${where} at ${utc(a.at)}: ${what} was off the baseline${raw}. The sync was unlike the ones before it.`;
 };

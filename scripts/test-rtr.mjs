@@ -198,4 +198,39 @@ await test('the caches from the environment: one by default, several from JSON, 
   await assert.rejects(cachesFromEnv({ RTR_CACHES: '[]' }));
 });
 
+await test('a delta with VRPs announced again while held: the changes leave them out, the anomaly and the event say how many', () => {
+  const fault = (min, code, n) => JSON.stringify({ timestamp: at(min), cache: 'c', event_type: 'error', schema_version: 1, error_text: 'duplicate announcement received', error_code: code, error_origin: 'client', error_count: n, proto_version: 2 });
+  const lines = [
+    JSON.stringify({ timestamp: at(0), cache: 'c', event_type: 'connected', schema_version: 1, proto_version: 2 }),
+    sync(0.1, { sync_type: 'full', vrp_announced: 1000 }),
+    sync(10, { serial: 2, vrp_announced: 30, vrp_withdrawn: 10 }),
+    fault(20, 7, 2255), fault(20, 6, 3),
+    sync(20.001, { serial: 3, vrp_announced: 2276, vrp_withdrawn: 2263 }),
+    JSON.stringify({ timestamp: at(20), cache: 'c', event_type: 'anomaly', schema_version: 1, category: 'structural', trigger: 'protocol_error', severity: 'high' }),
+    JSON.stringify({ timestamp: at(20.001), cache: 'c', event_type: 'anomaly', schema_version: 1, category: 'statistical', trigger: 'vrp_announced', severity: 'high', z_scores: { vrp_announced: 16.4 }, raw: { vrp_announced: 2276, vrp_withdrawn: 2263 } }),
+    sync(20.05, { sync_type: 'full', serial: 3, serial_changed: false, vrp_announced: 1013 }),   // the monitor asks for everything again
+  ];
+  const d = summarise(parseLines(lines.join('\n')), T0 + 30 * 60e3, { session_state: 1, protocol_version: 2 });
+  assert.equal(d.last_24h.vrp_announced, 30 + 21);
+  assert.equal(d.last_24h.vrp_withdrawn, 10 + 8);
+  assert.equal(d.last_24h.vrp_repeated, 2255);
+  assert.equal(d.last_24h.protocol_errors, 2);
+  assert.equal(d.series.points[0][3], 30 + 10 + 21 + 8);
+  const [stat, proto] = d.anomalies.list;                              // newest first
+  assert.equal(proto.trigger, 'protocol_error');
+  assert.equal(proto.repeated, 2255);
+  assert.equal(proto.unknown, 3);
+  assert.equal(stat.repeated, 2255);
+  assert.equal(stat.unknown, undefined);
+  assert.equal(stat.raw.vrp_announced, 2276);                          // what the monitor measured stays as it is
+  const ev = d.events.find((e) => e.code === 7);
+  assert.equal(ev.found_by_monitor, true);
+  assert.equal(ev.count, 2255);
+  assert.equal(d.events.find((e) => e.type === 'connected').found_by_monitor, undefined);
+  // a sync without such an error is untouched
+  const plain = summarise(parseLines([sync(1, { vrp_announced: 5, vrp_withdrawn: 2 })].join('\n')), T0 + 5 * 60e3);
+  assert.equal(plain.last_sync.vrp_repeated, undefined);
+  assert.equal(plain.last_24h.vrp_repeated, 0);
+});
+
 console.log(`${passed} tests passed`);

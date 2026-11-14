@@ -12,8 +12,8 @@
 //   node scripts/build-rtr.mjs OUT_FILE
 //
 // Environment: RTR_CACHES, the caches as a JSON array or the path of a file with one, each {id, name, host, telemetry (the NDJSON file
-// of its monitor), metrics (its Prometheus endpoint, or none), note (shown under its name), mute (the measures of its syncs that the
-// alerts leave out, as `alerts_muted` in the file: for a cache with a known fault that would be told every day)}; without it one cache, from RTR_TELEMETRY (default
+// of its monitor), metrics (its Prometheus endpoint, or none), note (shown under its name), mute (the measures of its syncs, or the
+// faults of its session such as protocol_error, that the alerts leave out, as `alerts_muted` in the file: for a cache with a known fault that would be told every day)}; without it one cache, from RTR_TELEMETRY (default
 // /var/db/raven/rtr-telemetry.ndjson), RTR_METRICS (default http://127.0.0.1:9595/metrics; empty to do without) and RTR_CACHE (the name
 // of the cache shown on the page, default rpki.ping6.it). ASPA_DATA, the URL or file of Routinator's jsonext (default
 // http://127.0.0.1:8080/data/aspas.json), whose count of ASPAs is put next to the one of the first cache.
@@ -67,6 +67,7 @@ const syncOf = (r) => ({
   at: iso(r.t), type: r.sync_type || null, serial: Number.isFinite(r.serial) ? r.serial : null, serial_changed: r.serial_changed === true,
   vrp_total: nz(r.vrp_total), aspa_total: nz(r.aspa_total),
   vrp_announced: nz(r.vrp_announced), vrp_withdrawn: nz(r.vrp_withdrawn), aspa_announced: nz(r.aspa_announced), aspa_withdrawn: nz(r.aspa_withdrawn),
+  ...(r.vrp_repeated ? { vrp_repeated: r.vrp_repeated } : {}),
   duration_ms: Number.isFinite(r.sync_duration_ns) ? round(r.sync_duration_ns / 1e6, 0) : null,
   interval_s: Number.isFinite(r.interval_since_ns) ? round(r.interval_since_ns / 1e9, 0) : null,
 });
@@ -75,6 +76,18 @@ const syncOf = (r) => ({
 // session event of the file is used, which cannot tell a monitor that stopped from one that is quiet.
 export function summarise(records, now = Date.now(), metrics = null) {
   const syncs = records.filter((r) => r.event_type === 'sync');
+  // A monitor after RAVEN 0.4.0 checks each delta against what it holds and writes, just before the sync, an `error` of its own
+  // (`error_origin` client) for the VRPs announced again while held (code 7) and for the records withdrawn while not held (code 6),
+  // then a structural anomaly `protocol_error`, and asks the cache for everything again on the same session. Its counts of the sync
+  // are the PDUs received, so a VRP announced again and then withdrawn in the same delta, which changed nothing (Fort 1.7.0 does it,
+  // FORT-validator issue 204), is in both: `repeated` says how many of them, and the changes shown here leave them out.
+  const faults = records.filter((r) => r.event_type === 'error' && r.error_origin === 'client');
+  const faultsOf = (t, code) => faults.reduce((n, e) => n + (e.error_code === code && Math.abs(e.t - t) <= 1000 ? nz(e.error_count) || 1 : 0), 0);
+  for (const r of syncs) {
+    if (r.sync_type === 'full' || !faults.length) continue;
+    const rep = Math.min(faultsOf(r.t, 7), nz(r.vrp_announced));
+    if (rep) { r.vrp_repeated = rep; r.vrp_announced = nz(r.vrp_announced) - rep; r.vrp_withdrawn = Math.max(0, nz(r.vrp_withdrawn) - rep); }
+  }
   // The monitor asks for RTR version 2 and, when the cache refuses it with error 4 (Bad protocol version), goes on with a lower one: that
   // is the negotiation of the version, not a fault of the cache. RAVEN up to 0.4.0 wrote it as an `error` event and a structural anomaly:
   // such errors are kept among the events as probes and their anomalies are left out of the counts. Later versions write a
@@ -114,6 +127,7 @@ export function summarise(records, now = Date.now(), metrics = null) {
     syncs: day.length, full: day.filter((r) => r.sync_type === 'full').length, serial_changes: day.filter((r) => r.serial_changed === true).length,
     vrp_announced: day.reduce((s, r) => s + (r.sync_type === 'full' ? 0 : nz(r.vrp_announced)), 0), vrp_withdrawn: day.reduce((s, r) => s + nz(r.vrp_withdrawn), 0),
     aspa_announced: day.reduce((s, r) => s + (r.sync_type === 'full' ? 0 : nz(r.aspa_announced)), 0), aspa_withdrawn: day.reduce((s, r) => s + nz(r.aspa_withdrawn), 0),
+    vrp_repeated: day.reduce((s, r) => s + nz(r.vrp_repeated), 0), protocol_errors: faults.filter((e) => e.t > now - DAY).length,
     interval_median_s: round(median(day.map((r) => r.interval_since_ns).filter(Number.isFinite).map((x) => x / 1e9)), 0),
     duration_max_ms: day.length ? round(Math.max(...day.map((r) => nz(r.sync_duration_ns))) / 1e6, 0) : null,
   };
@@ -134,6 +148,9 @@ export function summarise(records, now = Date.now(), metrics = null) {
     at: iso(a.t), category: a.category || null, trigger: a.trigger || null, severity: a.severity || null,
     z: Object.fromEntries(Object.entries(a.z_scores || {}).map(([k, v]) => [k, round(v)])),
     raw: Object.fromEntries(Object.entries(a.raw || {}).map(([k, v]) => [k, round(v, 0)])),
+    // of the VRPs announced and withdrawn in the sync of the anomaly, the ones announced again while held; on a protocol_error also
+    // the records withdrawn while not held
+    ...(faultsOf(a.t, 7) ? { repeated: faultsOf(a.t, 7) } : {}), ...(a.trigger === 'protocol_error' && faultsOf(a.t, 6) ? { unknown: faultsOf(a.t, 6) } : {}),
   }));
   const count = (sev) => anomalies.filter((a) => a.severity === sev).length;
   return {
@@ -145,6 +162,7 @@ export function summarise(records, now = Date.now(), metrics = null) {
     events: events.slice(-MAX_EVENTS).reverse().map((e) => ({
       at: iso(e.t), type: e.event_type, reason: (e.reset_reason || e.disconnect_reason || e.error_text || null) && String(e.reset_reason || e.disconnect_reason || e.error_text).replace(/\0+$/, ''),
       ...((e.event_type === 'error' && e.error_code === 4) || e.event_type === 'version_downgrade' ? { probe: true } : {}),
+      ...(e.error_origin === 'client' ? { found_by_monitor: true, count: nz(e.error_count) || 1 } : {}),
       ...(Number.isFinite(e.error_code) ? { code: e.error_code } : {}), ...(e.proto_version ? { protocol: e.proto_version } : {}),
       ...(e.event_type === 'version_downgrade' && Number.isFinite(e.next_proto_version) ? { next_protocol: e.next_proto_version } : {}),
     })),

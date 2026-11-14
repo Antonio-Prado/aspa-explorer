@@ -9,7 +9,7 @@
   const WHAT = {
     interval_since_ns: 'the time since the previous sync', sync_duration_ns: 'the duration of the sync',
     vrp_announced: 'the VRPs announced', vrp_withdrawn: 'the VRPs withdrawn', aspa_announced: 'the ASPAs announced', aspa_withdrawn: 'the ASPAs withdrawn',
-    correlated: 'several measures at once', reset: 'the session was reset', error: 'an error in the session', disconnected: 'the session dropped', cache_not_ready: 'the cache was not ready',
+    correlated: 'several measures at once', protocol_error: 'records against the protocol', reset: 'the session was reset', error: 'an error in the session', disconnected: 'the session dropped', cache_not_ready: 'the cache was not ready',
   };
   const EVENT = { connected: 'Connected', disconnected: 'Disconnected', reset: 'Session reset', error: 'Error', cache_not_ready: 'Cache not ready' };
   const MIN = 60e3, HOUR = 3600e3;
@@ -91,7 +91,8 @@
     $('rtr-metric').addEventListener('change', drawCharts);
     drawCharts();
 
-    const values = (a) => Object.keys(a.raw || {}).filter((k) => k === a.trigger || (a.z && Math.abs(a.z[k] || 0) >= 3)).map((k) => `${WHAT[k] || k}: ${value(k, a.raw[k])}${a.z && Number.isFinite(a.z[k]) ? ` (z ${a.z[k]})` : ''}`).join('; ');
+    const faults = (a) => [a.repeated ? `${fmt.format(a.repeated)} VRP${a.repeated === 1 ? '' : 's'} announced again while held` : null, a.unknown ? `${fmt.format(a.unknown)} record${a.unknown === 1 ? '' : 's'} withdrawn while not held` : null].filter(Boolean).join('; ');
+    const values = (a) => a.trigger === 'protocol_error' ? faults(a) : [Object.keys(a.raw || {}).filter((k) => k === a.trigger || (a.z && Math.abs(a.z[k] || 0) >= 3)).map((k) => `${WHAT[k] || k}: ${value(k, a.raw[k])}${a.z && Number.isFinite(a.z[k]) ? ` (z ${a.z[k]})` : ''}`).join('; '), a.repeated ? `of the VRPs, ${fmt.format(a.repeated)} were announced again while held and changed nothing` : null].filter(Boolean).join('; ');
     const allAnomalies = caches.flatMap((c) => ((c.anomalies && c.anomalies.list) || []).map((a) => ({ ...a, cache: c.name || c.id }))).sort((a, b) => Date.parse(b.at) - Date.parse(a.at)).slice(0, 50);
     const seen = caches.map((c) => `${fmt.format(c.telemetry ? c.telemetry.syncs : 0)} on ${c.name || c.id}`).join(', ');
     // the ten most recent anomalies, then all of them on request
@@ -113,7 +114,7 @@
 
     $('rtr-events').replaceChildren(...(doc.events && doc.events.length ? doc.events.map((e) => el('tr', {},
       el('td', { text: when(e.at) }),
-      el('td', { text: e.probe ? 'Version probe refused' : (EVENT[e.type] || e.type) }),
+      el('td', { text: e.probe ? 'Version probe refused' : e.found_by_monitor ? 'Records against the protocol' : (EVENT[e.type] || e.type) }),
       el('td', { text: [e.reason, e.code !== undefined ? `code ${e.code}` : null, e.protocol !== undefined ? `RTR version ${e.protocol}` : null, e.next_protocol !== undefined ? `goes on with version ${e.next_protocol}` : null].filter(Boolean).join(', ') || '–' }))) : [el('tr', {}, el('td', { colspan: '3', text: 'No session event recorded.' }))]));
 
     $('rtr-note').replaceChildren(`In the last 24 hours the cache of the site announced ${fmt.format(d.vrp_announced || 0)} VRPs and withdrew ${fmt.format(d.vrp_withdrawn || 0)}, announced ${fmt.format(d.aspa_announced || 0)} ASPAs and withdrew ${fmt.format(d.aspa_withdrawn || 0)}${d.duration_max_ms ? `; the longest sync took ${fmt.format(d.duration_max_ms)} ms` : ''}. The same data is available as `, el('a', { href: '/api/v1/rtr.json', text: 'JSON' }), ', the raw telemetry of each monitor as NDJSON (/api/v1/rtr/<id>.ndjson, see the ', el('a', { href: '/api.html', text: 'API page' }), '), and the subscribers to the status alerts are told of every anomaly. RAVEN is BSD-3-Clause software by Nokia, with its ', ext('https://ritmukhe.github.io/raven-docs/user-guide/cli-reference/#raven-rtr-monitor', 'documentation of the monitor'), '; the idea is explained in the RIPE Labs article ', ext('https://labs.ripe.net/author/ritesh-mukherjee/your-router-trusts-its-validator-but-whos-watching-the-validator/', 'Your router trusts its validator. But who\'s watching the validator?'), ' by Ritesh Mukherjee.');
