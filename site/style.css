@@ -757,7 +757,8 @@ a.tile:hover { box-shadow: 0 0 0 2px var(--accent); }
 .home-main { max-width: 1080px; box-sizing: border-box; margin: 0 auto; padding: 1rem 16px 2.5rem; display: flex; flex-direction: column; gap: 1.75rem; }
 .home-main h2 { margin: 0; font-size: 1.25rem; }
 .home-main h2.home-kicker { font-size: 0.875rem; font-weight: 600; color: var(--muted); }
-.home-lede { margin: 0; font-size: 1.0625rem; line-height: 1.5; color: var(--ink-2); max-width: 47rem; }
+/* wide enough for the sentence on one line; where it does not fit, two lines of like length and no word left alone */
+.home-lede { margin: 0; font-size: 1.0625rem; line-height: 1.5; color: var(--ink-2); max-width: 62rem; text-wrap: balance; }
 .home-you { background: var(--surface); border: 1px solid var(--grid); border-radius: 12px; padding: 1.75rem 2rem; display: flex; flex-direction: column; gap: 0.85rem; }
 .home-you p { margin: 0; }
 #home-verdict { display: flex; flex-direction: column; gap: 0.85rem; }
@@ -766,7 +767,7 @@ a.tile:hover { box-shadow: 0 0 0 2px var(--accent); }
 .you-tag { display: inline-block; padding: 0.35rem 1rem; border-radius: 999px; font-weight: 700; font-size: 1.125rem; }
 .you-tag.yes { background: var(--ok-bg); color: var(--ok-ink); }
 .you-tag.no { background: var(--warn-bg); color: var(--warn-ink); }
-.you-what { font-size: 1.125rem; line-height: 1.5; max-width: 45rem; }
+.you-what { font-size: 1.125rem; line-height: 1.5; max-width: 56rem; text-wrap: balance; }
 .you-do { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem 1.25rem; }
 .you-do a { display: inline-flex; align-items: center; min-height: 2.75rem; font-weight: 600; }
 .you-do a.you-go { padding: 0 1.1rem; border-radius: 8px; background: var(--btn); color: var(--btn-ink); text-decoration: none; }

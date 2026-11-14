@@ -15,6 +15,11 @@ A few numbers were deployed and folded into the next release without a tag of th
 ### Changed
 - `tools/replay/mrt2records.py` reads a day of `rrc00` in about 11 minutes, where it took two and a half hours. An UPDATE of a four-byte AS session with nothing odd in it, which is nearly all of a file, is read by the script itself; every other entry, and any UPDATE where a length does not add up, a prefix has bits after its length or appears twice, or an attribute is one that mrtparse reads in a way of its own, is still read by mrtparse, so the records are the same (a whole day of August 2026, 142 million records, and files of 2023, 2024 and 2025 give the same output, byte for byte, as do some 70,000 entries damaged on purpose). An entry that mrtparse cannot get out of (an error of its own, or a loop without end) is now an M record: before, the conversion stopped there. The record file is compressed at the lowest level of gzip: it is read once and deleted.
 
+## [1.77.1] - 2026-11-14
+
+### Fixed
+- Home: the opening sentence and the answer about the network of the visitor no longer leave a word or two alone on a second line. Both may be wider, so that they fit on one line where the window allows it, and where they do not the two lines are of like length.
+
 ## [1.77.0] - 2026-11-14
 
 ### Added
