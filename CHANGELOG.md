@@ -12,7 +12,8 @@ A few numbers were deployed and folded into the next release without a tag of th
 ## [1.76.2] - 2026-11-14
 
 ### Fixed
-- The page of an AS shows the name of the network when the pointer rests on the AS number in its heading.
+- The name of a network shows wherever its AS number is written, not only on links and chips: in a sentence (the answer on the page of an AS, the notes under the tables), in a cell (the hops of a path that was checked), in the history of an ASPA and in the headings. The box is about the number under the pointer, so a line with several numbers names each of them. Text that has a tooltip of its own, and the charts, keep theirs.
+- The Status page and the page of a subscription show the names too.
 
 ## [1.76.1] - 2026-11-14
 

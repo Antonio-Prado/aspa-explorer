@@ -1,7 +1,7 @@
 'use strict';
 
 // The name of an AS as a tooltip: when the pointer rests on an AS number (a chip, a link in a table or a path, a node
-// of the graph, a bar of a chart) or the keyboard focus reaches it, a small box under it gives the name that the
+// of the graph, a bar of a chart, or the number written in a sentence, a cell or a heading) or the keyboard focus reaches it, a small box under it gives the name that the
 // registry of its RIR records (the "holder" of RIPEstat's as-overview, e.g. "FIBERTELECOM-AS Fiber Telecom S.p.A.").
 // The box is the page's own, not the title attribute: the browser shows a title only after a second or more, and not
 // at all when it is set while the pointer is already resting. A name is asked once per visit, and only for the ASes
@@ -19,6 +19,19 @@
     if (h) return h[1];
     const t = /^\s*AS([1-9]\d{0,9})\s*$/i.exec(String(text || ''));
     return t ? t[1] : null;
+  }
+
+  // The AS number written at a place of a text: "AS1299" in "AS680 → AS1299" when the offset is on it or at one of its
+  // ends, with where it starts and ends. A name that only starts like one (AS-SET, ASN, AS1299x) and AS0 give null.
+  function asnAt(text, offset) {
+    const re = /(^|[^A-Za-z0-9])AS([1-9]\d{0,9})(?![A-Za-z0-9])/gi;
+    let m;
+    while ((m = re.exec(String(text || '')))) {
+      const start = m.index + m[1].length, end = m.index + m[0].length;
+      if (start > offset) break;
+      if (offset <= end) return { asn: m[2], start, end };
+    }
+    return null;
   }
 
   // The name in an answer of as-overview, or '' when the registry has none.
@@ -48,7 +61,7 @@
     return { left: Math.round(left), top: Math.round(top) };
   }
 
-  const api = { asnOf, holderOf, nameText, tooltipText, place };
+  const api = { asnOf, asnAt, holderOf, nameText, tooltipText, place };
   if (typeof module !== 'undefined' && module.exports) { module.exports = api; return; }
 
   const names = new Map();         // asn -> name ('' when the registry has none or the request failed)
@@ -84,6 +97,29 @@
     return asn ? { e, asn } : null;
   }
 
+  // An AS number in plain text (a sentence, a cell, a heading) that is under the pointer: the word, not its element,
+  // is what the box is about. Text with a tooltip of its own, a chart and a field are left alone.
+  const inside = (r, x, y) => x >= r.left - 2 && x <= r.right + 2 && y >= r.top - 2 && y <= r.bottom + 2;
+  function textTarget(x, y) {
+    let node = null, offset = 0;
+    if (document.caretPositionFromPoint) {
+      const p = document.caretPositionFromPoint(x, y);
+      if (p) { node = p.offsetNode; offset = p.offset; }
+    } else if (document.caretRangeFromPoint) {
+      const r = document.caretRangeFromPoint(x, y);
+      if (r) { node = r.startContainer; offset = r.startOffset; }
+    }
+    const e = node && node.nodeType === 3 ? node.parentElement : null;
+    if (!e || e.closest('[title], [data-own-tip], [data-tip], svg, .as-tip, [contenteditable]')) return null;
+    const at = asnAt(node.nodeValue, offset);
+    if (!at) return null;
+    const range = document.createRange();
+    range.setStart(node, at.start);
+    range.setEnd(node, at.end);
+    const rect = Array.from(range.getClientRects()).find((r) => inside(r, x, y));   // the caret snaps to the nearest text
+    return rect ? { e, asn: at.asn, rect } : null;
+  }
+
   let tip = null;                  // the box, made on first use
   let current = null;              // the element the box is about
   let timer = null;
@@ -108,7 +144,7 @@
 
   function hide() {
     clearTimeout(timer);
-    if (current) describe(current.e, false);
+    if (current && !current.rect) describe(current.e, false);
     current = null;
     if (tip) tip.hidden = true;
   }
@@ -119,7 +155,7 @@
     if (b.parentNode !== layer) layer.append(b);
     b.textContent = text;
     b.hidden = false;
-    const r = t.e.getBoundingClientRect();
+    const r = t.rect || t.e.getBoundingClientRect();
     const p = place(r, b.offsetWidth, b.offsetHeight, document.documentElement.clientWidth, window.innerHeight);
     b.style.left = `${p.left}px`;
     b.style.top = `${p.top}px`;
@@ -127,7 +163,7 @@
 
   function show(t) {
     current = t;
-    describe(t.e, true);
+    if (!t.rect) describe(t.e, true);
     if (t.text) { render(t, t.text); return; }
     if (names.has(t.asn)) {
       const text = tooltipText(t.asn, names.get(t.asn));
@@ -150,6 +186,18 @@
     if (!t) { if (current) hide(); return; }
     timer = setTimeout(() => show(t), t.text || !names.has(t.asn) ? SHOW_MS : 0);
   });
+  // an AS number in plain text: asked where the pointer rests, and left when the pointer goes off the word
+  document.addEventListener('pointermove', (ev) => {
+    if (ev.pointerType === 'touch') return;
+    const x = ev.clientX, y = ev.clientY;
+    if (current && current.rect) {
+      if (inside(current.rect, x, y)) return;
+      hide();
+    }
+    if (current || target(ev.target)) return;               // a link or a marked element: pointerover has it
+    clearTimeout(timer);
+    timer = setTimeout(() => { const t = textTarget(x, y); if (t) show(t); }, SHOW_MS);
+  }, { passive: true });
   // a tap (or a click) on an element with data-tip opens and closes its box: there is no pointer to rest on a touch screen
   document.addEventListener('click', (ev) => {
     const t = target(ev.target);

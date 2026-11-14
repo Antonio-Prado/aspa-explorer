@@ -2,7 +2,7 @@
 import { createRequire } from 'node:module';
 import assert from 'node:assert/strict';
 
-const { asnOf, holderOf, nameText, tooltipText, place } = createRequire(import.meta.url)('../site/asnames.js');
+const { asnOf, asnAt, holderOf, nameText, tooltipText, place } = createRequire(import.meta.url)('../site/asnames.js');
 
 let passed = 0;
 const test = (name, fn) => { fn(); passed++; console.log('ok  ', name); };
@@ -28,6 +28,28 @@ test('no AS: AS0, other links, other texts, numbers out of range', () => {
   assert.equal(asnOf('#AS3333x', 'AS3333 and more'), null);
   assert.equal(asnOf('#AS12345678901'), null);
   assert.equal(asnOf(null, null, '0'), null);
+});
+
+test('the AS number under a place of a text: the word the offset is on, or touches', () => {
+  const t = 'AS680 → AS1299 does not list AS680';
+  assert.deepEqual(asnAt(t, 0), { asn: '680', start: 0, end: 5 });
+  assert.deepEqual(asnAt(t, 5), { asn: '680', start: 0, end: 5 });
+  assert.deepEqual(asnAt(t, 10), { asn: '1299', start: 8, end: 14 });
+  assert.deepEqual(asnAt(t, 31), { asn: '680', start: 29, end: 34 });
+  assert.equal(asnAt(t, 7), null);
+  assert.equal(asnAt(t, 20), null);
+  assert.deepEqual(asnAt('providers +AS3491, -as174.', 20), { asn: '174', start: 20, end: 25 });
+  assert.deepEqual(asnAt('(AS1299,AS3356)', 9), { asn: '3356', start: 8, end: 14 });
+});
+
+test('no AS number in a text: AS0, a name that starts like one, a number too long, no text', () => {
+  assert.equal(asnAt('AS0 · no transit providers', 1), null);
+  assert.equal(asnAt('AS-FIBERTELECOM', 3), null);
+  assert.equal(asnAt('ASN 3333', 2), null);
+  assert.equal(asnAt('BAS3333 and AS3333x', 3), null);
+  assert.equal(asnAt('BAS3333 and AS3333x', 14), null);
+  assert.equal(asnAt('AS12345678901', 4), null);
+  assert.equal(asnAt(null, 0), null);
 });
 
 test('the name in an answer of RIPEstat as-overview', () => {
