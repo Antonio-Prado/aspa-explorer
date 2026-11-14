@@ -9,6 +9,11 @@ A few numbers were deployed and folded into the next release without a tag of th
 
 ## [Unreleased]
 
+## [1.76.1] - 2026-11-14
+
+### Fixed
+- The home page shows the name of the network of the visitor when the pointer rests on its AS number, as the other pages do: the page did not load the script of the names, and the number was not marked as an AS.
+
 ## [1.76.0] - 2026-11-14
 
 ### Added

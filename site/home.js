@@ -69,7 +69,7 @@
         what = `${as} declares ${k} provider${k === 1 ? '' : 's'}${issues ? `, with ${issues} thing${issues === 1 ? '' : 's'} to check` : ''}.`;
       }
       box.replaceChildren(
-        el('p', { class: 'you-head' }, el('span', { class: 'you-as mono', text: as }), ' ', el('span', { class: `you-tag ${published ? 'yes' : 'no'}`, text: published ? 'Has an ASPA' : 'No ASPA yet' })),
+        el('p', { class: 'you-head' }, el('span', { class: 'you-as mono', 'data-asn': String(n), text: as }), ' ', el('span', { class: `you-tag ${published ? 'yes' : 'no'}`, text: published ? 'Has an ASPA' : 'No ASPA yet' })),
         el('p', { class: 'you-what', text: what }),
         el('p', { class: 'you-do' }, el('a', { class: 'you-go', href: `/as/${as}`, text: `See ${as} in full` }), published ? null : el('a', { href: '/examples.html', text: 'How to write its ASPA' })),
         el('p', { class: 'you-from', text: `From your address ${me.ip}, as RIPE RIS sees it.` }),
