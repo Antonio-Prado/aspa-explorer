@@ -19,6 +19,7 @@ A few numbers were deployed and folded into the next release without a tag of th
 
 ### Fixed
 - Home: the opening sentence and the answer about the network of the visitor no longer leave a word or two alone on a second line. Both may be wider, so that they fit on one line where the window allows it, and where they do not the two lines are of like length.
+- The builder of the Incidents page could leave the temporary file of the detail behind when the reading of the incidents failed at once: it removed the file before it had been opened. It waits for the file to be closed first (the test of this case failed one time in four).
 
 ## [1.77.0] - 2026-11-14
 

@@ -277,7 +277,12 @@ export async function writeLines(file, items) {
     out.end();
     await once(out, 'finish');
   };
-  try { await Promise.race([lines(), failed]); } catch (err) { out.destroy(); await rm(tmp, { force: true }); throw err; }
+  try { await Promise.race([lines(), failed]); } catch (err) {
+    out.destroy();
+    if (!out.closed) await once(out, 'close');      // the file may still be opening: removed before that, it would come back
+    await rm(tmp, { force: true });
+    throw err;
+  }
   await rename(tmp, file);
 }
 
