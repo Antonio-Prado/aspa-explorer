@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "ASPA Explorer API",
-    "version": "1.77.2",
+    "version": "1.77.3",
     "description": "ASPA objects validated by Routinator at rpki.ping6.it, their history and quality, for any AS. Open data, read-only, no key.",
     "contact": {
       "email": "antonio.prado@dei.unipd.it"
@@ -1140,13 +1140,15 @@
                           "type": "integer"
                         },
                         "vrp_announced": {
-                          "type": "integer"
+                          "type": "integer",
+                          "description": "the VRPs that the cache came to hold in the deltas of the period (a full sync is not counted): the net change that the monitor writes in each sync (vrp_added, from RAVEN's main of 14 November 2026); for a sync from before, the announcement PDUs less the ones repeated while held. vrp_withdrawn likewise"
                         },
                         "vrp_withdrawn": {
                           "type": "integer"
                         },
                         "aspa_announced": {
-                          "type": "integer"
+                          "type": "integer",
+                          "description": "the customer ASes that came to have an ASPA in the deltas of the period; an ASPA announced for a customer that has one already replaces its providers and is not counted (for a sync without the net counts it is: one announcement PDU). aspa_withdrawn likewise"
                         },
                         "aspa_withdrawn": {
                           "type": "integer"

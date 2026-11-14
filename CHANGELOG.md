@@ -9,6 +9,11 @@ A few numbers were deployed and folded into the next release without a tag of th
 
 ## [Unreleased]
 
+## [1.77.3] - 2026-11-14
+
+### Changed
+- RTR caches: the VRPs and ASPAs announced and withdrawn (last 24 hours, hourly chart) are the records that the cache came to hold or stopped holding, which the monitor writes in each sync from RAVEN's main of 14 November 2026 on (`vrp_added`, `vrp_removed`, `aspa_added`, `aspa_removed`, next to the counts of the PDUs received). A VRP announced again while held is no longer taken off by this site: the monitor's own count leaves it out, whatever the cache does with it afterwards. An ASPA announced for a customer that has one already, whose providers it replaces, no longer counts as an ASPA announced. The syncs written before the change are counted as they were. The monitor's detector scores the same net values, so a delta that repeats records raises the records against the protocol alone, and the values of a statistical anomaly no longer carry the repeated VRPs next to them.
+
 ## [1.77.2] - 2026-11-14
 
 ### Added

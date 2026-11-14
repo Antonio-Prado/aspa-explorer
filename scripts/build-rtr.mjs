@@ -78,16 +78,28 @@ export function summarise(records, now = Date.now(), metrics = null) {
   const syncs = records.filter((r) => r.event_type === 'sync');
   // A monitor after RAVEN 0.4.0 checks each delta against what it holds and writes, just before the sync, an `error` of its own
   // (`error_origin` client) for the VRPs announced again while held (code 7) and for the records withdrawn while not held (code 6),
-  // then a structural anomaly `protocol_error`, and asks the cache for everything again on the same session. Its counts of the sync
-  // are the PDUs received, so a VRP announced again and then withdrawn in the same delta, which changed nothing (Fort 1.7.0 does it,
-  // FORT-validator issue 204), is in both: `repeated` says how many of them, and the changes shown here leave them out.
+  // then a structural anomaly `protocol_error`, and asks the cache for everything again on the same session. The counts of the sync
+  // `vrp_announced` and the like are the PDUs received, so a VRP announced again and then withdrawn in the same delta, which changed
+  // nothing (Fort 1.7.0 does it, FORT-validator issue 204), is in both: `repeated` says how many of them, and the changes shown here
+  // leave them out.
+  // From RAVEN's main of 14 November 2026 a sync also says what changed (`vrp_added`, `vrp_removed`, `aspa_added`, `aspa_removed`: the
+  // records that the cache came to hold or stopped holding), and the changes of a delta are those. They are less than the PDUs when a
+  // record is repeated, when an ASPA is announced for a customer that has one already (the new providers replace the old ones: no record
+  // more) and when a record is announced and withdrawn in the same delta. A file from before has no such counts: there the repeated
+  // VRPs are taken off the PDUs, which is right for a cache that withdraws each of them, as Fort did. On a full sync the monitor compares
+  // with what it held before, which is its own state and not a change of the cache: a full sync stays out of the changes, as before.
   const faults = records.filter((r) => r.event_type === 'error' && r.error_origin === 'client');
   const faultsOf = (t, code) => faults.reduce((n, e) => n + (e.error_code === code && Math.abs(e.t - t) <= 1000 ? nz(e.error_count) || 1 : 0), 0);
+  const net = (r) => Number.isFinite(r.vrp_added);
   for (const r of syncs) {
-    if (r.sync_type === 'full' || !faults.length) continue;
-    const rep = Math.min(faultsOf(r.t, 7), nz(r.vrp_announced));
-    if (rep) { r.vrp_repeated = rep; r.vrp_announced = nz(r.vrp_announced) - rep; r.vrp_withdrawn = Math.max(0, nz(r.vrp_withdrawn) - rep); }
+    if (r.sync_type === 'full') continue;
+    const rep = faults.length ? Math.min(faultsOf(r.t, 7), nz(r.vrp_announced)) : 0;
+    if (rep) r.vrp_repeated = rep;
+    if (net(r)) { r.vrp_announced = nz(r.vrp_added); r.vrp_withdrawn = nz(r.vrp_removed); r.aspa_announced = nz(r.aspa_added); r.aspa_withdrawn = nz(r.aspa_removed); }
+    else if (rep) { r.vrp_announced = nz(r.vrp_announced) - rep; r.vrp_withdrawn = Math.max(0, nz(r.vrp_withdrawn) - rep); }
   }
+  // the values of a statistical anomaly are the net ones when its sync has them: the repeated VRPs are not among them
+  const netAt = (t) => syncs.some((r) => net(r) && Math.abs(r.t - t) <= 1000);
   // The monitor asks for RTR version 2 and, when the cache refuses it with error 4 (Bad protocol version), goes on with a lower one: that
   // is the negotiation of the version, not a fault of the cache. RAVEN up to 0.4.0 wrote it as an `error` event and a structural anomaly:
   // such errors are kept among the events as probes and their anomalies are left out of the counts. Later versions write a
@@ -148,9 +160,9 @@ export function summarise(records, now = Date.now(), metrics = null) {
     at: iso(a.t), category: a.category || null, trigger: a.trigger || null, severity: a.severity || null,
     z: Object.fromEntries(Object.entries(a.z_scores || {}).map(([k, v]) => [k, round(v)])),
     raw: Object.fromEntries(Object.entries(a.raw || {}).map(([k, v]) => [k, round(v, 0)])),
-    // of the VRPs announced and withdrawn in the sync of the anomaly, the ones announced again while held; on a protocol_error also
-    // the records withdrawn while not held
-    ...(faultsOf(a.t, 7) ? { repeated: faultsOf(a.t, 7) } : {}), ...(a.trigger === 'protocol_error' && faultsOf(a.t, 6) ? { unknown: faultsOf(a.t, 6) } : {}),
+    // of the VRPs announced and withdrawn in the sync of the anomaly, the ones announced again while held (on a statistical anomaly
+    // only when its values are PDUs, which include them); on a protocol_error also the records withdrawn while not held
+    ...(faultsOf(a.t, 7) && (a.trigger === 'protocol_error' || !netAt(a.t)) ? { repeated: faultsOf(a.t, 7) } : {}), ...(a.trigger === 'protocol_error' && faultsOf(a.t, 6) ? { unknown: faultsOf(a.t, 6) } : {}),
   }));
   const count = (sev) => anomalies.filter((a) => a.severity === sev).length;
   return {

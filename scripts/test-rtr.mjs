@@ -233,4 +233,32 @@ await test('a delta with VRPs announced again while held: the changes leave them
   assert.equal(plain.last_24h.vrp_repeated, 0);
 });
 
+await test('a monitor that says what changed: the changes are the net counts, not the PDUs', () => {
+  const fault = (min, n) => JSON.stringify({ timestamp: at(min), cache: 'c', event_type: 'error', schema_version: 1, error_text: 'duplicate announcement received', error_code: 7, error_origin: 'client', error_count: n, proto_version: 2 });
+  const lines = [
+    sync(0.1, { sync_type: 'full', vrp_announced: 1000, vrp_added: 1000, vrp_removed: 0, aspa_announced: 40, aspa_added: 40, aspa_removed: 0 }),
+    // an ASPA announced for a customer that has one already replaces its providers: one PDU, no record more
+    sync(10, { serial: 2, vrp_announced: 30, vrp_withdrawn: 10, vrp_added: 30, vrp_removed: 10, aspa_announced: 3, aspa_withdrawn: 1, aspa_added: 2, aspa_removed: 1 }),
+    fault(20, 2255),
+    sync(20.001, { serial: 3, vrp_announced: 2276, vrp_withdrawn: 2263, vrp_added: 21, vrp_removed: 8, aspa_announced: 0, aspa_withdrawn: 0, aspa_added: 0, aspa_removed: 0 }),
+    JSON.stringify({ timestamp: at(20), cache: 'c', event_type: 'anomaly', schema_version: 1, category: 'structural', trigger: 'protocol_error', severity: 'high' }),
+    JSON.stringify({ timestamp: at(20.001), cache: 'c', event_type: 'anomaly', schema_version: 1, category: 'statistical', trigger: 'sync_duration_ns', severity: 'medium', z_scores: { sync_duration_ns: 9 }, raw: { sync_duration_ns: 4e9, vrp_announced: 21, vrp_withdrawn: 8 } }),
+    // the monitor asks for everything again and finds 5 records it had lost: its own state, not a change of the cache
+    sync(20.05, { sync_type: 'full', serial: 3, serial_changed: false, vrp_announced: 1033, vrp_added: 5, vrp_removed: 2, aspa_announced: 41, aspa_added: 0, aspa_removed: 0 }),
+  ];
+  const d = summarise(parseLines(lines.join('\n')), T0 + 30 * 60e3, { session_state: 1, protocol_version: 2 });
+  assert.equal(d.last_24h.vrp_announced, 30 + 21);
+  assert.equal(d.last_24h.vrp_withdrawn, 10 + 8);
+  assert.equal(d.last_24h.aspa_announced, 2);
+  assert.equal(d.last_24h.aspa_withdrawn, 1);
+  assert.equal(d.last_24h.vrp_repeated, 2255);
+  assert.equal(d.series.points[0][3], 30 + 10 + 21 + 8);
+  assert.equal(d.series.points[0][4], 2 + 1);
+  assert.equal(d.last_sync.vrp_announced, 1033);                       // a full sync: everything the cache holds
+  const [stat, proto] = d.anomalies.list;
+  assert.equal(proto.repeated, 2255);
+  assert.equal(stat.repeated, undefined);                              // its values are net: nothing to take off
+  assert.equal(stat.raw.vrp_announced, 21);
+});
+
 console.log(`${passed} tests passed`);
