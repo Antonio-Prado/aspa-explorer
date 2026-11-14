@@ -9,6 +9,11 @@ A few numbers were deployed and folded into the next release without a tag of th
 
 ## [Unreleased]
 
+## [1.77.2] - 2026-11-14
+
+### Added
+- Right now, Invalid announcements: the chart of the share by hour has the same choice of period as the RTR charts (24 hours, 3 days, 7 days, all). It opens on all the hours, as before; on 3 days or less the axis shows the hour as well as the day. The tiles and the tables stay on the whole period.
+
 ## [1.77.1] - 2026-11-14
 
 ### Added

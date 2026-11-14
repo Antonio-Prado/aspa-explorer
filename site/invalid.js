@@ -31,15 +31,28 @@
       tile('Prefixes with one', fmt.format(p.prefixes_with_invalid), 'distinct prefixes'),
       tile('Announcements per second', p.announcements_per_second.toLocaleString('en-US'), p.peak_announcements_per_second.at ? `peak ${fmt.format(p.peak_announcements_per_second.v)} on ${at(p.peak_announcements_per_second.at)}` : ''),
       tile('Peak of invalid per second', fmt.format(p.peak_invalid_per_second.v), p.peak_invalid_per_second.at ? at(p.peak_invalid_per_second.at) : ''));
-    const rows = d.hours.filter((h) => h.announcements > 0);
-    if (rows.length > 1) {
+    const all = d.hours.filter((h) => h.announcements > 0);
+    // the period of the chart: the hours counted back from the last one (0: all of them); the tiles and the tables stay on the whole period
+    const draw = (hours) => {
+      const from = hours && all.length ? Date.parse(all[all.length - 1].at) - (hours - 1) * 3600e3 : 0;
+      const rows = all.filter((h) => Date.parse(h.at) >= from);
+      if (rows.length < 2) { $('inv-chart').replaceChildren(el('p', { class: 'hint', text: 'The chart needs a few hours of data.' })); return; }
       const values = rows.map((h) => (100 * h.invalid) / h.announcements);
-      lineChart($('inv-chart'), rows.map((h) => at(h.at).split(',')[0]), values, {
+      const short = rows.length <= 72;               // a few days: the hour on the axis as well as the day
+      lineChart($('inv-chart'), rows.map((h) => (short ? at(h.at).replace(' UTC', '') : at(h.at).split(',')[0])), values, {
         fmtY: (v) => `${v.toFixed(v < 1 ? 2 : 1)}%`, yTitle: 'Invalid announcements (%)',
         tips: rows.map((h) => `the hour from ${at(h.at)}`), detail: (i) => `${fmt.format(rows[i].invalid)} of ${fmt.format(rows[i].announcements)} announcements`,
         label: `Share of invalid announcements by hour, from ${at(rows[0].at)} to ${at(rows[rows.length - 1].at)}: from ${values[0].toFixed(2)}% to ${values[values.length - 1].toFixed(2)}%, highest ${Math.max(...values).toFixed(2)}%.`,
       });
-    } else $('inv-chart').replaceChildren(el('p', { class: 'hint', text: 'The chart needs a few hours of data.' }));
+    };
+    const ranges = [...$('inv-range').querySelectorAll('[data-range]')];
+    for (const b of ranges) {
+      b.addEventListener('click', () => {
+        for (const o of ranges) o.setAttribute('aria-pressed', String(o === b));
+        draw(Number(b.dataset.range));
+      });
+    }
+    draw(0);
     table($('inv-origins'), d.by_count.slice(0, TOP),
       (r) => el('tr', {}, el('td', {}, chip(r.asn)), n(fmt.format(r.invalid)), n(fmt.format(r.announcements)), n(`${r.share}%`), n(fmt.format(r.prefixes))));
     table($('inv-share'), d.by_share.slice(0, TOP),
