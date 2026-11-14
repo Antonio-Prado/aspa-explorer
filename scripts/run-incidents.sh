@@ -4,12 +4,12 @@
 #   2. refreshes the ROAs (Routinator, rpki.ping6.it) and points incident.py at the newest CAIDA relationships and at the delegation files of the adoption job;
 #   3. runs incident.py, which keeps its state between runs and writes incidents_<file>.jsonl for each file;
 #   4. builds /api/v1/incidents.json (scripts/build-incidents.mjs) and the file with the verdict of each incident (/api/v1/incidents-detail.jsonl).
-# Everything is in $BASE: incoming/ (stream.py), work/ (incident.py, with its state), incidents-detail.jsonl.
+# Everything is in $BASE: incoming/ (stream.py), work/ (incident.py, with its state), archive/ (every incident file, compressed, kept for good), incidents-detail.jsonl.
 #   30 2 * * * /usr/bin/lockf -t 0 /var/db/aspa-data/run.lock /bin/sh -c '/bin/sh /usr/local/libexec/aspa-data/run-incidents.sh >/var/db/aspa-data/run.log 2>&1'
 # (02:30 local time: 00:30 UTC in summer, 01:30 UTC in winter; lockf: a day of data takes hours to read, and two runs at once would corrupt the state of incident.py;
 # the log is opened inside lockf, so that a run that finds the lock taken does not empty the log of the run that holds it)
 # The record files of more than KEEP_DAYS days are deleted once they have been read, and the incident files of more than
-# KEEP_INCIDENT_DAYS days are not part of the page any more.
+# KEEP_INCIDENT_DAYS days are not part of the page any more: their copy stays in archive/.
 set -eu
 BASE=${INCIDENTS_BASE:-/var/db/aspa-data}
 CODE=${INCIDENTS_CODE:-/usr/local/libexec/aspa-data}
@@ -59,6 +59,15 @@ else
   echo "no closed record file yet"
 fi
 find data -name 'records_*.jsonl.gz' -mtime +"$KEEP_DAYS" -delete
+
+# the archive: every incident file is kept for good, compressed, in archive/ (about a fifteenth of its size), so that the
+# days that leave the page are not lost; a file is copied once, when it is whole (incident.py writes it under another name)
+mkdir -p "$BASE/archive"
+for f in incidents_*.jsonl; do
+  [ -e "$f" ] || continue
+  [ -e "$BASE/archive/$f.xz" ] && continue
+  if xz -T2 -c "$f" > "$BASE/archive/$f.xz.tmp"; then mv "$BASE/archive/$f.xz.tmp" "$BASE/archive/$f.xz"; else rm -f "$BASE/archive/$f.xz.tmp"; echo "$f could not be archived" >&2; fi
+done
 
 # 4. the page: the incident files of the last KEEP_INCIDENT_DAYS days (the period shown is the one of these)
 find . -maxdepth 1 -name 'incidents_*.jsonl' -mtime +"$KEEP_INCIDENT_DAYS" -delete
