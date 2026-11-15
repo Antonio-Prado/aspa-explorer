@@ -46,6 +46,12 @@ impl Roas {
         out
     }
     pub fn is_empty(&self) -> bool { self.table.is_empty() && self.odd.is_empty() }
+    // roa_authorises: a ROA of the prefix or of a covering one has this origin and a maxLength that allows the prefix
+    pub fn authorises(&self, net: &Net, origin: u64) -> bool {
+        let min_len: u8 = if net.v6 { 16 } else { 8 };
+        if net.len < min_len { return false; }
+        (min_len..=net.len).rev().any(|i| self.table.get(&net.supernet(i)).is_some_and(|list| list.iter().any(|(asn, max_len)| *asn == origin && net.len <= *max_len)))
+    }
     // -> ("Invalid_Length" | "Invalid_Origin", the covering ROAs as "asn/maxLength,…" in order)
     pub fn hijack(&self, net: &Net, text: &str, origin: u64) -> Option<(&'static str, String)> {
         let mut covering: Vec<(u64, u8)> = Vec::new();

@@ -9,6 +9,9 @@ A few numbers were deployed and folded into the next release without a tag of th
 
 ## [Unreleased]
 
+### Added
+- `incident-rs`: a fourth detector, the more specifics of another origin under an aggregate (DEG, with the ones that waited for their aggregate), the same lines as `incident.py` on three million records of rrc00.
+
 ## [1.82.0] - 2026-11-15
 
 ### Added

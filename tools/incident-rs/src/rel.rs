@@ -34,6 +34,8 @@ impl Relationships {
         Relationships { table }
     }
     pub fn is_empty(&self) -> bool { self.table.is_empty() }
+    // whether CAIDA has the pair, in this order, with any relationship
+    pub fn linked(&self, a: u64, b: u64) -> bool { self.table.contains_key(&key(a, b)) }
     // the path as the collector has it, neighbour first: the first AS that passes on what it should not
     pub fn leak(&self, path: &[u64]) -> Option<Leak> {
         if path.len() < 3 { return None; }
