@@ -18,6 +18,13 @@ pub struct Rec<'a> {
     pub origin: Option<u64>,
     #[serde(default, rename = "compressed_path")]
     pub path: Option<Vec<u64>>,
+    // the records of the session: a change of state (S), a NOTIFICATION (N)
+    #[serde(default)]
+    pub state: Option<&'a str>,
+    #[serde(default)]
+    pub code: Option<i64>,
+    #[serde(default)]
+    pub subcode: Option<i64>,
 }
 
 // the same without the fields that can hold something else than numbers (an AS path with an AS_SET): the record still counts
@@ -38,7 +45,7 @@ struct Bare<'a> {
 pub fn parse(line: &[u8]) -> Option<Rec<'_>> {
     if let Ok(r) = serde_json::from_slice::<Rec>(line) { return Some(r); }
     let b: Bare = serde_json::from_slice(line).ok()?;
-    Some(Rec { kind: b.kind, collector: b.collector, timestamp: b.timestamp, prefix: b.prefix, peer: b.peer, origin: None, path: None })
+    Some(Rec { kind: b.kind, collector: b.collector, timestamp: b.timestamp, prefix: b.prefix, peer: b.peer, origin: None, path: None, state: None, code: None, subcode: None })
 }
 
 // "YYYY-MM-DD HH:MM:SS" (UTC) -> seconds since the epoch, 0 when it is not one (as parse_timestamp of incident.py);
@@ -97,4 +104,15 @@ impl Net {
 
 fn mask(len: u8, bits: u8) -> u128 {
     if len == 0 { 0 } else { let all = if bits == 32 { u32::MAX as u128 } else { u128::MAX }; all & !((1u128 << (bits - len)) - 1).wrapping_sub(0) & all }
+}
+
+// A prefix as the key of a table that Python keys by the text of the record: the network when the text is the way Python
+// writes it, the text itself otherwise (another key than its network, as in Python).
+#[derive(Clone, PartialEq, Eq, Hash)]
+pub enum Key { Canon(Net), Odd(Box<str>) }
+
+impl Key {
+    pub fn of(text: &str, net: Option<&Net>) -> Key {
+        match net { Some(n) if n.text() == text => Key::Canon(*n), _ => Key::Odd(text.into()) }
+    }
 }

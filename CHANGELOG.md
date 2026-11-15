@@ -10,7 +10,7 @@ A few numbers were deployed and folded into the next release without a tag of th
 ## [Unreleased]
 
 ### Added
-- `incident-rs`: a fourth detector, the more specifics of another origin under an aggregate (DEG, with the ones that waited for their aggregate), the same lines as `incident.py` on a whole day of rrc00 (110 million records, 29.8 million detections; 6 minutes and 2.3 GB, where the Python functions take 52 minutes and 4.4 GB).
+- `incident-rs` has every detector of `incident.py` and `extra_detectors.py`: after the flaps, the valleys and the origins that no ROA authorises, the more specifics of another origin under an aggregate (with the ones that waited for it), the space that is not allocated, the AS numbers and the links of the path, the deaggregation by scale, the delayed convergence, the amplified churn and the session (mass withdrawals, NOTIFICATIONs), and the peers that see a prefix flap. It writes the same lines as the Python functions (`ref/detections_ref.py`): 1,030,498 on three million records of rrc00, in 15 s where Python takes 214. The incidents that group the detections are still to come.
 
 ### Changed
 - `incident.py` keeps the events of a flap window as numbers (the time and one bit for an announcement; a single number when there is one event, as nearly always) instead of a list of pairs. A whole day of rrc00: the same 177,943 incidents and the same state at the end, peak memory from 8.9 to 6.7 GB, time from 10,173 to 8,258 s. A state saved by an earlier version is read as it is.
