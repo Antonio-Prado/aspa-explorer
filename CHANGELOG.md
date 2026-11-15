@@ -9,6 +9,11 @@ A few numbers were deployed and folded into the next release without a tag of th
 
 ## [Unreleased]
 
+## [1.77.4] - 2026-11-15
+
+### Changed
+- RTR caches: no anomaly of Fort is left out of the alerts any more. The Fort of this site runs since 14 November 2026, 14:57 UTC, with the correction of its deltas proposed in [FORT-validator #205](https://github.com/NICMx/FORT-validator/pull/205): over the 35 serials that followed the monitor received no record against the protocol, where every delta had some before ([FORT-validator #204](https://github.com/NICMx/FORT-validator/issues/204)). `mute` is gone from Fort in `deploy/freebsd/rtr-caches.json.example`, the note under its name names the correction, and the guide says so. A site that runs Fort 1.7.0 as released still needs `"mute": ["protocol_error"]` on it.
+
 ## [1.77.3] - 2026-11-14
 
 ### Changed
