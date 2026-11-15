@@ -266,9 +266,26 @@ async function loadEvents() {
 const HOP_CLASS = { 'Provider+': 'yes', 'Not Provider+': 'no', 'No Attestation': 'na' };
 
 function hopCell(customer, provider, outcome) {
-  const text = outcome === 'No Attestation' ? `${customer} has no ASPA`
-    : `${customer} ${outcome === 'Provider+' ? 'lists' : 'does not list'} ${provider}`;
-  return el('td', { class: 'hop ' + HOP_CLASS[outcome] }, text);
+  return el('td', { class: 'hop ' + HOP_CLASS[outcome] }, AspaVerify.hopText(aspaSets, customer, provider, outcome));
+}
+
+const DIRECTION_WORDS = { up: 'a route from a customer or a peer (upstream check)', down: 'a route from a provider (downstream check)' };
+// The same path read the other way: what the check of the other direction says, and why the two can differ.
+function otherDirection(v, other) {
+  let why = '';
+  if (other.result !== v.result) {
+    why = v.direction === 'up'
+      ? ' That check allows one lateral hop at the top and a descent after it, which this one does not.'
+      : ' That check wants every hop to climb, with no lateral hop and no descent.';
+  }
+  return `As ${DIRECTION_WORDS[other.direction]} the same path would be ${other.result}.${why}`;
+}
+// An Invalid path whose two ramps do not meet: the ASes left in the middle, and the two readings (site/valley.js).
+function squeezeText(v, other) {
+  const down = v.direction === 'down' ? v : other;
+  if (down.result !== 'Invalid') return [];
+  const s = AspaValley.squeeze(down, aspaSets);
+  return s ? AspaValley.squeezeWords(s) : [];
 }
 
 // An exchange-point AS in a path that is not Valid: say what it may mean (RFC 7947 asks a route server not to be in the path).
@@ -299,6 +316,7 @@ function pathVerdict(v, missing) {
   }
   if (v.direction === 'up') {
     const i = v.maxUp;
+    if (AspaVerify.isZero(aspaSets, v.path[i - 1])) return `${v.path[i - 1]} declares that it has no provider (an AS0 ASPA): the path cannot climb beyond it, and ${v.path[i]} comes after it, so the route is not a plain climb from the origin to the neighbour.`;
     return `${v.path[i - 1]} publishes an ASPA that does not list ${v.path[i]} as a provider, so the route is not a plain climb from the origin to the neighbour.`;
   }
   return `Even in the best case the up-ramp (at most ${v.maxUp} of ${v.N} ASes, from the origin ${first}) and the down-ramp (at most ${v.maxDown}, from the neighbour ${last}) do not meet: part of the path is a valley, which is how a route leak, a forged path segment or a gap in the ASPAs looks.`;
@@ -318,22 +336,23 @@ function pathCheckNodes(text, direction) {
     el('p', { class: 'src' }, `Path from the origin to the neighbour${v.path.length < parsed.path.length ? ' (prepending removed)' : ''}: ${v.path.join(' → ')}`),
   ];
   if (v.N > 1) {
-    const down = direction === 'down';
-    const head = el('tr', {}, el('th', { scope: 'col', text: 'Hop' }), el('th', { scope: 'col', text: 'Up-ramp check' }));
-    if (down) head.append(el('th', { scope: 'col', text: 'Down-ramp check' }));
+    // both ramps are always shown, also when the check that was asked reads the up-ramp only: the other direction is a line of its own
+    const other = AspaVerify.verify(aspaSets, parsed.path, direction === 'down' ? 'up' : 'down');
+    const squeezed = squeezeText(v, other);
+    if (squeezed.length) kids.splice(1, 0, el('p', { class: 'hint squeeze-note' }, el('strong', { text: squeezed[0] }), ' ', squeezed[1]));
+    kids.splice(1, 0, el('p', { class: 'hint', text: otherDirection(v, other) }));
+    const head = el('tr', {}, el('th', { scope: 'col', text: 'Hop' }), el('th', { scope: 'col', text: 'Up-ramp check' }), el('th', { scope: 'col', text: 'Down-ramp check' }));
     const rows = [];
     for (let i = 1; i < v.N; i++) {
-      const row = el('tr', {}, el('th', { scope: 'row', text: `${v.path[i - 1]} → ${v.path[i]}` }),
-        hopCell(v.path[i - 1], v.path[i], v.up[i]));
-      if (down) row.append(hopCell(v.path[i], v.path[i - 1], v.down[i + 1]));
-      rows.push(row);
+      rows.push(el('tr', {}, el('th', { scope: 'row', text: `${v.path[i - 1]} → ${v.path[i]}` }),
+        hopCell(v.path[i - 1], v.path[i], v.up[i]), hopCell(v.path[i], v.path[i - 1], v.down[i + 1])));
     }
     kids.push(el('div', { class: 'table-wrap card' }, el('table', { class: 'checks' },
       el('caption', { class: 'sr-only', text: 'ASPA checks for each hop, from the origin towards the neighbour' }),
       el('thead', {}, head), el('tbody', {}, ...rows))));
-    const ramps = [`Up-ramp, from the origin: ${v.minUp} AS${v.minUp === 1 ? '' : 'es'} certain, up to ${v.maxUp} possible.`];
-    if (down) ramps.push(`Down-ramp, from the neighbour: ${v.minDown} AS${v.minDown === 1 ? '' : 'es'} certain, up to ${v.maxDown} possible.`);
-    kids.push(el('p', { class: 'src', text: ramps.join(' ') + ` The path has ${v.N} ASes.` }));
+    const ramps = [`Up-ramp, from the origin: ${v.minUp} AS${v.minUp === 1 ? '' : 'es'} certain, up to ${v.maxUp} possible.`,
+      `Down-ramp, from the neighbour: ${v.minDown} AS${v.minDown === 1 ? '' : 'es'} certain, up to ${v.maxDown} possible.`];
+    kids.push(el('p', { class: 'src', text: ramps.join(' ') + ` The path has ${v.N} ASes.${direction === 'up' ? ' The upstream check reads the up-ramp only: it must cover the whole path.' : ''}` }));
   }
   return kids;
 }
@@ -350,17 +369,16 @@ function pathReport(text, direction) {
   const v = AspaVerify.verify(aspaSets, parsed.path, direction);
   const missing = AspaVerify.withoutAspa(aspaSets, v);
   const cls = { 'Provider+': 'provider', 'Not Provider+': 'not-provider', 'No Attestation': 'none' };
-  const sections = [{ heading: 'Verdict', text: `${v.result}. ${pathVerdict(v, missing)} Path from the origin to the neighbour: ${v.path.join(' → ')}. The route comes from ${direction === 'down' ? 'a provider (downstream check)' : 'a customer or a peer (upstream check)'}. ${dataStamp()}` }];
+  const other = AspaVerify.verify(aspaSets, parsed.path, direction === 'down' ? 'up' : 'down');
+  const more = v.N > 1 ? ` ${[otherDirection(v, other), ...squeezeText(v, other)].join(' ')}` : '';
+  const sections = [{ heading: 'Verdict', text: `${v.result}. ${pathVerdict(v, missing)}${more} Path from the origin to the neighbour: ${v.path.join(' → ')}. The route comes from ${direction === 'down' ? 'a provider (downstream check)' : 'a customer or a peer (upstream check)'}. ${dataStamp()}` }];
   if (v.N > 1) {
-    const down = direction === 'down';
     const rows = [];
     for (let i = 1; i < v.N; i++) {
-      const hop = (c, p, o) => [o === 'No Attestation' ? `${c} has no ASPA` : `${c} ${o === 'Provider+' ? 'lists' : 'does not list'} ${p}`, cls[o]];
-      const row = [`${v.path[i - 1]} → ${v.path[i]}`, hop(v.path[i - 1], v.path[i], v.up[i])];
-      if (down) row.push(hop(v.path[i], v.path[i - 1], v.down[i + 1]));
-      rows.push(row);
+      const hop = (c, p, o) => [AspaVerify.hopText(aspaSets, c, p, o), cls[o]];
+      rows.push([`${v.path[i - 1]} → ${v.path[i]}`, hop(v.path[i - 1], v.path[i], v.up[i]), hop(v.path[i], v.path[i - 1], v.down[i + 1])]);
     }
-    sections.push({ heading: 'Hop by hop', table: { columns: down ? ['Hop', 'Up-ramp check', 'Down-ramp check'] : ['Hop', 'Up-ramp check'], rows } });
+    sections.push({ heading: 'Hop by hop', table: { columns: ['Hop', 'Up-ramp check', 'Down-ramp check'], rows } });
   }
   return { kind: 'path', title: `AS path ${parsed.path.slice().reverse().join(' ')}: ${v.result}`, source: `/network.html#${new URLSearchParams({ path: text.trim(), from: direction })}`, sections };
 }

@@ -66,6 +66,43 @@
     return verifyLib.verify(m, v.path, 'down').result;
   }
 
+  // The ASes of an Invalid downstream path that are in neither ramp, and the two ASes that close them in: `left`, the last of the
+  // up-ramp, whose ASPA says that the first of them is not its provider, and `right`, the last of the down-ramp, whose ASPA says
+  // the same of the last of them. zero: that AS declares no provider (AS0), so its ASPA cannot be missing one; ifLeft, ifRight: what
+  // the downstream check would say with the AS in the ASPA of that side (null when the side declares no provider).
+  // null when the two ramps meet. v: a verify() result of the path, in any direction.
+  function squeeze(v, aspas) {
+    const p = v.path, N = v.N;
+    if (N < 3 || v.maxUp + v.maxDown >= N) return null;
+    const between = p.slice(v.maxUp, N - v.maxDown);
+    const left = p[v.maxUp - 1], right = p[N - v.maxDown];
+    const leftZero = verifyLib.isZero(aspas, left), rightZero = verifyLib.isZero(aspas, right);
+    return {
+      between, left, right, leftZero, rightZero,
+      ifLeft: leftZero ? null : whatIf(aspas, v, { customer: left, provider: between[0] }),
+      ifRight: rightZero ? null : whatIf(aspas, v, { customer: right, provider: between[between.length - 1] }),
+    };
+  }
+
+  // squeeze() in words: [what the ASPAs say, the two readings].
+  function squeezeWords(s) {
+    const one = s.between.length === 1, x = s.between[0], z = s.between[s.between.length - 1];
+    const says = (as, zero, other) => (zero ? `${as} declares no provider (AS0)` : `the ASPA of ${as} does not list ${other}`);
+    const what = one
+      ? `${x} is between two ASes that both say it is not their provider: ${says(s.left, s.leftZero, x)}, and ${says(s.right, s.rightZero, x)}.`
+      : `${s.between.join(', ')} are in neither ramp: ${says(s.left, s.leftZero, x)}, and ${says(s.right, s.rightZero, z)}.`;
+    const gaps = [];
+    if (!s.leftZero) gaps.push(`with ${x} in the ASPA of ${s.left} the path would be ${s.ifLeft}`);
+    if (!s.rightZero) gaps.push(`with ${z} in the ASPA of ${s.right} the path would be ${s.ifRight}`);
+    const leak = one
+      ? `a route leak, where ${x} passed on to ${s.right} a route that it learned from ${s.left} although, by these ASPAs, neither is its customer`
+      : 'a route leak or a forged part of the path';
+    const gap = gaps.length
+      ? `an ASPA that misses a real provider: ${gaps.join(', and ')}`
+      : 'nothing else: both ASes declare that they have no provider, so no ASPA can be missing one';
+    return [what, `Two readings: ${leak}; or ${gap}. The ASPAs alone cannot tell which.`];
+  }
+
   const RANK = { gap: 3, maybe: 2, none: 1 };
 
   // The reading of one valley. `v` is the verify() result of the path (origin first), `ixp` a Set of exchange-point AS numbers.
@@ -149,7 +186,7 @@
     return { kind, label, sources, against };
   }
 
-  const api = { neighbourReading, breakers, dominantUpstream, evidenceFor, whatIf, explain, words, hops };
+  const api = { neighbourReading, breakers, dominantUpstream, evidenceFor, whatIf, squeeze, squeezeWords, explain, words, hops };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.AspaValley = api;
 })(typeof self !== 'undefined' ? self : this);

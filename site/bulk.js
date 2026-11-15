@@ -14,13 +14,16 @@
     return { prefix: '', text: line.trim() };
   }
 
+  // an ASPA that names no provider (AS0 only), as isZero() of verify.js
+  const zero = (aspas, as) => { const p = aspas.get(as); return Boolean(p) && p.size > 0 && [...p].every((x) => x === 'AS0'); };
+
   // Why a verdict, in a few words.
   function note(v, aspas) {
     if (v.N <= 1) return 'a single AS: nothing to check';
     if (v.result === 'Valid') return v.direction === 'up' ? 'every hop is attested' : 'up-ramp and down-ramp cover the path';
     if (v.result === 'Invalid') {
       return v.direction === 'up'
-        ? `${v.path[v.maxUp - 1]} does not list ${v.path[v.maxUp]}`
+        ? (zero(aspas, v.path[v.maxUp - 1]) ? `${v.path[v.maxUp - 1]} declares no provider (AS0)` : `${v.path[v.maxUp - 1]} does not list ${v.path[v.maxUp]}`)
         : `a valley: the up-ramp (${v.maxUp}) and the down-ramp (${v.maxDown}) do not meet in ${v.N} ASes`;
     }
     const read = v.direction === 'up' ? v.path.slice(0, -1) : v.path;   // going up, the ASPA of the neighbour is not read

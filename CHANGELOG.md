@@ -9,6 +9,15 @@ A few numbers were deployed and folded into the next release without a tag of th
 
 ## [Unreleased]
 
+## [1.80.0] - 2026-11-15
+
+### Changed
+- Check an AS path: an AS whose ASPA is AS0 is said to *declare no provider*, in the verdict and in the table, instead of "does not list" the next AS: the path cannot climb beyond it. The verdict is the same as before, the procedure treats an AS0 ASPA as any other.
+- Check an AS path: the table always has both ramps, also for a route from a customer or a peer, and a line under the verdict says what the check of the other direction would make of the same path.
+
+### Added
+- Check an AS path: when the two ramps do not meet, the page names the ASes left between them and the two that close them in, with the two readings: a route leak, or an ASPA that misses a provider, and what the path would be with that provider added. An AS that declares no provider cannot be missing one.
+
 ## [1.79.1] - 2026-11-15
 
 ### Changed

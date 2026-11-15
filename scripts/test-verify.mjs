@@ -196,6 +196,19 @@ test('withoutAspa: going up the ASPA of the neighbour is not read', () => {
   assert.deepEqual(withoutAspa(a, verify(a, ['AS1', 'AS2', 'AS3'], 'down')), ['AS2', 'AS3']);
 });
 
+test('an AS0 ASPA: the AS declares no provider, and the hop says so; the verdict is the one of an empty list', () => {
+  const V = require('../site/verify.js');
+  const m = new Map([['AS6762', new Set(['AS0'])], ['AS59715', new Set(['AS6762'])], ['AS12735', new Set(['AS3257'])], ['AS5', new Set()]]);
+  assert.ok(V.isZero(m, 'AS6762'));
+  assert.ok(!V.isZero(m, 'AS59715') && !V.isZero(m, 'AS6939') && !V.isZero(m, 'AS5'));
+  assert.equal(V.hopText(m, 'AS6762', 'AS6939', V.hop(m, 'AS6762', 'AS6939')), 'AS6762 declares no provider (AS0)');
+  assert.equal(V.hopText(m, 'AS12735', 'AS6939', V.hop(m, 'AS12735', 'AS6939')), 'AS12735 does not list AS6939');
+  assert.equal(V.hopText(m, 'AS59715', 'AS6762', V.hop(m, 'AS59715', 'AS6762')), 'AS59715 lists AS6762');
+  assert.equal(V.hopText(m, 'AS6939', 'AS1', V.hop(m, 'AS6939', 'AS1')), 'AS6939 has no ASPA');
+  assert.equal(V.verify(m, ['AS59715', 'AS6762', 'AS6939'], 'up').result, 'Invalid');
+  assert.equal(V.verify(m, ['AS59715', 'AS6762', 'AS6939'], 'down').result, 'Valid', 'the lateral hop at the top is allowed going down');
+});
+
 test('quality: reserved ranges', () => {
   for (const as of ['AS23456', 'AS64496', 'AS64512', 'AS65535', 'AS65551', 'AS65552', 'AS131071', 'AS4200000000', 'AS4294967295']) assert.ok(quality.reserved(as), as);
   for (const as of ['AS1', 'AS3333', 'AS131072', 'AS4199999999']) assert.ok(!quality.reserved(as), as);

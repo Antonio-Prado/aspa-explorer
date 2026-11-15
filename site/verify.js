@@ -22,6 +22,19 @@
     return providers.has(provider) ? PROVIDER : NOT_PROVIDER;
   }
 
+  // An AS whose ASPA names no provider: its only entry is AS0. Nothing can be above it in a path.
+  function isZero(aspas, as) {
+    const providers = aspas.get(as);
+    return Boolean(providers) && providers.size > 0 && [...providers].every((p) => p === 'AS0');
+  }
+
+  // The outcome of hop(customer, provider) in words, for the table of a path.
+  function hopText(aspas, customer, provider, outcome) {
+    if (outcome === NO_ATTESTATION) return `${customer} has no ASPA`;
+    if (outcome === PROVIDER) return `${customer} lists ${provider}`;
+    return isZero(aspas, customer) ? `${customer} declares no provider (AS0)` : `${customer} does not list ${provider}`;
+  }
+
   // Remove repeated adjacent ASes (AS-path prepending).
   function compress(path) {
     return path.filter((as, i) => i === 0 || as !== path[i - 1]);
@@ -92,7 +105,7 @@
     return { path: path.reverse() };
   }
 
-  const api = { hop, compress, verify, withoutAspa, parsePath, PROVIDER, NOT_PROVIDER, NO_ATTESTATION };
+  const api = { hop, isZero, hopText, compress, verify, withoutAspa, parsePath, PROVIDER, NOT_PROVIDER, NO_ATTESTATION };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.AspaVerify = api;
 })(typeof self !== 'undefined' ? self : this);

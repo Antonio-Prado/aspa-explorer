@@ -23,16 +23,16 @@
 <meta name="twitter:card" content="summary_large_image">
 <meta name="color-scheme" content="light dark">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
-<link rel="stylesheet" href="/style.css?v=1.79.1">
-<script src="/status-checks.js?v=1.79.1" defer></script>
-<script src="/asnames.js?v=1.79.1" defer></script>
-<script src="/footer.js?v=1.79.1" defer></script>
+<link rel="stylesheet" href="/style.css?v=1.80.0">
+<script src="/status-checks.js?v=1.80.0" defer></script>
+<script src="/asnames.js?v=1.80.0" defer></script>
+<script src="/footer.js?v=1.80.0" defer></script>
 </head>
 <body>
 <a class="skip" href="#main">Skip to main content</a>
 <header class="wrap masthead">
   <div class="top">
-    <p class="back"><a class="brandlink" href="/" title="Back to ASPA Explorer"><img class="brand" src="/img/logo-mark.svg?v=1.79.1" alt="" width="40" height="40"><span>ASPA Explorer</span></a></p>
+    <p class="back"><a class="brandlink" href="/" title="Back to ASPA Explorer"><img class="brand" src="/img/logo-mark.svg?v=1.80.0" alt="" width="40" height="40"><span>ASPA Explorer</span></a></p>
     <nav class="topnav" aria-label="Main"><a class="sect a-look" href="/network.html">Look up</a><a class="sect a-adopt" href="/statistics.html">Adoption</a><a class="sect a-now" href="/now.html">Right now</a><a class="sect a-inc" href="/incidents.html">Incidents</a><a class="minor" href="/guide.html" aria-current="page">Guide</a><a class="minor" href="/examples.html">Examples</a><a class="minor" href="/api.html">API</a><a class="minor" href="/status.html">Status</a></nav>
   </div>
   <h1>Guide</h1>
@@ -103,7 +103,9 @@
       <dt>A customer or a peer (upstream check)</dt>
       <dd>The route was received from a customer or a peer. Every hop, from the origin to the neighbour, must be a customer-to-provider hop.</dd>
     </dl>
-    <p>For each pair of adjacent ASes, the <em>Up-ramp check</em> column shows whether the ASPA of the AS nearer the origin lists the other as a provider, and, for a route from a provider, the <em>Down-ramp check</em> column whether the ASPA of the AS nearer the neighbour lists the other: <em>lists</em> (✓), <em>does not list</em> (✗), or <em>has no ASPA</em> (?). A line under the table gives the length of each ramp: how many ASes are certain and how many are possible at most. An AS whose ASPA contains only <code>AS0</code> declares that it has no providers.</p>
+    <p>For each pair of adjacent ASes, the <em>Up-ramp check</em> column shows whether the ASPA of the AS nearer the origin lists the other as a provider, and the <em>Down-ramp check</em> column whether the ASPA of the AS nearer the neighbour lists the other: <em>lists</em> (✓), <em>does not list</em> (✗), or <em>has no ASPA</em> (?). Both columns are always there: the upstream check reads the first only, and a line under the verdict says what the check of the other direction would make of the same path. A line under the table gives the length of each ramp: how many ASes are certain and how many are possible at most.</p>
+    <p>An AS whose ASPA contains only <code>AS0</code> declares that it has no providers, as a network without transit does. The procedure treats it like any other ASPA, one with an empty list: every hop that would climb from that AS is refused (<em>declares no provider</em>), so the AS can only be the top of a path. A route from a provider may still have its one lateral hop there, from that AS to a peer.</p>
+    <p>When the two ramps do not meet, the page names the ASes left between them and the two ASes whose ASPAs close them in, and gives the two readings: a route leak (with one AS in the middle, that AS passed on a route between two networks that both say it is not their provider), or an ASPA that misses a real provider, with the verdict that the path would have if the provider were added. An AS that declares no provider cannot be missing one.</p>
     <dl>
       <dt>Valid</dt>
       <dd>The attested hops are enough to show that the path has the expected shape.</dd>

@@ -6,7 +6,7 @@ import { createRequire } from 'node:module';
 const require = createRequire(import.meta.url);
 const { verify, parsePath } = require('../site/verify.js');
 const { roles } = require('../site/irr.js');
-const { breakers, dominantUpstream, explain, words, hops, neighbourReading } = require('../site/valley.js');
+const { breakers, dominantUpstream, explain, words, hops, neighbourReading, squeeze, squeezeWords } = require('../site/valley.js');
 let passed = 0;
 const test = (name, fn) => { fn(); passed++; console.log('ok  ', name); };
 const attrs = (...lines) => lines.map((l) => { const i = l.indexOf(': '); return { name: l.slice(0, i), value: l.slice(i + 2) }; });
@@ -144,6 +144,36 @@ test('neighbours: a listed one is confirmed by any source, and "only the ASPA" w
   assert.equal(neighbourReading(true, 3356, r, [], null).kind, 'agrees');
   assert.equal(neighbourReading(true, 3491, r, [], null).kind, 'aspa-only');
   assert.equal(neighbourReading(true, 3491, undefined, null, null).kind, 'none');
+});
+
+// the path of 15 November 2026: AS6762 declares no provider, AS12735 does not list AS6939
+const SQ = aspas({ AS59715: ['AS6762', 'AS12874'], AS6762: ['AS0'], AS12735: ['AS3257', 'AS6762'], AS206271: ['AS60707'] });
+test('an AS between two that both refuse it as a provider: named, with the two readings, in either direction', () => {
+  for (const dir of ['up', 'down']) {
+    const v = verify(SQ, parsePath('206271 60707 12735 6939 6762 59715').path, dir);
+    assert.equal(v.result, 'Invalid');
+    const s = squeeze(v, SQ);
+    assert.deepEqual(s, { between: ['AS6939'], left: 'AS6762', right: 'AS12735', leftZero: true, rightZero: false, ifLeft: null, ifRight: 'Unknown' });
+    const [what, readings] = squeezeWords(s);
+    assert.equal(what, 'AS6939 is between two ASes that both say it is not their provider: AS6762 declares no provider (AS0), and the ASPA of AS12735 does not list AS6939.');
+    assert.match(readings, /a route leak, where AS6939 passed on to AS12735 a route that it learned from AS6762/);
+    assert.match(readings, /with AS6939 in the ASPA of AS12735 the path would be Unknown/);
+    assert.doesNotMatch(readings, /in the ASPA of AS6762/, 'an AS that declares no provider cannot be missing one');
+  }
+});
+
+test('the ramps that meet leave nothing between them; two networks without providers leave only the leak', () => {
+  assert.equal(squeeze(verify(SQ, parsePath('6939 6762 59715').path, 'down'), SQ), null, 'one lateral hop at the top');
+  assert.equal(squeeze(verify(SQ, parsePath('6762 59715').path, 'up'), SQ), null);
+  const two = aspas({ AS1: ['AS0'], AS3: ['AS0'] });
+  const s = squeeze(verify(two, parsePath('3 2 1').path, 'down'), two);
+  assert.deepEqual([s.between, s.ifLeft, s.ifRight], [['AS2'], null, null]);
+  assert.match(squeezeWords(s)[1], /both ASes declare that they have no provider/);
+  const wide = aspas({ AS1: ['AS9'], AS4: ['AS9'] });
+  const w = squeeze(verify(wide, parsePath('4 3 2 1').path, 'down'), wide);
+  assert.deepEqual(w.between, ['AS2', 'AS3']);
+  assert.match(squeezeWords(w)[0], /^AS2, AS3 are in neither ramp: the ASPA of AS1 does not list AS2, and the ASPA of AS4 does not list AS3\.$/);
+  assert.equal(w.ifLeft, 'Unknown', 'with AS2 in the ASPA of AS1 the up-ramp can go on: AS2 and AS3 publish nothing');
 });
 
 console.log(`${passed} tests passed`);
