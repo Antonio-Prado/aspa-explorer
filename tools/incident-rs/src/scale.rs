@@ -16,7 +16,7 @@ const DEG_JUMP_MIN_DAYS: usize = 3;
 struct Bucket { day: i64, p: FxHashMap<Key, u64>, n: u32, fired: u8 }
 struct Origin { day: i64, n: u32, n4: u32, fired: u8 }
 
-pub struct Hit { pub kind: &'static str, pub aggregate: Net, pub more_specifics: u32, pub origin_more_specifics: u32, pub twice_median: Option<u64> }
+pub struct Hit { pub kind: &'static str, pub aggregate: Net, pub more_specifics: u32, pub origin_more_specifics: u32, pub twice_median: Option<u64>, pub median_of_two: bool }
 
 #[derive(Default)]
 pub struct Scale { buckets: FxHashMap<(u64, Net), Bucket>, origins: FxHashMap<u64, Origin>, history: FxHashMap<u64, Vec<u32>> }
@@ -51,7 +51,8 @@ impl Scale {
         let o = self.origins.entry(origin).or_insert(Origin { day, n: 0, n4: 0, fired: 0 });
         o.n += 1;
         if !net.v6 { o.n4 += 1; }
-        let hit = |kind, m| Hit { kind, aggregate, more_specifics: b.n, origin_more_specifics: o.n, twice_median: m };
+        let even = self.history.get(&origin).is_some_and(|h| h.len() % 2 == 0);
+        let hit = |kind, m| Hit { kind, aggregate, more_specifics: b.n, origin_more_specifics: o.n, twice_median: m, median_of_two: even };
         let before = out.len();
         if net.v6 && b.n >= DEG_FLOOD_V6 && b.fired & 2 == 0 { b.fired |= 2; out.push(hit("flood", None)); }
         else if !net.v6 && o.n4 >= DEG_FLOOD_V4_ORIGIN && o.fired & 2 == 0 { o.fired |= 2; out.push(hit("flood", None)); }

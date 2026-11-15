@@ -21,6 +21,8 @@ impl Atr {
         let c = match self.collectors.iter().position(|x| x == collector) { Some(i) => i, None => { self.collectors.push(collector.to_string()); self.collectors.len() - 1 } };
         (c as u16, peer)
     }
+    // `rrc00_34800`, or the AS alone when the record does not say its collector (session_tag)
+    pub fn tag(&self, s: Session) -> String { let c = &self.collectors[s.0 as usize]; if c == "None" { s.1.to_string() } else { format!("{}_{}", c, s.1) } }
     // one more withdrawal of the session: how many in the last ten seconds
     pub fn withdrawal(&mut self, s: Session, epoch: i64) -> u32 {
         let w = self.windows.entry(s).or_default();

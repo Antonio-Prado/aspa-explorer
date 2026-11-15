@@ -9,6 +9,7 @@ mod asm;
 mod atr;
 mod deg;
 mod flaps;
+mod life;
 mod record;
 mod reg;
 mod rel;
@@ -26,6 +27,7 @@ const MASS_WITHDRAWAL: u32 = 500;
 
 fn main() {
     let args: Vec<String> = std::env::args().skip(1).collect();
+    if args.first().map(String::as_str) == Some("incidents") { return life::run(&args[1..]); }
     if args.first().map(String::as_str) != Some("detections") {
         eprintln!("usage: incident-rs detections [--detectors {}] [--caida FILE.bz2] [--roas FILE.json.xz] [--delegations DIR] [--links FILE] IN.jsonl.gz OUT.tsv", ALL);
         std::process::exit(2);
@@ -133,8 +135,9 @@ fn main() {
         }
         if do_prh {
             if let (Some(net), Some(origin)) = (&net, rec.origin) {
-                if let Some((kind, expected)) = roas.hijack(net, prefix, origin) {
+                if let Some((kind, covering)) = roas.hijack(net, prefix, origin) {
                     hits += 1;
+                    let expected = covering.iter().map(|(a, l)| format!("{}/{}", a, l)).collect::<Vec<_>>().join(",");
                     writeln!(out, "PRH\t{}\t{}\t{}\t{}\t{}\t{}\t{}", ts, prefix, collector, peer, origin, kind, expected).unwrap();
                 }
             }

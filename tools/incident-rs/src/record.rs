@@ -115,4 +115,5 @@ impl Key {
     pub fn of(text: &str, net: Option<&Net>) -> Key {
         match net { Some(n) if n.text() == text => Key::Canon(*n), _ => Key::Odd(text.into()) }
     }
+    pub fn text(&self) -> String { match self { Key::Canon(n) => n.text(), Key::Odd(s) => s.to_string() } }
 }

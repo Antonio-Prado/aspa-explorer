@@ -52,8 +52,8 @@ impl Roas {
         if net.len < min_len { return false; }
         (min_len..=net.len).rev().any(|i| self.table.get(&net.supernet(i)).is_some_and(|list| list.iter().any(|(asn, max_len)| *asn == origin && net.len <= *max_len)))
     }
-    // -> ("Invalid_Length" | "Invalid_Origin", the covering ROAs as "asn/maxLength,…" in order)
-    pub fn hijack(&self, net: &Net, text: &str, origin: u64) -> Option<(&'static str, String)> {
+    // -> ("Invalid_Length" | "Invalid_Origin", the covering ROAs as (asn, maxLength), in order)
+    pub fn hijack(&self, net: &Net, text: &str, origin: u64) -> Option<(&'static str, Vec<(u64, u8)>)> {
         let mut covering: Vec<(u64, u8)> = Vec::new();
         let mut add = |list: &Vec<(u64, u8)>| for r in list { if !covering.contains(r) { covering.push(*r); } };
         // the prefix itself, by its text
@@ -74,7 +74,6 @@ impl Roas {
         }
         if valid { return None; }
         covering.sort();
-        let expected = covering.iter().map(|(a, l)| format!("{}/{}", a, l)).collect::<Vec<_>>().join(",");
-        Some((if invalid_length { "Invalid_Length" } else { "Invalid_Origin" }, expected))
+        Some((if invalid_length { "Invalid_Length" } else { "Invalid_Origin" }, covering))
     }
 }
