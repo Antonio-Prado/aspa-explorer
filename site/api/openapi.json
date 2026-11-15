@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "ASPA Explorer API",
-    "version": "1.81.1",
+    "version": "1.82.0",
     "description": "ASPA objects validated by Routinator at rpki.ping6.it, their history and quality, for any AS. Open data, read-only, no key.",
     "contact": {
       "email": "antonio.prado@dei.unipd.it"
@@ -890,6 +890,13 @@
                           },
                           "failed": {
                             "type": "integer"
+                          },
+                          "version": {
+                            "type": [
+                              "string",
+                              "null"
+                            ],
+                            "description": "the release of the validator, when it says one (the Routinators)"
                           }
                         },
                         "additionalProperties": true
@@ -2147,6 +2154,7 @@
               "enum": [
                 "routinator",
                 "fort",
+                "as59715",
                 "level66",
                 "daknob_zrh2",
                 "daknob_ams1",
@@ -2188,6 +2196,7 @@
               "enum": [
                 "routinator",
                 "fort",
+                "as59715",
                 "level66",
                 "daknob_zrh2",
                 "daknob_ams1",
@@ -2229,6 +2238,7 @@
               "enum": [
                 "routinator",
                 "fort",
+                "as59715",
                 "level66",
                 "daknob_zrh2",
                 "daknob_ams1",

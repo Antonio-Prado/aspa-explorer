@@ -76,7 +76,10 @@ async function main() {
   const get = async (url) => {
     const r = await fetch(url.startsWith('/') ? base + url : url, { headers: { Accept: 'application/json', 'User-Agent': UA }, signal: AbortSignal.timeout(20000) });
     if (!r.ok) throw new Error(`HTTP ${r.status}`);
-    return r.json();
+    const body = await r.json();
+    const by = r.headers.get('X-ASPA-Validator');          // the second validator answered in the place of the first (status-checks.js)
+    if (by && body && typeof body === 'object') body.__answered_by = by;
+    return body;
   };
   const checks = makeChecks(get);
   const nowMs = Date.now();

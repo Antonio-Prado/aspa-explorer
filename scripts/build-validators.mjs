@@ -1,5 +1,6 @@
-// The ASPAs of four validators side by side: the two of this site, Routinator and Fort, rpki-client (the console of
-// the project) and the one that Cloudflare runs (also rpki-client). The exports of rpki-client are about 100 MB each,
+// The ASPAs of several validators side by side: the two of this site, Routinator and Fort, a second Routinator when the
+// site has one (another operator's, also the spare source of the site), rpki-client (the console of the project) and the
+// one that Cloudflare runs (also rpki-client). The exports of rpki-client are about 100 MB each,
 // but the ASPAs are in the last few kilobytes, so only the head and the tail of each file are fetched. Written as one
 // JSON file (served as /api/v1/validators.json); the ASPAs of Fort, which has no web interface of its own, are also
 // copied as they are next to it (fort-aspa.json, served as /api/v1/fort-aspa.json).
@@ -7,7 +8,10 @@
 //   node scripts/build-validators.mjs OUT_FILE
 //
 // Environment: ASPA_DATA, the URL or file of Routinator's jsonext (default http://127.0.0.1:8080/data/aspas.json);
-// FORT_ASPA, the URL or file of Fort's output.aspa (default https://rpki.ping6.it:8324/fort/aspa.json, open to this host only).
+// FORT_ASPA, the URL or file of Fort's output.aspa (default https://rpki.ping6.it:8324/fort/aspa.json, open to this host only);
+// SECOND_ROUTINATOR, the address of a second Routinator (https://rpki.example.net: its /jsonext and /api/v1/status are read,
+// once each for a run), and SECOND_ROUTINATOR_NAME, how the page calls it; ASPA_STATUS, the URL of the status of the first
+// (default: status.json next to ASPA_DATA), read for its version.
 import { readFile, writeFile, rename } from 'node:fs/promises';
 import { join, dirname } from 'node:path';
 import net from 'node:net';
@@ -118,13 +122,30 @@ async function fetchFort(src) {
   return { text: await r.text(), built: Number.isFinite(lm) ? new Date(lm).toISOString().replace(/\.\d+Z$/, 'Z') : null };
 }
 
+// The release of a Routinator, from its /api/v1/status ("routinator/0.16.0" -> "0.16.0"); null when it cannot be read.
+export const versionText = (status) => (status && typeof status.version === 'string' ? status.version.replace(/^routinator\//i, '') : null);
+async function versionOf(url) {
+  try { return versionText(await (await get(url)).json()); } catch { return null; }
+}
+
 async function main() {
   const out = process.argv[2];
   if (!out) { console.error('usage: build-validators.mjs OUT_FILE'); process.exit(2); }
   const dataUrl = process.env.ASPA_DATA || 'http://127.0.0.1:8080/data/aspas.json';
   const ours = /^https?:/.test(dataUrl) ? await (await get(dataUrl)).json() : JSON.parse(await readFile(dataUrl, 'utf8'));
   const sets = { routinator: normalise(ours.aspas || []) };
-  const sources = [{ id: 'routinator', name: SOURCES[0].name, built: (ours.metadata && ours.metadata.generatedTime) || null, count: sets.routinator.size, failed: null }];
+  const statusUrl = process.env.ASPA_STATUS || (/^https?:.*\/aspas\.json$/.test(dataUrl) ? dataUrl.replace(/aspas\.json$/, 'status.json') : null);
+  const sources = [{ id: 'routinator', name: SOURCES[0].name, built: (ours.metadata && ours.metadata.generatedTime) || null, count: sets.routinator.size, failed: null, version: statusUrl ? await versionOf(statusUrl) : null }];
+  // a second Routinator, run by somebody else: another release and another moment, so a few ASPAs may differ, which is what the table is for
+  const second = (process.env.SECOND_ROUTINATOR || '').replace(/\/+$/, '');
+  if (second) {
+    const name = process.env.SECOND_ROUTINATOR_NAME || 'Routinator (second validator)';
+    try {
+      const d = await (await get(`${second}/jsonext?exclude=routeOrigins,routerKeys`)).json();
+      sets.routinator2 = normalise(d.aspas || []);
+      sources.push({ id: 'routinator2', name, built: (d.metadata && d.metadata.generatedTime) || null, count: sets.routinator2.size, failed: null, version: await versionOf(`${second}/api/v1/status`) });
+    } catch (err) { console.error(`routinator2: ${err.message}`); sources.push({ id: 'routinator2', name, built: null, count: null, failed: null, error: err.message }); }
+  }
   const fortSrc = process.env.FORT_ASPA || 'https://rpki.ping6.it:8324/fort/aspa.json';
   try {
     const f = await fetchFort(fortSrc);

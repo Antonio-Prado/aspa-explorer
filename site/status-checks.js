@@ -31,7 +31,11 @@
     { id: 'validator', name: 'Validator (Routinator)', expected: 'every 10 minutes', run: async (now) => {
       const s = await get('/data/status.json');
       const t = Date.parse(s.lastUpdateDone);
-      return { state: byAge(now - t, 30 * MIN, 2 * HOUR), at: t, extra: String(s.version || '').replace('/', ' ') };
+      // the second validator answered in the place of the one of the site (nginx says so, X-ASPA-Validator): the data is fresh, but
+      // the validator of the site is not answering, which is at least a warning
+      const spare = typeof s.__answered_by === 'string' ? s.__answered_by : null;
+      const state = byAge(now - t, 30 * MIN, 2 * HOUR);
+      return { state: spare && state === 'ok' ? 'late' : state, at: t, extra: String(s.version || '').replace('/', ' ') + (spare ? `, from the spare validator (${spare}): the validator of the site does not answer` : '') };
     } },
     { id: 'api', name: 'Per-AS API, badges and feeds', expected: 'every 15 minutes', run: async (now) => {
       const m = await get('/api/v1/meta.json');
@@ -85,7 +89,10 @@
   const get = async (url) => {
     const r = await fetch(url, { headers: { Accept: 'application/json' }, cache: 'no-store' });
     if (!r.ok) throw new Error(`HTTP ${r.status}`);
-    return r.json();
+    const body = await r.json();
+    const by = r.headers.get('X-ASPA-Validator');
+    if (by && body && typeof body === 'object') body.__answered_by = by;
+    return body;
   };
   const checks = makeChecks(get);
 

@@ -1,7 +1,8 @@
 'use strict';
 
 // The "Validators compared" section of the Right now page: /api/v1/validators.json, built every hour by
-// scripts/build-validators.mjs from the ASPAs of the two validators of this site, Routinator and Fort, and of two rpki-client validators.
+// scripts/build-validators.mjs from the ASPAs of the two validators of this site, Routinator and Fort, of a second Routinator
+// run by another operator (when the site has one) and of two rpki-client validators.
 (function () {
   const $ = (id) => document.getElementById(id);
   const fmt = new Intl.NumberFormat('en-US');
@@ -35,19 +36,21 @@
       return;
     }
     const ids = d.sources.map((s) => s.id);
+    // a validator that this page does not know by name (a second Routinator) is called as the file calls it
+    for (const s of d.sources) if (!(s.id in SHORT) && s.name) SHORT[s.id] = s.name;
     // the validators of this site are named once together, then the others
     const LOCAL = { routinator: 'Routinator (NLnet Labs)', fort: 'Fort (NIC México)' };
     const OTHER = { 'rpki-client': 'rpki-client (OpenBSD, the console of the project)', cloudflare: 'the rpki-client that Cloudflare runs' };
     const local = ids.filter((id) => id in LOCAL).map((id) => LOCAL[id]);
     const who = [
       ...(local.length > 1 ? [`the two of this site, ${local.join(' and ')}`] : local.map((x) => `this site's ${x}`)),
-      ...ids.filter((id) => !(id in LOCAL)).map((id) => OTHER[id] || id),
+      ...ids.filter((id) => !(id in LOCAL)).map((id) => OTHER[id] || SHORT[id] || id),
     ];
     $('val-sub').textContent = `The ASPAs of ${d.sources.length} validators, read ${when(d.generated)}: ${who.slice(0, -1).join(', ')} and ${who[who.length - 1]}. Of ${fmt.format(d.customers)} customers, ${fmt.format(d.identical)} have the same providers in all of them.`;
     $('val-tiles').replaceChildren(...d.sources.map((s) => el('div', { class: 'tile card' },
       el('div', { class: 'label', text: SHORT[s.id] || s.name }),
       el('div', { class: 'value', text: s.count === null ? '–' : fmt.format(s.count) }),
-      el('div', { class: 'note', text: s.error ? 'not reachable' : `built ${when(s.built)}${s.failed ? ` · ${s.failed} failed` : ''}` }))));
+      el('div', { class: 'note', text: s.error ? 'not reachable' : `${s.version ? `version ${s.version} · ` : ''}built ${when(s.built)}${s.failed ? ` · ${s.failed} failed` : ''}` }))));
 
     const note = (x) => {
       if (x.as0) return 'AS0 next to other providers: the profile forbids it, and a validator may reject or trim the ASPA';

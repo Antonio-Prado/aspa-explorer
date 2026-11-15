@@ -1,0 +1,17 @@
+[package]
+name = "incident-rs"
+version = "0.1.0"
+edition = "2021"
+description = "The incident detectors of tools/data_scripts/incident.py, in Rust: same detections, a fraction of the time"
+license = "BSD-3-Clause"
+
+[dependencies]
+flate2 = "1"
+rustc-hash = "2"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+[profile.release]
+opt-level = 3
+lto = true
+codegen-units = 1

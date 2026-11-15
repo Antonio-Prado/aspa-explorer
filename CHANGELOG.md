@@ -9,6 +9,15 @@ A few numbers were deployed and folded into the next release without a tag of th
 
 ## [Unreleased]
 
+## [1.82.0] - 2026-11-15
+
+### Added
+- A second validator, the Routinator that AS59715 runs for its own routers (`rpki.as59715.net`), in three places.
+  - Spare source: when the validator of the site fails or does not answer within five seconds, `/data/aspas.json`, `/data/status.json` and `/data/validity/` are answered by the second one, through the same two-minute cache, and the last copy of the first is used only when both fail. Until now an old copy covered a validator that was down, for hours. The second validator is asked only then. The response says who answered (`X-ASPA-Validator`), and the check of the validator on the status page becomes a warning: the data is fresh, the validator of the site is not answering.
+  - *Validators compared* has five validators: the second Routinator is read once an hour and shown with its release, as the one of the site now is (`version` in `/api/v1/validators.json`, source `routinator2`). The few ASPAs on which the two differ are in the table of the differences like the others.
+  - *RTR caches* follows its RTR session with a monitor of its own (`as59715`: `/api/v1/rtr/as59715.ndjson`, its baseline and its metrics).
+- `incident-rs` (`tools/incident-rs`): the first detectors of `incident.py` in Rust, the flaps, the valleys in the path and the origins that no ROA authorises, with a reference in Python (`ref/detections_ref.py`) that writes the same lines from the functions of `incident.py`. On three million records of rrc00 they give the same 872,373 detections, line for line, in a ninth of the time. The incidents that group the detections are still to come.
+
 ## [1.81.1] - 2026-11-15
 
 ### Fixed

@@ -1,6 +1,6 @@
 // Unit tests for scripts/build-validators.mjs (no dependencies). Run with: node scripts/test-validators.mjs
 import assert from 'node:assert/strict';
-import { extractArray, normalise, compare, fortList, SOURCES } from './build-validators.mjs';
+import { extractArray, normalise, compare, fortList, SOURCES, versionText } from './build-validators.mjs';
 
 let passed = 0;
 const test = (name, fn) => { fn(); passed++; console.log('ok  ', name); };
@@ -45,6 +45,21 @@ test('the ASPAs of Fort: an object by customer, read as the ones of rpki-client'
   assert.throws(() => fortList({ roas: [] }), /no "aspa"/);
   assert.throws(() => fortList(null), /no "aspa"/);
   assert.deepEqual(SOURCES.map((s) => s.id), ['routinator', 'fort', 'rpki-client', 'cloudflare']);
+});
+
+test('the release of a Routinator from its status, and two Routinators that differ: a difference, not an error', () => {
+  assert.equal(versionText({ version: 'routinator/0.16.0' }), '0.16.0');
+  assert.equal(versionText({ version: '0.15.3' }), '0.15.3');
+  assert.equal(versionText({}), null);
+  assert.equal(versionText(null), null);
+  const a = normalise([{ customer: 'AS1', providers: ['AS2', 'AS3'] }, { customer: 'AS5', providers: ['AS6'] }]);
+  const b = normalise([{ customer: 'AS1', providers: ['AS2'] }, { customer: 'AS5', providers: ['AS6'] }, { customer: 'AS9', providers: ['AS8'] }]);
+  const c = compare({ routinator: a, routinator2: b });
+  assert.equal(c.customers, 3);
+  assert.equal(c.identical, 1);
+  assert.deepEqual(c.differences.map((x) => x.customer), ['AS1', 'AS9']);
+  assert.deepEqual(c.differences[1].providers, { routinator: null, routinator2: ['AS8'] });
+  assert.deepEqual(c.pairs, [{ a: 'routinator', b: 'routinator2', both: 2, only_a: 0, only_b: 1, differ: 1 }]);
 });
 
 console.log(`${passed} tests passed`);
