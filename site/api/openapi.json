@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "ASPA Explorer API",
-    "version": "1.77.4",
+    "version": "1.78.0",
     "description": "ASPA objects validated by Routinator at rpki.ping6.it, their history and quality, for any AS. Open data, read-only, no key.",
     "contact": {
       "email": "antonio.prado@dei.unipd.it"
@@ -2298,6 +2298,153 @@
                 "schema": {
                   "type": "string",
                   "description": "one JSON object a line: {type, subtype, actor, start, end, end_reason, paths, real, complete}"
+                }
+              }
+            }
+          },
+          "404": {
+            "$ref": "#/components/responses/NotBuilt"
+          }
+        }
+      }
+    },
+    "/api/v1/incidents-history.json": {
+      "get": {
+        "operationId": "getIncidentsHistoryJson",
+        "summary": "The incidents of every day since the first ASPA",
+        "description": "Built once a day (scripts/build-incidents-history.mjs) from every incident file that is kept: the ones of the recorder and the ones read from the archive of RIPE RIS for the days before it was started, back to 12 October 2023. `days` has a line for each day that was read (the UTC day its incidents ended): the incidents, the ones with an AS path, the verdicts of the ASPAs of the day and the count of each type. `periods` has the same aggregates as incidents.json for all the days (`all`) and for each calendar year, with the number of days read. The leaking networks (RLK-FP, RLK-PV) are judged within each day, and complete ASPAs use the CAIDA file of the month of the day. `days_covered` of `days_expected` days have been read so far. Aggregates only, no AS number.",
+        "responses": {
+          "200": {
+            "description": "The days and the periods",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "generated",
+                    "collector",
+                    "first_day",
+                    "days_expected",
+                    "days_covered",
+                    "days",
+                    "periods"
+                  ],
+                  "properties": {
+                    "generated": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "collector": {
+                      "type": "string",
+                      "description": "the vantage point, a RIPE RIS collector"
+                    },
+                    "first_day": {
+                      "type": "string",
+                      "format": "date"
+                    },
+                    "days_expected": {
+                      "type": "integer",
+                      "description": "the days from first_day to yesterday"
+                    },
+                    "days_covered": {
+                      "type": "integer",
+                      "description": "the days read so far"
+                    },
+                    "aspas": {
+                      "type": "string"
+                    },
+                    "relationships": {
+                      "type": "string"
+                    },
+                    "detail": {
+                      "type": "string",
+                      "description": "the path of the file with every incident of a day"
+                    },
+                    "days": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "day": {
+                            "type": "string",
+                            "format": "date"
+                          },
+                          "incidents": {
+                            "type": "integer"
+                          },
+                          "with_path": {
+                            "type": "integer"
+                          },
+                          "real": {
+                            "type": "array",
+                            "items": {
+                              "type": "integer"
+                            },
+                            "description": "[valid, unknown, invalid] with the ASPAs of the day"
+                          },
+                          "types": {
+                            "type": "object",
+                            "additionalProperties": {
+                              "type": "integer"
+                            }
+                          }
+                        }
+                      }
+                    },
+                    "periods": {
+                      "type": "object",
+                      "description": "`all` and each year: days, first, last, and period, total, by_type, subtypes and adoption as in incidents.json",
+                      "additionalProperties": {
+                        "type": "object"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "$ref": "#/components/responses/NotBuilt"
+          }
+        }
+      }
+    },
+    "/api/v1/incidents/{collector}/{day}.jsonl.gz": {
+      "get": {
+        "operationId": "getIncidentsOfDay",
+        "summary": "Every incident of one day, one record a line, gzipped",
+        "description": "The incidents that ended on a UTC day, for each day of incidents-history.json: the same records as incidents-detail.jsonl, with the verdicts of that day (the leaking networks judged within the day, the CAIDA file of the month). A gzip file of a few megabytes.",
+        "parameters": [
+          {
+            "name": "collector",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[a-z0-9-]+$"
+            },
+            "description": "the vantage point, as `collector` of incidents-history.json (rrc00)"
+          },
+          {
+            "name": "day",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "date"
+            },
+            "description": "a day of `days` in incidents-history.json (YYYY-MM-DD)"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The incidents of the day",
+            "content": {
+              "application/gzip": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary",
+                  "description": "gzip of one JSON object a line: {type, subtype, actor, start, end, end_reason, paths, real, complete}"
                 }
               }
             }

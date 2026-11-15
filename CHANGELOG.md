@@ -9,6 +9,13 @@ A few numbers were deployed and folded into the next release without a tag of th
 
 ## [Unreleased]
 
+## [1.78.0] - 2026-11-15
+
+### Added
+- Incidents: the page covers the time since the first ASPA (12 October 2023), not only the last 30 days. A new chart, *Day by day*, has a bar for each day that has been read (incidents, share Invalid or Unknown with the ASPAs of the day, or one type), and a choice of period (everything, a year, the last 30 days) applies to the numbers at the top, to the table by type and to the chart of adoption. The days before the recorder was started (4 October 2026) are read from the archive of RIPE RIS by `tools/backfill` and appear as they are done.
+- Incidents: every incident of each day, with its verdicts, is a file of its own (`/api/v1/incidents/rrc00/YYYY-MM-DD.jsonl.gz`), chosen from the page or with a click on the chart; `/api/v1/incidents-history.json` has the days and the periods. The paths name the vantage point, so that other collectors can be added.
+- `scripts/build-incidents-history.mjs` (with its tests) builds both at the end of the daily job, reading only the days that are new.
+
 ## [1.77.4] - 2026-11-15
 
 ### Changed

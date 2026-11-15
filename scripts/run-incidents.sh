@@ -4,6 +4,9 @@
 #   2. refreshes the ROAs (Routinator, rpki.ping6.it) and points incident.py at the newest CAIDA relationships and at the delegation files of the adoption job;
 #   3. runs incident.py, which keeps its state between runs and writes incidents_<file>.jsonl for each file;
 #   4. builds /api/v1/incidents.json (scripts/build-incidents.mjs) and the file with the verdict of each incident (/api/v1/incidents-detail.jsonl).
+#   5. builds /api/v1/incidents-history.json (scripts/build-incidents-history.mjs): every day that is archived, also the days that
+#      tools/backfill/backfill.py reads from the archive of RIPE RIS, with a file of the incidents of each day in days/rrc00/.
+#      The working directories of the backfill are the entries of $BASE/blocks (links, each with archive/, days.jsonl and cache/).
 # Everything is in $BASE: incoming/ (stream.py), work/ (incident.py, with its state), archive/ (every incident file, compressed, kept for good), incidents-detail.jsonl.
 #   30 2 * * * /usr/bin/lockf -t 0 /var/db/aspa-data/run.lock /bin/sh -c '/bin/sh /usr/local/libexec/aspa-data/run-incidents.sh >/var/db/aspa-data/run.log 2>&1'
 # (02:30 local time: 00:30 UTC in summer, 01:30 UTC in winter; lockf: a day of data takes hours to read, and two runs at once would corrupt the state of incident.py;
@@ -20,6 +23,7 @@ NODE=${NODE:-/usr/local/bin/node}
 ROAS_URL=${INCIDENTS_ROAS_URL:-https://rpki.ping6.it/json}
 KEEP_DAYS=${INCIDENTS_KEEP_DAYS:-3}
 KEEP_INCIDENT_DAYS=${INCIDENTS_KEEP_INCIDENT_DAYS:-30}
+COLLECTOR=${INCIDENTS_COLLECTOR:-rrc00}
 
 mkdir -p "$BASE/incoming" "$BASE/work/data" "$BASE/work/roas" "$BASE/work/delegations" "$BASE/work/links"
 cd "$BASE/work"
@@ -78,3 +82,15 @@ if ls incidents_*.jsonl >/dev/null 2>&1; then
 else
   echo "no incident file yet: nothing to publish"
 fi
+
+# 5. every day: the archive of the recorder and the days of the backfill; only the days that are new are read. A failure
+# here leaves the page of the last 30 days as it is
+blocks=""; caida="$GEN/cache"
+for d in "$BASE"/blocks/*/; do
+  [ -d "$d" ] || continue
+  blocks="${blocks:+$blocks,}${d%/}"
+  [ -d "${d}cache" ] && caida="$caida,${d}cache"
+done
+"$NODE" "$SCRIPTS/build-incidents-history.mjs" "$GEN/incidents-history.json" --live="$BASE/archive" --blocks="$blocks" \
+  --caida="$caida" --days="$BASE/days-cache/$COLLECTOR" --detail="$BASE/days/$COLLECTOR" --collector="$COLLECTOR" \
+  || echo "the history of the incidents could not be built" >&2

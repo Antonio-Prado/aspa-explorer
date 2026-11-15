@@ -139,12 +139,19 @@
     return series;
   }
 
+  let curveData = null, curveShow = null;
   function curve(d) {
     const select = $('inc-type'), box = $('inc-chart');
+    const before = select.value;
+    curveData = d;
     const options = [['total', 'All the incidents with a path, without the persistent valleys']].concat(typesOf(d).filter((k) => d.by_type[k].with_path).map((k) => [k, `${k}, ${(NAMES[k] || k).replace(/^(?!AS )./, (c) => c.toLowerCase())}`]));
-    if (options.length < 2 || !d.adoption || !d.adoption.levels) { $('inc-curve-title').parentElement.hidden = true; return; }
+    $('inc-curve-title').parentElement.hidden = options.length < 2 || !d.adoption || !d.adoption.levels;
+    if ($('inc-curve-title').parentElement.hidden) return;
     select.replaceChildren(...options.map(([v, t]) => el('option', { value: v, text: t })));
-    const show = () => {
+    if (options.some(([v]) => v === before)) select.value = before;
+    if (curveShow) { curveShow(); return; }
+    const show = curveShow = () => {
+      const d = curveData;                                         // the period shown now
       const type = select.value, series = draw(box, d, type), i10 = d.adoption.levels.indexOf(10);
       $('inc-legend').replaceChildren(...series.map((s) => el('li', {}, el('span', { class: `sw ${s.cls}`, 'aria-hidden': 'true' }), el('span', { class: 'lg', text: s.label }), ' ', el('span', { class: 'lv', text: `${s.values[i10].toFixed(0)}% Invalid when 10% publish` }))));
       const [largest, random] = series, i50 = d.adoption.levels.indexOf(50), leaks = type === 'RLK';
@@ -157,23 +164,146 @@
     window.addEventListener('resize', () => { clearTimeout(t); t = setTimeout(show, 150); });
   }
 
+  // The days of the history (/api/v1/incidents-history.json): a bar for each day that was read, from the first day of
+  // ASPA to yesterday; a day that is missing has no bar. With the pointer on the chart, a box says the day and its numbers.
+  const DAY = 86400e3;
+  function daysChart(h) {
+    const box = $('inc-days-chart'), select = $('inc-days-metric');
+    const types = ORDER.filter((t) => h.days.some((r) => r.types[t]));
+    const metrics = [
+      ['incidents', 'Incidents', 'Incidents', (r) => r.incidents, (v) => fmt.format(v)],
+      ['invalid', 'Invalid with the ASPAs of the day (% of the incidents with a path)', 'Invalid (%)', (r) => (r.with_path ? (100 * r.real[2]) / r.with_path : 0), (v) => `${v.toFixed(v < 10 ? 1 : 0)}%`],
+      ['unknown', 'Unknown with the ASPAs of the day (% of the incidents with a path)', 'Unknown (%)', (r) => (r.with_path ? (100 * r.real[1]) / r.with_path : 0), (v) => `${v.toFixed(v < 10 ? 1 : 0)}%`],
+      ...types.map((t) => [t, `${t}, ${(NAMES[t] || t).replace(/^(?!AS )./, (c) => c.toLowerCase())}`, `${t} incidents`, (r) => r.types[t] || 0, (v) => fmt.format(v)]),
+    ];
+    select.replaceChildren(...metrics.map(([v, t]) => el('option', { value: v, text: t })));
+    const t0 = Date.parse(h.first_day), n = h.days_expected;
+    const at = new Map(h.days.map((r) => [Math.round((Date.parse(r.day) - t0) / DAY), r]));
+    const iso = (i) => new Date(t0 + i * DAY).toISOString().slice(0, 10);
+    const pick = $('inc-day'), link = $('inc-day-link');
+    const href = () => { link.href = `/api/v1/incidents/${encodeURIComponent(h.collector)}/${pick.value}.jsonl.gz`; };
+    const show = () => {
+      const [, title, yTitle, value, fmtY] = metrics.find((x) => x[0] === select.value) || metrics[0];
+      const W = Math.max(280, box.clientWidth || 640), H = 240, m = { l: 68, r: 10, t: 10, b: 24 };
+      const iw = W - m.l - m.r, ih = H - m.t - m.b;
+      const max = Math.max(...h.days.map(value), 0);
+      const step = Math.pow(10, Math.floor(Math.log10(max || 1))) / 2, top = max > 0 ? Math.max(step, Math.ceil(max / step) * step) : 1;
+      const x = (i) => m.l + (iw * i) / n, y = (v) => m.t + ih - (ih * v) / top, w = Math.max(iw / n, 0.6);
+      const g = svg('svg', { viewBox: `0 0 ${W} ${H}`, role: 'img', 'aria-label': `${title}, one bar for each day from ${day(h.first_day)} to ${day(iso(n - 1))}: ${fmt.format(h.days_covered)} of ${fmt.format(n)} days have been read.` });
+      g.append(svg('text', { class: 'axistitle', transform: `translate(13 ${m.t + ih / 2}) rotate(-90)`, 'text-anchor': 'middle' }, yTitle));
+      for (let k = 0; k <= 4; k++) {
+        const v = (top * k) / 4;
+        g.append(svg('line', { class: k ? 'grid' : 'axisline', x1: m.l, x2: W - m.r, y1: y(v), y2: y(v) }), svg('text', { class: 'tick', x: m.l - 6, y: y(v) + 4, 'text-anchor': 'end' }, fmtY(v)));
+      }
+      g.append(svg('text', { class: 'tick', x: m.l, y: H - 6, 'text-anchor': 'start' }, day(h.first_day)));
+      for (let yr = Number(h.first_day.slice(0, 4)) + 1; ; yr++) {              // the first of January of each year
+        const i = Math.round((Date.parse(`${yr}-01-01`) - t0) / DAY);
+        if (i >= n) break;
+        g.append(svg('line', { class: 'grid', x1: x(i), x2: x(i), y1: m.t, y2: m.t + ih }));
+        if (x(i) - m.l > 80 && W - m.r - x(i) > 40) g.append(svg('text', { class: 'tick', x: x(i), y: H - 6, 'text-anchor': 'middle' }, String(yr)));
+      }
+      let d = '';
+      for (const [i, r] of at) { const v = value(r); if (v > 0) d += `M${x(i).toFixed(2)},${y(0)}v${(y(v) - y(0)).toFixed(2)}h${w.toFixed(2)}V${y(0)}z`; }
+      g.append(svg('path', { class: 'daybars', d }));
+      const cross = svg('line', { class: 'crossline', y1: m.t, y2: m.t + ih, visibility: 'hidden' });
+      g.append(cross);
+      const tip = el('div', { class: 'ctip', hidden: '' }, el('strong', {}), el('span', {}), el('span', {}));
+      box.replaceChildren(g, tip);
+      const [tValue, tWhen, tMore] = tip.children;
+      const hide = () => { tip.hidden = true; cross.setAttribute('visibility', 'hidden'); };
+      const point = (e) => {
+        const r = g.getBoundingClientRect();
+        if (!r.width) return -1;
+        const px = ((e.clientX - r.left) / r.width) * W;
+        const i = Math.max(0, Math.min(n - 1, Math.floor(((px - m.l) / iw) * n)));
+        const row = at.get(i), cx = x(i) + w / 2;
+        cross.setAttribute('x1', cx); cross.setAttribute('x2', cx); cross.setAttribute('visibility', 'visible');
+        tValue.textContent = row ? fmtY(value(row)) : 'Not read yet';
+        tWhen.textContent = day(iso(i));
+        tMore.textContent = row ? `${plural(row.incidents, 'incident')}, ${pct(row.real[2], row.with_path)} Invalid` : '';
+        tMore.hidden = !row;
+        tip.hidden = false;
+        const left = (cx / W) * r.width, tw = tip.offsetWidth;
+        tip.style.left = `${Math.max(0, Math.min(r.width - tw, left + 12 + tw > r.width ? left - 12 - tw : left + 12))}px`;
+        tip.style.top = '8px';
+        return i;
+      };
+      box.onpointermove = point;
+      // a click on a day that was read also chooses its file below
+      box.onpointerdown = (e) => { const i = point(e); if (at.has(i)) { pick.value = iso(i); href(); } };
+      box.onpointerleave = hide;
+    };
+    select.addEventListener('change', show);
+    show();
+    let t = 0;
+    window.addEventListener('resize', () => { clearTimeout(t); t = setTimeout(show, 150); });
+    const left = n - h.days_covered;
+    $('inc-days-note').textContent = `${fmt.format(h.days_covered)} of ${fmt.format(n)} days have been read${left > 0 ? `; ${fmt.format(left)} are still to come` : ''}. Move the pointer over the chart for the numbers of a day; a click chooses its file below.`;
+
+    // every incident of a day: the file of the day
+    pick.replaceChildren(...[...h.days].reverse().map((r) => el('option', { value: r.day, text: `${day(r.day)} (${fmt.format(r.incidents)})` })));
+    pick.addEventListener('change', href);
+    href();
+    $('inc-days').hidden = false;
+  }
+
+  const built = (iso) => `built ${new Date(iso).toLocaleString('en-GB', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'UTC' })} UTC`;
+  // What the page shows for a period: `d` has the shape of /api/v1/incidents.json, `meta` is the line under the title.
+  function render(d, meta, sources, note) {
+    $('meta').textContent = meta;
+    tiles(d);
+    rows(d);
+    if (note) $('inc-note').textContent += ` ${note}`;
+    curve(d);
+    $('inc-sources').textContent = sources;
+  }
+
   async function main() {
-    let d;
-    try {
-      const r = await fetch('/api/v1/incidents.json', { headers: { Accept: 'application/json' } });
-      if (!r.ok) throw new Error(`HTTP ${r.status}`);
-      d = await r.json();
-    } catch {
+    const get = async (url) => {
+      try { const r = await fetch(url, { headers: { Accept: 'application/json' } }); return r.ok ? await r.json() : null; } catch { return null; }
+    };
+    const [d, h] = await Promise.all([get('/api/v1/incidents.json'), get('/api/v1/incidents-history.json')]);
+    const history = h && Array.isArray(h.days) && h.days.length && h.periods && h.periods.all ? h : null;
+    if (!d && !history) {
       $('meta').textContent = 'No incident data is published yet. It is built from the files of the detectors and appears here when there is one.';
       for (const id of ['inc-types-title', 'inc-curve-title']) $(id).parentElement.hidden = true;
       return;
     }
-    const length = span(d.period.from, d.period.to);
-    $('meta').textContent = `${plural(d.total.incidents, 'incident')} in the updates of RIPE RIS rrc00, from ${utc(d.period.from)} to ${utc(d.period.to)}${length ? ` (${length} of data)` : ''} · built ${new Date(d.generated).toLocaleString('en-GB', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'UTC' })} UTC`;
-    tiles(d);
-    rows(d);
-    curve(d);
-    $('inc-sources').textContent = `ASPAs: ${d.aspas}. Relationships: ${d.relationships}. Detectors: the research project (data_scripts).`;
+    const where = `in the updates of RIPE RIS ${history ? history.collector : 'rrc00'}`;
+    const recent = () => {
+      const length = span(d.period.from, d.period.to);
+      render(d, `${plural(d.total.incidents, 'incident')} ${where}, from ${utc(d.period.from)} to ${utc(d.period.to)}${length ? ` (${length} of data)` : ''} · ${built(d.generated)}`,
+        `ASPAs: ${d.aspas}. Relationships: ${d.relationships}. Detectors: the research project (data_scripts).`);
+    };
+    if (!history) { recent(); return; }
+
+    // the periods: everything (the choice at the start), each year, and the window of the last 30 days
+    const yesterday = history.days_expected - 1, t0 = Date.parse(history.first_day);
+    const expected = (key) => {
+      if (key === 'all') return history.days_expected;
+      const a = Math.max(0, Math.round((Date.parse(`${key}-01-01`) - t0) / DAY)), b = Math.min(yesterday, Math.round((Date.parse(`${key}-12-31`) - t0) / DAY));
+      return b - a + 1;
+    };
+    const years = Object.keys(history.periods).filter((k) => /^\d{4}$/.test(k)).sort().reverse();
+    const select = $('inc-period');
+    select.replaceChildren(
+      el('option', { value: 'all', text: `Everything since ${day(history.first_day)}` }),
+      ...years.map((k) => el('option', { value: k, text: k })),
+      d ? el('option', { value: 'recent', text: 'The last 30 days, as one window' }) : null,
+    );
+    const show = () => {
+      const key = select.value;
+      if (key === 'recent') { $('inc-period-note').textContent = ''; recent(); return; }
+      const p = history.periods[key], of = expected(key);
+      $('inc-period-note').textContent = p.days < of ? `${fmt.format(p.days)} of the ${fmt.format(of)} days of this period have been read so far` : '';
+      render(p, `${plural(p.total.incidents, 'incident')} ${where}, in ${plural(p.days, 'day')} from ${day(p.first)} to ${day(p.last)} · ${built(history.generated)}`,
+        `ASPAs: ${history.aspas}. Relationships: ${history.relationships}. Detectors: the research project (data_scripts).`,
+        'In this period the leaking networks (FP, PV) are judged within each day.');
+    };
+    select.addEventListener('change', show);
+    $('inc-period-box').hidden = false;
+    show();
+    daysChart(history);
   }
 
   main();
