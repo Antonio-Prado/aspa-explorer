@@ -9,6 +9,12 @@
 #      The working directories of the backfill are the entries of $BASE/blocks (links, each with archive/, days.jsonl and cache/).
 #      $BASE/live-from, when it is there, has the first day that the archive of the recorder covers in full (YYYY-MM-DD): the
 #      days before it are taken from the backfill only.
+#   6. while incident-rs (tools/incident-rs) is checked against incident.py: when $INCIDENTS_RS (default $CODE/incident-rs)
+#      is there and $BASE/work-rs has its state, it reads the same files with the same tables (work-rs links them to work/)
+#      and each incident file it writes is compared with the one of incident.py (compare_incidents.py, next to incident.py):
+#      one line for each in $BASE/work-rs/compared.txt, and a file that is the same is deleted. Nothing of it is published,
+#      and a failure there changes nothing of the rest. The state is brought over once from the one of incident.py:
+#        python3.12 export_state.py --code $CODE work/active_state.pkl work-rs/state.jsonl && cd work-rs && incident-rs import-state state.jsonl
 # Everything is in $BASE: incoming/ (stream.py), work/ (incident.py, with its state), archive/ (every incident file, compressed, kept for good), incidents-detail.jsonl.
 #   30 2 * * * /usr/bin/lockf -t 0 /var/db/aspa-data/run.lock /bin/sh -c '/bin/sh /usr/local/libexec/aspa-data/run-incidents.sh >/var/db/aspa-data/run.log 2>&1'
 # (02:30 local time: 00:30 UTC in summer, 01:30 UTC in winter; lockf: a day of data takes hours to read, and two runs at once would corrupt the state of incident.py;
@@ -98,3 +104,22 @@ live_from=""
 "$NODE" "$SCRIPTS/build-incidents-history.mjs" "$GEN/incidents-history.json" --live="$BASE/archive" --live-from="$live_from" --blocks="$blocks" \
   --caida="$caida" --days="$BASE/days-cache/$COLLECTOR" --detail="$BASE/days/$COLLECTOR" --collector="$COLLECTOR" \
   || echo "the history of the incidents could not be built" >&2
+
+# 6. the parallel run of incident-rs, compared with incident.py
+RS=${INCIDENTS_RS:-$CODE/incident-rs}
+if [ -x "$RS" ] && [ -f "$BASE/work-rs/active_state.rs.bin" ]; then
+  if (cd "$BASE/work-rs" && "$RS" run >run.log 2>&1); then
+    for f in "$BASE"/work-rs/incidents_records_*.jsonl; do
+      [ -e "$f" ] || continue
+      name=${f##*/}
+      [ -e "$BASE/work/$name" ] || continue
+      verdict=$("$PY" "$CODE/compare_incidents.py" "$BASE/work/$name" "$f" | tail -n 1)
+      echo "$(date -u +%Y-%m-%dT%H:%M:%SZ) $name: $verdict" >> "$BASE/work-rs/compared.txt"
+      case "$verdict" in
+        *" 0 different, 0 lines only in one file") rm -f "$f" "$BASE/work-rs/summary_${name%.jsonl}.txt" ;;
+      esac
+    done
+  else
+    echo "the parallel run of incident-rs failed: see $BASE/work-rs/run.log" >&2
+  fi
+fi
