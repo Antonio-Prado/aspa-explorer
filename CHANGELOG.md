@@ -9,6 +9,13 @@ A few numbers were deployed and folded into the next release without a tag of th
 
 ## [Unreleased]
 
+## [1.80.1] - 2026-11-15
+
+### Changed
+- RTR caches: the page and the alerts know the records that the monitor writes about stale data (RAVEN after 0.4.0, with a fingerprint of the set of each cache): *data stopped changing*, *data changing again* and *back to data served before* among the session events, and their anomalies in words. The return of a cache to data it had served before is told to the subscribers; data that stopped changing is not told twice, the alert on the serial that does not advance already says it.
+- Incidents, `incident.py`: less memory, with the same incidents and the same saved state (checked on a whole day of rrc00, 177,943 incidents: peak from 10.3 to 8.9 GB, 6% faster). The more specifics that wait for an aggregate are kept only under the covering prefixes that can be one (/16 to /22, and the /32 for IPv6: the others were never read and were a gigabyte of the state), the index of the prefixes of the open incidents holds tuples and is not saved, the two copies of the state kept in memory during a file are gone (a file that fails is taken back by reading the state file again), and every prefix is one string.
+- Backfill: `tools/backfill/backfill.py --collector NAME` and `tools/replay/mrt2records.py --collector NAME` read any collector of RIPE RIS, each in a working directory of its own (the records of rrc00 are unchanged, byte for byte); `tools/backfill/rib_links.py` reads the links of the table on a host without Node.js (the same file as `scripts/rib-links.mjs`); the ROAs of the day are written as they are read, half a gigabyte less for the process that waits for `incident.py`.
+
 ## [1.80.0] - 2026-11-15
 
 ### Changed

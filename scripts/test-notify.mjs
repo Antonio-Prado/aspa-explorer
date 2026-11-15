@@ -1141,6 +1141,11 @@ await test('rtr: a statistical anomaly is told only above its median and, for th
   const churn = { at: '2026-11-12T19:20:01Z', severity: 'high', category: 'statistical', trigger: 'vrp_announced', z: { vrp_announced: 34.8, vrp_withdrawn: 34.7 }, raw: { aspa_announced: 0, aspa_withdrawn: 0, interval_since_ns: 600e9, sync_duration_ns: 7e8, vrp_announced: 5330, vrp_withdrawn: 5316 } };
   const MUTE = ['vrp_announced', 'vrp_withdrawn'];
   assert.equal(worthTelling(churn), churn);
+  // the monitor's records on stale data: the stall is told by the serial (watchRtr), the return to older data is told in words
+  assert.equal(worthTelling({ category: 'structural', trigger: 'data_stale', severity: 'high' }), null);
+  const back = { at: '2026-11-14T15:52:12Z', cache: 'Cloudflare', category: 'structural', trigger: 'data_regressed', severity: 'high' };
+  assert.equal(worthTelling(back), back);
+  assert.match(describeRtrEvent(back), /Cloudflare.*went back to data that it had served before\. A router that follows it now holds an older set/);
   assert.equal(worthTelling(churn, MUTE), null);
   assert.equal(worthTelling({ ...churn, z: {} }, MUTE), null);
   assert.equal(worthTelling({ ...churn, z: { ...churn.z, aspa_withdrawn: 90 }, raw: { ...churn.raw, aspa_withdrawn: 400 } }, MUTE).trigger, 'aspa_withdrawn');   // the rest is still told

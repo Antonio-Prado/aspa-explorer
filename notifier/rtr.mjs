@@ -10,6 +10,8 @@ export const WHAT = {
   protocol_error: 'the cache sent records against the protocol',
   reset: 'the session was reset', error: 'an error in the session', disconnected: 'the session dropped', cache_not_ready: 'the cache was not ready',
   serial_stale: 'the cache answers but its serial has not advanced', serial_advancing: 'the serial of the cache advances again',
+  data_stale: 'the data of the cache has not changed for longer than it usually does',
+  data_regressed: 'the cache went back to data that it had served before',
 };
 export const MAX_LINES = 10;
 
@@ -44,6 +46,9 @@ function counts(a, k, muted) {
 // the anomaly as it should be told (its trigger the strongest measure that counts), or null when it is not worth a message
 export function worthTelling(a, muted = []) {
   if (a && a.category === 'structural' && muted.includes(a.trigger)) return null;
+  // the monitor's own word on data that stopped changing (RAVEN, from the fingerprint of the set): the stall of the serial, which
+  // this service already tells once for each stall (watchRtr), is the same fact, and one message is enough
+  if (a && a.category === 'structural' && a.trigger === 'data_stale') return null;
   if (!a || a.category !== 'statistical') return a;
   const z = a.z && typeof a.z === 'object' ? a.z : {};
   const keep = Object.keys(z).filter((k) => counts(a, k, muted)).sort((x, y) => z[y] - z[x]);
@@ -107,6 +112,7 @@ export const describeRtrEvent = (a) => {
   if (a.trigger === 'serial_stale') return `${sev} anomaly${where} at ${utc(a.at)}: ${what}${a.since ? ` since ${utc(a.since)}` : ''}${a.hours ? ` (more than ${a.hours} hours)` : ''}. The validator behind it, or the node of it that answers this session, has stopped publishing or stalled: its routers keep old data without an alarm.`;
   if (a.trigger === 'serial_advancing') return `${sev} anomaly${where} at ${utc(a.at)}: ${what}.`;
   if (a.trigger === 'protocol_error') return `${sev} anomaly${where} at ${utc(a.at)}: ${what}${a.repeated ? `, ${a.repeated} VRP${a.repeated === 1 ? '' : 's'} announced again while held` : ''}${a.unknown ? `${a.repeated ? ' and' : ','} ${a.unknown} record${a.unknown === 1 ? '' : 's'} withdrawn while not held` : ''}. A router that applies such a delta as it comes can lose valid records, or drops the session (RFC 8210, errors 6 and 7).`;
+  if (a.trigger === 'data_regressed') return `${sev} anomaly${where} at ${utc(a.at)}: ${what}. A router that follows it now holds an older set than before, as after a change of node behind an anycast address.`;
   if (a.category === 'structural') return `${sev} anomaly${where} at ${utc(a.at)}: ${what}. The session itself misbehaved.`;
   return `${sev} anomaly${where} at ${utc(a.at)}: ${what} was off the baseline${raw}. The sync was unlike the ones before it.`;
 };

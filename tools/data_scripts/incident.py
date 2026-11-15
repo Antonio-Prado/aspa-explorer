@@ -5,6 +5,7 @@ import lzma
 import json
 import os
 import signal
+import sys
 import pickle
 import ipaddress
 import functools
@@ -28,6 +29,11 @@ LINKS = os.environ.get("INCIDENTS_LINKS", "links/*.txt")               # X-11: t
 GC_INTERVAL_SECONDS = 600  # run garbage collection every 10 minutes of bgp time
 BASELINE_TTL_SECONDS = 2592000  # 30 days ttl for baselines
 PENDING_TTL_SECONDS = 86400  # a day for the more specifics that wait for their aggregate (with 30 days they were millions of entries)
+# the deaggregation detector: a more specific is this long or longer, an aggregate this long or shorter, and the covering
+# prefixes of a more specific are looked for from DEG_COVER_FROM bits up: (IPv4, IPv6)
+DEG_SPECIFIC_MIN = {4: 24, 6: 48}
+DEG_AGGREGATE_MAX = {4: 22, 6: 32}
+DEG_COVER_FROM = {4: 16, 6: 32}
 
 stop_requested = False
 
@@ -127,6 +133,7 @@ def check_route_leak(rec, rel, state, current_epoch):
 
 _ROA_CACHE = {}
 _ROA_OWNER = [None]
+_NO_HIJACK = (False, {})         # one object for every announcement that is in order: the cache holds a million of them
 
 
 def check_prefix_hijack(rec, roas, state, current_epoch):
@@ -150,12 +157,12 @@ def _check_prefix_hijack(rec, roas, state, current_epoch):
     origin = rec.get("origin")
     
     if not prefix_str or origin is None or not roas:
-        return False, {}
+        return _NO_HIJACK
 
     try:
         net = ipaddress.ip_network(prefix_str, strict=False)
     except (ValueError, IndexError):
-        return False, {}
+        return _NO_HIJACK
 
     # gather all covering roas before evaluating
     covering_roas = set()
@@ -198,7 +205,7 @@ def _check_prefix_hijack(rec, roas, state, current_epoch):
                     "prefix": prefix_str
                 }
 
-    return False, {}
+    return _NO_HIJACK
 
 
 """def check_as_path_manipulation(rec, rel, state, current_epoch):
@@ -225,13 +232,16 @@ def _check_prefix_hijack(rec, roas, state, current_epoch):
 
 @functools.lru_cache(maxsize=1_000_000)
 def _supernets(prefix_str):
-    """(version, length, canonical prefix, the covering prefixes from /16 (IPv4) or /32 (IPv6) up), or None."""
+    """(version, length, canonical prefix, the covering prefixes that can be an aggregate), or None. The covering prefixes go
+    from /16 to /22 (IPv4), and are the /32 alone (IPv6): the detector only keeps aggregates of DEG_AGGREGATE_MAX bits or less,
+    so a longer covering prefix can never be found, neither now nor when an aggregate comes later. They were all listed, up to
+    the prefix itself, and the more specifics that wait for an aggregate were kept under each: most of the memory of the state."""
     try:
         net = ipaddress.ip_network(prefix_str, strict=False)
     except (ValueError, IndexError):
         return None
-    lo = 16 if net.version == 4 else 32
-    return net.version, net.prefixlen, str(net), tuple(str(net.supernet(new_prefix=i)) for i in range(lo, net.prefixlen))
+    lo, hi = DEG_COVER_FROM[net.version], DEG_AGGREGATE_MAX[net.version]
+    return net.version, net.prefixlen, str(net), tuple(str(net.supernet(new_prefix=i)) for i in range(lo, min(net.prefixlen, hi + 1)))
 
 
 def check_deaggregation(rec, rel, roas, state, current_epoch):
@@ -249,7 +259,7 @@ def check_deaggregation(rec, rel, roas, state, current_epoch):
     deg_state = state.setdefault("prefix_history", {})
     pending_specs = state.setdefault("pending_specifics", {})
 
-    specific_min, aggregate_max = (24, 22) if version == 4 else (48, 32)
+    specific_min, aggregate_max = DEG_SPECIFIC_MIN[version], DEG_AGGREGATE_MAX[version]
     if plen >= specific_min:
         for supernet in supernets:
             if supernet in deg_state:
@@ -391,20 +401,26 @@ def flush_incident(out_f, inc, end_time, end_reason, end_msg=None):
 
 def prefix_index(state, active_incidents):
     """prefix -> the keys of the incidents that have it, so that a withdrawal finds its incidents without a look at all of them
-    (a run keeps thousands open). Built when first needed, and kept up to date where incidents are added and removed."""
+    (a run keeps thousands open). Built when first needed, and kept up to date where incidents are added and removed. The keys
+    of a prefix are a tuple (a set for each of a million prefixes was most of a gigabyte), and the index is not saved with the
+    state: it is built again from the open incidents."""
     idx = state.get("_idx")
     if idx is None:
         idx = state["_idx"] = {}
         for key, inc in active_incidents.items():
             for p in inc["prefixes"]:
-                idx.setdefault(p, set()).add(key)
+                keys = idx.get(p, ())
+                if key not in keys:
+                    idx[p] = keys + (key,)
     return idx
 
 
 def index_prefix(state, key, prefix):
     idx = state.get("_idx")
     if idx is not None:
-        idx.setdefault(prefix, set()).add(key)
+        keys = idx.get(prefix, ())
+        if key not in keys:
+            idx[prefix] = keys + (key,)
 
 
 def check_timeouts(active_incidents, current_epoch, timeout_seconds, out_f, state=None):
@@ -419,9 +435,12 @@ def check_timeouts(active_incidents, current_epoch, timeout_seconds, out_f, stat
         idx = state.get("_idx") if state else None
         if idx is not None:
             for p in inc["prefixes"]:
-                if p in idx:
-                    idx[p].discard(key)
-                    if not idx[p]:
+                keys = idx.get(p)
+                if keys and key in keys:
+                    left = tuple(k for k in keys if k != key)
+                    if left:
+                        idx[p] = left
+                    else:
                         del idx[p]
         flush_incident(out_f, inc, end_time=inc["last_time"], end_reason="timeout")
 
@@ -452,14 +471,16 @@ def garbage_collect_state(state, current_epoch):
 
     # clear old pending specifics to prevent memory leaks
     if "pending_specifics" in state:
-        for k in list(state["pending_specifics"].keys()):
-            # keep items newer than ttl
-            state["pending_specifics"][k] = {
-                key: ts for key, ts in state["pending_specifics"][k].items()
-                if current_epoch - ts <= PENDING_TTL_SECONDS
-            }
-            if not state["pending_specifics"][k]:
-                del state["pending_specifics"][k]
+        pending = state["pending_specifics"]
+        for k in list(pending.keys()):
+            # keep items newer than ttl (a dict with nothing to drop is left as it is: rebuilding a million of them every
+            # ten minutes of data was time and memory for nothing)
+            waiting = pending[k]
+            if waiting and current_epoch - min(waiting.values()) <= PENDING_TTL_SECONDS:
+                continue
+            waiting = pending[k] = {key: ts for key, ts in waiting.items() if current_epoch - ts <= PENDING_TTL_SECONDS}
+            if not waiting:
+                del pending[k]
 
 
 def withdrawal_window(epochs=None):
@@ -512,6 +533,10 @@ def add_message(inc, rec, ts_str, current_epoch):
 def process_record(rec, rel, roas, active_incidents, timeout_seconds, out_f, state, reg=None, links=frozenset()):
     msg_type = rec.get("type")
     prefix = rec.get("prefix")
+    if type(prefix) is str:
+        # one string object for each prefix: the open incidents, the index and the state of the detectors hold the same
+        # prefix millions of times, and every record brings a new copy of it
+        prefix = rec["prefix"] = sys.intern(prefix)
     # X-12: the peer as a session (collector, peer AS): the same AS at two collectors is two sessions
     peer = extra_detectors.session_of(rec)
     ts_str = rec.get("timestamp")
@@ -665,6 +690,50 @@ def process_record(rec, rel, roas, active_incidents, timeout_seconds, out_f, sta
                 add_message(inc, rec, ts_str, current_epoch)
 
 
+def load_state():
+    """The open incidents, the files already read and the state of the detectors, as the last run saved them (empty when
+    there is no state file, or it cannot be read)."""
+    active_incidents, processed_files, state = {}, set(), {}
+    if os.path.exists(STATE_FILE):
+        print(f"loading state from previous run ('{STATE_FILE}')...", flush=True)
+        try:
+            with open(STATE_FILE, "rb") as f:
+                saved_data = pickle.load(f)
+            active_incidents = saved_data.get("incidents", {})
+            processed_files = saved_data.get("processed_files", set())
+            state = saved_data.get("state", {})
+            del saved_data
+            pending = state.get("pending_specifics", {})
+            for k in list(pending):
+                # the covering prefixes that can never be an aggregate, kept by a state saved before they were left out
+                version = 6 if ":" in k else 4
+                try:
+                    useless = int(k.rsplit("/", 1)[1]) > DEG_AGGREGATE_MAX[version]
+                except (IndexError, ValueError):
+                    useless = False
+                if useless:
+                    del pending[k]
+                elif isinstance(pending[k], set):
+                    # a state saved before the dedup keeps the specifics as a set of (prefix, origin, epoch)
+                    pending[k] = {(sp, so): ts for sp, so, ts in pending[k]}
+            # the index of the prefixes is built again when it is needed (a state saved before kept it, as sets)
+            state.pop("_idx", None)
+            # and one saved before X-12 keeps the peers as AS numbers
+            extra_detectors.upgrade_sessions(active_incidents, state)
+        except Exception as e:
+            print(f"could not load state: {e}. starting fresh.")
+            active_incidents, processed_files, state = {}, set(), {}
+    return active_incidents, processed_files, state
+
+
+def save_state(active_incidents, processed_files, state):
+    """The state file, written whole and then renamed; the index of the prefixes is left out (load_state)."""
+    with open(STATE_FILE + ".tmp", "wb") as f:
+        pickle.dump({"incidents": active_incidents, "processed_files": processed_files,
+                     "state": {k: v for k, v in state.items() if k != "_idx"}}, f)
+    os.replace(STATE_FILE + ".tmp", STATE_FILE)
+
+
 def generate_incident_summary(output_file):
     base_name = os.path.basename(output_file).split('.')[0]
     summary_file = f"summary_{base_name}.txt"
@@ -717,26 +786,7 @@ def main():
         print(f"no files found matching {DATA_PATHS}. fallback to live stream processing mode.")
         file_list = ["live_data_stream.jsonl"]
 
-    active_incidents = {}
-    processed_files = set()
-    state = {}
-    
-    if os.path.exists(STATE_FILE):
-        print(f"loading state from previous run ('{STATE_FILE}')...", flush=True)
-        try:
-            with open(STATE_FILE, "rb") as f:
-                saved_data = pickle.load(f)
-                active_incidents = saved_data.get("incidents", {})
-                processed_files = saved_data.get("processed_files", set())
-                state = saved_data.get("state", {})
-                # a state saved before the dedup keeps the specifics as a set of (prefix, origin, epoch)
-                for k, v in state.get("pending_specifics", {}).items():
-                    if isinstance(v, set):
-                        state["pending_specifics"][k] = {(sp, so): ts for sp, so, ts in v}
-                # and one saved before X-12 keeps the peers as AS numbers
-                extra_detectors.upgrade_sessions(active_incidents, state)
-        except Exception as e:
-            print(f"could not load state: {e}. starting fresh.")
+    active_incidents, processed_files, state = load_state()
 
     total_processed = 0
 
@@ -752,8 +802,8 @@ def main():
         dynamic_output_file = f"incidents_{base_name}.jsonl"
         tmp_output_file = dynamic_output_file + ".tmp"
 
-        checkpoint_incidents = pickle.dumps(active_incidents)
-        checkpoint_state = pickle.dumps(state)
+        # what a file that fails or is interrupted added is taken back by reading the state file again: it is the state as it
+        # was before the file (two copies of it were kept in memory for the whole run, a gigabyte)
 
         print(f"\nprocessing '{filepath}' -> '{dynamic_output_file}'...", flush=True)
         open_fn = gzip.open if filepath.endswith(".gz") else open
@@ -784,8 +834,9 @@ def main():
             print(f"\nerror reading {filepath}: {e}")
             # the file is not marked as processed and is read again in the next run: what it added to the open incidents and to the
             # state so far is taken back, so that the records read before the error are not counted twice
-            active_incidents = pickle.loads(checkpoint_incidents)
-            state = pickle.loads(checkpoint_state)
+            active_incidents.clear()
+            state.clear()
+            active_incidents, _, state = load_state()
             if os.path.exists(tmp_output_file):
                 os.remove(tmp_output_file)
             if not os.path.exists(filepath):
@@ -796,20 +847,13 @@ def main():
             print(f"\nrun aborted mid-file! state was NOT saved for '{filepath}'.")
             if os.path.exists(tmp_output_file):
                 os.remove(tmp_output_file)
-            active_incidents = pickle.loads(checkpoint_incidents)
-            state = pickle.loads(checkpoint_state)
-            break
+            break                 # nothing is saved: the state file is still the one of before this file
         else:
             if os.path.exists(tmp_output_file):
                 os.replace(tmp_output_file, dynamic_output_file)
             processed_files.add(filepath)
             print(f"\nfinished '{filepath}'. saving {len(active_incidents)} active incidents...", flush=True)
-            with open(STATE_FILE, "wb") as f:
-                pickle.dump({
-                    "incidents": active_incidents,
-                    "processed_files": processed_files,
-                    "state": state
-                }, f)
+            save_state(active_incidents, processed_files, state)
 
             generate_incident_summary(dynamic_output_file)
 
@@ -821,8 +865,7 @@ def main():
                     flush_incident(final_f, inc, end_time=inc["last_time"], end_reason="dataset_end")
             active_incidents.clear()
             state.pop("_idx", None)
-            with open(STATE_FILE, "wb") as f:
-                pickle.dump({"incidents": active_incidents, "processed_files": processed_files, "state": state}, f)
+            save_state(active_incidents, processed_files, state)
 
         print(f"\nall files processed successfully! total raw updates evaluated: {total_processed}.")
 

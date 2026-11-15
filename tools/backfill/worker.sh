@@ -1,5 +1,5 @@
 #!/bin/sh
-# usage: worker.sh BASE NAME      (BASE/blocks-NAME.txt: a block for each line, "FROM TO [--until YYYY-MM-DDTHH:MM]")
+# usage: worker.sh BASE NAME      (BASE/blocks-NAME.txt: a block for each line, "FROM TO [--until YYYY-MM-DDTHH:MM] [--collector NAME]")
 # Reads the blocks of its list in order with backfill.py, at low priority; a block that stops (a download that fails, a
 # server that does not answer) is tried again after 15 minutes. One worker for each list: a second one ends at once.
 #   daemon -f /usr/bin/lockf -t 0 BASE/log/NAME.lock /bin/sh BASE/code/worker.sh BASE NAME

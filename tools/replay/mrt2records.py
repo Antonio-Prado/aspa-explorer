@@ -46,12 +46,12 @@ def entries(reader, out):
         epoch = int(first(d["timestamp"]))
         if "peer_as" not in d:
             # an entry that the parser could not read in full (a message that does not parse): kept as a record of its own
-            out.append(json.dumps({"type": "M", "collector": "rrc00", "timestamp": stamp(epoch), "length": d.get("length")}) + "\n")
+            out.append(json.dumps({"type": "M", "collector": COLLECTOR, "timestamp": stamp(epoch), "length": d.get("length")}) + "\n")
             continue
         peer = int(d["peer_as"])
         if st in (0, 5):        # state change
             ns = d.get("new_state") or {}
-            out.append(json.dumps({"type": "S", "collector": "rrc00", "timestamp": stamp(epoch), "peer": peer,
+            out.append(json.dumps({"type": "S", "collector": COLLECTOR, "timestamp": stamp(epoch), "peer": peer,
                                    "state": str(list(ns.values())[0]).lower() if ns else None}) + "\n")
             continue
         bm = d.get("bgp_message")
@@ -73,12 +73,12 @@ def entries(reader, out):
             elif at == 15:
                 withdrawn += prefixes(attr["value"].get("withdrawn_routes"))
         for p in withdrawn:
-            out.append(json.dumps({"type": "W", "collector": "rrc00", "timestamp": stamp(epoch), "prefix": p, "peer": peer,
+            out.append(json.dumps({"type": "W", "collector": COLLECTOR, "timestamp": stamp(epoch), "prefix": p, "peer": peer,
                                    "origin": None, "flag": None, "compressed_path": None}) + "\n")
         if ann and path and not has_set:
             cp, flag = compress(path)
             for p in ann:
-                out.append(json.dumps({"type": "A", "collector": "rrc00", "timestamp": stamp(epoch), "prefix": p, "peer": peer,
+                out.append(json.dumps({"type": "A", "collector": COLLECTOR, "timestamp": stamp(epoch), "prefix": p, "peer": peer,
                                        "origin": cp[-1], "flag": flag, "compressed_path": cp}) + "\n")
 
 
@@ -92,6 +92,7 @@ PAD = bytes(16)
 # the attributes that mrtparse reads as a fixed number of bytes, whatever their length says: the two must agree
 FIXED = {1: (1,), 4: (4,), 5: (4,), 7: (6, 8), 9: (4,), 18: (8,)}
 MULTIPLE = {8: 4, 10: 4, 16: 8, 32: 12}     # read in steps of this many bytes
+COLLECTOR = "rrc00"                # the collector written in every record: --collector NAME (use_collector)
 W_HEAD = '{"type": "W", "collector": "rrc00", "timestamp": "'
 A_HEAD = '{"type": "A", "collector": "rrc00", "timestamp": "'
 W_TAIL = ', "origin": null, "flag": null, "compressed_path": null}\n'
@@ -270,7 +271,7 @@ def one(buf, p, q, when, out):
         entries(mrtparse.Reader(io.BytesIO(buf[p:q])), out)
     except Exception:
         del out[mark:]
-        out.append(json.dumps({"type": "M", "collector": "rrc00", "timestamp": when, "length": q - p - 12}) + "\n")
+        out.append(json.dumps({"type": "M", "collector": COLLECTOR, "timestamp": when, "length": q - p - 12}) + "\n")
     finally:
         signal.setitimer(signal.ITIMER_REAL, 0)
     return True
@@ -310,8 +311,19 @@ def convert(path, out, only_mrtparse=False):
     return n + len(lines), left
 
 
+def use_collector(name):
+    """The collector of the files that are read (the records of rrc00 when it is not called)."""
+    global COLLECTOR, W_HEAD, A_HEAD
+    COLLECTOR = name
+    W_HEAD = '{"type": "W", "collector": ' + json.dumps(name) + ', "timestamp": "'
+    A_HEAD = '{"type": "A", "collector": ' + json.dumps(name) + ', "timestamp": "'
+
+
 if __name__ == "__main__":
     args = sys.argv[1:]
+    if args[:1] == ["--collector"]:
+        use_collector(args[1])
+        args = args[2:]
     only = args[:1] == ["--mrtparse"]
     if only:
         args = args[1:]

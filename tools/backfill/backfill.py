@@ -5,12 +5,14 @@ BASE/archive. The days of a block are read in order, with the state of incident.
 nightly job; a block starts with an empty state, so it reads some days before its first one only to fill the state
 (the incidents written while it does are thrown away). The blocks can be run in any order: the newest first, to go back.
 
-usage: backfill.py BASE FROM TO [--warmup N] [--until YYYY-MM-DDTHH:MM] [--limit-files N]
+usage: backfill.py BASE FROM TO [--warmup N] [--until YYYY-MM-DDTHH:MM] [--limit-files N] [--collector NAME]
   BASE    working directory (code/ with incident.py, extra_detectors.py, mrt2records.py, rib-links.mjs, mrt.mjs; venv/ with mrtparse)
   FROM TO first and last day of the block (YYYY-MM-DD, UTC)
   --warmup N     days read before FROM to fill the state (default 2)
   --until T      a last, partial day after TO: the update files before T (to meet the first record of the recorder)
   --limit-files N  only the first N update files of each day (a test)
+  --collector NAME another collector of RIPE RIS than rrc00 (rrc06, rrc10, ...): its update files and its table; each
+                   collector has a working directory (BASE) of its own
 A day that is done is not read again: a block that was stopped starts again from the day it was reading. `touch BASE/STOP`
 ends every block after the day it is reading. Each day adds a line to BASE/days.jsonl (incidents, files, notes, seconds).
 The downloaded files come from outside: they stay under BASE/blocks/<block>/tmp, and the parser runs with python -I."""
@@ -18,7 +20,8 @@ import argparse, bz2, gzip, json, lzma, os, shutil, subprocess, sys, time, urlli
 from datetime import date, datetime, timedelta, timezone
 
 UA = "aspa-explorer-backfill"
-RIS = "https://data.ris.ripe.net/rrc00"
+RIS = "https://data.ris.ripe.net"
+COLLECTOR = "rrc00"                # --collector NAME: another collector of RIPE RIS, in a working directory of its own
 CAIDA = "https://publicdata.caida.org/datasets/as-relationships/serial-2"
 ROAS = "https://ftp.ripe.net/rpki"
 TALS = ("afrinic", "apnic", "arin", "lacnic", "ripencc")
@@ -38,7 +41,7 @@ def fetch(url, path, tries=4):
             return True
         if os.path.exists(path + ".part"):
             os.remove(path + ".part")
-        if r.returncode == 22 and "404" in r.stderr:
+        if "404" in r.stderr:            # curl says 22, or 56 when the server ends the answer early: either way it has no such file
             return False
         time.sleep(20 * (i + 1))
     raise RuntimeError(f"{url}: {r.stderr.strip()}")
@@ -87,37 +90,44 @@ def day_inputs(base, work, tmp, d):
         os.remove(link)
     os.symlink(p, link)
 
-    # the ROAs: the daily export of the five trust anchors that RIPE NCC keeps, as the JSON that incident.py reads
-    roas, missing = [], []
-    for tal in TALS:
-        got = False
-        for back in range(8):
-            x = d - timedelta(days=back)
-            p = os.path.join(tmp, f"roas-{tal}.csv.xz")
-            if fetch(f"{ROAS}/{tal}.tal/{x:%Y/%m/%d}/roas.csv.xz", p):
-                try:
-                    rows = lzma.open(p, "rt", encoding="utf-8", errors="replace").read().splitlines()[1:]
-                except (lzma.LZMAError, EOFError):
-                    continue
-                for row in rows:
-                    c = row.split(",")
-                    if len(c) >= 4 and c[1].startswith("AS"):
-                        roas.append({"asn": c[1], "prefix": c[2], "maxLength": int(c[3]) if c[3].isdigit() else None})
-                got = len(rows) > 0
-                if got:
-                    if back:
-                        notes.append(f"roas {tal} of {x}")
-                    break
-        if not got:
-            missing.append(tal)
+    # the ROAs: the daily export of the five trust anchors that RIPE NCC keeps, as the JSON that incident.py reads. They are
+    # written as they are read (a million of them, kept as a list, stayed in the memory of this process for the whole day)
+    n_roas, missing = 0, []
+    os.makedirs(os.path.join(work, "roas"), exist_ok=True)
+    roa_tmp = os.path.join(work, "roas", "current.json.xz.tmp")
+    with lzma.open(roa_tmp, "wt", encoding="utf-8", preset=1) as out:
+        out.write('{"roas": [')
+        for tal in TALS:
+            got = False
+            for back in range(8):
+                x = d - timedelta(days=back)
+                p = os.path.join(tmp, f"roas-{tal}.csv.xz")
+                if fetch(f"{ROAS}/{tal}.tal/{x:%Y/%m/%d}/roas.csv.xz", p):
+                    try:
+                        with lzma.open(p, "rt", encoding="utf-8", errors="replace") as f:
+                            rows = f.read().splitlines()[1:]
+                    except (lzma.LZMAError, EOFError):
+                        continue
+                    for row in rows:
+                        c = row.split(",")
+                        if len(c) >= 4 and c[1].startswith("AS"):
+                            out.write((", " if n_roas else "") + json.dumps({"asn": c[1], "prefix": c[2], "maxLength": int(c[3]) if c[3].isdigit() else None}))
+                            n_roas += 1
+                    got = len(rows) > 0
+                    del rows
+                    if got:
+                        if back:
+                            notes.append(f"roas {tal} of {x}")
+                        break
+            if not got:
+                missing.append(tal)
+        out.write("]}")
     if missing:
         notes.append("no roas of " + " ".join(missing))
-    if not roas:
+    if not n_roas:
+        os.remove(roa_tmp)
         raise RuntimeError(f"no ROAs for {d}")
-    os.makedirs(os.path.join(work, "roas"), exist_ok=True)
-    with lzma.open(os.path.join(work, "roas", "current.json.xz.tmp"), "wt", encoding="utf-8", preset=1) as f:
-        json.dump({"roas": roas}, f)
-    os.replace(os.path.join(work, "roas", "current.json.xz.tmp"), os.path.join(work, "roas", "current.json.xz"))
+    os.replace(roa_tmp, os.path.join(work, "roas", "current.json.xz"))
 
     # the delegation files of the five RIRs (a file that is missing: the one of a day before, or the one already there)
     deleg = os.path.join(work, "delegations")
@@ -142,15 +152,17 @@ def day_inputs(base, work, tmp, d):
     links = os.path.join(work, "links")
     os.makedirs(links, exist_ok=True)
     bview = os.path.join(tmp, "bview.gz")
-    if fetch(f"{RIS}/{d:%Y.%m}/bview.{d:%Y%m%d}.0000.gz", bview):
-        r = subprocess.run(["node", os.path.join(base, "code", "rib-links.mjs"), bview, os.path.join(links, "rrc00.txt")],
-                           capture_output=True, text=True)
+    if fetch(f"{RIS}/{COLLECTOR}/{d:%Y.%m}/bview.{d:%Y%m%d}.0000.gz", bview):
+        # with Node.js the script of the site, without it the same reading in Python (rib_links.py)
+        reader = (["node", os.path.join(base, "code", "rib-links.mjs")] if shutil.which("node")
+                  else [os.path.join(base, "venv", "bin", "python"), "-I", os.path.join(base, "code", "rib_links.py")])
+        r = subprocess.run(reader + [bview, os.path.join(links, f"{COLLECTOR}.txt")], capture_output=True, text=True)
         if r.returncode:
             notes.append("links of the table not read: " + r.stderr.strip()[-200:])
         os.remove(bview)
     else:
         notes.append("no table of the day: the links of before")
-    return notes, len(roas)
+    return notes, n_roas
 
 
 def day_records(base, tmp, d, out, until=None, limit=None):
@@ -168,14 +180,14 @@ def day_records(base, tmp, d, out, until=None, limit=None):
     cfg = os.path.join(tmp, "curl.cfg")
     with open(cfg, "w") as f:
         for n in names:
-            f.write(f'url = "{RIS}/{d:%Y.%m}/{n}"\noutput = "{os.path.join(dl, n)}"\n')
+            f.write(f'url = "{RIS}/{COLLECTOR}/{d:%Y.%m}/{n}"\noutput = "{os.path.join(dl, n)}"\n')
     for attempt in range(4):
         todo = [n for n in names if not os.path.exists(os.path.join(dl, n))]
         if not todo:
             break
         with open(cfg, "w") as f:
             for n in todo:
-                f.write(f'url = "{RIS}/{d:%Y.%m}/{n}"\noutput = "{os.path.join(dl, n)}"\n')
+                f.write(f'url = "{RIS}/{COLLECTOR}/{d:%Y.%m}/{n}"\noutput = "{os.path.join(dl, n)}"\n')
         subprocess.run(["curl", "-sS", "-f", "-A", UA, "--retry", "3", "--max-time", "600", "--parallel", "--parallel-max", "2",
                         "-K", cfg], capture_output=True, text=True)
         time.sleep(5 * attempt)
@@ -184,7 +196,8 @@ def day_records(base, tmp, d, out, until=None, limit=None):
         shutil.rmtree(dl)
         return 0, len(names)
     py = os.path.join(base, "venv", "bin", "python")
-    r = subprocess.run([py, "-I", os.path.join(base, "code", "mrt2records.py"), out + ".tmp.gz"] + have, capture_output=True, text=True)
+    r = subprocess.run([py, "-I", os.path.join(base, "code", "mrt2records.py"), "--collector", COLLECTOR, out + ".tmp.gz"] + have,
+                       capture_output=True, text=True)
     if r.returncode:
         raise RuntimeError(f"{d}: mrt2records: {r.stderr.strip()[-400:]}")
     os.replace(out + ".tmp.gz", out)
@@ -198,7 +211,10 @@ def main():
     ap.add_argument("--warmup", type=int, default=2)
     ap.add_argument("--until")
     ap.add_argument("--limit-files", type=int)
+    ap.add_argument("--collector", default="rrc00")
     a = ap.parse_args()
+    global COLLECTOR
+    COLLECTOR = a.collector
     base = os.path.abspath(a.base)
     first, last = date.fromisoformat(a.first), date.fromisoformat(a.last)
     until = datetime.fromisoformat(a.until) if a.until else None
@@ -249,7 +265,7 @@ def main():
                 json.dump(done, f)
             os.replace(done_file + ".tmp", done_file)
             with open(os.path.join(base, "days.jsonl"), "a") as f:
-                f.write(json.dumps({"day": key, "block": f"{first}_{last}", "warmup": warm, "partial": bool(partial), "incidents": 0,
+                f.write(json.dumps({"day": key, "block": f"{first}_{last}", "collector": COLLECTOR, "warmup": warm, "partial": bool(partial), "incidents": 0,
                                     "update_files": 0, "missing_files": n_missing, "roas": n_roas, "notes": notes}) + "\n")
             log(f"{d}: no update files, day skipped")
             continue
@@ -282,7 +298,7 @@ def main():
         with open(done_file + ".tmp", "w") as f:
             json.dump(done, f)
         os.replace(done_file + ".tmp", done_file)
-        row = {"day": key, "block": f"{first}_{last}", "warmup": warm, "partial": bool(partial), "incidents": n_inc, "update_files": n_files,
+        row = {"day": key, "block": f"{first}_{last}", "collector": COLLECTOR, "warmup": warm, "partial": bool(partial), "incidents": n_inc, "update_files": n_files,
                "missing_files": n_missing, "roas": n_roas, "notes": notes,
                "seconds": {"inputs": round(t1 - t0), "records": round(t2 - t1), "incidents": round(t3 - t2), "all": round(time.time() - t0)}}
         with open(os.path.join(base, "days.jsonl"), "a") as f:

@@ -172,7 +172,9 @@ export function summarise(records, now = Date.now(), metrics = null) {
     series: { interval: 'hour', columns: ['time', 'vrp_total', 'aspa_total', 'vrp_changes', 'aspa_changes'], points },
     anomalies: { total: anomalies.length, high: count('high'), medium: count('medium'), last_7_days: anomalies.filter((a) => a.t > now - 7 * DAY).length, probes, list },
     events: events.slice(-MAX_EVENTS).reverse().map((e) => ({
-      at: iso(e.t), type: e.event_type, reason: (e.reset_reason || e.disconnect_reason || e.error_text || null) && String(e.reset_reason || e.disconnect_reason || e.error_text).replace(/\0+$/, ''),
+      // (the records of the monitor on stale data, RAVEN after 0.4.0: `stale` says whether the cache was connected, `stale_resolved` how it ended)
+      at: iso(e.t), type: e.event_type, reason: ((e.reset_reason || e.disconnect_reason || e.error_text || null) && String(e.reset_reason || e.disconnect_reason || e.error_text).replace(/\0+$/, ''))
+        || (e.resolution ? String(e.resolution).replace(/_/g, ' ') : e.event_type === 'stale' && e.cache_state ? `cache ${e.cache_state}` : null),
       ...((e.event_type === 'error' && e.error_code === 4) || e.event_type === 'version_downgrade' ? { probe: true } : {}),
       ...(e.error_origin === 'client' ? { found_by_monitor: true, count: nz(e.error_count) || 1 } : {}),
       ...(Number.isFinite(e.error_code) ? { code: e.error_code } : {}), ...(e.proto_version ? { protocol: e.proto_version } : {}),

@@ -9,9 +9,10 @@
   const WHAT = {
     interval_since_ns: 'the time since the previous sync', sync_duration_ns: 'the duration of the sync',
     vrp_announced: 'the VRPs announced', vrp_withdrawn: 'the VRPs withdrawn', aspa_announced: 'the ASPAs announced', aspa_withdrawn: 'the ASPAs withdrawn',
-    correlated: 'several measures at once', protocol_error: 'records against the protocol', reset: 'the session was reset', error: 'an error in the session', disconnected: 'the session dropped', cache_not_ready: 'the cache was not ready',
+    correlated: 'several measures at once', protocol_error: 'records against the protocol', data_stale: 'data unchanged for longer than usual', data_regressed: 'back to data served before', reset: 'the session was reset', error: 'an error in the session', disconnected: 'the session dropped', cache_not_ready: 'the cache was not ready',
   };
-  const EVENT = { connected: 'Connected', disconnected: 'Disconnected', reset: 'Session reset', error: 'Error', cache_not_ready: 'Cache not ready' };
+  const EVENT = { connected: 'Connected', disconnected: 'Disconnected', reset: 'Session reset', error: 'Error', cache_not_ready: 'Cache not ready',
+    stale: 'Data stopped changing', stale_resolved: 'Data changing again', data_regressed: 'Back to data served before' };
   const MIN = 60e3, HOUR = 3600e3;
   const ago = (ms) => (ms < 2 * MIN ? 'just now' : ms < 90 * MIN ? `${Math.round(ms / MIN)} min ago` : ms < 48 * HOUR ? `${Math.round(ms / HOUR)} h ago` : `${Math.round(ms / 86400e3)} days ago`);
   const value = (k, v) => (k.endsWith('_ns') ? `${fmt.format(Math.round(v / 1e9))} s` : fmt.format(v));
