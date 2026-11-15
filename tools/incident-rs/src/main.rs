@@ -3,6 +3,7 @@
 // that group them are in life.rs.
 //   incident-rs run [--flush-open]            in the working directory of incident.py, in its place (life.rs)
 //   incident-rs incidents ... IN OUT          one file (life.rs)
+//   incident-rs import-state DUMP.jsonl [STATE]   the state of incident.py, as ref/export_state.py writes it, becomes the state of `run`
 //   incident-rs detections [--detectors LIST] [--caida FILE.bz2] [--roas FILE.json.xz] [--delegations DIR] [--links FILE] IN.jsonl.gz OUT.tsv
 // The detectors: flap (VOL-FO, with the peers that see the prefix flap), rlk, prh, deg (another origin under an aggregate),
 // ab (space that is not allocated), asm (the AS numbers and the links of the path), degs (deaggregation by scale),
@@ -31,6 +32,7 @@ fn main() {
     let args: Vec<String> = std::env::args().skip(1).collect();
     if args.first().map(String::as_str) == Some("incidents") { return life::run(&args[1..]); }
     if args.first().map(String::as_str) == Some("run") { return life::run_dir(&args[1..]); }
+    if args.first().map(String::as_str) == Some("import-state") { return life::import_state(&args[1..]); }
     if args.first().map(String::as_str) != Some("detections") {
         eprintln!("usage: incident-rs detections [--detectors {}] [--caida FILE.bz2] [--roas FILE.json.xz] [--delegations DIR] [--links FILE] IN.jsonl.gz OUT.tsv", ALL);
         std::process::exit(2);

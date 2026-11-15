@@ -47,6 +47,11 @@ impl Vol {
         if !w.fired && w.n >= VOL_AC_UPDATES && w.prefixes.len() >= VOL_AC_PREFIXES && w.peers.len() >= VOL_AC_PEERS { w.fired = true; return Some((w.n, w.peers.len())); }
         None
     }
+    // from a state of incident.py
+    pub fn import_burst(&mut self, key: Key, start: i64, last: i64, n: u32, fired: bool) { self.bursts.insert(key, Burst { start, last, n, fired }); }
+    pub fn import_churn(&mut self, origin: u64, start: i64, n: u32, prefixes: Vec<Key>, peers: Vec<u64>, fired: bool) {
+        self.churn.insert(origin, Window { start, n, prefixes: prefixes.into_iter().collect(), peers: peers.into_iter().collect(), fired });
+    }
     pub fn collect_garbage(&mut self, epoch: i64) {
         self.bursts.retain(|_, b| epoch - b.last <= VOL_DC_GAP);
         self.bursts.shrink_to_fit();

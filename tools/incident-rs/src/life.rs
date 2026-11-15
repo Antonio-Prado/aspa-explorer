@@ -499,3 +499,74 @@ pub fn run_dir(args: &[String]) {
     }
     println!("\nall files processed successfully! total raw updates evaluated: {}.", total);
 }
+
+// The state of incident.py, as ref/export_state.py writes it (one JSON array a line: what it is, then its values),
+// becomes the state that `run` starts from.
+pub fn import_state(args: &[String]) {
+    if args.is_empty() || args.len() > 2 { eprintln!("usage: incident-rs import-state DUMP.jsonl [STATE]"); std::process::exit(2); }
+    let target = args.get(1).map(String::as_str).unwrap_or(STATE_FILE);
+    let mut e = Engine::default();
+    let int = |v: &Value| v.as_i64().expect("a number");
+    let nat = |v: &Value| v.as_u64().expect("a number");
+    let text = |v: &Value| v.as_str().expect("a text").to_string();
+    let collector = |v: &Value| v.as_str().unwrap_or("None").to_string();
+    let key = |v: &Value| { let t = v.as_str().expect("a prefix"); Key::of(t, Net::parse(t).as_ref()) };
+    let day = |v: &Value| record::epoch_of(&format!("{} 00:00:00", v.as_str().expect("a day"))).div_euclid(86400);
+    let (mut lines, mut left_out) = (0u64, 0u64);
+    for line in BufReader::with_capacity(1 << 20, File::open(&args[0]).expect("the dump")).lines() {
+        let line = line.expect("read");
+        let row: Vec<Value> = serde_json::from_str(&line).expect("a line of the dump");
+        lines += 1;
+        match row[0].as_str().expect("the name of the part") {
+            "processed" => e.processed = row[1].as_array().unwrap().iter().map(text).collect(),
+            "last_gc" => e.last_gc = row[1].as_i64(),
+            "incident" => {
+                let a = row[1].as_array().unwrap();
+                let actor = match a[0].as_str().unwrap() {
+                    "dc" => Actor::Dc(key(&a[1])),
+                    "vol" => Actor::Vol(key(&a[1])),
+                    "atr" => Actor::Atr(e.atr.session(&collector(&a[1]), nat(&a[2]))),
+                    _ => Actor::Other(text(&a[1])),
+                };
+                let kind = text(&row[2]);
+                e.open.seq += 1;
+                let inc = Incident { kind: kind.clone(), actor: actor.clone(), seq: e.open.seq,
+                    prefixes: row[3].as_array().unwrap().iter().map(key).collect(),
+                    peers: row[4].as_array().unwrap().iter().map(|p| e.atr.session(&collector(&p[0]), nat(&p[1]))).collect(),
+                    start_time: text(&row[5]), start_epoch: int(&row[6]), last_time: text(&row[7]), last_epoch: int(&row[8]), total_updates: nat(&row[9]),
+                    details: serde_json::from_str(row[10].as_str().unwrap()).expect("the details"),
+                    messages: row[11].as_array().unwrap().iter().map(|m| m.as_str().unwrap().into()).collect() };
+                let prefixes: Vec<Key> = inc.prefixes.iter().cloned().collect();
+                e.open.slots.push(Some(inc));
+                let id = (e.open.slots.len() - 1) as u32;
+                e.open.by_actor.insert(actor, id);
+                if kind != "VOL" && kind != "ATR" { for p in &prefixes { e.open.index(id, p); } }
+            }
+            "flap" => match Net::parse(row[1].as_str().unwrap()) {
+                Some(net) => e.flaps.import(&net, &collector(&row[2]), nat(&row[3]), row[4].as_array().unwrap().iter().map(int).collect()),
+                None => left_out += 1,
+            },
+            "flap_peers" => e.flaps.import_peers(key(&row[1]), row[2].as_array().unwrap().iter().map(|p| (nat(&p[0]), int(&p[1]))).collect()),
+            "withdrawals" => { let s = e.atr.session(&collector(&row[1]), nat(&row[2])); e.atr.import_window(s, row[3].as_array().unwrap().iter().map(|p| (int(&p[0]), nat(&p[1]) as u32)).collect(), nat(&row[4]) as u32, int(&row[5])); }
+            "session" => { let s = e.atr.session(&collector(&row[1]), nat(&row[2])); e.atr.state(s, int(&row[3]), row[4].as_str().unwrap_or("None")); }
+            "aggregate" => match (Net::parse(row[1].as_str().unwrap()), row[2].as_u64()) { (Some(net), Some(origin)) => e.deg.import_aggregate(net, origin, int(&row[3])), _ => left_out += 1 },
+            "pending" => match Net::parse(row[1].as_str().unwrap()) {
+                Some(cover) => for w in row[2].as_array().unwrap() { match w[1].as_u64() { Some(origin) => e.deg.import_pending(cover, w[0].as_str().unwrap(), origin, int(&w[2])), None => left_out += 1 } },
+                None => left_out += 1,
+            },
+            "scale" => {
+                let v6 = int(&row[2]) == 6;
+                let number: u128 = row[3].as_str().unwrap().parse().expect("the aggregate");
+                let aggregate = if v6 { Net { addr: number << 96, len: 32, v6 } } else { Net { addr: number << 16, len: 16, v6 } };
+                e.scale.import_bucket(nat(&row[1]), aggregate, day(&row[4]), nat(&row[5]) as u32, nat(&row[6]) as u8, row[7].as_array().unwrap().iter().map(|p| (key(&p[0]), p[1].as_u64().unwrap_or(0))).collect());
+            }
+            "scale_origin" => e.scale.import_origin(nat(&row[1]), day(&row[2]), nat(&row[3]) as u32, nat(&row[4]) as u32, nat(&row[5]) as u8),
+            "scale_history" => e.scale.import_history(nat(&row[1]), row[2].as_array().unwrap().iter().map(|n| nat(n) as u32).collect()),
+            "burst" => e.vol.import_burst(key(&row[1]), int(&row[2]), int(&row[3]), nat(&row[4]) as u32, int(&row[5]) != 0),
+            "churn" => e.vol.import_churn(nat(&row[1]), int(&row[2]), nat(&row[3]) as u32, row[4].as_array().unwrap().iter().map(key).collect(), row[5].as_array().unwrap().iter().map(nat).collect(), int(&row[6]) != 0),
+            other => { eprintln!("a part of the state that is not known: {}", other); std::process::exit(1); }
+        }
+    }
+    e.save(target);
+    println!("{} lines read, {} open incidents, {} entries left out (a prefix or an origin that is not one) -> {}", lines, e.open_incidents(), left_out, target);
+}

@@ -43,6 +43,13 @@ impl Flaps {
         peers.retain(|(_, t)| epoch - *t <= VOL_FO_WINDOW);
         if peers.len() < VOL_FO_MIN_PEERS { 0 } else { peers.len() }
     }
+    // from a state of incident.py
+    pub fn import(&mut self, net: &Net, collector: &str, peer: u64, codes: Vec<i64>) {
+        let c = match self.collectors.iter().position(|x| x == collector) { Some(i) => i, None => { self.collectors.push(collector.to_string()); self.collectors.len() - 1 } } as u16;
+        let key = Key { addr: net.addr, peer: peer as u32, collector: c, len: net.len, v6: net.v6 };
+        self.table.insert(key, if codes.len() == 1 { Events::One(codes[0]) } else { Events::Many(codes) });
+    }
+    pub fn import_peers(&mut self, prefix: Prefix, peers: Vec<(u64, i64)>) { self.peers.insert(prefix, peers); }
     pub fn collect_garbage(&mut self, epoch: i64) {
         self.peers.retain(|_, v| v.iter().map(|(_, t)| *t).max().is_some_and(|t| epoch - t <= VOL_FO_WINDOW));
         self.table.retain(|_, v| { let last = match v { Events::One(c) => *c, Events::Many(l) => *l.last().unwrap() }; epoch - (last >> 1) <= VOL_FO_WINDOW });

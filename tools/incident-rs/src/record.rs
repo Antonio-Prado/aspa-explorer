@@ -60,7 +60,7 @@ impl Clock {
     }
 }
 
-fn epoch_of(s: &str) -> i64 {
+pub fn epoch_of(s: &str) -> i64 {
     let b = s.as_bytes();
     if b.len() < 19 { return 0; }
     let num = |a: usize, n: usize| -> Option<i64> {

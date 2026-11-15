@@ -39,6 +39,8 @@ impl Atr {
     pub fn note(&self, s: Session, epoch: i64) -> Option<&str> {
         self.states.get(&s).filter(|(t, _)| (0..=SESSION_EVENT_SECONDS).contains(&(epoch - *t))).map(|(_, st)| st.as_str())
     }
+    // from a state of incident.py
+    pub fn import_window(&mut self, s: Session, by_second: Vec<(i64, u32)>, count: u32, last: i64) { self.windows.insert(s, Withdrawals { by_second, count, last }); }
     pub fn collect_garbage(&mut self, epoch: i64) {
         self.windows.retain(|_, w| epoch - w.last <= WINDOW);
         self.states.retain(|_, (t, _)| epoch - *t <= SESSION_EVENT_SECONDS);

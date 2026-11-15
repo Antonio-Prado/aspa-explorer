@@ -62,6 +62,14 @@ impl Deg {
         }
         None
     }
+    // from a state of incident.py
+    pub fn import_aggregate(&mut self, net: Net, origin: u64, ts: i64) { if net.len >= limits(net.v6).2 { self.aggregates.insert(net, (origin, ts)); } }
+    pub fn import_pending(&mut self, cover: Net, text: &str, origin: u64, ts: i64) {
+        if let Some(net) = Net::parse(text) {
+            let odd = if net.text() == text { None } else { Some(text.into()) };
+            self.pending.entry(cover).or_default().insert(Waiting { net, origin, odd }, ts);
+        }
+    }
     pub fn collect_garbage(&mut self, epoch: i64) {
         self.aggregates.retain(|_, (_, ts)| epoch - *ts <= BASELINE_TTL_SECONDS);
         self.pending.retain(|_, waiting| {

@@ -67,6 +67,12 @@ impl Scale {
             }
         }
     }
+    // from a state of incident.py
+    pub fn import_bucket(&mut self, origin: u64, aggregate: Net, day: i64, n: u32, fired: u8, p: Vec<(Key, u64)>) {
+        self.buckets.insert((origin, aggregate), Bucket { day, p: p.into_iter().collect(), n, fired });
+    }
+    pub fn import_origin(&mut self, origin: u64, day: i64, n: u32, n4: u32, fired: u8) { self.origins.insert(origin, Origin { day, n, n4, fired }); }
+    pub fn import_history(&mut self, origin: u64, history: Vec<u32>) { self.history.insert(origin, history); }
     pub fn collect_garbage(&mut self, epoch: i64) {
         let day = epoch.div_euclid(86400);
         self.buckets.retain(|_, b| b.day == day);
