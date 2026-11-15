@@ -9,6 +9,11 @@ A few numbers were deployed and folded into the next release without a tag of th
 
 ## [Unreleased]
 
+## [1.81.0] - 2026-11-15
+
+### Changed
+- Alerts on the state of the service and on the RTR sessions are for whoever runs the site, and nobody else can subscribe to them: the form is gone from the status page, with its link at the foot of every page, and the notifier refuses the topic `status` (403) unless the operator opens it (`NOTIFY_STATUS_OPEN=yes`). The subscriptions to an AS are as before: they bring the changes of that AS and nothing about the service. A subscription to the status that exists goes on.
+
 ## [1.80.1] - 2026-11-15
 
 ### Changed

@@ -19,6 +19,8 @@
 //   NOTIFY_PORT      8090 (127.0.0.1)
 //   NOTIFY_SOCKET    a Unix socket to listen on instead of the port (the rc script sets it): only nginx and root can reach it
 //   NOTIFY_POLL      600 seconds between polls
+//   NOTIFY_STATUS_OPEN  yes: the topic "status" (state of the service, RTR anomalies) takes new subscriptions. Not set, it is closed:
+//                    start the service with it for the time it takes the operator to subscribe and confirm an address, then without
 import http from 'node:http';
 import { readFileSync, existsSync, writeFileSync, chmodSync, rmSync } from 'node:fs';
 import { randomBytes } from 'node:crypto';
@@ -103,7 +105,7 @@ async function sendConfirmation({ to, asn, token, site, leaks, invalid }) {
 }
 
 const api = makeApi({
-  store, key, site: SITE, sendConfirmation, log, mailDomainOk: (domain) => mailDomainOk(domain),
+  store, key, site: SITE, sendConfirmation, log, mailDomainOk: (domain) => mailDomainOk(domain), statusOpen: env('NOTIFY_STATUS_OPEN', '') === 'yes',
   verifyWebhook: (url, payload, secret, headers) => post(url, payload, { secret, headers }),
 });
 

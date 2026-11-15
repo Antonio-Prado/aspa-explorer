@@ -1,5 +1,5 @@
 // The HTTP side of the notifier, behind nginx on the loopback interface:
-//   POST /api/v1/subscriptions               {kind: "email"|"webhook", target, asn, leaks?: true, invalid?: 5..100000}  or  {kind, target, topic: "status"}
+//   POST /api/v1/subscriptions               {kind: "email"|"webhook", target, asn, leaks?: true, invalid?: 5..100000}  or  {kind, target, topic: "status"} (the operator, when open)
 //   POST /api/v1/subscriptions/confirm       {token}
 //   POST /api/v1/subscriptions/unsubscribe   {token}   (also ?token= with a form body, for List-Unsubscribe-Post)
 //   GET  /api/v1/verify?path=3356+1299+680&direction=upstream|downstream   the verdict of the ASPAs on an AS path (verify.mjs)
@@ -55,6 +55,9 @@ export function makeApi(deps) {
   // the place of the owner of the address, and one network cannot flood an address with confirmations either.
   const perTargetFrom = deps.perTargetFrom || limiter(3, 24 * HOUR, now);
   const MAX_PER_TARGET = deps.maxPerTarget || 20, MAX_PER_ASN = deps.maxPerAsn || 500;
+  // the alerts on the state of the service and on the RTR sessions are for whoever runs the site: the topic "status" takes
+  // new subscriptions only when the operator opens it (NOTIFY_STATUS_OPEN=yes), and the ones that exist go on
+  const statusOpen = deps.statusOpen === true;
   const verifying = new Set();
   const MAX_PENDING_PER_ASN = deps.maxPendingPerAsn || 100, MAX_PENDING = deps.maxPending || 5000;
 
@@ -71,6 +74,7 @@ export function makeApi(deps) {
     if (body.website) return reply(202, { status: 'pending' });                       // honeypot field: bots fill it
     // topic "status": the state of the parts of the service, kept as a subscription for the made-up AS "STATUS"
     const status = body.topic === 'status';
+    if (status && !statusOpen) return bad('the alerts on the state of the service are for the operator of the site: this topic is not open to subscription', 403);
     const asn = status ? STATUS : parseAsn(body.asn);
     if (!asn) return bad('asn must be an AS number such as AS3333 (1 to 4294967295), or topic "status"');
     if (!perIp(ip) ) return bad('too many requests from this address, try again later', 429);

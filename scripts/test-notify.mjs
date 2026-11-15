@@ -419,8 +419,19 @@ await test('status alerts: words and subject', () => {
   assert.equal(statusSubject([down, { ...down, id: 'api', name: 'API', to: 'l' }]), 'ASPA Explorer status: Leaks down');
 });
 
+await test('API: the status alerts are closed to subscription unless the operator opens them', async () => {
+  const { store, api, mails, hooks } = setup();
+  const r = await api.subscribe({ kind: 'email', target: 'ops@example.com', topic: 'status' }, '3.3.3.1');
+  assert.equal(r.status, 403);
+  assert.match(r.body.error, /for the operator of the site/);
+  assert.equal((await api.subscribe({ kind: 'webhook', target: 'https://hooks.example.org/s', topic: 'status' }, '3.3.3.2')).status, 403);
+  assert.ok(!store.find('email', 'ops@example.com', 'STATUS'));
+  assert.equal(mails.length + hooks.length, 0, 'nothing is sent and nothing is called');
+  assert.equal((await api.subscribe({ kind: 'email', target: 'ops@example.com', asn: 'AS3333' }, '3.3.3.3')).status, 202, 'an AS is subscribed as before');
+});
+
 await test('API: a subscription to the status alerts, not to an AS', async () => {
-  const { store, api, mails } = setup();
+  const { store, api, mails } = setup({ statusOpen: true });
   const r = await api.subscribe({ kind: 'email', target: 'ops@example.com', topic: 'status', leaks: true }, '3.3.3.3');
   assert.equal(r.status, 202);
   assert.equal(mails[0].asn, 'STATUS');
@@ -750,7 +761,7 @@ await test('invalid alerts: the words', () => {
 });
 
 await test('API: the threshold is kept only as a whole number in range, for an AS', async () => {
-  const { store, api, mails } = setup();
+  const { store, api, mails } = setup({ statusOpen: true });
   await api.subscribe({ kind: 'email', target: 'a@example.com', asn: 'AS1', invalid: 50 }, '4.4.4.1');
   assert.equal(mails[0].invalid, 50);
   assert.equal(store.find('email', 'a@example.com', 'AS1').invalid_min, 50);
