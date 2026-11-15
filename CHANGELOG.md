@@ -9,6 +9,11 @@ A few numbers were deployed and folded into the next release without a tag of th
 
 ## [Unreleased]
 
+## [1.78.1] - 2026-11-15
+
+### Fixed
+- Incidents: the link to the file of a day is built from the data of the day that is chosen, not from the value of the menu (a finding of the code scanning; the value was already one of the days of the list).
+
 ## [1.78.0] - 2026-11-15
 
 ### Added

@@ -181,7 +181,10 @@
     const at = new Map(h.days.map((r) => [Math.round((Date.parse(r.day) - t0) / DAY), r]));
     const iso = (i) => new Date(t0 + i * DAY).toISOString().slice(0, 10);
     const pick = $('inc-day'), link = $('inc-day-link');
-    const href = () => { link.href = `/api/v1/incidents/${encodeURIComponent(h.collector)}/${pick.value}.jsonl.gz`; };
+    // the link of the file comes from the data (the day of the line that is chosen), never from the text of the page
+    const listed = [...h.days].reverse().filter((r) => /^\d{4}-\d{2}-\d{2}$/.test(r.day));
+    const collector = /^[a-z0-9-]+$/.test(h.collector) ? h.collector : 'rrc00';
+    const href = () => { const r = listed[pick.selectedIndex]; if (r) link.href = `/api/v1/incidents/${collector}/${r.day}.jsonl.gz`; };
     const show = () => {
       const [, title, yTitle, value, fmtY] = metrics.find((x) => x[0] === select.value) || metrics[0];
       const W = Math.max(280, box.clientWidth || 640), H = 240, m = { l: 68, r: 10, t: 10, b: 24 };
@@ -230,7 +233,7 @@
       };
       box.onpointermove = point;
       // a click on a day that was read also chooses its file below
-      box.onpointerdown = (e) => { const i = point(e); if (at.has(i)) { pick.value = iso(i); href(); } };
+      box.onpointerdown = (e) => { const i = point(e); if (at.has(i)) { pick.selectedIndex = listed.findIndex((r) => r.day === iso(i)); href(); } };
       box.onpointerleave = hide;
     };
     select.addEventListener('change', show);
@@ -241,7 +244,7 @@
     $('inc-days-note').textContent = `${fmt.format(h.days_covered)} of ${fmt.format(n)} days have been read${left > 0 ? `; ${fmt.format(left)} are still to come` : ''}. Move the pointer over the chart for the numbers of a day; a click chooses its file below.`;
 
     // every incident of a day: the file of the day
-    pick.replaceChildren(...[...h.days].reverse().map((r) => el('option', { value: r.day, text: `${day(r.day)} (${fmt.format(r.incidents)})` })));
+    pick.replaceChildren(...listed.map((r) => el('option', { value: r.day, text: `${day(r.day)} (${fmt.format(r.incidents)})` })));
     pick.addEventListener('change', href);
     href();
     $('inc-days').hidden = false;
