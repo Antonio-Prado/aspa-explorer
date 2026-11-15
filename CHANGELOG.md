@@ -9,6 +9,11 @@ A few numbers were deployed and folded into the next release without a tag of th
 
 ## [Unreleased]
 
+## [1.79.1] - 2026-11-15
+
+### Changed
+- Incidents: the day by day chart opens on the last week (a new button, *7 days*), not on the whole time since 2023.
+
 ## [1.79.0] - 2026-11-15
 
 ### Added

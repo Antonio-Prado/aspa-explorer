@@ -185,8 +185,8 @@
     const listed = [...h.days].reverse().filter((r) => /^\d{4}-\d{2}-\d{2}$/.test(r.day));
     const collector = /^[a-z0-9-]+$/.test(h.collector) ? h.collector : 'rrc00';
     const href = () => { const r = listed[pick.selectedIndex]; if (r) link.href = `/api/v1/incidents/${collector}/${r.day}.jsonl.gz`; };
-    // the time window of the chart: the days from `a` to `b` (numbers of the day, 0 is the first day), all of them at the start
-    let a = 0, b = n - 1;
+    // the time window of the chart: the days from `a` to `b` (numbers of the day, 0 is the first day), the last week at the start
+    let a = Math.max(0, n - 7), b = n - 1;
     const from = $('inc-days-from'), to = $('inc-days-to'), buttons = [...$('inc-days-range').querySelectorAll('[data-range]')];
     for (const f of [from, to]) { f.min = iso(0); f.max = iso(n - 1); }
     const show = () => {
@@ -215,8 +215,9 @@
         const text = months ? t.toLocaleDateString('en-GB', { month: 'short', timeZone: 'UTC' }) : String(t.getUTCFullYear());
         if (x(i) - m.l > 90 && W - m.r - x(i) > 90 && (!months || cnt > 45)) g.append(svg('text', { class: 'tick', x: x(i), y: H - 6, 'text-anchor': 'middle' }, text));
       }
+      const bw = cnt <= 120 ? w * 0.8 : w;          // a short window leaves a gap between the days
       let d = '';
-      for (const [i, r] of at) { if (i < a || i > b) continue; const v = value(r); if (v > 0) d += `M${x(i).toFixed(2)},${y(0)}v${(y(v) - y(0)).toFixed(2)}h${w.toFixed(2)}V${y(0)}z`; }
+      for (const [i, r] of at) { if (i < a || i > b) continue; const v = value(r); if (v > 0) d += `M${(x(i) + (w - bw) / 2).toFixed(2)},${y(0)}v${(y(v) - y(0)).toFixed(2)}h${bw.toFixed(2)}V${y(0)}z`; }
       g.append(svg('path', { class: 'daybars', d }));
       const cross = svg('line', { class: 'crossline', y1: m.t, y2: m.t + ih, visibility: 'hidden' });
       g.append(cross);
