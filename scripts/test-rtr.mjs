@@ -177,6 +177,9 @@ await test('a serial that does not advance: stale after three hours of syncs wit
   const f = summarise(reset, T0 + 200 * 60e3, { session_state: 1, last_serial_change_seconds: (T0 + 10 * 60e3) / 1000 });
   assert.equal(f.session.serial_stale, false);
   assert.equal(f.session.last_serial_change, at(150));
+  assert.equal(f.session.last_change_resync, true, 'the change is a resync on a new session, not the serial moving on');
+  assert.equal(d.session.last_change_resync, false);
+  assert.equal(m.session.last_change_resync, false, 'the gauge saw the serial move later than any full sync');
   assert.equal(summarise(reset, T0 + 340 * 60e3, { session_state: 1, last_serial_change_seconds: (T0 + 10 * 60e3) / 1000 }).session.serial_stale, true);   // and then stale again
 });
 

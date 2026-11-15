@@ -130,6 +130,9 @@ export function summarise(records, now = Date.now(), metrics = null) {
     connected, since: lastConn ? iso(lastConn.t) : null, protocol: negotiated, expired: metrics && 'data_expired' in metrics ? metrics.data_expired === 1 : null,
     from_metrics: Boolean(metrics && 'session_state' in metrics), carries_aspa: Boolean(last) && ((negotiated ?? 0) >= 2 || nz(last.aspa_total) > 0),
     last_serial_change: lastChangeAt ? iso(lastChangeAt) : null,
+    // whether that last change is a full resync on a new session and not the serial moving on: it proves the data fresh, but after a
+    // stall it does not say that the cache moves again (the client may only have reached another node, or been started again)
+    last_change_resync: Boolean(lastChange && lastChange.sync_type === 'full' && lastChange.t + 2000 >= (gaugeAt || 0)),
     serial_stale: Boolean(connected && last && lastChangeAt && now - lastChangeAt > STALE_AFTER && now - last.t <= STALE_AFTER),
     stale_after_s: STALE_AFTER / 1000,
   };

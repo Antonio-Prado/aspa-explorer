@@ -83,6 +83,8 @@ export function watchRtr(doc, saved) {
     // the serial that stops advancing while the cache answers (and its recovery): the builder says so, the first poll only takes note.
     // The stall is told once for each serial that stalls (`since`): a session that drops and comes back with the same serial is the
     // same stall, not a new one, and its coming back is not a recovery; the recovery is a serial later than the one that stalled.
+    // A full resync on a new session ends the stall for the builder (the data is fresh) but is not a recovery either: the client may
+    // have reached another node of the cache, or been started again. The recovery is told when the serial moves on after it.
     const isStale = Boolean(c.session && c.session.serial_stale);
     const since = c.session && c.session.last_serial_change ? c.session.last_serial_change : null;
     stale[c.id] = isStale;
@@ -91,7 +93,7 @@ export function watchRtr(doc, saved) {
       if (isStale && !oldStale[c.id] && (since === null || told[c.id] !== since)) {
         events.push({ at: when, cache: c.name || c.id, cache_id: c.id, severity: 'high', category: 'structural', trigger: 'serial_stale', since, hours: c.session.stale_after_s ? Math.round(c.session.stale_after_s / 3600) : null });
         told[c.id] = since;
-      } else if (!isStale && told[c.id] !== null && !(c.session && c.session.connected === false) && (since === null || told[c.id] === '' || Date.parse(since) > Date.parse(told[c.id]))) {
+      } else if (!isStale && told[c.id] !== null && !(c.session && c.session.connected === false) && !(c.session && c.session.last_change_resync) && (since === null || told[c.id] === '' || Date.parse(since) > Date.parse(told[c.id]))) {
         events.push({ at: when, cache: c.name || c.id, cache_id: c.id, severity: 'medium', category: 'structural', trigger: 'serial_advancing' });
         told[c.id] = null;
       }

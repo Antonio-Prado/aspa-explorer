@@ -1256,6 +1256,17 @@ await test('rtr: the first poll takes note, a new anomaly is announced once, an 
   assert.equal(st.events.length, 1); assert.equal(st.events[0].trigger, 'serial_advancing');
   st = watchRtr(c({ serial_stale: true, connected: true, last_serial_change: '2026-11-10T09:20:00Z', stale_after_s: 10800 }, '2026-11-10T12:30:00Z'), st.saved);
   assert.equal(st.events.length, 1); assert.equal(st.events[0].trigger, 'serial_stale');   // a new stall, said again
+  // a stall that ends with a full resync on a new session (the monitor was started again, or reached another node): not told as a
+  // recovery; it is told when the serial moves on after that, and a new stall of the new session is told as a new stall
+  let n = watchRtr(c({ serial_stale: false, connected: true, last_serial_change: S }, '2026-11-14T12:00:00Z'), null);
+  n = watchRtr(c({ serial_stale: true, connected: true, last_serial_change: S, stale_after_s: 10800 }, '2026-11-14T19:00:00Z'), n.saved);
+  assert.equal(n.events[0].trigger, 'serial_stale');
+  n = watchRtr(c({ serial_stale: false, connected: true, last_serial_change: '2026-11-15T18:55:39Z', last_change_resync: true }, '2026-11-15T19:00:00Z'), n.saved);
+  assert.deepEqual(n.events, []);
+  const moved = watchRtr(c({ serial_stale: false, connected: true, last_serial_change: '2026-11-15T19:55:40Z', last_change_resync: false }, '2026-11-15T20:00:00Z'), n.saved);
+  assert.equal(moved.events.length, 1); assert.equal(moved.events[0].trigger, 'serial_advancing');
+  const again = watchRtr(c({ serial_stale: true, connected: true, last_serial_change: '2026-11-15T18:55:39Z', last_change_resync: true, stale_after_s: 10800 }, '2026-11-15T22:00:00Z'), n.saved);
+  assert.equal(again.events.length, 1); assert.equal(again.events[0].trigger, 'serial_stale');
   let u = watchRtr(c({ serial_stale: true, connected: true, last_serial_change: S, stale_after_s: 10800 }, '2026-11-10T09:00:00Z'), null);
   u = watchRtr(c({ serial_stale: false, connected: false, last_serial_change: S }, '2026-11-10T09:05:00Z'), u.saved);
   u = watchRtr(c({ serial_stale: true, connected: true, last_serial_change: S, stale_after_s: 10800 }, '2026-11-10T09:10:00Z'), u.saved);

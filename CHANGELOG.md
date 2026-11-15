@@ -9,6 +9,11 @@ A few numbers were deployed and folded into the next release without a tag of th
 
 ## [Unreleased]
 
+## [1.81.1] - 2026-11-15
+
+### Fixed
+- RTR caches: after a serial that did not advance, "the serial of the cache advances again" was told as soon as the monitor connected again and received everything with a full sync, as when the monitor is started again or reaches another node of the cache. That is not the cache moving: it is told now when the serial moves on after it (`last_change_resync` in `/api/v1/rtr.json` says which of the two the last change was).
+
 ## [1.81.0] - 2026-11-15
 
 ### Changed
