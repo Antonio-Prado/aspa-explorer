@@ -1,0 +1,20 @@
+#!/bin/sh
+# Starts Routinator again when it is not running (the kernel killed it when the host ran out of memory, and nothing
+# brought it back). From cron, every five minutes, as root:
+#   */5 * * * * root /usr/local/sbin/routinator-watch
+# A restart takes some seconds between its stop and its start: a second look after a pause tells it from a dead process.
+# To keep Routinator stopped on purpose: touch /var/run/routinator.nowatch (and remove it afterwards).
+PATH=/sbin:/bin:/usr/sbin:/usr/bin:/usr/local/sbin:/usr/local/bin; export PATH
+[ -e /var/run/routinator.nowatch ] && exit 0
+service routinator status >/dev/null 2>&1 && exit 0
+sleep 30
+service routinator status >/dev/null 2>&1 && exit 0
+logger -t routinator-watch "routinator is not running: starting it"
+service routinator start </dev/null >/dev/null 2>&1
+sleep 10
+if service routinator status >/dev/null 2>&1; then
+  logger -t routinator-watch "routinator started"
+else
+  logger -t routinator-watch "routinator did not start"
+  exit 1
+fi

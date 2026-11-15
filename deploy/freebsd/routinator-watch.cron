@@ -1,0 +1,2 @@
+# Starts Routinator again when it is not running (see /usr/local/sbin/routinator-watch)
+*/5 * * * * root /usr/local/sbin/routinator-watch
