@@ -13,6 +13,7 @@ A few numbers were deployed and folded into the next release without a tag of th
 
 ### Fixed
 - Incidents: the link to the file of a day is built from the data of the day that is chosen, not from the value of the menu (a finding of the code scanning; the value was already one of the days of the list).
+- Incidents: an incident is counted on the day it ended, read from the incident and not from the name of its file. The first files of the recorder hold all the days from 4 to 22 October 2026 (they were read again on 23 October), and the day by day chart of 1.78.0 would have put them all on 22 October.
 
 ## [1.78.0] - 2026-11-15
 

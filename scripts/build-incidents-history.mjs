@@ -3,21 +3,24 @@
 // The incident files are the ones that run-incidents.sh keeps in archive/ (the recorder) and the ones that
 // tools/backfill/backfill.py writes from the archive of RIPE RIS (the days before the recorder was started).
 //   node scripts/build-incidents-history.mjs OUT_FILE --live=DIR --blocks=DIR[,DIR] --caida=DIR[,DIR] --days=DIR --detail=DIR
-//        [--collector=rrc00] [--max-days=N]
+//        [--collector=rrc00] [--max-files=N]
 //   --live     archive/ of the recorder: incidents_records_<epoch>.jsonl.xz, the state of incident.py is continuous
 //   --blocks   working directories of the backfill: archive/ and days.jsonl (the block of each day). A block starts with an
 //              empty state and ends by writing the incidents still open (incidents_open_<epoch>.jsonl.xz), so an incident
 //              that began before the first day of its block is left out: the block before has it
 //   --caida    directories with the CAIDA relationships (as-rel2-YYYYMMDD.bz2 or YYYYMMDD.as-rel2.txt.bz2): each day uses
 //              the newest file that is not of a later month
-//   --days     where the result of each day is kept (<day>.json): a day is read again only when its files change
+//   --days     where the result of each file is kept (<file>.json, and <file>/<day>.jsonl.gz with its incidents of each
+//              day): a file is read again only when it changes
 //   --detail   where the verdict of each incident goes, a file for each day (<day>.jsonl.gz)
-//   --max-days at most N days are read in a run (the others at the next one); the output has the days read so far
-// A day is the UTC day in the name of the file: the day the incidents were written, which is the day they ended. The leaking
-// ASes (RLK-FP, RLK-PV) are judged within each day. The ASPAs are the ones at the start of the day each incident began, from
-// the history of changes (INCIDENTS_EVENTS, as build-incidents.mjs); a day before the history has no ASPA.
+//   --max-files at most N files are read in a run (the others at the next one); the output has the days read so far
+// A day is the UTC day an incident ended, not the day in the name of its file: a file of the recorder can hold more days
+// (data read again, or read late), and the incidents that end around midnight are in the file of the day after. The
+// leaking ASes (RLK-FP, RLK-PV) are judged within each day of each file. The ASPAs are the ones at the start of the day
+// each incident began, from the history of changes (INCIDENTS_EVENTS, as build-incidents.mjs); a day before the history
+// has no ASPA.
 import { readFile, writeFile, rename, readdir, stat, mkdir, rm } from 'node:fs/promises';
-import { createWriteStream } from 'node:fs';
+import { createReadStream, createWriteStream } from 'node:fs';
 import { once } from 'node:events';
 import { createInterface } from 'node:readline';
 import { join } from 'node:path';
@@ -34,16 +37,15 @@ export const FIRST_DAY = '2023-10-12';
 const NAME = /^incidents_(records|open)_(\d+)\.jsonl\.xz$/;
 const dayOf = (epoch) => new Date(epoch * 1000).toISOString().slice(0, 10);
 
-// The files of each day: Map day -> [{ file, size, since }], `since` the first day of the block of a backfill file (null for
-// the recorder). A backfill file whose day is not yet in days.jsonl waits for the next run.
+// The incident files: [{ file, name, size, day, since }], `day` the UTC day in the name, `since` the first day of the block
+// of a backfill file (null for the recorder). A backfill file whose day is not yet in days.jsonl waits for the next run.
 export async function sources(live, blocks) {
-  const days = new Map();
-  const put = (day, x) => { if (day >= FIRST_DAY) { if (!days.has(day)) days.set(day, []); days.get(day).push(x); } };
+  const out = [];
   const list = async (dir) => { try { return (await readdir(dir)).sort(); } catch { return []; } };
   for (const dir of live) {
     for (const f of await list(dir)) {
       const m = NAME.exec(f);
-      if (m && m[1] === 'records') put(dayOf(Number(m[2])), { file: join(dir, f), size: (await stat(join(dir, f))).size, since: null });
+      if (m && m[1] === 'records') out.push({ file: join(dir, f), name: f, size: (await stat(join(dir, f))).size, day: dayOf(Number(m[2])), since: null });
     }
   }
   for (const dir of blocks) {
@@ -57,14 +59,19 @@ export async function sources(live, blocks) {
       const m = NAME.exec(f);
       if (!m) continue;
       const day = dayOf(Number(m[2]));
-      if (first.has(day)) put(day, { file: join(dir, 'archive', f), size: (await stat(join(dir, 'archive', f))).size, since: first.get(day) });
+      if (first.has(day)) out.push({ file: join(dir, 'archive', f), name: f, size: (await stat(join(dir, 'archive', f))).size, day, since: first.get(day) });
     }
   }
-  return days;
+  return out.sort((a, b) => a.day.localeCompare(b.day) || a.name.localeCompare(b.name));
 }
-const keyOf = (list) => list.map((x) => `${x.file.split('/').pop()}:${x.size}:${x.since || ''}`).sort().join('|');
+const keyOf = (x) => `${x.size}:${x.since || ''}`;
+// The day of an incident: the UTC day it ended (or began, when it has no end); `fallback` when it has neither.
+export const dayOfIncident = (inc, fallback) => {
+  for (const t of [inc.end, inc.start]) if (typeof t === 'string' && /^\d{4}-\d{2}-\d{2}/.test(t)) return t.slice(0, 10);
+  return fallback;
+};
 
-// The incidents of the files of a day, one at a time; `only`: as readIncidents of build-incidents.mjs.
+// The incidents of some files, one at a time; `only`: as readIncidents of build-incidents.mjs.
 export async function* readDay(list, only = null) {
   for (const src of list) {
     const xz = spawn('xz', ['-dc', src.file], { stdio: ['ignore', 'pipe', 'inherit'] });
@@ -124,32 +131,57 @@ export function sum(results) {
   return out;
 }
 
-// One day: its result (as analyser().result()) and, with `detailFile`, the verdict of each incident, gzipped.
-export async function buildDay(list, aspasOf, rel, detailFile = null) {
-  const tracker = leakTracker();
-  for await (const inc of readDay(list, LEAKS_ONLY)) tracker.add(inc);
-  const a = analyser(aspasOf, rel.providers, rel.degree, tracker.result());
-  let out = null, gz = null, failed = null;
-  if (detailFile) {
-    gz = createGzip({ level: 6 });
-    out = createWriteStream(`${detailFile}.tmp`);
-    failed = new Promise((_, reject) => { out.once('error', reject); gz.once('error', reject); });
-    failed.catch(() => {});
-    gz.pipe(out);
+// One file: the result of each day it has incidents of (Map day -> analyser().result()) and, with `partsDir`, the verdict
+// of each incident in a gzipped file for each day (partsDir/<day>.jsonl.gz).
+export async function buildFile(src, aspasOf, rel, partsDir = null) {
+  const trackers = new Map();
+  for await (const inc of readDay([src], LEAKS_ONLY)) {
+    const d = dayOfIncident(inc, src.day);
+    if (!trackers.has(d)) trackers.set(d, leakTracker());
+    trackers.get(d).add(inc);
   }
-  const work = async () => {
-    for await (const inc of readDay(list)) {
-      const row = a.add(inc);
-      if (gz && !gz.write(JSON.stringify(row) + '\n')) await once(gz, 'drain');
+  if (partsDir) { await rm(partsDir, { recursive: true, force: true }); await mkdir(partsDir, { recursive: true }); }
+  const days = new Map();          // day -> { a: analyser, gz, out }
+  let fail = null;
+  const failed = new Promise((_, reject) => { fail = reject; });
+  failed.catch(() => {});
+  const open = (d) => {
+    const x = { a: analyser(aspasOf, rel.providers, rel.degree, trackers.has(d) ? trackers.get(d).result() : leakTracker().result()) };
+    if (partsDir) {
+      x.gz = createGzip({ level: 6 });
+      x.out = createWriteStream(join(partsDir, `${d}.jsonl.gz`));
+      x.out.once('error', fail); x.gz.once('error', fail);
+      x.gz.pipe(x.out);
     }
-    if (gz) { gz.end(); await once(out, 'finish'); }
+    days.set(d, x);
+    return x;
   };
-  try { await (failed ? Promise.race([work(), failed]) : work()); } catch (err) {
-    if (out) { out.destroy(); await rm(`${detailFile}.tmp`, { force: true }); }
+  const work = async () => {
+    for await (const inc of readDay([src])) {
+      const d = dayOfIncident(inc, src.day);
+      const x = days.get(d) || open(d);
+      const row = x.a.add(inc);
+      if (x.gz && !x.gz.write(JSON.stringify(row) + '\n')) await once(x.gz, 'drain');
+    }
+    for (const x of days.values()) if (x.gz) { x.gz.end(); await once(x.out, 'finish'); }
+  };
+  try { await Promise.race([work(), failed]); } catch (err) {
+    for (const x of days.values()) x.out?.destroy();
+    if (partsDir) await rm(partsDir, { recursive: true, force: true });
     throw err;
   }
-  if (detailFile) await rename(`${detailFile}.tmp`, detailFile);
-  return a.result();
+  return new Map([...days].map(([d, x]) => [d, x.a.result()]));
+}
+
+// The file of a day: the parts of the files that have incidents of it, one after the other (gzip members).
+async function assemble(parts, file) {
+  const out = createWriteStream(`${file}.tmp`);
+  try {
+    for (const p of parts) { const r = createReadStream(p); r.pipe(out, { end: false }); await once(r, 'end'); }
+    out.end();
+    await once(out, 'finish');
+  } catch (err) { out.destroy(); await rm(`${file}.tmp`, { force: true }); throw err; }
+  await rename(`${file}.tmp`, file);
 }
 
 // The line of a day for the chart: the counts, without the curves.
@@ -177,10 +209,10 @@ async function main() {
   const dirs = (n) => flag(n).split(',').filter(Boolean);
   const [outFile] = argv.filter((a) => !a.startsWith('--'));
   if (!outFile || !flag('days') || !flag('detail') || !(dirs('live').length + dirs('blocks').length)) {
-    console.error('usage: build-incidents-history.mjs OUT_FILE --live=DIR --blocks=DIR[,DIR] --caida=DIR[,DIR] --days=DIR --detail=DIR [--collector=rrc00] [--max-days=N]');
+    console.error('usage: build-incidents-history.mjs OUT_FILE --live=DIR --blocks=DIR[,DIR] --caida=DIR[,DIR] --days=DIR --detail=DIR [--collector=rrc00] [--max-files=N]');
     process.exit(2);
   }
-  const daysDir = flag('days'), detailDir = flag('detail'), max = Number(flag('max-days')) || Infinity;
+  const daysDir = flag('days'), detailDir = flag('detail'), max = Number(flag('max-files')) || Infinity;
   await mkdir(daysDir, { recursive: true });
   await mkdir(detailDir, { recursive: true });
   const src = await sources(dirs('live'), dirs('blocks'));
@@ -200,26 +232,40 @@ async function main() {
 
   const unbz = async (f) => (await promisify(execFile)('bunzip2', ['-c', f], { maxBuffer: 1 << 30 })).stdout;
   let rel = null;
-  const byDay = new Map(), used = new Set();
+  const perDay = new Map(), parts = new Map(), dirty = new Set(), used = new Set();      // day -> results, day -> part files
   let built = 0, waiting = 0;
-  for (const day of [...src.keys()].sort().reverse()) {          // the newest first: a first run shows the recent days soon
-    const list = src.get(day), key = keyOf(list), file = join(daysDir, `${day}.json`);
+  for (const x of [...src].reverse()) {          // the newest first: a first run shows the recent days soon
+    const key = keyOf(x), file = join(daysDir, `${x.name}.json`), partsDir = join(daysDir, x.name);
     let cached = null;
     try { cached = JSON.parse(await readFile(file, 'utf8')); } catch { /* not built yet */ }
     if (!cached || cached.key !== key) {
       if (built >= max) { waiting++; if (!cached) continue; }
       else {
-        const c = caidaFor(caida, day);
+        const c = caidaFor(caida, x.day);
         if (!rel || rel.date !== c.date) rel = { date: c.date, ...relationSets(await unbz(c.file)) };
-        const result = await buildDay(list, aspasOf, rel, join(detailDir, `${day}.jsonl.gz`));
-        cached = { key, caida: c.date, result };
+        const days = await buildFile(x, aspasOf, rel, partsDir);
+        for (const d of Object.keys((cached || {}).days || {})) dirty.add(d);
+        cached = { key, caida: c.date, days: Object.fromEntries(days) };
         await write(file, JSON.stringify(cached) + '\n');
+        for (const d of days.keys()) dirty.add(d);
         built++;
-        console.log(`${day}: ${result.total.incidents} incidents (CAIDA ${c.date})`);
+        console.log(`${x.name}: ${[...days.values()].reduce((n, r) => n + r.total.incidents, 0)} incidents in ${days.size} day${days.size === 1 ? '' : 's'} (CAIDA ${c.date})`);
       }
     }
-    byDay.set(day, cached.result);
+    for (const [d, r] of Object.entries(cached.days)) {
+      if (d < FIRST_DAY) continue;
+      if (!perDay.has(d)) { perDay.set(d, []); parts.set(d, []); }
+      perDay.get(d).push(r);
+      parts.get(d).push(join(partsDir, `${d}.jsonl.gz`));
+    }
     used.add(cached.caida);
+  }
+  const byDay = new Map([...perDay].map(([d, list]) => [d, list.length === 1 ? list[0] : sum(list)]));
+  for (const d of byDay.keys()) {
+    const out = join(detailDir, `${d}.jsonl.gz`);
+    let there = true;
+    try { await stat(out); } catch { there = false; }
+    if (dirty.has(d) || !there) await assemble(parts.get(d).sort(), out);
   }
   if (!byDay.size) throw new Error('no day is built: not publishing');
 
@@ -240,7 +286,7 @@ async function main() {
     periods: periods(byDay),
   };
   await write(outFile, JSON.stringify(doc) + '\n');
-  console.log(`${doc.generated}: ${all.length} of ${expected} days, ${doc.periods.all.total.incidents} incidents, ${built} days read${waiting ? `, ${waiting} waiting` : ''}`);
+  console.log(`${doc.generated}: ${all.length} of ${expected} days, ${doc.periods.all.total.incidents} incidents, ${built} files read${waiting ? `, ${waiting} waiting` : ''}`);
 }
 
 if (import.meta.url === `file://${process.argv[1]}`) main().catch((err) => { console.error(err.message); process.exit(1); });
