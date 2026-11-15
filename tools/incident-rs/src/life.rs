@@ -179,7 +179,12 @@ impl Engine {
         left.len()
     }
     // process_record
-    pub fn process(&mut self, line: &str, t: &Tables, out: &mut impl Write) {
+    pub fn process(&mut self, line: &str, t: &Tables, out: &mut impl Write) -> bool {
+        if record::parse(line.as_bytes()).is_none() { return false; }
+        self.record(line, t, out);
+        true
+    }
+    fn record(&mut self, line: &str, t: &Tables, out: &mut impl Write) {
         let Engine { flaps, deg, scale, vol, atr, open, last_gc, clock, scale_hits, anomalies, written, .. } = self;
         let Tables { rel, roas, registry, links } = t;
     let rec = match record::parse(line.as_bytes()) { Some(r) => r, None => return };
@@ -364,8 +369,7 @@ pub fn read_file(engine: &mut Engine, t: &Tables, file: &str, out: &mut impl Wri
         let raw = raw?;
         let line = match std::str::from_utf8(&raw) { Ok(l) => l.trim(), Err(_) => continue };
         if line.is_empty() { continue; }
-        engine.process(line, t, out);
-        n += 1;
+        if engine.process(line, t, out) { n += 1; }
     }
     Ok(n)
 }

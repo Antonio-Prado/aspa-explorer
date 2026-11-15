@@ -39,11 +39,13 @@ One file, with the tables named on the command line; and the detections alone, o
 - Two runs with the state between them against one run: the same bytes.
 - `incident.py` on the first half of a file, its state exported and imported, `run` on the second half: the same incidents as one run.
 
-What a day of rrc00 does not exercise, and is therefore checked by reading only: the NOTIFICATION records (type `N`), the jump of the more specifics of an origin against its median (it needs three days of history), a prefix whose text is not the way Python writes its network.
+- What a day of rrc00 does not have is in the made-up records of `ref/made_cases.py` (NOTIFICATIONs, the jump of the more specifics of an origin against its median, whole and not, an IPv6 flood, prefixes written in another way than Python writes them, records without a collector, a mass withdrawal after a change of state): `incident.py` and `run` write the same incidents for them.
+
+`ref/compare_incidents.py` compares two incident files field by field.
 
 ## What differs from the Python scripts
 
 - The lists written from a set are sorted.
 - The details are written without spaces after `,` and `:`.
-- A prefix that is not an address is never a flap (Python counts its events by its text).
+- The events of a flap are counted by the network of the prefix: a prefix that is not an address is never a flap, and one written in two ways is one prefix (Python counts by the text of the record).
 - The state is not the pickle of `incident.py`: it is read with `import-state`, one way.
