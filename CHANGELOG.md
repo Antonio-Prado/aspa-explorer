@@ -9,6 +9,11 @@ A few numbers were deployed and folded into the next release without a tag of th
 
 ## [Unreleased]
 
+## [1.78.3] - 2026-11-15
+
+### Fixed
+- Incidents: the day by day chart was drawn while its section was still hidden, for a width it did not have, and came out enlarged.
+
 ## [1.78.2] - 2026-11-15
 
 ### Fixed

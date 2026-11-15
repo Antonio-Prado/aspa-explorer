@@ -237,6 +237,7 @@
       box.onpointerleave = hide;
     };
     select.addEventListener('change', show);
+    $('inc-days').hidden = false;                 // before the first drawing: a hidden box has no width to draw for
     show();
     let t = 0;
     window.addEventListener('resize', () => { clearTimeout(t); t = setTimeout(show, 150); });
@@ -247,7 +248,6 @@
     pick.replaceChildren(...listed.map((r) => el('option', { value: r.day, text: `${day(r.day)} (${fmt.format(r.incidents)})` })));
     pick.addEventListener('change', href);
     href();
-    $('inc-days').hidden = false;
   }
 
   const built = (iso) => `built ${new Date(iso).toLocaleString('en-GB', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'UTC' })} UTC`;
