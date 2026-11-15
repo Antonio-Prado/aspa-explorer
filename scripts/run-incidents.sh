@@ -7,6 +7,8 @@
 #   5. builds /api/v1/incidents-history.json (scripts/build-incidents-history.mjs): every day that is archived, also the days that
 #      tools/backfill/backfill.py reads from the archive of RIPE RIS, with a file of the incidents of each day in days/rrc00/.
 #      The working directories of the backfill are the entries of $BASE/blocks (links, each with archive/, days.jsonl and cache/).
+#      $BASE/live-from, when it is there, has the first day that the archive of the recorder covers in full (YYYY-MM-DD): the
+#      days before it are taken from the backfill only.
 # Everything is in $BASE: incoming/ (stream.py), work/ (incident.py, with its state), archive/ (every incident file, compressed, kept for good), incidents-detail.jsonl.
 #   30 2 * * * /usr/bin/lockf -t 0 /var/db/aspa-data/run.lock /bin/sh -c '/bin/sh /usr/local/libexec/aspa-data/run-incidents.sh >/var/db/aspa-data/run.log 2>&1'
 # (02:30 local time: 00:30 UTC in summer, 01:30 UTC in winter; lockf: a day of data takes hours to read, and two runs at once would corrupt the state of incident.py;
@@ -91,6 +93,8 @@ for d in "$BASE"/blocks/*/; do
   blocks="${blocks:+$blocks,}${d%/}"
   [ -d "${d}cache" ] && caida="$caida,${d}cache"
 done
-"$NODE" "$SCRIPTS/build-incidents-history.mjs" "$GEN/incidents-history.json" --live="$BASE/archive" --blocks="$blocks" \
+live_from=""
+[ -f "$BASE/live-from" ] && live_from=$(head -n 1 "$BASE/live-from")
+"$NODE" "$SCRIPTS/build-incidents-history.mjs" "$GEN/incidents-history.json" --live="$BASE/archive" --live-from="$live_from" --blocks="$blocks" \
   --caida="$caida" --days="$BASE/days-cache/$COLLECTOR" --detail="$BASE/days/$COLLECTOR" --collector="$COLLECTOR" \
   || echo "the history of the incidents could not be built" >&2

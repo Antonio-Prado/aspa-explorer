@@ -3,8 +3,10 @@
 // The incident files are the ones that run-incidents.sh keeps in archive/ (the recorder) and the ones that
 // tools/backfill/backfill.py writes from the archive of RIPE RIS (the days before the recorder was started).
 //   node scripts/build-incidents-history.mjs OUT_FILE --live=DIR --blocks=DIR[,DIR] --caida=DIR[,DIR] --days=DIR --detail=DIR
-//        [--collector=rrc00] [--max-files=N]
+//        [--collector=rrc00] [--live-from=DAY] [--max-files=N]
 //   --live     archive/ of the recorder: incidents_records_<epoch>.jsonl.xz, the state of incident.py is continuous
+//   --live-from the first day that the files of the recorder cover in full (YYYY-MM-DD): its incidents that ended before
+//              are left out, the backfill has those days
 //   --blocks   working directories of the backfill: archive/ and days.jsonl (the block of each day). A block starts with an
 //              empty state and ends by writing the incidents still open (incidents_open_<epoch>.jsonl.xz), so an incident
 //              that began before the first day of its block is left out: the block before has it
@@ -39,13 +41,13 @@ const dayOf = (epoch) => new Date(epoch * 1000).toISOString().slice(0, 10);
 
 // The incident files: [{ file, name, size, day, since }], `day` the UTC day in the name, `since` the first day of the block
 // of a backfill file (null for the recorder). A backfill file whose day is not yet in days.jsonl waits for the next run.
-export async function sources(live, blocks) {
+export async function sources(live, blocks, liveFrom = null) {
   const out = [];
   const list = async (dir) => { try { return (await readdir(dir)).sort(); } catch { return []; } };
   for (const dir of live) {
     for (const f of await list(dir)) {
       const m = NAME.exec(f);
-      if (m && m[1] === 'records') out.push({ file: join(dir, f), name: f, size: (await stat(join(dir, f))).size, day: dayOf(Number(m[2])), since: null });
+      if (m && m[1] === 'records') out.push({ file: join(dir, f), name: f, size: (await stat(join(dir, f))).size, day: dayOf(Number(m[2])), since: null, from: liveFrom });
     }
   }
   for (const dir of blocks) {
@@ -64,7 +66,7 @@ export async function sources(live, blocks) {
   }
   return out.sort((a, b) => a.day.localeCompare(b.day) || a.name.localeCompare(b.name));
 }
-const keyOf = (x) => `${x.size}:${x.since || ''}`;
+const keyOf = (x) => `${x.size}:${x.since || ''}${x.from ? `:from ${x.from}` : ''}`;
 // The day of an incident: the UTC day it ended (or began, when it has no end); `fallback` when it has neither.
 export const dayOfIncident = (inc, fallback) => {
   for (const t of [inc.end, inc.start]) if (typeof t === 'string' && /^\d{4}-\d{2}-\d{2}/.test(t)) return t.slice(0, 10);
@@ -83,6 +85,7 @@ export async function* readDay(list, only = null) {
       try { o = JSON.parse(line); } catch { /* a cut line */ }
       if (!o || typeof o !== 'object' || !o.incident_type) continue;
       if (src.since && typeof o.start === 'string' && o.start.slice(0, 10) < src.since) continue;
+      if (src.from && dayOfIncident(o, src.day) < src.from) continue;
       yield o;
     }
     await ended;
@@ -209,13 +212,14 @@ async function main() {
   const dirs = (n) => flag(n).split(',').filter(Boolean);
   const [outFile] = argv.filter((a) => !a.startsWith('--'));
   if (!outFile || !flag('days') || !flag('detail') || !(dirs('live').length + dirs('blocks').length)) {
-    console.error('usage: build-incidents-history.mjs OUT_FILE --live=DIR --blocks=DIR[,DIR] --caida=DIR[,DIR] --days=DIR --detail=DIR [--collector=rrc00] [--max-files=N]');
+    console.error('usage: build-incidents-history.mjs OUT_FILE --live=DIR --blocks=DIR[,DIR] --caida=DIR[,DIR] --days=DIR --detail=DIR [--collector=rrc00] [--live-from=DAY] [--max-files=N]');
     process.exit(2);
   }
   const daysDir = flag('days'), detailDir = flag('detail'), max = Number(flag('max-files')) || Infinity;
   await mkdir(daysDir, { recursive: true });
   await mkdir(detailDir, { recursive: true });
-  const src = await sources(dirs('live'), dirs('blocks'));
+  const liveFrom = /^\d{4}-\d{2}-\d{2}$/.test(flag('live-from')) ? flag('live-from') : null;
+  const src = await sources(dirs('live'), dirs('blocks'), liveFrom);
   const caida = await caidaFiles(dirs('caida'));
   if (!caida.length) throw new Error('no CAIDA relationships file in --caida');
 

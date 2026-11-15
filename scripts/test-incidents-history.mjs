@@ -54,6 +54,14 @@ await test('a backfill file leaves out what began before its block, the recorder
   assert.deepEqual(await got('2026-10-05', /"RLK"/), ['RLK 2026-10-04']);
 });
 
+await test('with a first day, the recorder leaves out what ended before it', async () => {
+  const s = await sources([live], [blk], '2026-10-05');
+  assert.deepEqual(s.map((x) => x.from || null), [null, null, null, '2026-10-05', '2026-10-05'], 'only the files of the recorder');
+  const out = [];
+  for await (const i of readDay(s.filter((x) => x.day === '2026-10-05'))) out.push(`${i.incident_type} ${i.start.slice(0, 10)}`);
+  assert.deepEqual(out.sort(), ['PRH 2026-10-05', 'VOL 2026-10-05']);
+});
+
 await test('the day of an incident is the day it ended, then the day it began, then the day of the file', () => {
   assert.equal(dayOfIncident({ start: '2026-10-04 23:50:00', end: '2026-10-05 00:10:00' }, 'x'), '2026-10-05');
   assert.equal(dayOfIncident({ start: '2026-10-04 23:50:00', end: null }, 'x'), '2026-10-04');

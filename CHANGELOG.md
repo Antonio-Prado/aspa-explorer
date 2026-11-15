@@ -9,6 +9,11 @@ A few numbers were deployed and folded into the next release without a tag of th
 
 ## [Unreleased]
 
+## [1.78.2] - 2026-11-15
+
+### Fixed
+- Incidents: the incident files of the recorder are kept since 22 October 2026 only, and of the days from 4 to 21 October they hold the few incidents that were closed late. The history takes the recorder from the first day it covers in full (23 October, `--live-from` of `build-incidents-history.mjs`, read by `run-incidents.sh` from `live-from`), and the days before are read from the archive of RIPE RIS like the others.
+
 ## [1.78.1] - 2026-11-15
 
 ### Fixed
