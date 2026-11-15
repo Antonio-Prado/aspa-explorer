@@ -296,6 +296,11 @@ def check_deaggregation(rec, rel, roas, state, current_epoch):
     return False, {}
 
 
+def _flap_codes(history):
+    """The events of a flap history saved as (time, type) pairs, as the numbers kept now."""
+    return [(int(e) << 1) | (1 if t == "A" else 0) for e, t in history]
+
+
 def check_state_volatility(rec, state, current_epoch):
     prefix = rec.get("prefix")
     peer = extra_detectors.session_of(rec)        # X-12: the flaps of a session, not of an AS that feeds several collectors
@@ -304,18 +309,30 @@ def check_state_volatility(rec, state, current_epoch):
 
     vol_state = state.setdefault("vol_flaps", {})
     key = (prefix, peer)
-    
-    # a deque: the events older than the window leave from the left (the list that was rebuilt for every update cost more
-    # than everything else together for a prefix that flaps for hours); a state saved with lists is converted
+
+    # the events of the last VOL_FO_WINDOW seconds, each one number (the time, and one bit that says an announcement): alone
+    # when it is the only one, in a list otherwise. During a session reset there are millions of these at once, nearly all
+    # with one event: as a deque of (time, type) each took some 700 bytes, and that was the peak of the memory of a day
+    code = (current_epoch << 1) | (1 if rec.get("type") == "A" else 0)
     history = vol_state.get(key)
-    if not isinstance(history, deque):
-        history = vol_state[key] = deque(history or ())
-    history.append((current_epoch, rec.get("type")))
-    while current_epoch - history[0][0] > VOL_FO_WINDOW:
-        history.popleft()
+    if history is None:
+        vol_state[key] = code
+        return False, {}
+    if type(history) is int:
+        history = [history]
+    elif type(history) is not list or (history and type(history[0]) is not int):
+        history = _flap_codes(history)                     # a state saved with deques or lists of (time, type)
+    history.append(code)
+    oldest = current_epoch - VOL_FO_WINDOW
+    drop = 0
+    while (history[drop] >> 1) < oldest:
+        drop += 1
+    if drop:
+        del history[:drop]
+    vol_state[key] = history
 
     if len(history) >= VOL_FO_FLAPS:
-        if any(x[1] == "A" for x in history) and any(x[1] == "W" for x in history):
+        if any(x & 1 for x in history) and not all(x & 1 for x in history):
             return True, {"flap_count": len(history), "window_seconds": VOL_FO_WINDOW, "vol_type": "FO"}
 
     return False, {}
@@ -447,7 +464,8 @@ def check_timeouts(active_incidents, current_epoch, timeout_seconds, out_f, stat
 
 def garbage_collect_state(state, current_epoch):
     if "vol_flaps" in state:
-        stale = [k for k, v in state["vol_flaps"].items() if not v or (current_epoch - v[-1][0]) > VOL_FO_WINDOW]
+        stale = [k for k, v in state["vol_flaps"].items()
+                 if not v or (current_epoch - ((v if type(v) is int else v[-1] if type(v[-1]) is int else (int(v[-1][0]) << 1)) >> 1)) > VOL_FO_WINDOW]
         for k in stale: 
             del state["vol_flaps"][k]
 
