@@ -180,14 +180,11 @@ impl Engine {
     }
     // process_record
     pub fn process(&mut self, line: &str, t: &Tables, out: &mut impl Write) -> bool {
-        if record::parse(line.as_bytes()).is_none() { return false; }
-        self.record(line, t, out);
-        true
+        match record::parse(line.as_bytes()) { Some(rec) => { self.record(rec, line, t, out); true } None => false }
     }
-    fn record(&mut self, line: &str, t: &Tables, out: &mut impl Write) {
+    fn record(&mut self, rec: record::Rec, line: &str, t: &Tables, out: &mut impl Write) {
         let Engine { flaps, deg, scale, vol, atr, open, last_gc, clock, scale_hits, anomalies, written, .. } = self;
         let Tables { rel, roas, registry, links } = t;
-    let rec = match record::parse(line.as_bytes()) { Some(r) => r, None => return };
     let collector = rec.collector.unwrap_or("None");
     let (ts, peer) = (rec.timestamp.unwrap_or(""), rec.peer.unwrap_or(0));
     if rec.kind == "N" || rec.kind == "S" {
