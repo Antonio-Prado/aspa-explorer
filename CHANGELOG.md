@@ -9,7 +9,10 @@ A few numbers were deployed and folded into the next release without a tag of th
 
 ## [Unreleased]
 
+## [1.79.0] - 2026-11-15
+
 ### Added
+- Incidents: the day by day chart has a time window of your choice: the last 30 days, 90 days or 12 months, everything, or any two dates. With a window of a year or less the lines mark the months.
 - `deploy/freebsd/routinator-watch`: a cron job for the host of the validator that starts Routinator again when its process is gone (on 15 November 2026 the kernel killed it for lack of memory and it stayed down for two hours).
 
 ## [1.78.3] - 2026-11-15

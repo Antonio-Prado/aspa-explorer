@@ -23,17 +23,17 @@
 <meta name="twitter:card" content="summary_large_image">
 <meta name="color-scheme" content="light dark">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
-<link rel="stylesheet" href="/style.css?v=1.78.3">
-<script src="/incidents.js?v=1.78.3" defer></script>
-<script src="/asnames.js?v=1.78.3" defer></script>
-<script src="/status-checks.js?v=1.78.3" defer></script>
-<script src="/footer.js?v=1.78.3" defer></script>
+<link rel="stylesheet" href="/style.css?v=1.79.0">
+<script src="/incidents.js?v=1.79.0" defer></script>
+<script src="/asnames.js?v=1.79.0" defer></script>
+<script src="/status-checks.js?v=1.79.0" defer></script>
+<script src="/footer.js?v=1.79.0" defer></script>
 </head>
 <body class="area-inc">
 <a class="skip" href="#main">Skip to main content</a>
 <header class="wrap masthead">
   <div class="top">
-    <p class="back"><a class="brandlink" href="/" title="Back to ASPA Explorer"><img class="brand" src="/img/logo-mark.svg?v=1.78.3" alt="" width="40" height="40"><span>ASPA Explorer</span></a></p>
+    <p class="back"><a class="brandlink" href="/" title="Back to ASPA Explorer"><img class="brand" src="/img/logo-mark.svg?v=1.79.0" alt="" width="40" height="40"><span>ASPA Explorer</span></a></p>
     <nav class="topnav" aria-label="Main"><a class="sect a-look" href="/network.html">Look up</a><a class="sect a-adopt" href="/statistics.html">Adoption</a><a class="sect a-now" href="/now.html">Right now</a><a class="sect a-inc" href="/incidents.html" aria-current="page">Incidents</a><a class="minor" href="/guide.html">Guide</a><a class="minor" href="/examples.html">Examples</a><a class="minor" href="/api.html">API</a><a class="minor" href="/status.html">Status</a></nav>
   </div>
   <div class="pagetop">
@@ -54,11 +54,19 @@
 
   <section aria-labelledby="inc-days-title" id="inc-days" hidden>
     <h2 id="inc-days-title" class="subhead">Day by day, since the first ASPA</h2>
-    <p class="hint">One bar for each day, from 12 October 2023, the day of the first ASPA, to yesterday. A day with no bar has not been read yet: the days before the recorder was started are being read from the archive of RIPE RIS, a few each day.</p>
+    <p class="hint">One bar for each day, from 12 October 2023, the day of the first ASPA, to yesterday. A day with no bar has not been read yet: the days before the recorder was started are being read from the archive of RIPE RIS, a few each day and the newest first, so the oldest days come last. The buttons and the two dates choose the time window of the chart.</p>
     <div class="histctl">
       <label>Show
         <select id="inc-days-metric"></select>
       </label>
+    </div>
+    <div class="histctl" id="inc-days-range" role="group" aria-label="Time window of the chart">
+      <button type="button" data-range="30" aria-pressed="false">30 days</button>
+      <button type="button" data-range="90" aria-pressed="false">90 days</button>
+      <button type="button" data-range="365" aria-pressed="false">12 months</button>
+      <button type="button" data-range="0" aria-pressed="true">All</button>
+      <label>From <input type="date" id="inc-days-from"></label>
+      <label>to <input type="date" id="inc-days-to"></label>
     </div>
     <div class="linechart" id="inc-days-chart"></div>
     <p class="hint" id="inc-days-note"></p>

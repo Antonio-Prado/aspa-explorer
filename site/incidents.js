@@ -185,28 +185,38 @@
     const listed = [...h.days].reverse().filter((r) => /^\d{4}-\d{2}-\d{2}$/.test(r.day));
     const collector = /^[a-z0-9-]+$/.test(h.collector) ? h.collector : 'rrc00';
     const href = () => { const r = listed[pick.selectedIndex]; if (r) link.href = `/api/v1/incidents/${collector}/${r.day}.jsonl.gz`; };
+    // the time window of the chart: the days from `a` to `b` (numbers of the day, 0 is the first day), all of them at the start
+    let a = 0, b = n - 1;
+    const from = $('inc-days-from'), to = $('inc-days-to'), buttons = [...$('inc-days-range').querySelectorAll('[data-range]')];
+    for (const f of [from, to]) { f.min = iso(0); f.max = iso(n - 1); }
     const show = () => {
+      const cnt = b - a + 1, inside = h.days.filter((r) => { const i = Math.round((Date.parse(r.day) - t0) / DAY); return i >= a && i <= b; });
+      from.value = iso(a); to.value = iso(b);
+      $('inc-days-note').textContent = `${fmt.format(inside.length)} of the ${fmt.format(cnt)} days from ${day(iso(a))} to ${day(iso(b))} have been read${cnt > inside.length ? `; ${fmt.format(cnt - inside.length)} are still to come` : ''}. Move the pointer over the chart for the numbers of a day; a click chooses its file below.`;
       const [, title, yTitle, value, fmtY] = metrics.find((x) => x[0] === select.value) || metrics[0];
       const W = Math.max(280, box.clientWidth || 640), H = 240, m = { l: 68, r: 10, t: 10, b: 24 };
       const iw = W - m.l - m.r, ih = H - m.t - m.b;
-      const max = Math.max(...h.days.map(value), 0);
+      const max = Math.max(...inside.map(value), 0);
       const step = Math.pow(10, Math.floor(Math.log10(max || 1))) / 2, top = max > 0 ? Math.max(step, Math.ceil(max / step) * step) : 1;
-      const x = (i) => m.l + (iw * i) / n, y = (v) => m.t + ih - (ih * v) / top, w = Math.max(iw / n, 0.6);
-      const g = svg('svg', { viewBox: `0 0 ${W} ${H}`, role: 'img', 'aria-label': `${title}, one bar for each day from ${day(h.first_day)} to ${day(iso(n - 1))}: ${fmt.format(h.days_covered)} of ${fmt.format(n)} days have been read.` });
+      const x = (i) => m.l + (iw * (i - a)) / cnt, y = (v) => m.t + ih - (ih * v) / top, w = Math.max(iw / cnt, 0.6);
+      const g = svg('svg', { viewBox: `0 0 ${W} ${H}`, role: 'img', 'aria-label': `${title}, one bar for each day from ${day(iso(a))} to ${day(iso(b))}: ${fmt.format(inside.length)} of ${fmt.format(cnt)} days have been read.` });
       g.append(svg('text', { class: 'axistitle', transform: `translate(13 ${m.t + ih / 2}) rotate(-90)`, 'text-anchor': 'middle' }, yTitle));
       for (let k = 0; k <= 4; k++) {
         const v = (top * k) / 4;
         g.append(svg('line', { class: k ? 'grid' : 'axisline', x1: m.l, x2: W - m.r, y1: y(v), y2: y(v) }), svg('text', { class: 'tick', x: m.l - 6, y: y(v) + 4, 'text-anchor': 'end' }, fmtY(v)));
       }
-      g.append(svg('text', { class: 'tick', x: m.l, y: H - 6, 'text-anchor': 'start' }, day(h.first_day)));
-      for (let yr = Number(h.first_day.slice(0, 4)) + 1; ; yr++) {              // the first of January of each year
-        const i = Math.round((Date.parse(`${yr}-01-01`) - t0) / DAY);
-        if (i >= n) break;
+      g.append(svg('text', { class: 'tick', x: m.l, y: H - 6, 'text-anchor': 'start' }, day(iso(a))), svg('text', { class: 'tick', x: W - m.r, y: H - 6, 'text-anchor': 'end' }, day(iso(b))));
+      // a line at the first of January of each year, or at the first of each month when the window is a year or less
+      const months = cnt <= 400;
+      for (let t = new Date(Date.UTC(Number(iso(a).slice(0, 4)), months ? Number(iso(a).slice(5, 7)) : 12, 1)); ; t.setUTCMonth(t.getUTCMonth() + (months ? 1 : 12))) {
+        const i = Math.round((t.getTime() - t0) / DAY);
+        if (i > b) break;
         g.append(svg('line', { class: 'grid', x1: x(i), x2: x(i), y1: m.t, y2: m.t + ih }));
-        if (x(i) - m.l > 80 && W - m.r - x(i) > 40) g.append(svg('text', { class: 'tick', x: x(i), y: H - 6, 'text-anchor': 'middle' }, String(yr)));
+        const text = months ? t.toLocaleDateString('en-GB', { month: 'short', timeZone: 'UTC' }) : String(t.getUTCFullYear());
+        if (x(i) - m.l > 90 && W - m.r - x(i) > 90 && (!months || cnt > 45)) g.append(svg('text', { class: 'tick', x: x(i), y: H - 6, 'text-anchor': 'middle' }, text));
       }
       let d = '';
-      for (const [i, r] of at) { const v = value(r); if (v > 0) d += `M${x(i).toFixed(2)},${y(0)}v${(y(v) - y(0)).toFixed(2)}h${w.toFixed(2)}V${y(0)}z`; }
+      for (const [i, r] of at) { if (i < a || i > b) continue; const v = value(r); if (v > 0) d += `M${x(i).toFixed(2)},${y(0)}v${(y(v) - y(0)).toFixed(2)}h${w.toFixed(2)}V${y(0)}z`; }
       g.append(svg('path', { class: 'daybars', d }));
       const cross = svg('line', { class: 'crossline', y1: m.t, y2: m.t + ih, visibility: 'hidden' });
       g.append(cross);
@@ -218,7 +228,7 @@
         const r = g.getBoundingClientRect();
         if (!r.width) return -1;
         const px = ((e.clientX - r.left) / r.width) * W;
-        const i = Math.max(0, Math.min(n - 1, Math.floor(((px - m.l) / iw) * n)));
+        const i = Math.max(a, Math.min(b, a + Math.floor(((px - m.l) / iw) * cnt)));
         const row = at.get(i), cx = x(i) + w / 2;
         cross.setAttribute('x1', cx); cross.setAttribute('x2', cx); cross.setAttribute('visibility', 'visible');
         tValue.textContent = row ? fmtY(value(row)) : 'Not read yet';
@@ -241,8 +251,23 @@
     show();
     let t = 0;
     window.addEventListener('resize', () => { clearTimeout(t); t = setTimeout(show, 150); });
-    const left = n - h.days_covered;
-    $('inc-days-note').textContent = `${fmt.format(h.days_covered)} of ${fmt.format(n)} days have been read${left > 0 ? `; ${fmt.format(left)} are still to come` : ''}. Move the pointer over the chart for the numbers of a day; a click chooses its file below.`;
+    // the window: a button for the last days, or the two dates
+    const press = (v) => buttons.forEach((x) => x.setAttribute('aria-pressed', String(x.dataset.range === v)));
+    buttons.forEach((x) => x.addEventListener('click', () => {
+      const days = Number(x.dataset.range);
+      b = n - 1; a = days ? Math.max(0, n - days) : 0;
+      press(x.dataset.range);
+      show();
+    }));
+    const dated = () => {
+      const i = (f, other) => (/^\d{4}-\d{2}-\d{2}$/.test(f.value) ? Math.max(0, Math.min(n - 1, Math.round((Date.parse(f.value) - t0) / DAY))) : other);
+      const x = i(from, a), z = i(to, b);
+      a = Math.min(x, z); b = Math.max(x, z);
+      press(null);
+      show();
+    };
+    from.addEventListener('change', dated);
+    to.addEventListener('change', dated);
 
     // every incident of a day: the file of the day
     pick.replaceChildren(...listed.map((r) => el('option', { value: r.day, text: `${day(r.day)} (${fmt.format(r.incidents)})` })));
