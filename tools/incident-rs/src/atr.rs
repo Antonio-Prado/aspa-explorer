@@ -8,12 +8,12 @@ const WINDOW: i64 = 10;
 const SESSION_EVENT_SECONDS: i64 = 120;
 const ATTRIBUTE_SUBCODES: [i64; 4] = [1, 4, 5, 9];
 
-#[derive(Default)]
+#[derive(Default, serde::Serialize, serde::Deserialize)]
 struct Withdrawals { by_second: Vec<(i64, u32)>, count: u32, last: i64 }
 
 pub type Session = (u16, u64);
 
-#[derive(Default)]
+#[derive(Default, serde::Serialize, serde::Deserialize)]
 pub struct Atr { collectors: Vec<String>, windows: FxHashMap<Session, Withdrawals>, states: FxHashMap<Session, (i64, String)> }
 
 impl Atr {

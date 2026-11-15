@@ -13,7 +13,7 @@ const PENDING_TTL_SECONDS: i64 = 86_400;
 
 // a more specific that waits: Python keys it by the text of the record, so a text that is not the way Python writes the
 // network is another key (`odd`)
-#[derive(PartialEq, Eq, Hash)]
+#[derive(PartialEq, Eq, Hash, serde::Serialize, serde::Deserialize)]
 struct Waiting { net: Net, origin: u64, odd: Option<Box<str>> }
 
 pub enum Hit {
@@ -23,7 +23,7 @@ pub enum Hit {
     Retroactive(Net, Vec<(String, u64, i64)>),
 }
 
-#[derive(Default)]
+#[derive(Default, serde::Serialize, serde::Deserialize)]
 pub struct Deg {
     aggregates: FxHashMap<Net, (u64, i64)>,
     // in the order they came, as the dictionary of Python: the first five are the ones told

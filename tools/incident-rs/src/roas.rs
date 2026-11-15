@@ -27,13 +27,20 @@ fn number(v: &Option<serde_json::Value>) -> Option<u64> {
 }
 
 impl Roas {
-    pub fn load(file: &str) -> Roas {
+    // every file, as load_roas reads every roas/*.xz
+    pub fn load_all(files: &[String]) -> Roas {
+        let mut out = Roas::default();
+        for f in files { out.add(f); }
+        out
+    }
+    pub fn load(file: &str) -> Roas { let mut out = Roas::default(); out.add(file); out }
+    fn add(&mut self, file: &str) {
+        let out = self;
         let mut child = Command::new("xz").args(["-dc", file]).stdout(Stdio::piped()).spawn().expect("xz");
         let mut text = Vec::new();
         child.stdout.take().unwrap().read_to_end(&mut text).expect("read");
         child.wait().expect("xz");
         let parsed: File = serde_json::from_slice(&text).expect("the ROA file");
-        let mut out = Roas::default();
         for e in parsed.roas {
             let (prefix, asn) = match (e.prefix, e.asn) { (Some(p), Some(a)) if !p.is_empty() => (p, a), _ => continue };
             let asn = match &asn { serde_json::Value::Number(n) => n.as_u64(), serde_json::Value::String(s) => s.replace("AS", "").parse().ok(), _ => None };
@@ -43,8 +50,8 @@ impl Roas {
             let list = if net.text() == prefix { out.table.entry(net).or_default() } else { out.odd.entry(prefix).or_default() };
             if !list.contains(&(asn, max_len)) { list.push((asn, max_len)); }
         }
-        out
     }
+    pub fn len(&self) -> usize { self.table.len() + self.odd.len() }
     pub fn is_empty(&self) -> bool { self.table.is_empty() && self.odd.is_empty() }
     // roa_authorises: a ROA of the prefix or of a covering one has this origin and a maxLength that allows the prefix
     pub fn authorises(&self, net: &Net, origin: u64) -> bool {

@@ -8,14 +8,17 @@ use rustc_hash::FxHashSet;
 #[derive(Default)]
 pub struct Links { known: FxHashSet<(u64, u64)> }
 
+impl Links { pub fn len(&self) -> usize { self.known.len() / 2 } }
+
 impl Links {
-    pub fn load(file: &str) -> Links {
+    pub fn load(file: &str) -> Links { Links::load_all(&[file.to_string()]) }
+    pub fn load_all(files: &[String]) -> Links {
         let mut known = FxHashSet::default();
-        for line in std::fs::read_to_string(file).expect("the file of the links").lines() {
+        for file in files { for line in std::fs::read_to_string(file).expect("the file of the links").lines() {
             let p: Vec<&str> = line.split_whitespace().collect();
             if p.len() != 2 { continue; }
             if let (Ok(a), Ok(b)) = (p[0].parse::<u64>(), p[1].parse::<u64>()) { known.insert((a, b)); known.insert((b, a)); }
-        }
+        } }
         Links { known }
     }
 }

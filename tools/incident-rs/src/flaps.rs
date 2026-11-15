@@ -7,13 +7,14 @@ const VOL_FO_FLAPS: usize = 10;
 const VOL_FO_WINDOW: i64 = 300;
 const VOL_FO_MIN_PEERS: usize = 3;
 
-#[derive(PartialEq, Eq, Hash, Clone, Copy)]
+#[derive(PartialEq, Eq, Hash, Clone, Copy, serde::Serialize, serde::Deserialize)]
 struct Key { addr: u128, peer: u32, collector: u16, len: u8, v6: bool }
 
 // the events of the window: the time and one bit for an announcement; nearly always one
+#[derive(serde::Serialize, serde::Deserialize)]
 enum Events { One(i64), Many(Vec<i64>) }
 
-#[derive(Default)]
+#[derive(Default, serde::Serialize, serde::Deserialize)]
 pub struct Flaps { table: FxHashMap<Key, Events>, collectors: Vec<String>, peers: FxHashMap<Prefix, Vec<(u64, i64)>> }
 
 impl Flaps {

@@ -83,7 +83,7 @@ fn epoch_of(s: &str) -> i64 {
 
 // A prefix as numbers: the address with the host bits cleared (as ip_network(strict=False)), its length, its family; and
 // whether the text it came from is the way Python writes that network, which decides if a table keyed by text has it.
-#[derive(Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Clone, Copy, PartialEq, Eq, Hash, serde::Serialize, serde::Deserialize)]
 pub struct Net { pub addr: u128, pub len: u8, pub v6: bool }
 
 impl Net {
@@ -108,7 +108,7 @@ fn mask(len: u8, bits: u8) -> u128 {
 
 // A prefix as the key of a table that Python keys by the text of the record: the network when the text is the way Python
 // writes it, the text itself otherwise (another key than its network, as in Python).
-#[derive(Clone, PartialEq, Eq, Hash)]
+#[derive(Clone, PartialEq, Eq, Hash, serde::Serialize, serde::Deserialize)]
 pub enum Key { Canon(Net), Odd(Box<str>) }
 
 impl Key {

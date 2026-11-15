@@ -33,6 +33,7 @@ impl Relationships {
         child.wait().expect("bzip2");
         Relationships { table }
     }
+    pub fn len(&self) -> usize { self.table.len() }
     pub fn is_empty(&self) -> bool { self.table.is_empty() }
     // whether CAIDA has the pair, in this order, with any relationship
     pub fn linked(&self, a: u64, b: u64) -> bool { self.table.contains_key(&key(a, b)) }

@@ -12,10 +12,12 @@ const VOL_AC_UPDATES: u32 = 3000;
 const VOL_AC_PREFIXES: usize = 300;
 const VOL_AC_PEERS: usize = 8;
 
+#[derive(serde::Serialize, serde::Deserialize)]
 struct Burst { start: i64, last: i64, n: u32, fired: bool }
+#[derive(serde::Serialize, serde::Deserialize)]
 struct Window { start: i64, n: u32, prefixes: FxHashSet<Key>, peers: FxHashSet<u64>, fired: bool }
 
-#[derive(Default)]
+#[derive(Default, serde::Serialize, serde::Deserialize)]
 pub struct Vol { bursts: FxHashMap<Key, Burst>, churn: FxHashMap<u64, Window> }
 
 impl Vol {

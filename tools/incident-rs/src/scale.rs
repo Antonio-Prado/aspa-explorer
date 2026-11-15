@@ -13,12 +13,15 @@ const DEG_HISTORY_DAYS: usize = 7;
 const DEG_JUMP_MIN_DAYS: usize = 3;
 
 // p: the first peer that had the prefix, 0 once a second one had it and it was counted
+#[derive(serde::Serialize, serde::Deserialize)]
 struct Bucket { day: i64, p: FxHashMap<Key, u64>, n: u32, fired: u8 }
+#[derive(serde::Serialize, serde::Deserialize)]
 struct Origin { day: i64, n: u32, n4: u32, fired: u8 }
 
+#[derive(Clone)]
 pub struct Hit { pub kind: &'static str, pub aggregate: Net, pub more_specifics: u32, pub origin_more_specifics: u32, pub twice_median: Option<u64>, pub median_of_two: bool }
 
-#[derive(Default)]
+#[derive(Default, serde::Serialize, serde::Deserialize)]
 pub struct Scale { buckets: FxHashMap<(u64, Net), Bucket>, origins: FxHashMap<u64, Origin>, history: FxHashMap<u64, Vec<u32>> }
 
 fn twice_median(v: &[u32]) -> u64 {

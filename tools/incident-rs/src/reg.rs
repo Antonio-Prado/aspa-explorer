@@ -42,14 +42,18 @@ fn listed(t: &Table, lo: u128, hi: u128) -> Option<&'static str> {
 }
 
 impl Registry {
+    pub fn len(&self) -> usize { self.asn.0.len() + self.v4.0.len() + self.v6.0.len() }
     // the files delegated-* of a directory
     pub fn load(dir: &str) -> Registry {
-        let (mut asn, mut v4, mut v6): (Vec<(u128, u128, &'static str)>, Vec<_>, Vec<_>) = (Vec::new(), Vec::new(), Vec::new());
-        let mut files: Vec<_> = std::fs::read_dir(dir).expect("the directory of the delegation files").filter_map(|e| e.ok()).map(|e| e.path())
-            .filter(|p| p.file_name().and_then(|n| n.to_str()).is_some_and(|n| n.starts_with("delegated-"))).collect();
+        let mut files: Vec<String> = std::fs::read_dir(dir).expect("the directory of the delegation files").filter_map(|e| e.ok()).map(|e| e.path())
+            .filter(|p| p.file_name().and_then(|n| n.to_str()).is_some_and(|n| n.starts_with("delegated-"))).map(|p| p.to_string_lossy().into_owned()).collect();
         files.sort();
+        Registry::load_all(&files)
+    }
+    pub fn load_all(files: &[String]) -> Registry {
+        let (mut asn, mut v4, mut v6): (Vec<(u128, u128, &'static str)>, Vec<_>, Vec<_>) = (Vec::new(), Vec::new(), Vec::new());
         for f in files {
-            let text = String::from_utf8_lossy(&std::fs::read(&f).expect("read")).into_owned();
+            let text = String::from_utf8_lossy(&std::fs::read(f).expect("read")).into_owned();
             for line in text.lines() {
                 let p: Vec<&str> = line.split('|').collect();
                 if p.len() < 7 { continue; }

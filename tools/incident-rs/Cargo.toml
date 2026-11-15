@@ -6,8 +6,9 @@ description = "The incident detectors of tools/data_scripts/incident.py, in Rust
 license = "BSD-3-Clause"
 
 [dependencies]
+bincode = "1.3"
 flate2 = "1"
-indexmap = "2"
+indexmap = { version = "2", features = ["serde"] }
 rustc-hash = "2"
 serde = { version = "1", features = ["derive"] }
 serde_json = { version = "1", features = ["preserve_order"] }
