@@ -9,12 +9,14 @@
 #      The working directories of the backfill are the entries of $BASE/blocks (links, each with archive/, days.jsonl and cache/).
 #      $BASE/live-from, when it is there, has the first day that the archive of the recorder covers in full (YYYY-MM-DD): the
 #      days before it are taken from the backfill only.
-#   6. while incident-rs (tools/incident-rs) is checked against incident.py: when $INCIDENTS_RS (default $CODE/incident-rs)
-#      is there and $BASE/work-rs has its state, it reads the same files with the same tables (work-rs links them to work/)
-#      and each incident file it writes is compared with the one of incident.py (compare_incidents.py, next to incident.py):
-#      one line for each in $BASE/work-rs/compared.txt, and a file that is the same is deleted. Nothing of it is published,
-#      and a failure there changes nothing of the rest. The state is brought over once from the one of incident.py:
-#        python3.12 export_state.py --code $CODE work/active_state.pkl work-rs/state.jsonl && cd work-rs && incident-rs import-state state.jsonl
+#   6. while incident-rs is checked against incident.py, the one that did not find the incidents of step 3 reads the same files
+#      with the same tables in a directory of its own ($BASE/work-py for incident.py, $BASE/work-rs for incident-rs; links
+#      to work/ for data, roas, delegations, links and the CAIDA file), and each incident file it writes is compared with the
+#      one of step 3 (compare_incidents.py, next to incident.py): one line for each in compared.txt of that directory, and a
+#      file that is the same is deleted. Nothing of it is published, and a failure there changes nothing of the rest.
+# Step 3 is incident-rs (tools/incident-rs, $INCIDENTS_RS, default $CODE/incident-rs) when work/ has its state
+# (active_state.rs.bin), incident.py otherwise. A state of incident.py is brought over once:
+#   python3.12 export_state.py --code $CODE active_state.pkl state.jsonl && incident-rs import-state state.jsonl
 # Everything is in $BASE: incoming/ (stream.py), work/ (incident.py, with its state), archive/ (every incident file, compressed, kept for good), incidents-detail.jsonl.
 #   30 2 * * * /usr/bin/lockf -t 0 /var/db/aspa-data/run.lock /bin/sh -c '/bin/sh /usr/local/libexec/aspa-data/run-incidents.sh >/var/db/aspa-data/run.log 2>&1'
 # (02:30 local time: 00:30 UTC in summer, 01:30 UTC in winter; lockf: a day of data takes hours to read, and two runs at once would corrupt the state of incident.py;
@@ -65,8 +67,10 @@ if [ -f "$GEN/cache/dump-rrc00.gz" ]; then
 fi
 
 # 3. the incidents
+RS=${INCIDENTS_RS:-$CODE/incident-rs}
+if [ -x "$RS" ] && [ -f active_state.rs.bin ]; then ENGINE=rs; else ENGINE=py; fi
 if ls data/records_*.jsonl.gz >/dev/null 2>&1; then
-  "$PY" "$CODE/incident.py"
+  if [ "$ENGINE" = rs ]; then "$RS" run; else "$PY" "$CODE/incident.py"; fi
 else
   echo "no closed record file yet"
 fi
@@ -105,21 +109,21 @@ live_from=""
   --caida="$caida" --days="$BASE/days-cache/$COLLECTOR" --detail="$BASE/days/$COLLECTOR" --collector="$COLLECTOR" \
   || echo "the history of the incidents could not be built" >&2
 
-# 6. the parallel run of incident-rs, compared with incident.py
-RS=${INCIDENTS_RS:-$CODE/incident-rs}
-if [ -x "$RS" ] && [ -f "$BASE/work-rs/active_state.rs.bin" ]; then
-  if (cd "$BASE/work-rs" && "$RS" run >run.log 2>&1); then
-    for f in "$BASE"/work-rs/incidents_records_*.jsonl; do
+# 6. the other one in parallel, compared with the one of step 3
+if [ "$ENGINE" = rs ]; then CHECK=$BASE/work-py; STATE=active_state.pkl; else CHECK=$BASE/work-rs; STATE=active_state.rs.bin; fi
+if [ -f "$CHECK/$STATE" ] && { [ "$ENGINE" = rs ] || [ -x "$RS" ]; }; then
+  if (cd "$CHECK" && if [ "$ENGINE" = rs ]; then "$PY" "$CODE/incident.py"; else "$RS" run; fi >run.log 2>&1); then
+    for f in "$CHECK"/incidents_records_*.jsonl; do
       [ -e "$f" ] || continue
       name=${f##*/}
       [ -e "$BASE/work/$name" ] || continue
       verdict=$("$PY" "$CODE/compare_incidents.py" "$BASE/work/$name" "$f" | tail -n 1)
-      echo "$(date -u +%Y-%m-%dT%H:%M:%SZ) $name: $verdict" >> "$BASE/work-rs/compared.txt"
+      echo "$(date -u +%Y-%m-%dT%H:%M:%SZ) $name: $verdict" >> "$CHECK/compared.txt"
       case "$verdict" in
-        *" 0 different, 0 lines only in one file") rm -f "$f" "$BASE/work-rs/summary_${name%.jsonl}.txt" ;;
+        *" 0 different, 0 lines only in one file") rm -f "$f" "$CHECK/summary_${name%.jsonl}.txt" ;;
       esac
     done
   else
-    echo "the parallel run of incident-rs failed: see $BASE/work-rs/run.log" >&2
+    echo "the parallel run in $CHECK failed: see $CHECK/run.log" >&2
   fi
 fi

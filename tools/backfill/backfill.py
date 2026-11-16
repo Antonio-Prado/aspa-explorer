@@ -6,7 +6,9 @@ nightly job; a block starts with an empty state, so it reads some days before it
 (the incidents written while it does are thrown away). The blocks can be run in any order: the newest first, to go back.
 
 usage: backfill.py BASE FROM TO [--warmup N] [--until YYYY-MM-DDTHH:MM] [--limit-files N] [--collector NAME]
-  BASE    working directory (code/ with incident.py, extra_detectors.py, mrt2records.py, rib-links.mjs, mrt.mjs; venv/ with mrtparse)
+  BASE    working directory (code/ with incident.py, extra_detectors.py, mrt2records.py, rib-links.mjs, mrt.mjs; venv/ with mrtparse;
+          with code/incident-rs, tools/incident-rs built for the host, the incidents are found by it, and code/export_state.py
+          brings over the state of a block that incident.py began)
   FROM TO first and last day of the block (YYYY-MM-DD, UTC)
   --warmup N     days read before FROM to fill the state (default 2)
   --until T      a last, partial day after TO: the update files before T (to meet the first record of the recorder)
@@ -269,14 +271,25 @@ def main():
                                     "update_files": 0, "missing_files": n_missing, "roas": n_roas, "notes": notes}) + "\n")
             log(f"{d}: no update files, day skipped")
             continue
-        log(f"{d}: incident.py")
-        # the last day of the block also writes the incidents that are still open: no later day of this block will close them
-        cmd = [py, os.path.join(base, "code", "incident.py")] + (["--flush-open"] if is_last else [])
+        # incident-rs (tools/incident-rs) when code/ has it, incident.py otherwise. A block that incident.py began goes on
+        # from its state, brought over once (ref/export_state.py and import-state)
+        rs = os.path.join(base, "code", "incident-rs")
+        use_rs = os.access(rs, os.X_OK)
+        log(f"{d}: {'incident-rs' if use_rs else 'incident.py'}")
         with open(os.path.join(block, "incident.log"), "a") as lg:
+            if use_rs and os.path.exists(os.path.join(work, "active_state.pkl")) and not os.path.exists(os.path.join(work, "active_state.rs.bin")):
+                dump = os.path.join(work, "state.jsonl")
+                subprocess.run([py, os.path.join(base, "code", "export_state.py"), "--code", os.path.join(base, "code"), "active_state.pkl", dump],
+                               cwd=work, stdout=lg, stderr=subprocess.STDOUT, check=True)
+                subprocess.run([rs, "import-state", dump], cwd=work, stdout=lg, stderr=subprocess.STDOUT, check=True)
+                os.remove(dump)
+                os.rename(os.path.join(work, "active_state.pkl"), os.path.join(work, "active_state.pkl.before-rs"))
+            # the last day of the block also writes the incidents that are still open: no later day of this block will close them
+            cmd = ([rs, "run"] if use_rs else [py, os.path.join(base, "code", "incident.py")]) + (["--flush-open"] if is_last else [])
             r = subprocess.run(cmd, cwd=work, stdout=lg, stderr=subprocess.STDOUT)
         out = os.path.join(work, f"incidents_{name}.jsonl")
         if r.returncode or not os.path.exists(out):
-            raise RuntimeError(f"{d}: incident.py ended with {r.returncode} (see {block}/incident.log)")
+            raise RuntimeError(f"{d}: {os.path.basename(cmd[0])} ended with {r.returncode} (see {block}/incident.log)")
         t3 = time.time()
         n_inc = 0
         outs = [(out, f"incidents_{name}.jsonl.xz")]
