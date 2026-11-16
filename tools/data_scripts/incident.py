@@ -548,13 +548,33 @@ def add_message(inc, rec, ts_str, current_epoch):
         inc["messages"][3] = rec
 
 
+_V6_TEXT = {}
+
+
+def canonical_v6(text):
+    """The way ipaddress writes an IPv6 prefix, as one string object. The records do not always write a prefix the same way
+    (the withdrawals of some peers come as 2605:9cc0:c0d:0:0:0:0:0/48, the announcements as 2605:9cc0:c0d::/48), and every
+    table here is keyed by the text: the two were two prefixes, so the withdrawals neither made the prefix flap nor reached
+    its incidents. A text that is no prefix stays as it is."""
+    c = _V6_TEXT.get(text)
+    if c is None:
+        try:
+            c = sys.intern(str(ipaddress.ip_network(text, strict=False)))
+        except ValueError:
+            c = sys.intern(text)
+        if len(_V6_TEXT) >= 1 << 20:
+            _V6_TEXT.clear()
+        _V6_TEXT[text] = c
+    return c
+
+
 def process_record(rec, rel, roas, active_incidents, timeout_seconds, out_f, state, reg=None, links=frozenset()):
     msg_type = rec.get("type")
     prefix = rec.get("prefix")
     if type(prefix) is str:
         # one string object for each prefix: the open incidents, the index and the state of the detectors hold the same
         # prefix millions of times, and every record brings a new copy of it
-        prefix = rec["prefix"] = sys.intern(prefix)
+        prefix = rec["prefix"] = canonical_v6(prefix) if ":" in prefix else sys.intern(prefix)
     # X-12: the peer as a session (collector, peer AS): the same AS at two collectors is two sessions
     peer = extra_detectors.session_of(rec)
     ts_str = rec.get("timestamp")

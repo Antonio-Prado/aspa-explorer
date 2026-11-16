@@ -42,6 +42,11 @@ for i in range(160):
 for i in range(60):
     for peer in (3356, 174, 2914, 6939):
         (A if i % 2 else W)(2, 60000 + i * 4, "198.41.0.0/24", peer, *([[peer, 26415]] if i % 2 else []))
+# an IPv6 flap whose withdrawals write the prefix in full, as some peers do: one prefix, so a flap
+for i in range(60):
+    for peer in (3356, 174, 2914):
+        if i % 2: A(3, 30000 + i * 4, "2605:9cc0:c0d::/48", peer, [peer, 16509, 8987])
+        else: W(3, 30000 + i * 4, "2605:9cc0:c0d:0:0:0:0:0/48", peer)
 # an amplified churn: 3,200 updates of one origin, 320 prefixes, ten peers, in four minutes
 for i in range(3200):
     A(4, 70000 + i // 14, f"45.{i % 320 // 250}.{i % 320 % 250}.0/24", 1000 + i % 10, [1000 + i % 10, 3356, 9002])

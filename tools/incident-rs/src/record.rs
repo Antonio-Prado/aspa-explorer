@@ -106,6 +106,18 @@ fn mask(len: u8, bits: u8) -> u128 {
     if len == 0 { 0 } else { let all = if bits == 32 { u32::MAX as u128 } else { u128::MAX }; all & !((1u128 << (bits - len)) - 1).wrapping_sub(0) & all }
 }
 
+// The text of an IPv6 prefix as incident.py makes it (canonical_v6) when the record writes it in another way
+// (2605:9cc0:c0d:0:0:0:0:0/48 for 2605:9cc0:c0d::/48): None when it is already that, or no prefix, or IPv4
+pub fn canonical(text: &str, net: Option<&Net>) -> Option<String> {
+    if !text.contains(':') { return None; }
+    net.map(Net::text).filter(|c| c != text)
+}
+
+// the line of the record with the prefix written that way, as incident.py writes the record back in the messages
+pub fn with_prefix(line: &str, old: &str, new: &str) -> String {
+    line.replacen(&format!("\"prefix\": \"{}\"", old), &format!("\"prefix\": \"{}\"", new), 1)
+}
+
 // A prefix as the key of a table that Python keys by the text of the record: the network when the text is the way Python
 // writes it, the text itself otherwise (another key than its network, as in Python).
 #[derive(Clone, PartialEq, Eq, Hash, serde::Serialize, serde::Deserialize)]

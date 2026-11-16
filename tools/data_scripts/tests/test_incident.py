@@ -352,6 +352,14 @@ class Sessions(unittest.TestCase):
         active, _ = run(sorted(records, key=lambda r: r["timestamp"]), rel={}, roas={})
         self.assertNotIn("VOL_20.5.0.0/24", active)
 
+    def test_an_ipv6_prefix_written_in_full_is_the_same_prefix(self):
+        records = [dict(r, prefix="2605:9cc0:c0d:0:0:0:0:0/48") if r["type"] == "W" else r for r in flaps("2605:9cc0:c0d::/48", [7, 8, 9])]
+        active, _ = run(records, rel={}, roas={})
+        self.assertIn("VOL_2605:9cc0:c0d::/48", active)
+        self.assertEqual(active["VOL_2605:9cc0:c0d::/48"]["prefixes"], {"2605:9cc0:c0d::/48"})
+        self.assertEqual(incident.canonical_v6("2001:DB8:1:0::/48"), "2001:db8:1::/48")
+        self.assertEqual(incident.canonical_v6("not a prefix"), "not a prefix")
+
     def test_a_saved_state_with_as_numbers_becomes_sessions_of_rrc00(self):
         incidents = {"PRH_666": {"peers": {4}}}
         state = {"peer_withdrawals": {4: {"by_second": {}, "count": 0, "last": 0}}, "peer_state": {4: (0, "down")},

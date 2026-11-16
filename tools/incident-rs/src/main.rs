@@ -105,6 +105,8 @@ fn main() {
         n += 1;
         let collector = rec.collector.unwrap_or("None");
         let net = record::Net::parse(prefix);
+        let canon = record::canonical(prefix, net.as_ref());
+        let prefix = canon.as_deref().unwrap_or(prefix);
         let key = record::Key::of(prefix, net.as_ref());
         if do_dc {
             if let Some((seconds, updates)) = vol.update(&key, epoch) {

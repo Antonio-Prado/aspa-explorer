@@ -222,6 +222,9 @@ impl Engine {
     }
     let session = atr.session(collector, peer);
     let net = Net::parse(prefix);
+    let canon = record::canonical(prefix, net.as_ref());
+    let fixed = canon.as_ref().map(|c| record::with_prefix(line, prefix, c));
+    let (prefix, line) = (canon.as_deref().unwrap_or(prefix), fixed.as_deref().unwrap_or(line));
     let key = Key::of(prefix, net.as_ref());
 
     // an update of a prefix whose delayed convergence is already an incident belongs to it
@@ -543,7 +546,10 @@ pub fn import_state(args: &[String]) {
                 e.open.by_actor.insert(actor, id);
                 if kind != "VOL" && kind != "ATR" { for p in &prefixes { e.open.index(id, p); } }
             }
+            // a history kept under an IPv6 text written in another way stays apart in Python and never gets an event again:
+            // here, keyed by the network, it would take the place of the one of the canonical text
             "flap" => match Net::parse(row[1].as_str().unwrap()) {
+                Some(net) if record::canonical(row[1].as_str().unwrap(), Some(&net)).is_some() => left_out += 1,
                 Some(net) => e.flaps.import(&net, &collector(&row[2]), nat(&row[3]), row[4].as_array().unwrap().iter().map(int).collect()),
                 None => left_out += 1,
             },

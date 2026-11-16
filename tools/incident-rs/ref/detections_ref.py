@@ -45,6 +45,8 @@ with gzip.open(a.src, "rt", encoding="utf-8") as f, open(a.dst, "w") as out:
         prefix = rec.get("prefix")
         if not prefix or not peer or not ts:
             continue
+        if type(prefix) is str and ":" in prefix:
+            prefix = rec["prefix"] = incident.canonical_v6(prefix)        # as process_record
         epoch = incident.parse_timestamp(ts)
         if epoch > 0:
             if last_gc is None:
