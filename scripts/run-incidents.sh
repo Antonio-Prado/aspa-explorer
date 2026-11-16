@@ -1,25 +1,20 @@
 #!/bin/sh
 # The daily job of the Incidents page, run from cron as the user of the builders (aspagen), a little after the end of the UTC day:
 #   1. takes the record files that stream.py has closed (every one but the newest, which it is still writing);
-#   2. refreshes the ROAs (Routinator, rpki.ping6.it) and points incident.py at the newest CAIDA relationships and at the delegation files of the adoption job;
-#   3. runs incident.py, which keeps its state between runs and writes incidents_<file>.jsonl for each file;
+#   2. refreshes the ROAs (Routinator, rpki.ping6.it) and points the detector at the newest CAIDA relationships and at the delegation files of the adoption job;
+#   3. runs incident-rs (tools/incident-rs), which keeps its state between runs and writes incidents_<file>.jsonl for each file;
 #   4. builds /api/v1/incidents.json (scripts/build-incidents.mjs) and the file with the verdict of each incident (/api/v1/incidents-detail.jsonl).
 #   5. builds /api/v1/incidents-history.json (scripts/build-incidents-history.mjs): every day that is archived, also the days that
 #      tools/backfill/backfill.py reads from the archive of RIPE RIS, with a file of the incidents of each day in days/rrc00/.
 #      The working directories of the backfill are the entries of $BASE/blocks (links, each with archive/, days.jsonl and cache/).
 #      $BASE/live-from, when it is there, has the first day that the archive of the recorder covers in full (YYYY-MM-DD): the
 #      days before it are taken from the backfill only.
-#   6. while incident-rs is checked against incident.py, the one that did not find the incidents of step 3 reads the same files
-#      with the same tables in a directory of its own ($BASE/work-py for incident.py, $BASE/work-rs for incident-rs; links
-#      to work/ for data, roas, delegations, links and the CAIDA file), and each incident file it writes is compared with the
-#      one of step 3 (compare_incidents.py, next to incident.py): one line for each in compared.txt of that directory, and a
-#      file that is the same is deleted. Nothing of it is published, and a failure there changes nothing of the rest.
-# Step 3 is incident-rs (tools/incident-rs, $INCIDENTS_RS, default $CODE/incident-rs) when work/ has its state
-# (active_state.rs.bin), incident.py otherwise. A state of incident.py is brought over once:
+# Step 3 is incident-rs ($INCIDENTS_RS, default $CODE/incident-rs) when work/ has its state (active_state.rs.bin), and
+# incident.py, the detector it was ported from, otherwise. A state of incident.py is brought over once:
 #   python3.12 export_state.py --code $CODE active_state.pkl state.jsonl && incident-rs import-state state.jsonl
-# Everything is in $BASE: incoming/ (stream.py), work/ (incident.py, with its state), archive/ (every incident file, compressed, kept for good), incidents-detail.jsonl.
+# Everything is in $BASE: incoming/ (stream.py), work/ (the detector, with its state), archive/ (every incident file, compressed, kept for good), incidents-detail.jsonl.
 #   30 2 * * * /usr/bin/lockf -t 0 /var/db/aspa-data/run.lock /bin/sh -c '/bin/sh /usr/local/libexec/aspa-data/run-incidents.sh >/var/db/aspa-data/run.log 2>&1'
-# (02:30 local time: 00:30 UTC in summer, 01:30 UTC in winter; lockf: a day of data takes hours to read, and two runs at once would corrupt the state of incident.py;
+# (02:30 local time: 00:30 UTC in summer, 01:30 UTC in winter; lockf: a day of data takes hours to read, and two runs at once would corrupt the state of the detector;
 # the log is opened inside lockf, so that a run that finds the lock taken does not empty the log of the run that holds it)
 # The record files of more than KEEP_DAYS days are deleted once they have been read, and the incident files of more than
 # KEEP_INCIDENT_DAYS days are not part of the page any more: their copy stays in archive/.
@@ -108,22 +103,3 @@ live_from=""
 "$NODE" "$SCRIPTS/build-incidents-history.mjs" "$GEN/incidents-history.json" --live="$BASE/archive" --live-from="$live_from" --blocks="$blocks" \
   --caida="$caida" --days="$BASE/days-cache/$COLLECTOR" --detail="$BASE/days/$COLLECTOR" --collector="$COLLECTOR" \
   || echo "the history of the incidents could not be built" >&2
-
-# 6. the other one in parallel, compared with the one of step 3
-if [ "$ENGINE" = rs ]; then CHECK=$BASE/work-py; STATE=active_state.pkl; else CHECK=$BASE/work-rs; STATE=active_state.rs.bin; fi
-if [ -f "$CHECK/$STATE" ] && { [ "$ENGINE" = rs ] || [ -x "$RS" ]; }; then
-  if (cd "$CHECK" && if [ "$ENGINE" = rs ]; then "$PY" "$CODE/incident.py"; else "$RS" run; fi >run.log 2>&1); then
-    for f in "$CHECK"/incidents_records_*.jsonl; do
-      [ -e "$f" ] || continue
-      name=${f##*/}
-      [ -e "$BASE/work/$name" ] || continue
-      verdict=$("$PY" "$CODE/compare_incidents.py" "$BASE/work/$name" "$f" | tail -n 1)
-      echo "$(date -u +%Y-%m-%dT%H:%M:%SZ) $name: $verdict" >> "$CHECK/compared.txt"
-      case "$verdict" in
-        *" 0 different, 0 lines only in one file") rm -f "$f" "$CHECK/summary_${name%.jsonl}.txt" ;;
-      esac
-    done
-  else
-    echo "the parallel run in $CHECK failed: see $CHECK/run.log" >&2
-  fi
-fi
