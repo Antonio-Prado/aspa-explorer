@@ -55,12 +55,12 @@ class Parser(unittest.TestCase):
 
 
 class Writer(unittest.TestCase):
-    def test_one_file_for_each_day_and_late_records_stay(self):
+    def test_one_file_for_each_hour_and_late_records_stay(self):
         with tempfile.TemporaryDirectory() as d:
             cwd = os.getcwd()
             os.chdir(d)
             try:
-                w = stream.DailyWriter()
+                w = stream.HourlyWriter()
                 rec = lambda ts: {"timestamp": ts, "type": "W"}
                 w.write(rec("2026-10-22 23:59:59"))
                 first = w.name
@@ -68,6 +68,8 @@ class Writer(unittest.TestCase):
                 stream.time.sleep(1.1)                    # the name has the epoch of the opening
                 w.write(rec("2026-10-23 00:00:01"))
                 second = w.name
+                w.write(rec("2026-10-23 00:59:59"))      # the same hour
+                self.assertEqual(w.name, second)
                 w.close()
             finally:
                 os.chdir(cwd)
@@ -75,7 +77,7 @@ class Writer(unittest.TestCase):
             with gzip.open(os.path.join(d, first), "rt") as f:
                 self.assertEqual(len(f.readlines()), 2)
             with gzip.open(os.path.join(d, second), "rt") as f:
-                self.assertEqual(len(f.readlines()), 1)
+                self.assertEqual(len(f.readlines()), 2)
 
 
 if __name__ == "__main__":

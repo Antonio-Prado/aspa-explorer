@@ -20,9 +20,9 @@ sequenceDiagram
 
     loop while it runs
         RIS-->>S: UPDATE, NOTIFICATION, state of a peer (RIS Live, rrc00)
-        S->>D: one record, in the file of the UTC day
+        S->>D: one record, in the file of the UTC hour
     end
-    S->>D: close the file when the day ends
+    S->>D: close the file when the hour ends
 
     opt the past
         R->>RIS: the MRT files of a window
@@ -66,7 +66,7 @@ The copy of ASPA Explorer also writes two records of the session, with no prefix
 
 ## stream.py
 
-Listens to [RIPE RIS Live](https://ris-live.ripe.net/) (collector `rrc00`) until Ctrl+C or `SIGTERM`, and reconnects by itself with exponential backoff; after ten failed attempts in a row (about half an hour) it exits, and the rc script starts it again. It writes one file for each **UTC day**, `records_<epoch of the opening>.jsonl.gz`, and closes it when the day ends: a gzip file is complete only once it is closed, and `incident.py` needs complete files. A record that arrives a little late (the stream is not in strict order) stays in the file of the day before. The file is flushed every 10,000 records, so a partial file can be read while the script runs (the last block may be cut).
+Listens to [RIPE RIS Live](https://ris-live.ripe.net/) (collector `rrc00`) until Ctrl+C or `SIGTERM`, and reconnects by itself with exponential backoff; after ten failed attempts in a row (about half an hour) it exits, and the rc script starts it again. It writes one file for each **UTC hour** (one for each day until November 2026), `records_<epoch of the opening>.jsonl.gz`, and closes it when the hour ends: a gzip file is complete only once it is closed, and the detector needs complete files, so the job of the Incidents page can run every hour on the hours that have ended. A record that arrives a little late (the stream is not in strict order) stays in the file of the hour before. The file is flushed every 10,000 records, so a partial file can be read while the script runs (the last block may be cut).
 
 ```bash
 python stream.py
@@ -143,7 +143,7 @@ The scripts were run: `stream.py` on the live stream (27,168 updates in 25 s), `
 | `VOL` started at `total_updates` 1 with one message | after 25 s: 105 `VOL` incidents with totals up to 1,189 and 1 message each | starts from the flaps that triggered it, keeps up to 4 messages |
 | Open incidents at the end of the last file were silently lost | the output of a short run was empty | `--flush-open`, and the behaviour is documented |
 | `stream.py` had `peer` as a string and `collector` as `rrc00.ripe.net` | the first 17,596 records | integer and `rrc00`, as `record.py` and the project documentation (`STREAM.md`) |
-| A gzip file can be read in full only when closed, and the file was never closed until the end | | one file for each UTC day, flush every 10,000 records |
+| A gzip file can be read in full only when closed, and the file was never closed until the end | | one file for each UTC hour, flush every 10,000 records |
 | The summary used `jq` through a shell | | made in Python |
 
 Open points, **not changed**, to be decided:

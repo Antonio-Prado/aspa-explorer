@@ -264,7 +264,10 @@ async function main() {
     }
     used.add(cached.caida);
   }
-  const byDay = new Map([...perDay].map(([d, list]) => [d, list.length === 1 ? list[0] : sum(list)]));
+  // the day that is going on is left out until it has ended: the recorder closes a file every hour, and a part of a day
+  // would read as a day with fewer incidents
+  const yesterday = new Date(Date.now() - 86400e3).toISOString().slice(0, 10);
+  const byDay = new Map([...perDay].filter(([d]) => d <= yesterday).map(([d, list]) => [d, list.length === 1 ? list[0] : sum(list)]));
   for (const d of byDay.keys()) {
     const out = join(detailDir, `${d}.jsonl.gz`);
     let there = true;
@@ -274,7 +277,6 @@ async function main() {
   if (!byDay.size) throw new Error('no day is built: not publishing');
 
   const all = [...byDay.keys()].sort();
-  const yesterday = new Date(Date.now() - 86400e3).toISOString().slice(0, 10);
   const expected = Math.round((Date.parse(yesterday) - Date.parse(FIRST_DAY)) / 86400e3) + 1;
   const months = [...used].sort();
   const doc = {

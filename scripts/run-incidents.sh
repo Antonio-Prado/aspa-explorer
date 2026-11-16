@@ -1,7 +1,7 @@
 #!/bin/sh
-# The daily job of the Incidents page, run from cron as the user of the builders (aspagen), a little after the end of the UTC day:
-#   1. takes the record files that stream.py has closed (every one but the newest, which it is still writing);
-#   2. refreshes the ROAs (Routinator, rpki.ping6.it) and points the detector at the newest CAIDA relationships and at the delegation files of the adoption job;
+# The job of the Incidents page, run from cron every hour as the user of the builders (aspagen), a little after the end of the UTC hour:
+#   1. takes the record files that stream.py has closed (one for each UTC hour: every one but the newest, which it is still writing);
+#   2. refreshes the ROAs (Routinator, rpki.ping6.it) when they are older than ROAS_MAX_AGE minutes, and points the detector at the newest CAIDA relationships and at the delegation files of the adoption job;
 #   3. runs incident-rs (tools/incident-rs), which keeps its state between runs and writes incidents_<file>.jsonl for each file;
 #   4. builds /api/v1/incidents.json (scripts/build-incidents.mjs) and the file with the verdict of each incident (/api/v1/incidents-detail.jsonl).
 #   5. builds /api/v1/incidents-history.json (scripts/build-incidents-history.mjs): every day that is archived, also the days that
@@ -13,8 +13,9 @@
 # incident.py, the detector it was ported from, otherwise. A state of incident.py is brought over once:
 #   python3.12 export_state.py --code $CODE active_state.pkl state.jsonl && incident-rs import-state state.jsonl
 # Everything is in $BASE: incoming/ (stream.py), work/ (the detector, with its state), archive/ (every incident file, compressed, kept for good), incidents-detail.jsonl.
-#   30 2 * * * /usr/bin/lockf -t 0 /var/db/aspa-data/run.lock /bin/sh -c '/bin/sh /usr/local/libexec/aspa-data/run-incidents.sh >/var/db/aspa-data/run.log 2>&1'
-# (02:30 local time: 00:30 UTC in summer, 01:30 UTC in winter; lockf: a day of data takes hours to read, and two runs at once would corrupt the state of the detector;
+#   5 * * * * /usr/bin/lockf -t 0 /var/db/aspa-data/run.lock /bin/sh -c '/bin/sh /usr/local/libexec/aspa-data/run-incidents.sh >/var/db/aspa-data/run.log 2>&1'
+# (five minutes past the hour, when stream.py has closed the file of the hour before; lockf: two runs at once would corrupt the
+# state of the detector, and a run that finds the lock taken ends at once;
 # the log is opened inside lockf, so that a run that finds the lock taken does not empty the log of the run that holds it)
 # The record files of more than KEEP_DAYS days are deleted once they have been read, and the incident files of more than
 # KEEP_INCIDENT_DAYS days are not part of the page any more: their copy stays in archive/.
@@ -29,6 +30,7 @@ ROAS_URL=${INCIDENTS_ROAS_URL:-https://rpki.ping6.it/json}
 KEEP_DAYS=${INCIDENTS_KEEP_DAYS:-3}
 KEEP_INCIDENT_DAYS=${INCIDENTS_KEEP_INCIDENT_DAYS:-30}
 COLLECTOR=${INCIDENTS_COLLECTOR:-rrc00}
+ROAS_MAX_AGE=${INCIDENTS_ROAS_MAX_AGE:-360}
 
 mkdir -p "$BASE/incoming" "$BASE/work/data" "$BASE/work/roas" "$BASE/work/delegations" "$BASE/work/links"
 cd "$BASE/work"
@@ -41,13 +43,16 @@ for f in "$BASE"/incoming/records_*.jsonl.gz; do
   mv "$f" data/
 done
 
-# 2. the ROAs of today (incident.py reads every roas/*.xz: only one is kept) and the CAIDA relationships under the name it expects
-if curl -fsS --max-time 300 -o roas.json.tmp "$ROAS_URL" && xz -c roas.json.tmp > roas/current.json.xz.tmp; then
-  mv roas/current.json.xz.tmp roas/current.json.xz
-else
-  echo "the ROAs could not be refreshed: the ones of before are used" >&2
+# 2. the ROAs (the detector reads every roas/*.xz: only one is kept), at most every ROAS_MAX_AGE minutes, and the CAIDA
+# relationships under the name it expects
+if [ ! -f roas/current.json.xz ] || [ -n "$(find roas/current.json.xz -mmin +"$ROAS_MAX_AGE")" ]; then
+  if curl -fsS --max-time 300 -o roas.json.tmp "$ROAS_URL" && xz -c roas.json.tmp > roas/current.json.xz.tmp; then
+    mv roas/current.json.xz.tmp roas/current.json.xz
+  else
+    echo "the ROAs could not be refreshed: the ones of before are used" >&2
+  fi
+  rm -f roas.json.tmp roas/current.json.xz.tmp
 fi
-rm -f roas.json.tmp roas/current.json.xz.tmp
 caida=$(ls -1 "$GEN"/cache/as-rel2-*.bz2 2>/dev/null | sort | tail -n 1 || true)
 [ -n "$caida" ] && ln -sf "$caida" 20260901.as-rel.txt.bz2     # CAIDA_FILE of incident.py
 
@@ -57,7 +62,7 @@ for f in "$GEN"/cache/delegated-*; do [ -f "$f" ] && ln -sf "$f" delegations/; d
 # the links of the table of the collector at the start of the day (the dump that the valley job keeps in its cache), for the
 # forged-link detector: extra_detectors.py reads links/*.txt; without the file every link that CAIDA lacks is a candidate
 mkdir -p links
-if [ -f "$GEN/cache/dump-rrc00.gz" ]; then
+if [ -f "$GEN/cache/dump-rrc00.gz" ] && [ "$GEN/cache/dump-rrc00.gz" -nt links/rrc00.txt ]; then     # once for each new dump
   "$NODE" "$SCRIPTS/rib-links.mjs" "$GEN/cache/dump-rrc00.gz" links/rrc00.txt || echo "the links of the table could not be read: every missing link is a candidate" >&2
 fi
 

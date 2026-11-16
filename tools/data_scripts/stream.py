@@ -141,24 +141,25 @@ def parser(ws):
                    "origin": None, "flag": None, "compressed_path": None}
 
 
-class DailyWriter:
-    """One gzip file for each UTC day (the day of the timestamp of the records), closed when the day ends:
-    a gzip file can be read in full only after it is closed, and incident.py needs complete files."""
+class HourlyWriter:
+    """One gzip file for each UTC hour (the hour of the timestamp of the records), closed when the hour ends: a gzip file
+    can be read in full only after it is closed, and the detector needs complete files. With a file an hour the job of the
+    Incidents page can run every hour on the hours that have ended (it was one file a day)."""
 
     def __init__(self):
         self.f = None
-        self.day = None
+        self.hour = None
         self.name = None
 
     def write(self, rec):
-        day = rec["timestamp"][:10]
+        hour = rec["timestamp"][:13]          # "YYYY-MM-DD HH"
         # a record a little late (the stream is not in strict order) stays in the current file
-        if self.f is None or day > self.day:
+        if self.f is None or hour > self.hour:
             self.close()
             self.name = f"records_{int(time.time())}.jsonl.gz"
             self.f = gzip.open(self.name, "wt", encoding="utf-8")
-            self.day = day
-            print(f"\nwriting '{self.name}' (UTC day {day}).", flush=True)
+            self.hour = hour
+            print(f"\nwriting '{self.name}' (UTC hour {hour}).", flush=True)
         self.f.write(json.dumps(rec, ensure_ascii=False) + "\n")
 
     def flush(self):
@@ -181,7 +182,7 @@ def main():
     url = "wss://ris-live.ripe.net/v1/ws/?client=py-bgp-stream-collector"
 
     count = 0
-    writer = DailyWriter()
+    writer = HourlyWriter()
     try:
         while not stop_requested:
             ws = connect_with_retry(url)
