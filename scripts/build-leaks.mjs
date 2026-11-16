@@ -20,9 +20,12 @@
 // (the by-AS file of each of the last 60 days, to compare two days).
 import { createRequire } from 'node:module';
 import { mkdir, readFile, writeFile, rename, stat, readdir, unlink } from 'node:fs/promises';
-import { createWriteStream } from 'node:fs';
+import { createWriteStream, createReadStream } from 'node:fs';
+import { createGunzip } from 'node:zlib';
+import { execFile } from 'node:child_process';
+import { promisify } from 'node:util';
 import { pipeline } from 'node:stream/promises';
-import { Readable, Transform } from 'node:stream';
+import { Readable, Transform, Writable } from 'node:stream';
 import { join } from 'node:path';
 import net from 'node:net';
 import { readRib, openDump } from './mrt.mjs';
@@ -330,8 +333,17 @@ async function download(url, path) {
     let size = 0;
     const cap = new Transform({ transform(chunk, _enc, done) { size += chunk.length; done(size > MAX_DUMP_BYTES ? new Error(`${url}: larger than ${MAX_DUMP_BYTES} bytes`) : null, chunk); } });
     await pipeline(Readable.fromWeb(r.body), cap, createWriteStream(tmp));
+    // a download can end without an error and still not be the whole file (16 November 2026: "invalid stored block
+    // lengths" in the dump of rrc00, and no collector read that day): it is read through once, and fetched again if it fails
+    try { await intact(tmp, path); } catch (err) { await unlink(tmp).catch(() => {}); throw new Error(`${url}: the file is not whole (${err.message})`); }
   });
   await rename(tmp, path);
+}
+
+// a compressed file read through to the end: an error when it is cut or damaged
+export async function intact(file, name = file) {
+  if (name.endsWith('.gz')) await pipeline(createReadStream(file), createGunzip(), new Writable({ write(_c, _e, done) { done(); } }));
+  else if (name.endsWith('.bz2')) await promisify(execFile)('bzip2', ['-t', file]);
 }
 
 // The newest CAIDA relationships file in the cache (the adoption job keeps it there), read with bunzip2.

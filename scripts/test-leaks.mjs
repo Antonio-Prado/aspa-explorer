@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { Readable } from 'node:stream';
 import { readRib, readAsPath } from './mrt.mjs';
 import { createRequire as cr } from 'node:module';
-import { Leaks, classify, spanOf, aspaMap, relations, byAs, addHistory, withRetry, dumpUrl, dayDumpUrls, previousDay, pickLatestRib, rvListing, isRis, COLLECTORS, MAX_PLACES } from './build-leaks.mjs';
+import { Leaks, classify, spanOf, aspaMap, relations, byAs, addHistory, withRetry, intact, dumpUrl, dayDumpUrls, previousDay, pickLatestRib, rvListing, isRis, COLLECTORS, MAX_PLACES } from './build-leaks.mjs';
 
 let passed = 0;
 const test = async (name, fn) => { await fn(); passed++; console.log('ok  ', name); };
@@ -245,6 +245,20 @@ await test('the places of valley kept in memory are bounded; the routes past the
   assert.equal(l.omitted, 1);
   assert.equal([...l.groups.values()][0].routes, 2);
   assert.ok(MAX_PLACES >= 100000);
+});
+
+await test('a dump that is cut is not whole', async () => {
+  const { gzipSync } = await import('node:zlib');
+  const { writeFile, mkdtemp, rm } = await import('node:fs/promises');
+  const { tmpdir } = await import('node:os');
+  const { join } = await import('node:path');
+  const dir = await mkdtemp(join(tmpdir(), 'dump-'));
+  const gz = gzipSync(Buffer.alloc(200000, 7));
+  await writeFile(join(dir, 'whole.tmp'), gz);
+  await writeFile(join(dir, 'cut.tmp'), gz.subarray(0, gz.length - 40));
+  await intact(join(dir, 'whole.tmp'), 'dump-rrc00.gz');
+  await assert.rejects(intact(join(dir, 'cut.tmp'), 'dump-rrc00.gz'));
+  await rm(dir, { recursive: true });
 });
 
 console.log(`${passed} tests passed`);
