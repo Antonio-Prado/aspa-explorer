@@ -27,6 +27,7 @@ COLLECTOR = "rrc00"                # --collector NAME: another collector of RIPE
 CAIDA = "https://publicdata.caida.org/datasets/as-relationships/serial-2"
 ROAS = "https://ftp.ripe.net/rpki"
 TALS = ("afrinic", "apnic", "arin", "lacnic", "ripencc")
+MIN_FREE_MB = int(os.environ.get("BACKFILL_MIN_FREE_MB", "1200"))   # a day is not begun with less free space than this
 
 
 def log(*a):
@@ -243,6 +244,11 @@ def main():
         if os.path.exists(os.path.join(base, "STOP")):       # touch BASE/STOP: the workers end after the day they are reading
             log("STOP is there: ending")
             return
+        # a day takes some hundreds of megabytes while it is read (update files, records, ROAs, table): on a small disk the
+        # worker waits (it tries the block again every 15 minutes) instead of filling it
+        free = shutil.disk_usage(base).free
+        if free < MIN_FREE_MB << 20:
+            raise RuntimeError(f"{d}: {free >> 20} MB free in {base}, less than {MIN_FREE_MB} (BACKFILL_MIN_FREE_MB)")
         t0 = time.time()
         if os.path.exists(tmp):
             shutil.rmtree(tmp)
