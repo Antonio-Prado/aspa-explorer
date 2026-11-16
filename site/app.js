@@ -607,11 +607,20 @@ function checkRoutes(routes) {
     else if (v.result === 'Unknown') why = `no ASPA from ${missing.slice(0, 4).join(', ')}${missing.length > 4 ? ` and ${missing.length - 4} more` : ''}`;
     const ixps = v.result === 'Valid' ? [] : ixpIn(v.path);
     if (ixps.length) why += `${why ? ' · ' : ''}${ixps.join(', ')} ${ixps.length === 1 ? 'is an' : 'are'} exchange-point AS${ixps.length === 1 ? '' : 'es'}`;
-    return { v, result: v.result, why, shown: compressBgp(e.bgp), routes: e.routes, prefixes: e.prefixes.size, feeders: e.feeders };
+    return { v, result: v.result, why, shown: compressBgp(e.bgp), routes: e.routes, prefixes: e.prefixes.size, prefixList: [...e.prefixes], feeders: e.feeders };
   });
   const order = { Invalid: 0, Unknown: 1, Valid: 2 };
   rows.sort((a, b) => order[a.result] - order[b.result] || b.routes - a.routes);
   return { rows, skipped };
+}
+// The prefixes of a place of valley: the first three, then "+N more" with the full list in the tooltip.
+function prefixCell(list) {
+  list.sort((a, b) => a.localeCompare(b, 'en', { numeric: true }));
+  const shown = list.slice(0, 3), rest = list.length - shown.length;
+  const td = el('td', { class: 'mono' }, ...shown.flatMap((p, i) => (i ? [el('br'), p] : [p])));
+  if (rest > 0) td.append(el('br'), el('span', { class: 'hint', title: list.join('\n'), text: `+${fmt.format(rest)} more` }));
+  if (!list.length) td.textContent = '–';
+  return td;
 }
 const compressBgp = (p) => p.filter((n, i) => i === 0 || n !== p[i - 1]);
 
@@ -625,25 +634,26 @@ function leakPanel(rows) {
     const v = r.v;
     const from = v.path[v.maxUp - 1], to = v.path[v.N - v.maxDown];
     const key = `${from}|${to}`;
-    const g = groups.get(key) || { from, to, between: v.path.slice(v.maxUp, v.N - v.maxDown), paths: 0, routes: 0, feeders: new Set(), example: r.shown, v };
-    g.paths++; g.routes += r.routes; for (const f of r.feeders) g.feeders.add(f);
+    const g = groups.get(key) || { from, to, between: v.path.slice(v.maxUp, v.N - v.maxDown), paths: 0, routes: 0, feeders: new Set(), prefixes: new Set(), example: r.shown, v };
+    g.paths++; g.routes += r.routes; for (const f of r.feeders) g.feeders.add(f); for (const p of r.prefixList || []) g.prefixes.add(p);
     groups.set(key, g);
   }
   if (!groups.size) return null;
   const list = [...groups.values()].sort((x, y) => y.feeders.size - x.feeders.size || y.routes - x.routes);
-  const head = el('tr', {}, ...['Valley between', 'ASes in the valley', 'Paths', 'Routes', 'Feeders', 'Example'].map((t, i) => el('th', { scope: 'col', class: i >= 2 && i <= 4 ? 'num' : undefined, text: t })));
+  const head = el('tr', {}, ...['Valley between', 'ASes in the valley', 'Prefixes', 'Paths', 'Routes', 'Feeders', 'Example'].map((t, i) => el('th', { scope: 'col', class: i >= 3 && i <= 5 ? 'num' : undefined, text: t })));
   const trs = list.slice(0, 10).flatMap((g) => {
     const why = el('button', { type: 'button', class: 'linkish', text: 'why?', 'aria-expanded': 'false' });
     const row = el('tr', {},
       el('td', {}, asChip(g.from), ' ', asChip(g.to)),
       el('td', {}, ...(g.between.length ? g.between.flatMap((x, i) => (i ? [' ', asChip(x)] : [asChip(x)])) : ['–'])),
+      prefixCell([...g.prefixes]),
       el('td', { class: 'num', text: fmt.format(g.paths) }), el('td', { class: 'num', text: fmt.format(g.routes) }), el('td', { class: 'num', text: fmt.format(g.feeders.size) }),
       el('td', {}, el('a', { href: `#path=${encodeURIComponent(g.example.join(' '))}&from=down`, text: 'open the path' }), ' · ', why));
     let detail = null;
     why.addEventListener('click', () => {
       if (detail) { detail.hidden = !detail.hidden; why.setAttribute('aria-expanded', String(!detail.hidden)); return; }
       const body = el('div', { 'aria-live': 'polite' }, el('span', { class: 'busy', text: 'Asking the RIPE database and RIPEstat' }));
-      detail = el('tr', { class: 'detailrow' }, el('td', { colspan: '6' }, body));
+      detail = el('tr', { class: 'detailrow' }, el('td', { colspan: '7' }, body));
       row.after(detail);
       why.setAttribute('aria-expanded', 'true');
       valleyWhy(g, body).catch(() => body.replaceChildren(el('p', { text: 'The registries could not be read just now. Try again later.' })));
@@ -653,7 +663,7 @@ function leakPanel(rows) {
   return el('div', {},
     el('h3', { class: 'subhead', text: 'Valleys seen now' }),
     el('section', { class: 'table-wrap card', tabindex: '0', 'aria-label': 'Valleys seen now' }, el('table', { class: 'checks live nb' },
-      el('caption', { class: 'sr-only', text: 'Paths that the ASPAs show to contain a valley, grouped by the place of the valley, with the paths, routes and feeders that see it' }),
+      el('caption', { class: 'sr-only', text: 'Paths that the ASPAs show to contain a valley, grouped by the place of the valley, with the prefixes they carry and the paths, routes and feeders that see it' }),
       el('thead', {}, head), el('tbody', {}, ...trs))),
     el('p', { class: 'hint', text: `${fmt.format(list.length)} place${list.length === 1 ? '' : 's'} of valley${list.length > 10 ? ', the ten seen by most feeders are listed' : ''}. A valley is a route that came down from a provider or a peer and went up again. It can be a route leak, a forged path or, more often, a gap in the ASPAs: look at the neighbours below before drawing a conclusion about the ASes in the valley: an ASPA that does not list one of its real providers makes valid routes look like valleys, and many of these places can be just that. The ASPAs prove a valley only where they are published, so paths of unknown verdict may hide others.` }));
 }
