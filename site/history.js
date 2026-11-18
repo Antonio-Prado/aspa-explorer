@@ -91,7 +91,16 @@
     return { added: pb.filter((p) => !ka.has(key(p))), gone: pa.filter((p) => !kb.has(key(p))), kept: pb.filter((p) => ka.has(key(p))).length };
   }
 
-  const api = { stateOf, replay, replayBefore, diff, applyDay, classify, sortProviders, compareAs, comparePlaces };
+  // A sudden mass removal is a fault of the source, not news: on 18 November 2026 a validator dropped the
+  // whole RIPE NCC trust anchor for a quarter of an hour (2,352 ASPAs) and took them back. The step from the
+  // state prev to the state cur is suspect when it removes more than `min` customers and more than `share` of prev.
+  function massRemoval(prev, cur, min = 200, share = 0.1) {
+    let removed = 0;
+    for (const c of prev.keys()) if (!cur.has(c)) removed++;
+    return { removed, of: prev.size, suspect: removed > min && removed > prev.size * share };
+  }
+
+  const api = { stateOf, replay, replayBefore, diff, applyDay, classify, sortProviders, compareAs, comparePlaces, massRemoval };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.AspaHistory = api;
 })(typeof self !== 'undefined' ? self : this);

@@ -25,7 +25,7 @@ import http from 'node:http';
 import { readFileSync, existsSync, writeFileSync, chmodSync, rmSync } from 'node:fs';
 import { randomBytes } from 'node:crypto';
 import { openStore } from './store.mjs';
-import { stabilise, audience, describeEvent, stateOf, newPlaces, describePlace, changeBudget, CHANGES_A_DAY } from './changes.mjs';
+import { stabilise, audience, describeEvent, stateOf, massRemoval, newPlaces, describePlace, changeBudget, CHANGES_A_DAY } from './changes.mjs';
 import { compose, serialize, sendmail, mailDomainOk } from './mail.mjs';
 import { post } from './webhook.mjs';
 import { makeOutbox } from './outbox.mjs';
@@ -312,8 +312,12 @@ async function poll() {
     const data = await r.json();
     if (!Array.isArray(data.aspas) || !data.aspas.length) throw new Error('empty ASPA data, ignored');
     const current = stateOf(data.aspas);
-    verifier.set(data.aspas, (data.metadata && data.metadata.generatedTime) || null);      // the ASPAs that GET /api/v1/verify answers with
     const saved = store.getState('committed');
+    // a validator that lost a trust anchor for a few minutes is not a wave of removed ASPAs (massRemoval in site/history.js):
+    // the poll counts as failed and neither the state nor the ASPAs of /api/v1/verify take the data
+    const mass = saved ? massRemoval(new Map(saved), current) : { suspect: false };
+    if (mass.suspect) throw new Error(`${mass.removed} of ${mass.of} ASPAs gone at once: suspect data from the validator, ignored`);
+    verifier.set(data.aspas, (data.metadata && data.metadata.generatedTime) || null);      // the ASPAs that GET /api/v1/verify answers with
     pulse.lastOk = Date.now(); pulse.failures = 0; sources.ok('aspas', Date.parse(data.metadata && data.metadata.generatedTime));
     if (!saved) { store.setState('committed', [...current]); store.setState('pending', {}); log(`first run: ${current.size} ASPAs taken as the starting point`); return; }
     const out = stabilise(new Map(saved), current, store.getState('pending') || {});

@@ -9,6 +9,11 @@ A few numbers were deployed and folded into the next release without a tag of th
 
 ## [Unreleased]
 
+## [1.83.1] - 2026-11-18
+
+### Fixed
+- History, feed and notifications: a sudden mass removal of ASPAs is taken as a fault of the validator and not as news. On 18 November 2026, from 14:18 to 14:33 UTC, the Routinator behind the site dropped every object under the RIPE NCC trust anchor (377,520 VRPs and 2,352 ASPAs; another Routinator, DaKnOb ZRH2, did the same from 14:24 to 14:37, while Fort, Level66 and the Routinator of AS59715 did not) and then took them back. The hourly snapshot wrote 2,372 changes to the `history` branch and the feed, which the next run corrected, and the notifier confirmed the removals and their return and sent the messages of both. Now the snapshot job and the notifier compare the data with the last state they kept: when more than 200 ASPAs and more than a tenth of them are gone at once (`massRemoval` in `site/history.js`), the job writes nothing and fails, and the poll of the notifier counts as failed and announces nothing. `ACCEPT_MASS_REMOVAL=1` makes the job write a removal that is real.
+
 ## [1.83.0] - 2026-11-16
 
 ### Added

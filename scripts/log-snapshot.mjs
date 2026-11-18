@@ -18,7 +18,7 @@
 import { createRequire } from 'node:module';
 import { atomFeed } from './feed.mjs';
 
-const { applyDay, classify } = createRequire(import.meta.url)('../site/history.js');
+const { applyDay, classify, replay, stateOf, massRemoval } = createRequire(import.meta.url)('../site/history.js');
 
 const SITE = process.env.ASPA_SITE || 'https://aspa.ping6.it';
 const EXPERIMENT = process.env.ASPA_EXPERIMENT || 'aspa-adoption';
@@ -147,6 +147,13 @@ try {
   rows.push({ ...oldRows.find((r) => r.date === day), date: day, ...metrics, src: 'aspa' });
   rows.sort((a, b) => a.date.localeCompare(b.date));
   const oldEvents = eventsText ? JSON.parse(eventsText) : [];
+  // a validator that lost a trust anchor for a few minutes would write thousands of false removals
+  // (see massRemoval in site/history.js): nothing is written, and the next run takes the data again.
+  // ACCEPT_MASS_REMOVAL=1 writes them anyway, for a removal that is real.
+  const mass = massRemoval(replay(oldEvents), stateOf(data.aspas || []));
+  if (mass.suspect && process.env.ACCEPT_MASS_REMOVAL !== '1') {
+    throw new Error(`${mass.removed} of ${mass.of} ASPAs gone since the last snapshot: suspect data from the validator, nothing written (ACCEPT_MASS_REMOVAL=1 to write it)`);
+  }
   const events = applyDay(oldEvents, data.aspas || [], day);
   const eventsJson = JSON.stringify(events);
   const eventsChanged = eventsJson !== JSON.stringify(oldEvents);

@@ -5,8 +5,8 @@
 import { createRequire } from 'node:module';
 
 const History = createRequire(import.meta.url)('../site/history.js');
-const { stateOf, diff, sortProviders } = History;
-export { stateOf, sortProviders };
+const { stateOf, diff, sortProviders, massRemoval } = History;
+export { stateOf, sortProviders, massRemoval };
 
 const sig = (providers) => JSON.stringify(providers);
 

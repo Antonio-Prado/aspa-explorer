@@ -111,7 +111,7 @@ test('parsePath rejects junk and flags AS_SETs', () => {
 
 
 // ---- site/history.js: events, replay and daily diff ----
-const { stateOf, replay, replayBefore, diff, applyDay, classify } = require('../site/history.js');
+const { stateOf, replay, replayBefore, diff, applyDay, classify, massRemoval } = require('../site/history.js');
 const st = (obj) => new Map(Object.entries(obj));
 
 test('stateOf merges the objects of one customer and sorts providers numerically', () => {
@@ -149,6 +149,17 @@ test('applyDay is idempotent: a rerun on the same day replaces that day', () => 
   const twice = applyDay(once, aspas, '2026-01-02');
   assert.deepEqual(once, [['2026-01-01', 'AS1', ['AS2']], ['2026-01-02', 'AS3', ['AS4']]]);
   assert.deepEqual(twice, once);
+});
+
+test('massRemoval: the loss of a trust anchor is suspect, ordinary removals are not', () => {
+  const state = (n, from = 1) => new Map(Array.from({ length: n }, (_, i) => [`AS${from + i}`, ['AS0']]));
+  const before = state(4172);
+  // 18 November 2026: 2,351 ASPAs of the RIPE NCC trust anchor gone for a quarter of an hour
+  assert.deepEqual(massRemoval(before, state(1821)), { removed: 2351, of: 4172, suspect: true });
+  assert.equal(massRemoval(before, state(4100)).suspect, false);              // 72 removals in a day
+  assert.equal(massRemoval(state(1000), state(850)).suspect, false);          // 15% but only 150 ASes
+  assert.equal(massRemoval(before, state(4172, 5000)).suspect, true);         // replaced wholesale
+  assert.equal(massRemoval(new Map(), state(10)).suspect, false);             // a first run
 });
 
 test('classify tells new, changed (with the providers added and dropped) and removed', () => {
