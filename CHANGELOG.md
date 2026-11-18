@@ -9,6 +9,9 @@ A few numbers were deployed and folded into the next release without a tag of th
 
 ## [Unreleased]
 
+### Changed
+- Backfill of the incidents: `backfill.py --chunk-hours N` (or `BACKFILL_CHUNK_HOURS`) reads each day in parts of N hours, downloading, turning into records, reading and removing one part before the next. A day of a busy collector took about 2 GB of disk at once (the update files and the records of the whole day), more than the small nodes that run some collectors had free; with parts of one hour it takes a few tens of megabytes besides the state. The incidents of the day are the same: on a day of rrc19 (four hours of updates, with a day of warm-up) the files of the incidents and of the open incidents were the same bytes as in one reading, also when the run was stopped in the middle of the day and started again, which goes on from the part it was reading (`day.json` in the block). The default, 24, keeps the reading of before.
+
 ## [1.83.1] - 2026-11-18
 
 ### Fixed

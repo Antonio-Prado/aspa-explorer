@@ -5,7 +5,7 @@ BASE/archive. The days of a block are read in order, with the state of incident.
 nightly job; a block starts with an empty state, so it reads some days before its first one only to fill the state
 (the incidents written while it does are thrown away). The blocks can be run in any order: the newest first, to go back.
 
-usage: backfill.py BASE FROM TO [--warmup N] [--until YYYY-MM-DDTHH:MM] [--limit-files N] [--collector NAME]
+usage: backfill.py BASE FROM TO [--warmup N] [--until YYYY-MM-DDTHH:MM] [--limit-files N] [--collector NAME] [--chunk-hours N]
   BASE    working directory (code/ with incident.py, extra_detectors.py, mrt2records.py, rib-links.mjs, mrt.mjs; venv/ with mrtparse;
           with code/incident-rs, tools/incident-rs built for the host, the incidents are found by it, and code/export_state.py
           brings over the state of a block that incident.py began)
@@ -15,6 +15,9 @@ usage: backfill.py BASE FROM TO [--warmup N] [--until YYYY-MM-DDTHH:MM] [--limit
   --limit-files N  only the first N update files of each day (a test)
   --collector NAME another collector of RIPE RIS than rrc00 (rrc06, rrc10, ...): its update files and its table; each
                    collector has a working directory (BASE) of its own
+  --chunk-hours N  read each day in parts of N hours (default 24, or BACKFILL_CHUNK_HOURS): the update files and the
+                   records of one part are on the disk at a time, which a small disk needs (a day of a busy collector
+                   takes 2 GB at once); the incidents are the same as in one reading of the day
 A day that is done is not read again: a block that was stopped starts again from the day it was reading. `touch BASE/STOP`
 ends every block after the day it is reading. Each day adds a line to BASE/days.jsonl (incidents, files, notes, seconds).
 The downloaded files come from outside: they stay under BASE/blocks/<block>/tmp, and the parser runs with python -I."""
@@ -168,22 +171,23 @@ def day_inputs(base, work, tmp, d):
     return notes, n_roas
 
 
-def day_records(base, tmp, d, out, until=None, limit=None):
-    """The update files of the day -> the record file. -> (files read, files missing)."""
-    dl = os.path.join(tmp, "updates")
-    os.makedirs(dl, exist_ok=True)
+def update_names(d, until=None, limit=None):
+    """The update files of the day (or of the part before `until`), as (start, name), five minutes apart."""
     t = datetime(d.year, d.month, d.day)
     end = until or t + timedelta(days=1)
     names = []
     while t < end:
-        names.append(f"updates.{t:%Y%m%d.%H%M}.gz")
+        names.append((t, f"updates.{t:%Y%m%d.%H%M}.gz"))
         t += timedelta(minutes=5)
-    if limit:
-        names = names[:limit]
+    return names[:limit] if limit else names
+
+
+def day_records(base, tmp, d, names, out):
+    """Some update files of the day (names from update_names) -> the record file out. -> (files read, files missing)."""
+    names = [n for _, n in names]
+    dl = os.path.join(tmp, "updates")
+    os.makedirs(dl, exist_ok=True)
     cfg = os.path.join(tmp, "curl.cfg")
-    with open(cfg, "w") as f:
-        for n in names:
-            f.write(f'url = "{RIS}/{COLLECTOR}/{d:%Y.%m}/{n}"\noutput = "{os.path.join(dl, n)}"\n')
     for attempt in range(4):
         todo = [n for n in names if not os.path.exists(os.path.join(dl, n))]
         if not todo:
@@ -195,7 +199,7 @@ def day_records(base, tmp, d, out, until=None, limit=None):
                         "-K", cfg], capture_output=True, text=True)
         time.sleep(5 * attempt)
     have = [os.path.join(dl, n) for n in names if os.path.exists(os.path.join(dl, n)) and os.path.getsize(os.path.join(dl, n)) > 0]
-    if not have:                     # a day when the collector wrote nothing
+    if not have:                     # a part of the day when the collector wrote nothing
         shutil.rmtree(dl)
         return 0, len(names)
     py = os.path.join(base, "venv", "bin", "python")
@@ -215,6 +219,7 @@ def main():
     ap.add_argument("--until")
     ap.add_argument("--limit-files", type=int)
     ap.add_argument("--collector", default="rrc00")
+    ap.add_argument("--chunk-hours", type=int, default=int(os.environ.get("BACKFILL_CHUNK_HOURS", "24")))
     a = ap.parse_args()
     global COLLECTOR
     COLLECTOR = a.collector
@@ -253,21 +258,112 @@ def main():
         if os.path.exists(tmp):
             shutil.rmtree(tmp)
         os.makedirs(tmp)
-        for f in os.listdir(os.path.join(work, "data")):      # what a run that was stopped left
-            os.remove(os.path.join(work, "data", f))
         epoch = int(datetime(d.year, d.month, d.day, tzinfo=timezone.utc).timestamp())
         name = f"records_{epoch}"
         partial = until if until and d == until.date() else None
+        is_last = i == len(days) - 1
+        # The day is read in parts of --chunk-hours hours (24: the whole day at once): the update files of a part are
+        # downloaded, turned into a record file, read by the detector and removed before the next part, so a small disk
+        # holds one part and not a whole day. The detector keeps its state from one part to the next, and its incidents are
+        # added to the file of the day, the same lines in the same order as in one reading. day.json says how far a day that
+        # was stopped had come, so that it goes on from there.
+        names = update_names(d, partial, a.limit_files)
+        step = max(1, a.chunk_hours) * 12
+        chunks = [names[j:j + step] for j in range(0, len(names), step)] or [[]]
+        acc = os.path.join(work, "day_incidents.jsonl.part")
+        prog_file = os.path.join(block, "day.json")
+        prog = json.load(open(prog_file)) if os.path.exists(prog_file) else {}
+        if prog.get("day") != key:
+            prog = {"day": key, "chunks": 0, "size": 0, "files": 0, "missing": 0}
+            for f in os.listdir(os.path.join(work, "data")):      # what a run that was stopped left
+                os.remove(os.path.join(work, "data", f))
+            if os.path.exists(acc):
+                os.remove(acc)
         log(f"{d}{' (warm-up)' if warm else ''}: inputs")
         notes, n_roas = day_inputs(base, work, tmp, d)
         t1 = time.time()
-        log(f"{d}: update files")
-        n_files, n_missing = day_records(base, tmp, d, os.path.join(work, "data", name + ".jsonl.gz"), partial, a.limit_files)
-        t2 = time.time()
-        is_last = i == len(days) - 1
+        t_rec = t_inc = 0.0
+        rs = os.path.join(base, "code", "incident-rs")
+        use_rs = os.access(rs, os.X_OK)
+        cmd = None
+        for c, part in enumerate(chunks):
+            if c < prog["chunks"]:
+                continue
+            last_part = c == len(chunks) - 1
+            ce = int(part[0][0].replace(tzinfo=timezone.utc).timestamp()) if part else epoch
+            cname = f"records_{ce}"
+            rec = os.path.join(work, "data", cname + ".jsonl.gz")
+            cout = os.path.join(work, f"incidents_{cname}.jsonl")
+            ta = time.time()
+            if not os.path.exists(rec) and not os.path.exists(cout):
+                if len(chunks) > 1:
+                    log(f"{d}: update files {part[0][0]:%H:%M}-{part[-1][0]:%H:%M}")
+                else:
+                    log(f"{d}: update files")
+                n_files, n_missing = day_records(base, tmp, d, part, rec)
+                prog["files"] += n_files
+                prog["missing"] += n_missing
+            tb = time.time()
+            t_rec += tb - ta
+            if not os.path.exists(rec) and not os.path.exists(cout):
+                # nothing in this part: the detector has nothing to read, unless it is the last part of the block, which
+                # also writes the incidents that are still open
+                if not (is_last and last_part):
+                    prog["chunks"] = c + 1
+                    with open(prog_file + ".tmp", "w") as f:
+                        json.dump(prog, f)
+                    os.replace(prog_file + ".tmp", prog_file)
+                    continue
+            # incident-rs (tools/incident-rs) when code/ has it, incident.py otherwise. A block that incident.py began goes on
+            # from its state, brought over once (ref/export_state.py and import-state)
+            if len(chunks) == 1:
+                log(f"{d}: {'incident-rs' if use_rs else 'incident.py'}")
+            with open(os.path.join(block, "incident.log"), "a") as lg:
+                if use_rs and os.path.exists(os.path.join(work, "active_state.pkl")) and not os.path.exists(os.path.join(work, "active_state.rs.bin")):
+                    dump = os.path.join(work, "state.jsonl")
+                    subprocess.run([py, os.path.join(base, "code", "export_state.py"), "--code", os.path.join(base, "code"), "active_state.pkl", dump],
+                                   cwd=work, stdout=lg, stderr=subprocess.STDOUT, check=True)
+                    subprocess.run([rs, "import-state", dump], cwd=work, stdout=lg, stderr=subprocess.STDOUT, check=True)
+                    os.remove(dump)
+                    os.rename(os.path.join(work, "active_state.pkl"), os.path.join(work, "active_state.pkl.before-rs"))
+                # the last part of the last day of the block also writes the incidents that are still open: no later day of
+                # this block will close them
+                cmd = ([rs, "run"] if use_rs else [py, os.path.join(base, "code", "incident.py")]) + (["--flush-open"] if is_last and last_part else [])
+                r = subprocess.run(cmd, cwd=work, stdout=lg, stderr=subprocess.STDOUT)
+            if os.path.exists(rec) and (r.returncode or not os.path.exists(cout)):
+                raise RuntimeError(f"{d}: {os.path.basename(cmd[0])} ended with {r.returncode} (see {block}/incident.log)")
+            t_inc += time.time() - tb
+            # the incidents of the part go to the file of the day; a copy that was stopped halfway is cut back first
+            with open(acc, "ab") as o:
+                o.truncate(prog["size"])
+                if os.path.exists(cout):
+                    with open(cout, "rb") as f:
+                        shutil.copyfileobj(f, o)
+                o.flush()
+                os.fsync(o.fileno())
+                prog["size"] = o.tell()
+            prog["chunks"] = c + 1
+            with open(prog_file + ".tmp", "w") as f:
+                json.dump(prog, f)
+            os.replace(prog_file + ".tmp", prog_file)
+            if os.path.exists(cout):
+                os.remove(cout)
+            # the record files read before this one go; this one stays until the end of the day, so that a last part with
+            # no update files still finds a file (already read) and the detector writes the incidents that are open
+            for f in os.listdir(os.path.join(work, "data")):
+                if os.path.join(work, "data", f) != rec:
+                    os.remove(os.path.join(work, "data", f))
+            for f in os.listdir(work):
+                if f.startswith("summary_incidents_"):
+                    os.remove(os.path.join(work, f))
+        n_files, n_missing = prog["files"], prog["missing"]
+        t2 = t1 + t_rec
         if not n_files and not is_last:
             notes.append("no update files")
             shutil.rmtree(tmp)
+            if os.path.exists(acc):
+                os.remove(acc)
+            os.remove(prog_file)
             done.append(key)
             with open(done_file + ".tmp", "w") as f:
                 json.dump(done, f)
@@ -277,26 +373,9 @@ def main():
                                     "update_files": 0, "missing_files": n_missing, "roas": n_roas, "notes": notes}) + "\n")
             log(f"{d}: no update files, day skipped")
             continue
-        # incident-rs (tools/incident-rs) when code/ has it, incident.py otherwise. A block that incident.py began goes on
-        # from its state, brought over once (ref/export_state.py and import-state)
-        rs = os.path.join(base, "code", "incident-rs")
-        use_rs = os.access(rs, os.X_OK)
-        log(f"{d}: {'incident-rs' if use_rs else 'incident.py'}")
-        with open(os.path.join(block, "incident.log"), "a") as lg:
-            if use_rs and os.path.exists(os.path.join(work, "active_state.pkl")) and not os.path.exists(os.path.join(work, "active_state.rs.bin")):
-                dump = os.path.join(work, "state.jsonl")
-                subprocess.run([py, os.path.join(base, "code", "export_state.py"), "--code", os.path.join(base, "code"), "active_state.pkl", dump],
-                               cwd=work, stdout=lg, stderr=subprocess.STDOUT, check=True)
-                subprocess.run([rs, "import-state", dump], cwd=work, stdout=lg, stderr=subprocess.STDOUT, check=True)
-                os.remove(dump)
-                os.rename(os.path.join(work, "active_state.pkl"), os.path.join(work, "active_state.pkl.before-rs"))
-            # the last day of the block also writes the incidents that are still open: no later day of this block will close them
-            cmd = ([rs, "run"] if use_rs else [py, os.path.join(base, "code", "incident.py")]) + (["--flush-open"] if is_last else [])
-            r = subprocess.run(cmd, cwd=work, stdout=lg, stderr=subprocess.STDOUT)
         out = os.path.join(work, f"incidents_{name}.jsonl")
-        if r.returncode or not os.path.exists(out):
-            raise RuntimeError(f"{d}: {os.path.basename(cmd[0])} ended with {r.returncode} (see {block}/incident.log)")
-        t3 = time.time()
+        os.replace(acc, out)
+        t3 = t2 + t_inc
         n_inc = 0
         outs = [(out, f"incidents_{name}.jsonl.xz")]
         if is_last and os.path.exists(os.path.join(work, "incidents_open.jsonl")):
@@ -308,11 +387,10 @@ def main():
                 subprocess.run(["xz", "-T2", "-c", src], stdout=open(os.path.join(archive, dst + ".tmp"), "wb"), check=True)
                 os.replace(os.path.join(archive, dst + ".tmp"), os.path.join(archive, dst))
             os.remove(src)
-        for f in os.listdir(work):
-            if f.startswith("summary_incidents_"):
-                os.remove(os.path.join(work, f))
-        os.remove(os.path.join(work, "data", name + ".jsonl.gz"))
+        for f in os.listdir(os.path.join(work, "data")):
+            os.remove(os.path.join(work, "data", f))
         shutil.rmtree(tmp)
+        os.remove(prog_file)
         done.append(key)
         with open(done_file + ".tmp", "w") as f:
             json.dump(done, f)
