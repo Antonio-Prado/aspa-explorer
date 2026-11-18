@@ -18,6 +18,7 @@ usage: backfill.py BASE FROM TO [--warmup N] [--until YYYY-MM-DDTHH:MM] [--limit
   --chunk-hours N  read each day in parts of N hours (default 24, or BACKFILL_CHUNK_HOURS): the update files and the
                    records of one part are on the disk at a time, which a small disk needs (a day of a busy collector
                    takes 2 GB at once); the incidents are the same as in one reading of the day
+BACKFILL_DROP_DONE_WORK=1 removes the working files of a block when it is done (keep them for a block to be extended).
 A day that is done is not read again: a block that was stopped starts again from the day it was reading. `touch BASE/STOP`
 ends every block after the day it is reading. Each day adds a line to BASE/days.jsonl (incidents, files, notes, seconds).
 The downloaded files come from outside: they stay under BASE/blocks/<block>/tmp, and the parser runs with python -I."""
@@ -401,6 +402,11 @@ def main():
         with open(os.path.join(base, "days.jsonl"), "a") as f:
             f.write(json.dumps(row) + "\n")
         log(f"{d}: done, {n_inc} incidents, {round((time.time() - t0) / 60)} min" + (f" ({'; '.join(notes)})" if notes else ""))
+    # with BACKFILL_DROP_DONE_WORK=1 the working files of a block that is done (its state, ROAs, delegation files and links:
+    # about 100 MB) go: no other block uses them, each starting from an empty state, but a block that is to be extended
+    # later (--until, to meet the recorder) needs its state, so they stay by default; done.json and incident.log stay
+    if os.environ.get("BACKFILL_DROP_DONE_WORK") == "1" and os.path.exists(work):
+        shutil.rmtree(work)
     log(f"block {first}_{last}: done")
 
 
