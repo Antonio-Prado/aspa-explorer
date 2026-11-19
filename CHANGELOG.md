@@ -9,6 +9,12 @@ A few numbers were deployed and folded into the next release without a tag of th
 
 ## [Unreleased]
 
+## [1.90.0] - 2026-11-20
+
+### Added
+
+- A tenth RTR cache on the *RTR caches* tab of *Right now*: the Fort that AS59715 runs for its own routers next to its Routinator (`as59715_fort`). Different code from the Routinator in the same network, RTR version 1, VRPs only. Its telemetry, baseline and metrics have the same addresses as the other caches (`/api/v1/rtr/as59715_fort.ndjson`, `-baseline.json`, `.metrics`).
+
 ## [1.89.1] - 2026-11-19
 
 ### Changed
