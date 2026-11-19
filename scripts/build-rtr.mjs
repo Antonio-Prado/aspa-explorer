@@ -187,6 +187,25 @@ export function summarise(records, now = Date.now(), metrics = null) {
   };
 }
 
+// A cache next to the others: how many VRPs and ASPAs it holds more or fewer than the median of the other caches that are up, with
+// their data not expired. The detector of each monitor compares a cache with its own past, so a cache that serves an old set, or
+// loses records a few at a time, looks ordinary to it; next to the others it does not. `beyond` names the measures that are further
+// from the median than a fault needs (a thousand VRPs, twenty ASPAs: the floors of the alerts). The ASPAs are compared among the caches
+// that hold some: one that carries none says so already. Null for a cache that is down, or with fewer than three others to compare with.
+export const APART = { vrp: 1000, aspa: 20 };
+const middle = (list) => { const s = [...list].sort((a, b) => a - b); const m = s.length >> 1; return s.length % 2 ? s[m] : Math.round((s[m - 1] + s[m]) / 2); };
+export function apartOf(c, caches) {
+  const live = (x) => Boolean(x && x.last_sync && x.session && x.session.connected && !x.session.expired);
+  if (!live(c)) return null;
+  const others = caches.filter((x) => x.id !== c.id && live(x));
+  if (others.length < 3) return null;
+  const vrp = c.last_sync.vrp_total - middle(others.map((x) => x.last_sync.vrp_total));
+  const withAspa = (x) => x.session.carries_aspa && x.last_sync.aspa_total > 0;
+  const peers = withAspa(c) ? others.filter(withAspa) : [];
+  const aspa = peers.length >= 3 ? c.last_sync.aspa_total - middle(peers.map((x) => x.last_sync.aspa_total)) : null;
+  return { vrp, aspa, others: others.length, beyond: [Math.abs(vrp) >= APART.vrp ? 'vrp' : null, aspa !== null && Math.abs(aspa) >= APART.aspa ? 'aspa' : null].filter(Boolean) };
+}
+
 // The caches to follow, from RTR_CACHES (a JSON array, or the path of a file with one) or from the single-cache variables.
 export async function cachesFromEnv(env = process.env) {
   if (env.RTR_CACHES) {
@@ -234,6 +253,7 @@ async function main() {
   const now = Date.now();
   const caches = [];
   for (const c of await cachesFromEnv()) caches.push(await readCache(c, now));
+  for (const c of caches) c.apart = apartOf(c, caches);
   let http = null;
   try {
     const raw = /^https?:/.test(dataUrl) ? await (await fetch(dataUrl, { headers: { Accept: 'application/json' }, signal: AbortSignal.timeout(20000) })).text() : await readFile(dataUrl, 'utf8');

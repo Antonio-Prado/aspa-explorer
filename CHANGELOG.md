@@ -9,6 +9,11 @@ A few numbers were deployed and folded into the next release without a tag of th
 
 ## [Unreleased]
 
+## [1.88.0] - 2026-11-19
+
+### Added
+- Right now, RTR caches: each cache is set next to the others. The detector of a monitor compares a cache with its own past, so a cache that serves an old set of records, or loses them a few at a time, looks ordinary to it. `/api/v1/rtr.json` now says for each cache how many VRPs and ASPAs it holds more or fewer than the median of the other caches that are up (`apart`, with `beyond` for the measures further than a thousand VRPs or twenty ASPAs; the ASPAs are compared among the caches that hold some, and at least three others are needed), and the table of the caches says so under the number. When a cache has been apart for three hours without a break, the operator of the site and the contact of that cache are told once, and once more when it is back in line. The case that asked for it: a cache added today holds about 6,000 VRPs fewer than the other eight, and a comparison of its records with those of a validator of the same operator showed 16,820 that it lacks and 10,708 that it still has, an old set that no sync of its own would give away; an earlier one was a public cache that lost about 2,000 VRPs over ten hours.
+
 ## [1.87.0] - 2026-11-19
 
 ### Added

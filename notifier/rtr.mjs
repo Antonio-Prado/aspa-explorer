@@ -12,7 +12,10 @@ export const WHAT = {
   serial_stale: 'the cache answers but its serial has not advanced', serial_advancing: 'the serial of the cache advances again',
   data_stale: 'the data of the cache has not changed for longer than it usually does',
   data_regressed: 'the cache went back to data that it had served before',
+  apart: 'the cache holds a different number of records from the other caches', apart_over: 'the cache is back in line with the other caches',
 };
+// a cache further from the median of the others than a fault needs (`apart.beyond` in rtr.json) is told when it has been so for this long
+export const APART_AFTER = 3 * 3600e3;
 export const MAX_LINES = 10;
 
 const at = (a) => Date.parse(a && a.at);
@@ -69,7 +72,8 @@ export function watchRtr(doc, saved) {
   const old = saved && saved.last && typeof saved.last === 'object' ? saved.last : (saved && Number.isFinite(saved.last) ? { routinator: saved.last } : null);
   const oldStale = saved && saved.stale && typeof saved.stale === 'object' ? saved.stale : {};
   const oldTold = saved && saved.told && typeof saved.told === 'object' ? saved.told : {};
-  const next = {}, stale = {}, told = {}, events = [];
+  const oldApart = saved && saved.apart && typeof saved.apart === 'object' ? saved.apart : {};
+  const next = {}, stale = {}, told = {}, apart = {}, events = [];
   const when = doc && Number.isFinite(Date.parse(doc.generated)) ? doc.generated : new Date().toISOString();
   for (const c of caches) {
     const list = c.anomalies && Array.isArray(c.anomalies.list) ? c.anomalies.list.filter((a) => Number.isFinite(at(a))) : [];
@@ -98,9 +102,20 @@ export function watchRtr(doc, saved) {
         told[c.id] = null;
       }
     } else if (isStale && !old) told[c.id] = since;   // the first poll: what is already stale is not news later either
+    // The cache next to the others (the builder says how far it is from their median): told once when it has been apart for
+    // APART_AFTER without a break, and once when it is back. The time starts at the first poll that sees it, also the very first.
+    const isApart = Boolean(c.apart && Array.isArray(c.apart.beyond) && c.apart.beyond.length);
+    const was = oldApart[c.id] && typeof oldApart[c.id] === 'object' ? oldApart[c.id] : null;
+    if (isApart) {
+      apart[c.id] = { since: was ? was.since : when, told: Boolean(was && was.told) };
+      if (!apart[c.id].told && Date.parse(when) - Date.parse(apart[c.id].since) >= APART_AFTER) {
+        events.push({ at: when, cache: c.name || c.id, cache_id: c.id, severity: 'medium', category: 'structural', trigger: 'apart', since: apart[c.id].since, apart: { vrp: c.apart.vrp, aspa: c.apart.aspa, others: c.apart.others, beyond: c.apart.beyond } });
+        apart[c.id].told = true;
+      }
+    } else if (was && was.told) events.push({ at: when, cache: c.name || c.id, cache_id: c.id, severity: 'medium', category: 'structural', trigger: 'apart_over' });
   }
-  if (!old) return { events: [], saved: { last: next, stale, told } };
-  return { events: events.sort((a, b) => at(a) - at(b)), saved: { last: next, stale, told } };
+  if (!old) return { events: [], saved: { last: next, stale, told, apart } };
+  return { events: events.sort((a, b) => at(a) - at(b)), saved: { last: next, stale, told, apart } };
 }
 
 const utc = (s) => new Date(s).toISOString().replace(/\.\d+Z$/, '').replace('T', ' ') + ' UTC';
@@ -112,7 +127,12 @@ export const describeRtrEvent = (a) => {
   const raw = a.raw && a.trigger in a.raw ? ` (${value(a.trigger, a.raw[a.trigger])}` + (a.z && Number.isFinite(a.z[a.trigger]) ? `, ${a.z[a.trigger]} deviations from the usual)` : ')') : '';
   const where = a.cache ? ` on ${a.cache}` : '';
   if (a.trigger === 'serial_stale') return `${sev} anomaly${where} at ${utc(a.at)}: ${what}${a.since ? ` since ${utc(a.since)}` : ''}${a.hours ? ` (more than ${a.hours} hours)` : ''}. The validator behind it, or the node of it that answers this session, has stopped publishing or stalled: its routers keep old data without an alarm.`;
-  if (a.trigger === 'serial_advancing') return `${sev} anomaly${where} at ${utc(a.at)}: ${what}.`;
+  if (a.trigger === 'serial_advancing' || a.trigger === 'apart_over') return `${sev} anomaly${where} at ${utc(a.at)}: ${what}.`;
+  if (a.trigger === 'apart') {
+    const p = a.apart || {}, n = (v, unit) => `${Math.abs(v).toLocaleString('en-US')} ${unit}${Math.abs(v) === 1 ? '' : 's'} ${v < 0 ? 'fewer' : 'more'}`;
+    const far = [(p.beyond || []).includes('vrp') ? n(p.vrp, 'VRP') : null, (p.beyond || []).includes('aspa') ? n(p.aspa, 'ASPA') : null].filter(Boolean).join(' and ');
+    return `${sev} anomaly${where} at ${utc(a.at)}: it holds ${far} than the median of the other ${p.others} caches followed, and has since ${utc(a.since)}. Its own syncs look ordinary: a set that is old, or filtered in another way, or a validator that is losing records a few at a time, shows only next to the others.`;
+  }
   if (a.trigger === 'protocol_error') return `${sev} anomaly${where} at ${utc(a.at)}: ${what}${a.repeated ? `, ${a.repeated} VRP${a.repeated === 1 ? '' : 's'} announced again while held` : ''}${a.unknown ? `${a.repeated ? ' and' : ','} ${a.unknown} record${a.unknown === 1 ? '' : 's'} withdrawn while not held` : ''}. A router that applies such a delta as it comes can lose valid records, or drops the session (RFC 8210, errors 6 and 7).`;
   if (a.trigger === 'data_regressed') return `${sev} anomaly${where} at ${utc(a.at)}: ${what}. A router that follows it now holds an older set than before, as after a change of node behind an anycast address.`;
   if (a.category === 'structural') return `${sev} anomaly${where} at ${utc(a.at)}: ${what}. The session itself misbehaved.`;
@@ -173,7 +193,8 @@ export function periodOf(events) {
 export const describeContactEvent = (e) => {
   const also = Array.isArray(e.also) ? e.also : [];
   const n = Number.isFinite(e.others) ? e.others : 0;
-  if (!n) return describeRtrEvent(e);
+  // a state of the cache, not a sync: what the others did in those minutes says nothing about it
+  if (!n || ['apart', 'apart_over', 'serial_stale', 'serial_advancing'].includes(e.trigger)) return describeRtrEvent(e);
   return `${describeRtrEvent(e)} ${also.length
     ? `At about the same time ${also.length} of the other ${n} caches followed here had an anomaly too (${also.join(', ')}): the cause is likely upstream of your cache.`
     : `None of the other ${n} caches followed here had an anomaly at about that time.`}`;

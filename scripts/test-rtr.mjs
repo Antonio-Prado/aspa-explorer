@@ -1,7 +1,7 @@
 // Unit tests for scripts/build-rtr.mjs (no dependencies). Run with: node scripts/test-rtr.mjs
 import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
-import { parseLines, parseMetrics, summarise, cachesFromEnv, KEEP_DAYS, MAX_ANOMALIES, STALE_AFTER } from './build-rtr.mjs';
+import { parseLines, parseMetrics, summarise, cachesFromEnv, KEEP_DAYS, MAX_ANOMALIES, STALE_AFTER, apartOf, APART } from './build-rtr.mjs';
 
 const { idOf, parseId, fromTelemetry, idOfWindow, parseWindow, windowOf } = createRequire(import.meta.url)('../site/rtr-anomaly.js');
 let passed = 0;
@@ -340,6 +340,27 @@ test('the address of a period, and what a cache did in it: records lost and back
   const quiet = windowOf(sync('2026-11-18T13:00:00Z', 7, 1), from, to);
   assert.deepEqual([quiet.syncs, quiet.before.vrp, quiet.lowest, quiet.after, quiet.fell], [0, 7, null, null, false]);
   assert.equal(windowOf('', from, to).before, null);
+});
+
+test('a cache next to the others: far from their median in VRPs or ASPAs, among the caches that are up', () => {
+  const c = (id, vrp, aspa, o = {}) => ({ id, last_sync: { vrp_total: vrp, aspa_total: aspa }, session: { connected: true, expired: false, carries_aspa: aspa !== null && o.carries !== false, ...o.session } });
+  const caches = [c('a', 1036914, 4212), c('b', 1037012, 4213), c('c', 1037016, 4207), c('d', 1037035, 4212), c('old', 1030953, 0), c('v0', 1036898, 0, { carries: false }), c('slow', 1036362, 0, { carries: false })];
+  assert.deepEqual(apartOf(caches[4], caches), { vrp: -6010, aspa: null, others: 6, beyond: ['vrp'] });            // an old set; it holds no ASPA, which is not compared
+  assert.deepEqual(apartOf(caches[0], caches), { vrp: -41, aspa: 0, others: 6, beyond: [] });
+  assert.deepEqual(apartOf(caches[6], caches).beyond, []);                                                         // 600 fewer: under the floor
+  assert.deepEqual(apartOf(c('x', 1037000 + APART.vrp + 100, 4212 - APART.aspa), caches).beyond, ['vrp', 'aspa']); // more is apart as well
+  assert.equal(apartOf(c('x', 1037000, 4212 - APART.aspa + 1), caches).beyond.length, 0);
+  // down, expired or without a sync: not compared, and not among the others
+  assert.equal(apartOf(c('x', 1, 1, { session: { connected: false } }), caches), null);
+  assert.equal(apartOf(c('x', 1, 1, { session: { expired: true } }), caches), null);
+  assert.equal(apartOf({ id: 'x', session: { connected: true }, last_sync: null }, caches), null);
+  const few = [c('a', 1000000, 4000), c('b', 1000000, 4000), c('down', 5, 5, { session: { connected: false } })];
+  assert.equal(apartOf(c('x', 900000, 3000), few), null);                                                         // two others that are up: too few
+  const three = [...few, c('e', 1000000, 4000)];
+  assert.deepEqual(apartOf(c('x', 900000, 3000), three), { vrp: -100000, aspa: -1000, others: 3, beyond: ['vrp', 'aspa'] });
+  assert.equal(apartOf(c('x', 1000000, 3000), [c('a', 1000000, 4000), c('b', 1000000, 4000), c('v0', 1000000, 0, { carries: false })]).aspa, null);   // two with ASPAs: too few
+  assert.equal(apartOf(three[0], three), null);                                                                    // itself is not among the others: two left
+  assert.equal(apartOf(three[0], [...three, c('f', 1000000, 4000)]).vrp, 0);
 });
 
 console.log(`${passed} tests passed`);

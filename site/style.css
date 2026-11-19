@@ -166,6 +166,7 @@ button.tipchip:hover { background: var(--chip-hover); }
 .chip.zero { font-family: inherit; }
 .linkish { background: none; border: 0; padding: 0; color: var(--accent); font-weight: 400; text-decoration: underline; text-underline-offset: 2px; font-size: 0.875rem; }
 .linkish:hover { background: none; }
+small.apart { color: var(--warn-ink); background: var(--warn-bg); border-radius: 4px; padding: 0 0.3rem; white-space: nowrap; }
 tr.linked > td { background: var(--wash); }
 tr.linked > td:first-child { box-shadow: inset 3px 0 0 var(--accent); }
 

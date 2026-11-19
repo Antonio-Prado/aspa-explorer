@@ -72,14 +72,17 @@
 
     // the caches side by side: the first is the cache of the site, the others references; a change that all see comes from upstream
     const caches = Array.isArray(doc.caches) && doc.caches.length ? doc.caches : [{ id: doc.cache_id || 'routinator', name: doc.cache_name || 'Routinator of this site', host: doc.cache, session: s, last_sync: ls, last_24h: d, anomalies: an }];
+    // a cache that holds a number of records far from the median of the others (`apart` in the file) says so under the number
+    const apartNote = (c, k) => (c.apart && Array.isArray(c.apart.beyond) && c.apart.beyond.includes(k)
+      ? [el('br'), el('small', { class: 'apart', text: `${fmt.format(Math.abs(c.apart[k]))} ${c.apart[k] < 0 ? 'fewer' : 'more'} than the others` })] : []);
     $('rtr-caches').replaceChildren(...caches.map((c) => {
       const cs = c.session || {}, cl = c.last_sync, cd = c.last_24h || {}, ca = c.anomalies || {};
       return el('tr', {},
         el('th', { scope: 'row' }, el('span', { text: c.name || c.id }), c.note ? el('br') : null, c.note ? el('small', { class: 'muted', text: c.note }) : null),
         el('td', {}, el('span', { class: `badge ${cs.connected && !cs.expired ? 'v-valid' : 'v-invalid'}`, text: cs.connected ? (cs.expired ? 'Up, data expired' : 'Up') : 'Down' })),
         el('td', { text: cs.protocol === null || cs.protocol === undefined ? '–' : `v${cs.protocol}${cs.carries_aspa ? '' : ', no ASPA'}` }),
-        el('td', { class: 'num', text: cl ? fmt.format(cl.vrp_total) : '–' }),
-        el('td', { class: 'num', text: cl ? (cs.carries_aspa ? fmt.format(cl.aspa_total) : 'not carried') : '–' }),
+        el('td', { class: 'num' }, cl ? fmt.format(cl.vrp_total) : '–', ...apartNote(c, 'vrp')),
+        el('td', { class: 'num' }, cl ? (cs.carries_aspa ? fmt.format(cl.aspa_total) : 'not carried') : '–', ...apartNote(c, 'aspa')),
         el('td', { text: cl ? `${ago(now - Date.parse(cl.at))}${cl.type ? `, ${cl.type}` : ''}` : 'none yet' }),
         el('td', { class: 'num', text: fmt.format(cd.syncs || 0) }),
         el('td', { class: 'num', text: `${fmt.format(ca.last_7_days || 0)}${ca.probes ? ` (+${fmt.format(ca.probes)} version probes left out)` : ''}` }));

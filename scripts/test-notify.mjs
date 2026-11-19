@@ -17,6 +17,7 @@ import { checkReport, shell, headTags, newId, ID_RE, LIMITS, legacyIdOk, LEGACY_
 import { watchStatus, describeStatusEvent, statusSubject, MONITOR } from '../notifier/status.mjs';
 import { makeVerifier, MAX_PATH, MAX_TEXT } from '../notifier/verify.mjs';
 import { watchRtr, describeRtrEvent, describeRtrEvents, rtrSubject, MAX_LINES, worthTelling } from '../notifier/rtr.mjs';
+import { APART_AFTER } from '../notifier/rtr.mjs';
 import { contactTopic, contactCaches, forContact, periodOf, describeContactEvent, describeContactEvents, contactSubject, CONTACT_A_DAY } from '../notifier/rtr.mjs';
 import { run as contactRun } from '../notifier/contact.mjs';
 
@@ -1210,7 +1211,7 @@ await test('rtr: the first poll takes note, a new anomaly is announced once, an 
   assert.deepEqual(second.saved.last, { routinator: Date.parse(a2.at) });
   assert.deepEqual(watchRtr({ anomalies: { list: [a2, a1] } }, second.saved).events, []);
   assert.deepEqual(watchRtr({}, second.saved).events, []);                           // a file without anomalies, or broken
-  assert.deepEqual(watchRtr(null, null), { events: [], saved: { last: {}, stale: {}, told: {} } });
+  assert.deepEqual(watchRtr(null, null), { events: [], saved: { last: {}, stale: {}, told: {}, apart: {} } });
   assert.equal(watchRtr({ anomalies: { list: [{ at: 'never' }, a1] } }, { last: 0 }).events.length, 1);   // the state of 1.58 (one number) still works
   // several caches: each has its own memory, and the events say which cache
   const two = { caches: [{ id: 'routinator', name: 'Routinator of this site', anomalies: { list: [a1] } }, { id: 'cloudflare', name: 'Cloudflare', anomalies: { list: [] } }] };
@@ -1414,6 +1415,44 @@ await test('rtr contacts: the operator adds, lists and removes a contact; the fi
   // a contact is not an audience of the changes of ASPAs or of the status alerts
   assert.deepEqual(audience({ customer: 'AS64496', kind: 'added', providers: ['AS64497'], added: ['AS64497'], dropped: [] }, store.allActive()), []);
   store.close();
+});
+
+await test('rtr: a cache that stays apart from the others is told once after three hours, and once when it is back', () => {
+  const T = Date.parse('2026-11-19T12:00:00Z');
+  const doc = (min, apart) => ({ generated: new Date(T + min * 60e3).toISOString(), caches: [
+    { id: 'a', name: 'A', anomalies: { list: [] }, session: { connected: true }, apart: { vrp: 10, aspa: 0, others: 3, beyond: [] } },
+    { id: 'old', name: 'Old cache', anomalies: { list: [] }, session: { connected: true }, apart },
+  ] });
+  const far = { vrp: -6053, aspa: null, others: 8, beyond: ['vrp'] };
+  let r = watchRtr(doc(0, far), null);                                         // the first poll: nothing told, the time starts
+  assert.deepEqual(r.events, []);
+  assert.deepEqual(r.saved.apart, { old: { since: '2026-11-19T12:00:00.000Z', told: false } });
+  r = watchRtr(doc(170, far), r.saved);
+  assert.deepEqual(r.events, []);                                              // not yet three hours
+  r = watchRtr(doc(180, far), r.saved);
+  assert.equal(r.events.length, 1);
+  assert.deepEqual([r.events[0].trigger, r.events[0].cache_id, r.events[0].since, r.events[0].apart.vrp], ['apart', 'old', '2026-11-19T12:00:00.000Z', -6053]);
+  assert.equal(describeRtrEvent(r.events[0]), 'Medium anomaly on Old cache at 2026-11-19 15:00:00 UTC: it holds 6,053 VRPs fewer than the median of the other 8 caches followed, and has since 2026-11-19 12:00:00 UTC. Its own syncs look ordinary: a set that is old, or filtered in another way, or a validator that is losing records a few at a time, shows only next to the others.');
+  assert.match(describeRtrEvent({ ...r.events[0], apart: { vrp: 1500, aspa: -1, others: 4, beyond: ['vrp', 'aspa'] } }), /it holds 1,500 VRPs more and 1 ASPA fewer than the median of the other 4 caches/);
+  assert.equal(describeContactEvent({ ...r.events[0], others: 8, also: [] }), describeRtrEvent(r.events[0]));   // a state: what the others did then is not said
+  r = watchRtr(doc(600, far), r.saved);
+  assert.deepEqual(r.events, []);                                              // told once
+  r = watchRtr(doc(610, { ...far, beyond: [] }), r.saved);
+  assert.deepEqual(r.events.map((e) => [e.trigger, e.cache_id]), [['apart_over', 'old']]);
+  assert.match(describeRtrEvent(r.events[0]), /on Old cache at 2026-11-19 22:10:00 UTC: the cache is back in line with the other caches\.$/);
+  assert.deepEqual(r.saved.apart, {});
+  // apart for an hour and back: never told, and the next time starts again; a cache without the field (an older file) is not apart
+  r = watchRtr(doc(700, far), r.saved);
+  r = watchRtr(doc(760, null), r.saved);
+  assert.deepEqual([r.events, r.saved.apart], [[], {}]);
+  r = watchRtr(doc(770, far), r.saved);
+  r = watchRtr(doc(770 + APART_AFTER / 60e3 - 1, far), r.saved);
+  assert.deepEqual(r.events, []);
+  r = watchRtr(doc(770 + APART_AFTER / 60e3, far), r.saved);
+  assert.equal(r.events.length, 1);
+  // a state saved before this version has no `apart`: the time starts now
+  const older = watchRtr(doc(0, far), { last: { a: 0, old: 0 }, stale: {}, told: {} });
+  assert.deepEqual([older.events, older.saved.apart.old.told], [[], false]);
 });
 
 console.log(`${passed} tests passed`);
