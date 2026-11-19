@@ -33,7 +33,7 @@ import { makePulse } from './pulse.mjs';
 import { TTL_DAYS } from './reports.mjs';
 import { dueInvalid, describeInvalid } from './invalid.mjs';
 import { watchStatus, describeStatusEvent, statusSubject } from './status.mjs';
-import { watchRtr, describeRtrEvents, rtrSubject } from './rtr.mjs';
+import { watchRtr, describeRtrEvents, rtrSubject, contactCaches, forContact, periodOf, describeContactEvents, contactSubject, CONTACT_A_DAY } from './rtr.mjs';
 import { makeApi, httpHandler, STATUS } from './server.mjs';
 import { makeVerifier } from './verify.mjs';
 
@@ -150,6 +150,26 @@ async function send(sub, job, row) {
     } else {
       ok(await post(sub.target, { event_id, type: 'aspa.rtr', text: text.join(' '), time: new Date().toISOString(), anomalies: job.events.map((a) => ({ at: a.at, cache: a.cache || null, cache_id: a.cache_id || null, severity: a.severity, category: a.category, trigger: a.trigger, values: a.raw || {}, z: a.z || {} })), page: `${SITE}/now.html#rtr-title`, unsubscribe: unsub }, { secret: sub.secret }));
     }
+  } else if (job.type === 'rtr-contact' || job.type === 'rtr-welcome') {
+    // to the people who run a cache that the site follows (notifier/contact.mjs): the anomalies of their cache, or the first message
+    const welcome = job.type === 'rtr-welcome';
+    const caches = (contactCaches(sub.asn) || []).join(', ');
+    const text = welcome
+      ? [`ASPA Explorer now follows your RTR cache${caches.includes(',') ? 's' : ''} (${caches}) next to the other caches on its Right now page, as a router would: one read-only RTR session, kept by an independent client.`, '',
+        'From now on this address is told when the monitor finds something on your cache that could matter to a router: a session that drops or misbehaves, a thousand VRPs or twenty ASPAs announced or withdrawn at once, records against the protocol, a serial that stops advancing for hours. Each message says whether the other caches saw the same, and you get a few a day at most.']
+      : [...describeContactEvents(job.events), ...(job.last ? ['', `This is message ${CONTACT_A_DAY + 1} in 24 hours: the next ones are not sent until a day has passed. The page has all of them.`] : [])];
+    const page = `${SITE}/now.html#${welcome ? 'rtr-title' : periodOf(job.events)}`;
+    if (sub.kind === 'email') {
+      await mailTo(sub.target, welcome ? 'ASPA Explorer: alerts on your RTR cache' : contactSubject(job.events), [
+        ...text, '',
+        `${welcome ? 'The caches side by side' : 'What every cache did in that period'}: ${page}`, '',
+        'You receive this because you let ASPA Explorer follow your cache and agreed to these messages. To stop them:',
+        unsubPage, '',
+        'The telemetry of each cache and its anomalies are public on the page. An anomaly is a sync out of the ordinary, not a verdict on the data. Replies reach the person who runs the site.',
+      ].join('\n'), unsub);
+    } else {
+      ok(await post(sub.target, { event_id, type: welcome ? 'aspa.rtr.welcome' : 'aspa.rtr.cache', text: text.filter(Boolean).join(' '), time: new Date().toISOString(), anomalies: (job.events || []).map((a) => ({ at: a.at, cache: a.cache || null, cache_id: a.cache_id || null, severity: a.severity, category: a.category, trigger: a.trigger, values: a.raw || {}, also: a.also || [] })), page, unsubscribe: unsub }, { secret: sub.secret }));
+    }
   } else if (job.type === 'status') {
     const text = job.events.map(describeStatusEvent);
     if (sub.kind === 'email') {
@@ -183,6 +203,7 @@ const outbox = makeOutbox({ store, send, log });
 
 // What is queued here is sent by the next drain(): at once, and again every minute for the ones that have to be retried.
 const budget = changeBudget();
+const contactBudget = changeBudget(CONTACT_A_DAY);
 const queueChanges = (events) => {
   const subs = store.allActive();
   for (const e of events) for (const { sub, relation } of audience(e, subs)) {
@@ -251,6 +272,15 @@ async function pollRtr() {
   log(`${out.events.length} anomal${out.events.length === 1 ? 'y' : 'ies'} in the RTR session`);
   store.transaction(() => {
     for (const sub of store.allActive().filter((s) => s.asn === STATUS)) outbox.enqueue(sub.id, { type: 'rtr', events: out.events });
+    // the contact of a cache that somebody else runs: the anomalies of that cache only, a few messages a day at most
+    for (const sub of store.allActive()) {
+      const ids = contactCaches(sub.asn);
+      const mine = ids ? forContact(out.events, ids, doc) : [];
+      if (!mine.length) continue;
+      const b = contactBudget(sub.id);
+      if (b === 'skip') { log(`subscription ${sub.id}: more than ${CONTACT_A_DAY} messages to the contact of a cache in a day, this one is not sent`); continue; }
+      outbox.enqueue(sub.id, { type: 'rtr-contact', events: mine, last: b === 'notice' });
+    }
     store.setState('rtr', out.saved);
   });
   return at;

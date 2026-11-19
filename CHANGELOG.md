@@ -9,6 +9,11 @@ A few numbers were deployed and folded into the next release without a tag of th
 
 ## [Unreleased]
 
+## [1.87.0] - 2026-11-19
+
+### Added
+- Notifications: the people who run a cache that the site follows can be told of the anomalies of their own cache. The operator of the site adds the contact after they agreed (`notifier/contact.mjs add ADDRESS CACHE_ID...`, with `list` and `remove`): it is a subscription whose topic names its caches, which the public form cannot make. The contact gets a first message that says what will come, and then the anomalies that the operator is told (a session that drops or misbehaves, a thousand VRPs or twenty ASPAs announced or withdrawn at once, records against the protocol, a serial that stands still), for its caches only. Each one says how many of the other caches had an anomaly within twenty minutes, and which: an anomaly that others share comes from upstream of the cache, as on 18 November 2026, and one that a cache has alone is its own. The link of the message is the period around the anomalies on the Right now page. At most three messages in 24 hours, and a fourth that says that the next ones wait; every message has the link to stop them.
+
 ## [1.86.0] - 2026-11-19
 
 ### Added

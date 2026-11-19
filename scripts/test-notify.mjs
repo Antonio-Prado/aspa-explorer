@@ -17,6 +17,8 @@ import { checkReport, shell, headTags, newId, ID_RE, LIMITS, legacyIdOk, LEGACY_
 import { watchStatus, describeStatusEvent, statusSubject, MONITOR } from '../notifier/status.mjs';
 import { makeVerifier, MAX_PATH, MAX_TEXT } from '../notifier/verify.mjs';
 import { watchRtr, describeRtrEvent, describeRtrEvents, rtrSubject, MAX_LINES, worthTelling } from '../notifier/rtr.mjs';
+import { contactTopic, contactCaches, forContact, periodOf, describeContactEvent, describeContactEvents, contactSubject, CONTACT_A_DAY } from '../notifier/rtr.mjs';
+import { run as contactRun } from '../notifier/contact.mjs';
 
 let passed = 0;
 const test = async (name, fn) => { await fn(); passed++; console.log('ok  ', name); };
@@ -1354,6 +1356,64 @@ await test('HTTP: the path check is GET only, cached for a minute, and limited f
   await new Promise((r) => plain.listen(0, '127.0.0.1', r));
   assert.equal((await fetch(`http://127.0.0.1:${plain.address().port}/api/v1/verify?path=1`)).status, 405);
   await new Promise((r) => plain.close(r));
+});
+
+await test('rtr contacts: the topic of a contact, the anomalies of its caches only, and what the other caches did', () => {
+  assert.equal(contactTopic(['connesi_stayrtr', 'connesi', 'connesi']), 'RTR:connesi+connesi_stayrtr');
+  assert.deepEqual(contactCaches('RTR:connesi+connesi_stayrtr'), ['connesi', 'connesi_stayrtr']);
+  for (const bad of ['AS64496', 'STATUS', 'RTR:', 'RTR:a+', 'RTR:A', 'RTR:../x', null, undefined]) assert.equal(contactCaches(bad), null);
+  for (const bad of [[], ['A'], ['a b'], ['x'.repeat(41)], Array.from({ length: 9 }, (_, i) => `c${i}`)]) assert.throws(() => contactTopic(bad));
+
+  const drop = (t) => ({ at: t, severity: 'high', category: 'statistical', trigger: 'vrp_withdrawn', z: { vrp_withdrawn: 3864.4, aspa_withdrawn: 871.2 }, raw: { vrp_withdrawn: 377520, aspa_withdrawn: 2352 } });
+  const small = { at: '2026-11-18T14:20:00Z', severity: 'medium', category: 'statistical', trigger: 'vrp_withdrawn', z: { vrp_withdrawn: 4 }, raw: { vrp_withdrawn: 30 } };
+  const doc = { caches: [
+    { id: 'routinator', name: 'Routinator of this site', anomalies: { list: [drop('2026-11-18T14:18:02Z')] } },
+    { id: 'connesi', name: 'Routinator of Connesi', anomalies: { list: [drop('2026-11-18T14:24:21Z')] } },
+    { id: 'fort', name: 'Fort of this site', anomalies: { list: [small, drop('2026-11-18T10:00:00Z')] } },       // not worth telling, and too far
+    { id: 'level66', name: 'Level66', anomalies: { list: [] } },
+  ] };
+  const events = [{ ...drop('2026-11-18T14:18:02Z'), cache: 'Routinator of this site', cache_id: 'routinator' }, { ...drop('2026-11-18T14:24:21Z'), cache: 'Routinator of Connesi', cache_id: 'connesi' }];
+  const mine = forContact(events, ['connesi', 'connesi_stayrtr'], doc);
+  assert.equal(mine.length, 1);
+  assert.deepEqual([mine[0].cache_id, mine[0].others, mine[0].also], ['connesi', 3, ['Routinator of this site']]);
+  assert.match(describeContactEvent(mine[0]), /on Routinator of Connesi at 2026-11-18 14:24:21 UTC: the number of VRPs withdrawn was off the baseline \(377520, 3864\.4 deviations from the usual\)\. .* At about the same time 1 of the other 3 caches followed here had an anomaly too \(Routinator of this site\): the cause is likely upstream of your cache\.$/);
+  assert.match(describeContactEvent({ ...mine[0], also: [] }), /None of the other 3 caches followed here had an anomaly at about that time\.$/);
+  assert.equal(describeContactEvent({ ...mine[0], others: 0 }), describeRtrEvent(mine[0]));
+  assert.deepEqual(forContact(events, ['level66'], doc), []);
+  assert.equal(contactSubject(mine), 'ASPA Explorer: an anomaly on your RTR cache Routinator of Connesi (high)');
+  assert.equal(contactSubject([mine[0], { ...mine[0], cache: 'StayRTR of Connesi', severity: 'medium' }]), 'ASPA Explorer: 2 anomalies on your RTR caches (high)');
+  assert.equal(periodOf(mine), 'rtr-w-20261118T1409Z-20261118T1454Z');
+  assert.equal(periodOf([mine[0], { ...mine[0], at: '2026-11-18T14:37:28Z' }]), 'rtr-w-20261118T1409Z-20261118T1507Z');
+  assert.equal(periodOf([mine[0], { ...mine[0], at: '2026-11-20T14:37:28Z' }]), 'rtr-w-20261118T1409Z-20261119T1409Z');   // a day at most
+  assert.equal(periodOf([]), 'rtr-title');
+  assert.equal(describeContactEvents(Array.from({ length: MAX_LINES + 2 }, () => mine[0])).length, MAX_LINES + 1);
+  assert.equal(CONTACT_A_DAY, 3);
+});
+
+await test('rtr contacts: the operator adds, lists and removes a contact; the first message is queued', () => {
+  const store = openStore(':memory:');
+  assert.deepEqual(contactRun(['list'], store), []);
+  const [line] = contactRun(['add', 'noc@example.net', 'connesi_stayrtr', 'connesi'], store, 1000);
+  assert.match(line, /^contact 1: noc@example\.net for connesi, connesi_stayrtr; the first message is queued$/);
+  const sub = store.get(1);
+  assert.deepEqual([sub.kind, sub.target, sub.asn, sub.status, sub.confirmed], ['email', 'noc@example.net', 'RTR:connesi+connesi_stayrtr', 'active', 1000]);
+  assert.equal(store.outboxCount(), 1);
+  assert.deepEqual(JSON.parse(store.outboxDue(1000)[0].job), { type: 'rtr-welcome' });
+  assert.deepEqual(contactRun(['list'], store), ['1\tnoc@example.net\tconnesi connesi_stayrtr']);
+  assert.throws(() => contactRun(['add', 'noc@example.net', 'fort'], store), /is a contact already/);
+  assert.throws(() => contactRun(['add', 'not an address', 'fort'], store), /an e-mail address/);
+  assert.throws(() => contactRun(['add', 'a@example.net'], store), /cache ids/);
+  assert.throws(() => contactRun(['add', 'a@example.net', 'Bad Id'], store), /cache ids/);
+  contactRun(['add', 'b@example.net', 'fort', '--quiet'], store, 1000);
+  assert.equal(store.outboxCount(), 1);
+  assert.match(contactRun(['remove', 'noc@example.net'], store)[0], /^removed 1 contact of/);
+  assert.equal(store.outboxCount(), 0);
+  assert.deepEqual(contactRun(['list'], store), ['2\tb@example.net\tfort']);
+  assert.throws(() => contactRun(['remove', 'noc@example.net'], store), /is not a contact/);
+  assert.throws(() => contactRun(['what'], store), /usage/);
+  // a contact is not an audience of the changes of ASPAs or of the status alerts
+  assert.deepEqual(audience({ customer: 'AS64496', kind: 'added', providers: ['AS64497'], added: ['AS64497'], dropped: [] }, store.allActive()), []);
+  store.close();
 });
 
 console.log(`${passed} tests passed`);

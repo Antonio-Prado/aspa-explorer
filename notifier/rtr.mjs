@@ -130,3 +130,63 @@ export function rtrSubject(events) {
   const high = events.some((e) => e.severity === 'high');
   return `ASPA Explorer: ${events.length === 1 ? 'an anomaly' : `${events.length} anomalies`} in the RTR session with the validator${high ? ' (high)' : ''}`;
 }
+
+// The people who run a cache that the site follows are told of the anomalies of their own cache, when they asked for it: a subscription
+// whose topic names the caches ("RTR:connesi+connesi_stayrtr"), made by the operator of the site with notifier/contact.mjs after the
+// contact agreed, never from the public form. The anomalies are the ones worth telling the operator of the site, no others.
+export const CONTACT = 'RTR:';
+const CACHE_ID = /^[a-z0-9_]{1,40}$/;
+export const contactTopic = (ids) => {
+  const list = [...new Set(ids)].sort();
+  if (!list.length || list.length > 8 || !list.every((id) => CACHE_ID.test(id))) throw new Error('cache ids are 1 to 8 names of lowercase letters, digits and _');
+  return `${CONTACT}${list.join('+')}`;
+};
+export const contactCaches = (topic) => {
+  if (typeof topic !== 'string' || !topic.startsWith(CONTACT)) return null;
+  const list = topic.slice(CONTACT.length).split('+');
+  return list.length && list.every((id) => CACHE_ID.test(id)) ? list : null;
+};
+
+// The events of the caches `ids`, each with what the other caches followed did at about the same time: `also`, the names of the ones
+// with an anomaly worth telling within `windowMs` of it, and `others`, how many other caches are followed. An anomaly that other
+// caches share comes from upstream of the cache (a registry, a repository), one that it has alone is its own.
+export function forContact(events, ids, doc, windowMs = 20 * 60e3) {
+  const caches = doc && Array.isArray(doc.caches) ? doc.caches : [];
+  const others = caches.filter((c) => !ids.includes(c.id));
+  return events.filter((e) => ids.includes(e.cache_id)).map((e) => ({
+    ...e,
+    others: others.length,
+    also: others.filter((c) => ((c.anomalies && c.anomalies.list) || []).some((a) => Math.abs(at(a) - at(e)) <= windowMs && worthTelling(a, Array.isArray(c.alerts_muted) ? c.alerts_muted : []))).map((c) => c.name || c.id),
+  }));
+}
+
+// the address of the period around the events on the Right now page: a quarter of an hour before the first, half an hour after the last
+const stamp = (ms) => `${new Date(ms).toISOString().replace(/[-:]/g, '').slice(0, 13)}Z`;
+export function periodOf(events) {
+  const times = events.map(at).filter(Number.isFinite);
+  if (!times.length) return 'rtr-title';
+  const from = Math.floor(Math.min(...times) / 60e3) * 60e3 - 15 * 60e3;
+  const to = Math.min(Math.floor(Math.max(...times) / 60e3) * 60e3 + 30 * 60e3, from + 24 * 3600e3);
+  return `rtr-w-${stamp(from)}-${stamp(to)}`;
+}
+
+export const describeContactEvent = (e) => {
+  const also = Array.isArray(e.also) ? e.also : [];
+  const n = Number.isFinite(e.others) ? e.others : 0;
+  if (!n) return describeRtrEvent(e);
+  return `${describeRtrEvent(e)} ${also.length
+    ? `At about the same time ${also.length} of the other ${n} caches followed here had an anomaly too (${also.join(', ')}): the cause is likely upstream of your cache.`
+    : `None of the other ${n} caches followed here had an anomaly at about that time.`}`;
+};
+export const describeContactEvents = (events) => {
+  const lines = events.slice(0, MAX_LINES).map(describeContactEvent);
+  if (events.length > MAX_LINES) lines.push(`And ${events.length - MAX_LINES} more, on the Right now page.`);
+  return lines;
+};
+export function contactSubject(events) {
+  const names = [...new Set(events.map((e) => e.cache).filter(Boolean))];
+  const high = events.some((e) => e.severity === 'high');
+  return `ASPA Explorer: ${events.length === 1 ? 'an anomaly' : `${events.length} anomalies`} on your RTR cache${names.length === 1 ? ` ${names[0]}` : 's'}${high ? ' (high)' : ''}`;
+}
+// at most this many messages to a contact in 24 hours; the last one says that the next ones wait
+export const CONTACT_A_DAY = 3;
