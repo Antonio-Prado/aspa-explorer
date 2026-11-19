@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
 import { parseLines, parseMetrics, summarise, cachesFromEnv, KEEP_DAYS, MAX_ANOMALIES, STALE_AFTER } from './build-rtr.mjs';
 
-const { idOf, parseId, fromTelemetry } = createRequire(import.meta.url)('../site/rtr-anomaly.js');
+const { idOf, parseId, fromTelemetry, idOfWindow, parseWindow, windowOf } = createRequire(import.meta.url)('../site/rtr-anomaly.js');
 let passed = 0;
 const test = async (name, fn) => { await fn(); passed++; console.log('ok  ', name); };
 
@@ -302,6 +302,44 @@ test('the address of an anomaly, and the anomaly read from the raw telemetry: th
   assert.equal(fromTelemetry(text, at(11), 'vrp_announced'), null);      // another time
   assert.equal(fromTelemetry(text, 'never', 'vrp_announced'), null);
   assert.equal(fromTelemetry('', at(10), 'vrp_announced'), null);
+});
+
+test('the address of a period, and what a cache did in it: records lost and back, an ordinary change, no sync, no ASPA', () => {
+  const from = Date.parse('2026-11-18T14:10:00Z'), to = Date.parse('2026-11-18T14:40:00Z');
+  assert.equal(idOfWindow(from, to), 'rtr-w-20261118T1410Z-20261118T1440Z');
+  assert.deepEqual(parseWindow('rtr-w-20261118T1410Z-20261118T1440Z'), { from, to });
+  assert.deepEqual(parseWindow('rtr-w-20261118T2350Z-20261119T0020Z'), { from: Date.parse('2026-11-18T23:50:00Z'), to: Date.parse('2026-11-19T00:20:00Z') });
+  for (const bad of ['', 'rtr-w-20261118T1410Z', 'rtr-w-20261118T1440Z-20261118T1410Z', 'rtr-w-20261118T1410Z-20261118T1410Z', 'rtr-w-20261118T1410Z-20261120T1410Z',
+    'rtr-w-20261318T1410Z-20261318T1440Z', 'rtr-w-20261118T1410Z-20261118T1470Z', 'rtr-a-x-20261118T142421Z-a']) assert.equal(parseWindow(bad), null);
+
+  const sync = (time, vrp, aspa, v = 2) => JSON.stringify({ timestamp: time, cache: 'c', event_type: 'sync', sync_type: 'incremental', proto_version: v, vrp_total: vrp, aspa_total: aspa });
+  const anomaly = (time, trigger) => JSON.stringify({ timestamp: time, cache: 'c', event_type: 'anomaly', category: 'statistical', trigger, severity: 'high' });
+  const lost = [sync('2026-11-18T14:01:15Z', 1036433, 4173), sync('2026-11-18T14:18:02.3Z', 658928, 1821), anomaly('2026-11-18T14:18:02.3Z', 'vrp_withdrawn'),
+    sync('2026-11-18T14:33:32.8Z', 1036465, 4172), anomaly('2026-11-18T14:33:32.8Z', 'vrp_announced'), anomaly('2026-11-18T15:00:00Z', 'vrp_announced'), sync('2026-11-18T14:50:00Z', 1036470, 4172)].join('\n');
+  const w = windowOf(lost, from, to);
+  assert.equal(w.syncs, 2);
+  assert.deepEqual(w.before, { at: '2026-11-18T14:01:15Z', vrp: 1036433, aspa: 4173 });
+  assert.deepEqual(w.lowest, { at: '2026-11-18T14:18:02Z', vrp: 658928, aspa: 1821 });
+  assert.deepEqual(w.after, { at: '2026-11-18T14:33:32Z', vrp: 1036465, aspa: 4172 });
+  assert.deepEqual(w.drop, { vrp: 377505, aspa: 2352 });
+  assert.equal(w.fell, true);
+  assert.equal(w.back, '2026-11-18T14:33:32Z');
+  assert.deepEqual(w.anomalies, [{ at: '2026-11-18T14:18:02Z', trigger: 'vrp_withdrawn' }, { at: '2026-11-18T14:33:32Z', trigger: 'vrp_announced' }]);
+  // the period ends before the records are back
+  const short = windowOf(lost, from, Date.parse('2026-11-18T14:30:00Z'));
+  assert.equal(short.fell, true);
+  assert.equal(short.back, null);
+  // only the ASPAs fall
+  const aspas = windowOf([sync('2026-11-18T14:00:00Z', 1000000, 4000), sync('2026-11-18T14:20:00Z', 1000010, 3000), sync('2026-11-18T14:30:00Z', 1000020, 3999)].join('\n'), from, to);
+  assert.deepEqual([aspas.fell, aspas.drop, aspas.lowest.at, aspas.back], [true, { vrp: 0, aspa: 1000 }, '2026-11-18T14:20:00Z', '2026-11-18T14:30:00Z']);
+  // an ordinary change, on a session that carries no ASPA
+  const plain = windowOf([sync('2026-11-18T14:00:00Z', 1036396, 0, 0), sync('2026-11-18T14:17:00Z', 1036387, 0, 0), sync('2026-11-18T14:27:00Z', 1036424, 0, 0)].join('\n'), from, to);
+  assert.deepEqual([plain.syncs, plain.fell, plain.drop, plain.back, plain.after.aspa, plain.anomalies], [2, false, { vrp: 9, aspa: 0 }, null, null, []]);
+  // no sync before the period: the first one in it is where the cache starts from; no sync in it
+  assert.deepEqual(windowOf(sync('2026-11-18T14:20:00Z', 5, 1), from, to).drop, { vrp: 0, aspa: 0 });
+  const quiet = windowOf(sync('2026-11-18T13:00:00Z', 7, 1), from, to);
+  assert.deepEqual([quiet.syncs, quiet.before.vrp, quiet.lowest, quiet.after, quiet.fell], [0, 7, null, null, false]);
+  assert.equal(windowOf('', from, to).before, null);
 });
 
 console.log(`${passed} tests passed`);

@@ -9,6 +9,11 @@ A few numbers were deployed and folded into the next release without a tag of th
 
 ## [Unreleased]
 
+## [1.85.0] - 2026-11-19
+
+### Added
+- Right now, RTR caches: a period has an address too, and shows what every cache did in it. `/now.html#rtr-w-<from>-<to>`, to the minute and in UTC (for example [18 November 2026 from 14:10 to 14:40](https://aspa.ping6.it/now.html#rtr-w-20261118T1410Z-20261118T1440Z), when the certificate of the RIPE NCC trust anchor was not valid yet), opens the tab on a table with a row for each cache: the VRPs and the ASPAs it held before the period, at the lowest point when it was down by more than a thousand VRPs or twenty ASPAs and by more than 1% of them, and at its last sync in the period, with the time it went down and the time it was back; the caches that went down are marked, and so are the anomalies of the period in the table below, the older ones added to it. On that example two of the seven caches, both Routinator, were down by about 377,500 VRPs and 2,352 ASPAs for a quarter of an hour, and the other five were not. The numbers come from the raw telemetry of each monitor, read when the address is opened (`windowOf` in `site/rtr-anomaly.js`); a period is a day at most. Under the table of the anomalies, the address of one anomaly now offers the period around it (a quarter of an hour before, half an hour after). An event that several caches see took one link for each anomaly, and said nothing of the caches that did not see it.
+
 ## [1.84.0] - 2026-11-19
 
 ### Added

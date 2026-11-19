@@ -39,8 +39,8 @@
 
     const fromHash = (scroll) => {
       const id = OLD[location.hash.slice(1)] || location.hash.slice(1);
-      // the address of one anomaly of the RTR caches (rtr.js draws its row when the data is there) opens their table
-      const target = id && ($(id) || (/^rtr-a-/.test(id) ? $('rtr-anomalies') : null));
+      // the address of one anomaly of the RTR caches, or of a period (rtr.js draws them when the data is there), opens their tab
+      const target = id && ($(id) || (/^rtr-[aw]-/.test(id) ? $('rtr-anomalies') : null));
       const panel = target && target.closest('[role="tabpanel"]');
       if (!panel) return false;
       select(tabs.find((t) => panelOf(t) === panel));
