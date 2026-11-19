@@ -12,7 +12,7 @@ A few numbers were deployed and folded into the next release without a tag of th
 ## [1.86.0] - 2026-11-19
 
 ### Added
-- Right now, RTR caches: an eighth cache, the Routinator that Connesi S.p.A. (AS15605) runs for its own routers and lets this site follow, after we asked operators for more validators to compare. It speaks RTR version 2, with the ASPAs, and is another release of Routinator in another network: 1,037,035 VRPs and 4,212 ASPAs at its first sync. Its monitor is the profile `connesi` (`/api/v1/rtr/connesi.ndjson`, `-baseline.json`, `.metrics`); the detector says nothing about it before 100 syncs. Connesi S.p.A. is in the credits.
+- Right now, RTR caches: two more caches, nine in all, which Connesi S.p.A. (AS15605) runs for its own routers and lets this site follow, after we asked operators for more validators to compare. The first is a Routinator, another release in another network, over RTR version 2 with the ASPAs: 1,037,035 VRPs and 4,212 ASPAs at its first sync. The second is a StayRTR, which accepts RTR version 2 and sends Router Key PDUs but no ASPA: 1,030,953 VRPs. Their monitors are the profiles `connesi` and `connesi_stayrtr` (`/api/v1/rtr/<id>.ndjson`, `-baseline.json`, `.metrics`); the detector says nothing about a cache before 100 syncs. Connesi S.p.A. is in the credits.
 
 ## [1.85.0] - 2026-11-19
 
