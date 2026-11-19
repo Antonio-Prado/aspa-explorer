@@ -6,6 +6,7 @@
 (function () {
   const $ = (id) => document.getElementById(id);
   const { el, fmt, when, lineChart } = window.AspaUI;
+  const A = window.AspaRtrAnomaly;
   const WHAT = {
     interval_since_ns: 'the time since the previous sync', sync_duration_ns: 'the duration of the sync',
     vrp_announced: 'the VRPs announced', vrp_withdrawn: 'the VRPs withdrawn', aspa_announced: 'the ASPAs announced', aspa_withdrawn: 'the ASPAs withdrawn',
@@ -104,17 +105,23 @@
 
     const faults = (a) => [a.repeated ? `${fmt.format(a.repeated)} VRP${a.repeated === 1 ? '' : 's'} announced again while held` : null, a.unknown ? `${fmt.format(a.unknown)} record${a.unknown === 1 ? '' : 's'} withdrawn while not held` : null].filter(Boolean).join('; ');
     const values = (a) => a.trigger === 'protocol_error' ? faults(a) : [Object.keys(a.raw || {}).filter((k) => k === a.trigger || (a.z && Math.abs(a.z[k] || 0) >= 3)).map((k) => `${WHAT[k] || k}: ${value(k, a.raw[k])}${a.z && Number.isFinite(a.z[k]) ? ` (z ${a.z[k]})` : ''}`).join('; '), a.repeated ? `of the VRPs, ${fmt.format(a.repeated)} were announced again while held and changed nothing` : null].filter(Boolean).join('; ');
-    const allAnomalies = caches.flatMap((c) => ((c.anomalies && c.anomalies.list) || []).map((a) => ({ ...a, cache: c.name || c.id }))).sort((a, b) => Date.parse(b.at) - Date.parse(a.at)).slice(0, 50);
+    // every anomaly has an address of its own (#rtr-a-<cache>-<time>-<trigger>): the first, should two share one
+    const ids = new Set();
+    const addressed = (a, c) => { const id = A.idOf(c.id, a.at, a.trigger); const first = c.id && !ids.has(id); ids.add(id); return { ...a, cache: c.name || c.id, id: first ? id : null }; };
+    const everyAnomaly = caches.flatMap((c) => ((c.anomalies && c.anomalies.list) || []).map((a) => addressed(a, c))).sort((a, b) => Date.parse(b.at) - Date.parse(a.at));
+    const allAnomalies = everyAnomaly.slice(0, 50);
+    let linked = null;                                           // the anomaly of the address of the page, when it is not among the ones shown
+    let marked = null;                                           // the address of the page, when it is the one of an anomaly: its row is marked
     const seen = caches.map((c) => `${fmt.format(c.telemetry ? c.telemetry.syncs : 0)} on ${c.name || c.id}`).join(', ');
     // the ten most recent anomalies, then all of them on request
-    const anomalyRow = (a) => el('tr', {},
-      el('td', { text: when(a.at) }),
+    const anomalyRow = (a) => el('tr', a.id ? { id: a.id, ...(a.id === marked ? { class: 'linked' } : {}) } : {},
+      a.id ? el('td', {}, el('a', { href: `#${a.id}`, title: 'The address of this anomaly, to link to it', text: when(a.at) })) : el('td', { text: when(a.at) }),
       el('td', { text: a.cache }),
       el('td', {}, el('span', { class: `badge ${a.severity === 'high' ? 'v-invalid' : 'v-unknown'}`, text: a.severity || 'unknown' })),
       el('td', { text: `${WHAT[a.trigger] || a.trigger || 'unknown'}${a.category === 'structural' ? ' (the session itself)' : ''}` }),
       el('td', { text: values(a) || '–' }));
     const drawAnomalies = (n) => $('rtr-anomalies').replaceChildren(...(allAnomalies.length
-      ? [...allAnomalies.slice(0, n).map(anomalyRow), ...(allAnomalies.length > n ? [el('tr', {}, el('td', { colspan: '5' }, more(allAnomalies.length)))] : [])]
+      ? [...(linked ? [anomalyRow(linked)] : []), ...allAnomalies.slice(0, n).map(anomalyRow), ...(allAnomalies.length > n ? [el('tr', {}, el('td', { colspan: '5' }, more(allAnomalies.length)))] : [])]
       : [el('tr', {}, el('td', { colspan: '5', text: `None so far. The detector says nothing before it has seen 100 syncs on a cache and compares each sync with the last 500; it has seen ${seen}.` }))]));
     function more(all) {
       const b = el('button', { type: 'button', class: 'linkish', text: `Show all ${all}` });
@@ -122,6 +129,33 @@
       return b;
     }
     drawAnomalies(10);
+
+    // The address of one anomaly opens the table on it: among the ten shown, among all the ones of the file or, for an older one, read
+    // from the raw telemetry of its monitor and put in the first row. The Right now page has opened the tab already (now.js).
+    async function openLinked() {
+      const want = A.parseId(location.hash.slice(1));
+      const cache = want && caches.find((c) => c.id === want.cache);
+      if (!cache) return;
+      const id = A.idOf(cache.id, want.at, want.trigger);
+      const at = allAnomalies.findIndex((a) => a.id === id);
+      let found = at < 0 ? everyAnomaly.find((a) => a.id === id) || null : null;
+      if (at < 0 && !found) {
+        try {
+          const r = await fetch(`/api/v1/rtr/${cache.id}.ndjson`);
+          const entry = r.ok ? A.fromTelemetry(await r.text(), want.at, want.trigger) : null;
+          if (entry) found = { ...entry, cache: cache.name || cache.id, id };
+        } catch { /* the table stays as it is */ }
+      }
+      if (at < 0 && !found) return;
+      const shown = $('rtr-anomalies').rows.length;
+      linked = found;
+      marked = id;
+      // the rows shown stay the ones shown (ten, or all after "Show all"), unless the anomaly is further down
+      drawAnomalies(at >= 10 || shown > 12 ? allAnomalies.length : 10);
+      $(id).scrollIntoView({ block: 'center' });
+    }
+    openLinked();
+    window.addEventListener('hashchange', openLinked);
 
     $('rtr-events').replaceChildren(...(doc.events && doc.events.length ? doc.events.map((e) => el('tr', {},
       el('td', { text: when(e.at) }),

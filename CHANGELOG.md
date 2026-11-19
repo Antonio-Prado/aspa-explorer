@@ -9,6 +9,11 @@ A few numbers were deployed and folded into the next release without a tag of th
 
 ## [Unreleased]
 
+## [1.84.0] - 2026-11-19
+
+### Added
+- Right now, RTR caches: every anomaly has an address of its own. The time in the first column of the table of the anomalies is a link (`/now.html#rtr-a-<cache>-<time>-<trigger>`, for example [the withdrawal of 18 November 2026 on the Routinator of the site](https://aspa.ping6.it/now.html#rtr-a-routinator-20261118T141802Z-vrp_withdrawn)); opened, it shows the RTR caches tab with the row of that anomaly marked and in view, among the ten shown or among all of them. `/api/v1/rtr.json` keeps the fifty newest anomalies of each cache: for an older one the page reads the raw telemetry of the monitor (`/api/v1/rtr/<cache>.ndjson`) and puts the anomaly in the first row, so the link goes on working (`site/rtr-anomaly.js`; on the telemetry of the seven caches, the 169 anomalies of the file read this way are the entries that the file has). The table showed the ten newest anomalies and the others on request, so an anomaly could be pointed to only by saying where to look.
+
 ### Changed
 - Backfill of the incidents: `backfill.py --chunk-hours N` (or `BACKFILL_CHUNK_HOURS`) reads each day in parts of N hours, downloading, turning into records, reading and removing one part before the next. A day of a busy collector took about 2 GB of disk at once (the update files and the records of the whole day), more than the small nodes that run some collectors had free; with parts of one hour it takes a few tens of megabytes besides the state. The incidents of the day are the same: on a day of rrc19 (four hours of updates, with a day of warm-up) the files of the incidents and of the open incidents were the same bytes as in one reading, also when the run was stopped in the middle of the day and started again, which goes on from the part it was reading (`day.json` in the block). The default, 24, keeps the reading of before. With `BACKFILL_DROP_DONE_WORK=1` the working files of a block that is done (about 100 MB: its state, ROAs, delegation files and links) are removed, which no other block uses; by default they stay, since a block to be extended to meet the recorder needs its state.
 

@@ -166,6 +166,8 @@ button.tipchip:hover { background: var(--chip-hover); }
 .chip.zero { font-family: inherit; }
 .linkish { background: none; border: 0; padding: 0; color: var(--accent); font-weight: 400; text-decoration: underline; text-underline-offset: 2px; font-size: 0.875rem; }
 .linkish:hover { background: none; }
+tr.linked > td { background: var(--wash); }
+tr.linked > td:first-child { box-shadow: inset 3px 0 0 var(--accent); }
 
 /* overview */
 .tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(8.5rem, 1fr)); gap: 10px; margin-bottom: 10px; }

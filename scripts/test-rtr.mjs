@@ -1,7 +1,9 @@
 // Unit tests for scripts/build-rtr.mjs (no dependencies). Run with: node scripts/test-rtr.mjs
 import assert from 'node:assert/strict';
+import { createRequire } from 'node:module';
 import { parseLines, parseMetrics, summarise, cachesFromEnv, KEEP_DAYS, MAX_ANOMALIES, STALE_AFTER } from './build-rtr.mjs';
 
+const { idOf, parseId, fromTelemetry } = createRequire(import.meta.url)('../site/rtr-anomaly.js');
 let passed = 0;
 const test = async (name, fn) => { await fn(); passed++; console.log('ok  ', name); };
 
@@ -262,6 +264,44 @@ await test('a monitor that says what changed: the changes are the net counts, no
   assert.equal(proto.repeated, 2255);
   assert.equal(stat.repeated, undefined);                              // its values are net: nothing to take off
   assert.equal(stat.raw.vrp_announced, 21);
+});
+
+test('the address of an anomaly, and the anomaly read from the raw telemetry: the entry that the file has', () => {
+  const id = idOf('daknob_zrh2', '2026-11-18T14:24:21Z', 'vrp_withdrawn');
+  assert.equal(id, 'rtr-a-daknob_zrh2-20261118T142421Z-vrp_withdrawn');
+  assert.deepEqual(parseId(id), { cache: 'daknob_zrh2', at: '2026-11-18T14:24:21Z', trigger: 'vrp_withdrawn' });
+  for (const bad of ['', 'rtr-title', 'rtr-a-x-20261118T142421Z', 'rtr-a-../x-20261118T142421Z-a', 'rtr-a-x-2026-11-18T14:24:21Z-a', 'rtr-a-x-20261118T142421Z-<b>']) assert.equal(parseId(bad), null);
+
+  const ms = (min, extra) => new Date(T0 + min * 60e3 + extra).toISOString();
+  const rec = (min, extra, o) => JSON.stringify({ timestamp: ms(min, extra), cache: 'c', schema_version: 1, ...o });
+  const text = [
+    // a statistical anomaly of a sync whose counts are PDUs, with VRPs announced again while held; and the structural one of the same sync
+    rec(10, 100, { event_type: 'error', error_code: 7, error_origin: 'client', error_count: 12 }),
+    rec(10, 100, { event_type: 'error', error_code: 6, error_origin: 'client', error_count: 3 }),
+    rec(10, 100, { event_type: 'anomaly', category: 'structural', trigger: 'protocol_error', severity: 'high' }),
+    rec(10, 200, { event_type: 'sync', sync_type: 'incremental', serial_changed: true, vrp_total: 1000, aspa_total: 40, vrp_announced: 500, vrp_withdrawn: 400, aspa_announced: 0, aspa_withdrawn: 0 }),
+    rec(10, 200, { event_type: 'anomaly', category: 'statistical', trigger: 'vrp_announced', severity: 'medium', z_scores: { vrp_announced: 12.3456, vrp_withdrawn: 2 }, raw: { vrp_announced: 500, vrp_withdrawn: 400, sync_duration_ns: 1234567890.4 } }),
+    // one of a sync that says what changed: nothing to take off
+    rec(30, 0, { event_type: 'error', error_code: 7, error_origin: 'client', error_count: 5 }),
+    rec(30, 300, { event_type: 'sync', sync_type: 'incremental', serial_changed: true, vrp_total: 1000, aspa_total: 40, vrp_announced: 9000, vrp_withdrawn: 5, vrp_added: 8995, vrp_removed: 0, aspa_added: 0, aspa_removed: 0 }),
+    rec(30, 300, { event_type: 'anomaly', category: 'statistical', trigger: 'vrp_announced', severity: 'high', z_scores: { vrp_announced: 3864.386 }, raw: { vrp_announced: 8995 } }),
+    // a refused probe of the version, which is not an anomaly, and a later one written with another time zone
+    rec(40, 0, { event_type: 'error', error_code: 4 }),
+    rec(40, 10, { event_type: 'anomaly', category: 'structural', trigger: 'error_report', severity: 'high' }),
+    JSON.stringify({ timestamp: '2026-11-09T15:50:00.5+01:00', cache: 'c', event_type: 'anomaly', category: 'structural', trigger: 'data_stale', severity: 'medium' }),
+    'not json',
+  ].join('\n');
+  const list = summarise(parseLines(text), T0 + 2 * 3600e3).anomalies.list;
+  assert.equal(list.length, 4);
+  for (const a of list) assert.deepEqual(fromTelemetry(text, a.at, a.trigger), a);
+  assert.equal(list.find((a) => a.trigger === 'protocol_error').unknown, 3);
+  assert.equal(list.find((a) => a.trigger === 'vrp_announced' && a.severity === 'medium').repeated, 12);
+  assert.equal(list.find((a) => a.trigger === 'data_stale').at, '2026-11-09T14:50:00Z');
+  assert.equal(fromTelemetry(text, at(40), 'error_report'), null);       // the probe
+  assert.equal(fromTelemetry(text, at(10), 'vrp_withdrawn'), null);      // another trigger
+  assert.equal(fromTelemetry(text, at(11), 'vrp_announced'), null);      // another time
+  assert.equal(fromTelemetry(text, 'never', 'vrp_announced'), null);
+  assert.equal(fromTelemetry('', at(10), 'vrp_announced'), null);
 });
 
 console.log(`${passed} tests passed`);
