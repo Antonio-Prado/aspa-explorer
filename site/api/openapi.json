@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "ASPA Explorer API",
-    "version": "1.88.0",
+    "version": "1.89.0",
     "description": "ASPA objects validated by Routinator at rpki.ping6.it, their history and quality, for any AS. Open data, read-only, no key.",
     "contact": {
       "email": "antonio.prado@dei.unipd.it"
@@ -2429,6 +2429,196 @@
         }
       }
     },
+    "/api/v1/incidents-history-{collector}.json": {
+      "get": {
+        "operationId": "getIncidentsHistoryOfCollector",
+        "summary": "The incidents of every day since the first ASPA, for a collector read from the archive",
+        "description": "The same file as incidents-history.json for a collector of RIPE RIS that has no recorder here: its days are read from the archive of RIPE RIS, so they end where that reading began. The collectors that have one are in incidents-collectors.json.",
+        "responses": {
+          "200": {
+            "description": "The days and the periods",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "generated",
+                    "collector",
+                    "first_day",
+                    "days_expected",
+                    "days_covered",
+                    "days",
+                    "periods"
+                  ],
+                  "properties": {
+                    "generated": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "collector": {
+                      "type": "string",
+                      "description": "the vantage point, a RIPE RIS collector"
+                    },
+                    "first_day": {
+                      "type": "string",
+                      "format": "date"
+                    },
+                    "days_expected": {
+                      "type": "integer",
+                      "description": "the days from first_day to yesterday"
+                    },
+                    "days_covered": {
+                      "type": "integer",
+                      "description": "the days read so far"
+                    },
+                    "aspas": {
+                      "type": "string"
+                    },
+                    "relationships": {
+                      "type": "string"
+                    },
+                    "detail": {
+                      "type": "string",
+                      "description": "the path of the file with every incident of a day"
+                    },
+                    "days": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "day": {
+                            "type": "string",
+                            "format": "date"
+                          },
+                          "incidents": {
+                            "type": "integer"
+                          },
+                          "with_path": {
+                            "type": "integer"
+                          },
+                          "real": {
+                            "type": "array",
+                            "items": {
+                              "type": "integer"
+                            },
+                            "description": "[valid, unknown, invalid] with the ASPAs of the day"
+                          },
+                          "types": {
+                            "type": "object",
+                            "additionalProperties": {
+                              "type": "integer"
+                            }
+                          }
+                        }
+                      }
+                    },
+                    "periods": {
+                      "type": "object",
+                      "description": "`all` and each year: days, first, last, and period, total, by_type, subtypes and adoption as in incidents.json",
+                      "additionalProperties": {
+                        "type": "object"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "$ref": "#/components/responses/NotBuilt"
+          }
+        },
+        "parameters": [
+          {
+            "name": "collector",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^rrc[0-9]{2}$"
+            },
+            "description": "a collector of incidents-collectors.json other than the one of the recorder (rrc18)"
+          }
+        ]
+      }
+    },
+    "/api/v1/incidents-collectors.json": {
+      "get": {
+        "operationId": "getIncidentsCollectorsJson",
+        "summary": "The collectors whose incidents have a history",
+        "description": "Written every hour (scripts/build-incidents-collectors.mjs): for each collector the address of its history file, the days read so far with the first and the last, and the incidents in them. The collector of the recorder (`main`) comes first; the others are read from the archive of RIPE RIS.",
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "The file",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "generated": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "collectors": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string"
+                          },
+                          "main": {
+                            "type": "boolean"
+                          },
+                          "history": {
+                            "type": "string"
+                          },
+                          "generated": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "days_covered": {
+                            "type": "integer"
+                          },
+                          "days_expected": {
+                            "type": [
+                              "integer",
+                              "null"
+                            ]
+                          },
+                          "first": {
+                            "type": "string",
+                            "format": "date"
+                          },
+                          "last": {
+                            "type": "string",
+                            "format": "date"
+                          },
+                          "incidents": {
+                            "type": [
+                              "integer",
+                              "null"
+                            ]
+                          }
+                        },
+                        "additionalProperties": true
+                      }
+                    }
+                  },
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "404": {
+            "$ref": "#/components/responses/NotBuilt"
+          }
+        }
+      }
+    },
     "/api/v1/incidents/{collector}/{day}.jsonl.gz": {
       "get": {
         "operationId": "getIncidentsOfDay",
@@ -2443,7 +2633,7 @@
               "type": "string",
               "pattern": "^[a-z0-9-]+$"
             },
-            "description": "the vantage point, as `collector` of incidents-history.json (rrc00)"
+            "description": "the vantage point, as `id` of incidents-collectors.json (rrc00, rrc18)"
           },
           {
             "name": "day",

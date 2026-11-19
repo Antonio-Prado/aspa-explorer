@@ -9,6 +9,11 @@ A few numbers were deployed and folded into the next release without a tag of th
 
 ## [Unreleased]
 
+## [1.89.0] - 2026-11-19
+
+### Added
+- Incidents: the history of other collectors of RIPE RIS, next to the one of the recorder. The days of rrc00 before the recorder was started are read from the archive of RIPE RIS, and the same reading goes on for other collectors, whose incidents were computed and kept but not shown. A menu *Collector* above the page now offers every collector that has a history, with the days read so far: the first is rrc18 (Barcelona), read in full from 12 October 2023 to 31 October 2026. Choosing one (`/incidents.html?collector=rrc18`) shows its periods, its chart day by day and the file of each of its days; the window of the last 30 days is of the recorder only, and the chart opens on the last week that has data. On the host, `scripts/run-incidents-collectors.sh` builds `/api/v1/incidents-history-<collector>.json` and the files of the days for each directory of `collectors/` (links to the working directories of the backfill), a few hundred files a run, and `scripts/build-incidents-collectors.mjs` writes the list, `/api/v1/incidents-collectors.json`. A collector read on another host needs its archive, its `days.jsonl` and the CAIDA files of its months copied here.
+
 ## [1.88.0] - 2026-11-19
 
 ### Added

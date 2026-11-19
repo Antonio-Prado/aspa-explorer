@@ -167,6 +167,8 @@
   // The days of the history (/api/v1/incidents-history.json): a bar for each day that was read, from the first day of
   // ASPA to yesterday; a day that is missing has no bar. With the pointer on the chart, a box says the day and its numbers.
   const DAY = 86400e3;
+  // where the collectors of RIPE RIS are, for the ones that have a history here
+  const PLACE = { rrc00: 'Amsterdam, multihop', rrc01: 'London, LINX', rrc03: 'Amsterdam, AMS-IX', rrc06: 'Tokyo', rrc10: 'Milan, MIX', rrc18: 'Barcelona, CATNIX', rrc19: 'Johannesburg', rrc22: 'Bucharest', rrc23: 'Singapore' };
   function daysChart(h) {
     const box = $('inc-days-chart'), select = $('inc-days-metric');
     const types = ORDER.filter((t) => h.days.some((r) => r.types[t]));
@@ -186,7 +188,9 @@
     const collector = /^[a-z0-9-]+$/.test(h.collector) ? h.collector : 'rrc00';
     const href = () => { const r = listed[pick.selectedIndex]; if (r) link.href = `/api/v1/incidents/${collector}/${r.day}.jsonl.gz`; };
     // the time window of the chart: the days from `a` to `b` (numbers of the day, 0 is the first day), the last week at the start
-    let a = Math.max(0, n - 7), b = n - 1;
+    // (the last week that has data: a collector read from the archive ends where its backfill began)
+    const end = Math.max(...at.keys());
+    let a = Math.max(0, end - 6), b = end;
     const from = $('inc-days-from'), to = $('inc-days-to'), buttons = [...$('inc-days-range').querySelectorAll('[data-range]')];
     for (const f of [from, to]) { f.min = iso(0); f.max = iso(n - 1); }
     const show = () => {
@@ -256,7 +260,7 @@
     const press = (v) => buttons.forEach((x) => x.setAttribute('aria-pressed', String(x.dataset.range === v)));
     buttons.forEach((x) => x.addEventListener('click', () => {
       const days = Number(x.dataset.range);
-      b = n - 1; a = days ? Math.max(0, n - days) : 0;
+      b = days ? end : n - 1; a = days ? Math.max(0, end - days + 1) : 0;
       press(x.dataset.range);
       show();
     }));
@@ -291,14 +295,29 @@
     const get = async (url) => {
       try { const r = await fetch(url, { headers: { Accept: 'application/json' } }); return r.ok ? await r.json() : null; } catch { return null; }
     };
-    const [d, h] = await Promise.all([get('/api/v1/incidents.json'), get('/api/v1/incidents-history.json')]);
+    // The collectors that have a history (/api/v1/incidents-collectors.json): the one of the recorder at the start, another one
+    // with ?collector=<id>. The address of its file comes from the list, never from the address of the page; the window of the
+    // last 30 days exists for the collector of the recorder only.
+    const index = await get('/api/v1/incidents-collectors.json');
+    const collectors = index && Array.isArray(index.collectors) ? index.collectors.filter((c) => c && /^[a-z0-9]+$/.test(c.id) && /^\/api\/v1\/incidents-history(-[a-z0-9]+)?\.json$/.test(c.history)) : [];
+    const asked = new URLSearchParams(location.search).get('collector');
+    const chosen = collectors.find((c) => c.id === asked) || collectors.find((c) => c.main) || null;
+    const other = Boolean(chosen && !chosen.main);
+    const [d, h] = await Promise.all([other ? null : get('/api/v1/incidents.json'), get(chosen ? chosen.history : '/api/v1/incidents-history.json')]);
+    if (collectors.length > 1) {
+      const pick = $('inc-collector');
+      pick.replaceChildren(...collectors.map((c) => el('option', { value: c.id, text: `${c.id}${PLACE[c.id] ? `, ${PLACE[c.id]}` : ''} (${fmt.format(c.days_covered)} days)` })));
+      pick.selectedIndex = Math.max(0, collectors.indexOf(chosen));
+      pick.addEventListener('change', () => { const c = collectors[pick.selectedIndex]; if (c) location.search = c.main ? '' : `?collector=${c.id}`; });
+      $('inc-collector-box').hidden = false;
+    }
     const history = h && Array.isArray(h.days) && h.days.length && h.periods && h.periods.all ? h : null;
     if (!d && !history) {
       $('meta').textContent = 'No incident data is published yet. It is built from the files of the detectors and appears here when there is one.';
       for (const id of ['inc-types-title', 'inc-curve-title']) $(id).parentElement.hidden = true;
       return;
     }
-    const where = `in the updates of RIPE RIS ${history ? history.collector : 'rrc00'}`;
+    const where = `in the updates of RIPE RIS ${history ? `${history.collector}${PLACE[history.collector] ? ` (${PLACE[history.collector]})` : ''}` : 'rrc00'}`;
     const recent = () => {
       const length = span(d.period.from, d.period.to);
       render(d, `${plural(d.total.incidents, 'incident')} ${where}, from ${utc(d.period.from)} to ${utc(d.period.to)}${length ? ` (${length} of data)` : ''} · ${built(d.generated)}`,
