@@ -167,8 +167,8 @@
   // The days of the history (/api/v1/incidents-history.json): a bar for each day that was read, from the first day of
   // ASPA to yesterday; a day that is missing has no bar. With the pointer on the chart, a box says the day and its numbers.
   const DAY = 86400e3;
-  // where the collectors of RIPE RIS are, for the ones that have a history here
-  const PLACE = { rrc00: 'Amsterdam, multihop', rrc01: 'London, LINX', rrc03: 'Amsterdam, AMS-IX', rrc06: 'Tokyo', rrc10: 'Milan, MIX', rrc18: 'Barcelona, CATNIX', rrc19: 'Johannesburg', rrc22: 'Bucharest', rrc23: 'Singapore' };
+  // where the collectors of RIPE RIS are
+  const PLACE = { rrc00: 'Amsterdam, multihop', rrc01: 'London, LINX', rrc03: 'Amsterdam, AMS-IX', rrc04: 'Geneva, CIXP', rrc05: 'Vienna, VIX', rrc06: 'Tokyo', rrc07: 'Stockholm, Netnod', rrc10: 'Milan, MIX', rrc11: 'New York, NYIIX', rrc12: 'Frankfurt, DE-CIX', rrc13: 'Moscow, MSK-IX', rrc14: 'Palo Alto', rrc15: 'São Paulo, IX.br', rrc16: 'Miami', rrc18: 'Barcelona, CATNIX', rrc19: 'Johannesburg', rrc20: 'Zurich, SwissIX', rrc21: 'Paris, France-IX', rrc22: 'Bucharest', rrc23: 'Singapore', rrc24: 'Montevideo, multihop', rrc25: 'Amsterdam, multihop', rrc26: 'Dubai, UAE-IX' };
   function daysChart(h) {
     const box = $('inc-days-chart'), select = $('inc-days-metric');
     const types = ORDER.filter((t) => h.days.some((r) => r.types[t]));

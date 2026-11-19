@@ -9,6 +9,13 @@ A few numbers were deployed and folded into the next release without a tag of th
 
 ## [Unreleased]
 
+## [1.89.1] - 2026-11-19
+
+### Changed
+
+- The line under the title of a page fills the row: it was held to two thirds of it on a wide window.
+- Incidents: the menu of the collectors gives the place of every collector of RIPE RIS, for the ones whose history is being added (rrc12, rrc14, rrc15, rrc20 and rrc21 among them).
+
 ## [1.89.0] - 2026-11-19
 
 ### Added

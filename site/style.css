@@ -911,7 +911,7 @@ body { overflow-x: clip; }
 .pagetop { position: relative; isolation: isolate; margin-top: 0.75rem; margin-bottom: 1rem; padding: 1.2rem 0 1.3rem; }
 .pagetop::before { content: ""; position: absolute; z-index: -1; top: 0; bottom: 0; left: 50%; width: 100vw; transform: translateX(-50%); background: var(--area-tint, transparent); border-top: 4px solid var(--area, transparent); }
 .masthead .pagetop h1 { margin: 0 0 0.3rem; }
-.masthead .pagetop .lede { font-size: 1.0625rem; color: var(--ink); max-width: 47rem; }
+.masthead .pagetop .lede { font-size: 1.0625rem; color: var(--ink); max-width: none; }
 .pagenav { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.85rem; }
 .pagenav a { padding: 0.5rem 0.85rem; border-radius: 999px; background: var(--surface); box-shadow: 0 0 0 1px var(--area, var(--grid)); color: var(--area, var(--accent)); font-size: 0.875rem; font-weight: 600; text-decoration: none; }
 .pagenav a:hover { text-decoration: underline; }
