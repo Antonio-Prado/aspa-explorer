@@ -1,0 +1,15 @@
+[Unit]
+Description=Start the backfill workers that are not running (~/workers.conf)
+After=network-online.target
+Wants=network-online.target
+RequiresMountsFor=/data
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+User=debian
+ExecStart=/bin/sh /home/debian/start-workers.sh
+# the workers go on after the script ends; stopping this unit ends the ones that it started
+
+[Install]
+WantedBy=multi-user.target
