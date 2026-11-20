@@ -1189,6 +1189,10 @@ await test('rtr: a statistical anomaly is told only above its median and, for th
   assert.match(describeRtrEvent({ ...proto, cache: 'Fort' }), /records against the protocol, 2255 VRPs announced again while held and 3 records withdrawn while not held\. A router/);
   assert.match(describeRtrEvent({ ...proto, repeated: 1, unknown: undefined }), /, 1 VRP announced again while held\. /);
   assert.match(describeRtrEvent({ ...proto, repeated: undefined, unknown: 1 }), /protocol, 1 record withdrawn while not held\. /);
+  // a record that the monitor could not read (code 0, a later monitor still)
+  assert.match(describeRtrEvent({ ...proto, repeated: undefined, unknown: undefined, unreadable: 2 }), /protocol, 2 records that the monitor could not read\. .*errors 0, 6 and 7\)/);
+  assert.match(describeRtrEvent({ ...proto, unreadable: 1 }), /held, 3 records withdrawn while not held and 1 record that the monitor could not read\. /);
+  assert.match(describeRtrEvent(proto), /errors 6 and 7\)/);
   assert.equal(worthTelling({ ...churn, repeated: 5300 }), null);                                           // 30 and 16 records did change: no fault
   assert.equal(worthTelling({ ...churn, z: {}, repeated: 5300 }), null);
   const real = { ...churn, repeated: 300 };

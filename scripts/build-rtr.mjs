@@ -77,7 +77,8 @@ const syncOf = (r) => ({
 export function summarise(records, now = Date.now(), metrics = null) {
   const syncs = records.filter((r) => r.event_type === 'sync');
   // A monitor after RAVEN 0.4.0 checks each delta against what it holds and writes, just before the sync, an `error` of its own
-  // (`error_origin` client) for the VRPs announced again while held (code 7) and for the records withdrawn while not held (code 6),
+  // (`error_origin` client) for the VRPs announced again while held (code 7), for the records withdrawn while not held (code 6) and,
+  // from its main of 19 November 2026, for the records that it could not read and skipped (code 0),
   // then a structural anomaly `protocol_error`, and asks the cache for everything again on the same session. The counts of the sync
   // `vrp_announced` and the like are the PDUs received, so a VRP announced again and then withdrawn in the same delta, which changed
   // nothing (Fort 1.7.0 does it, FORT-validator issue 204), is in both: `repeated` says how many of them, and the changes shown here
@@ -164,8 +165,11 @@ export function summarise(records, now = Date.now(), metrics = null) {
     z: Object.fromEntries(Object.entries(a.z_scores || {}).map(([k, v]) => [k, round(v)])),
     raw: Object.fromEntries(Object.entries(a.raw || {}).map(([k, v]) => [k, round(v, 0)])),
     // of the VRPs announced and withdrawn in the sync of the anomaly, the ones announced again while held (on a statistical anomaly
-    // only when its values are PDUs, which include them); on a protocol_error also the records withdrawn while not held
+    // only when its values are PDUs, which include them); on a protocol_error also the records withdrawn while not held (code 6)
     ...(faultsOf(a.t, 7) && (a.trigger === 'protocol_error' || !netAt(a.t)) ? { repeated: faultsOf(a.t, 7) } : {}), ...(a.trigger === 'protocol_error' && faultsOf(a.t, 6) ? { unknown: faultsOf(a.t, 6) } : {}),
+    // and the records that the monitor could not read (code 0, RAVEN's main of 19 November 2026: a prefix length or a maxLength out of
+    // range, an ASPA record of the wrong length), which it skips before asking for everything again
+    ...(a.trigger === 'protocol_error' && faultsOf(a.t, 0) ? { unreadable: faultsOf(a.t, 0) } : {}),
   }));
   const count = (sev) => anomalies.filter((a) => a.severity === sev).length;
   return {

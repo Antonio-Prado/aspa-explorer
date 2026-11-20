@@ -9,8 +9,11 @@ A few numbers were deployed and folded into the next release without a tag of th
 
 ## [Unreleased]
 
+## [1.94.0] - 2026-11-20
+
 ### Changed
 
+- RTR caches: a record that the monitor could not read (a prefix length or a maxLength out of range, an ASPA record of the wrong length: error 0 of RFC 8210, which RAVEN reports from its main of 19 November 2026) has its own words in the session events, in the anomalies and in the alerts, and an anomaly `protocol_error` of `rtr.json` says how many as `unreadable`.
 - The workers of a backfill machine start again after a reboot (`tools/backfill/start-workers.sh` and `backfill-workers.service`, from the list in `~/workers.conf`).
 - A backfill machine sends its incident archives to the host by itself (`tools/backfill/ship-to-aspa.sh` with a systemd timer, and `tools/backfill/receive.py`, the forced command of its key on the host, which lets through only an rsync that receives into the two directories of the archives).
 - The first message to the contact of a cache can carry a paragraph of its own: `node notifier/contact.mjs add ADDRESS CACHE_ID... --note TEXT`, for what is to be said of those caches in particular (one of them does not answer yet, for instance).

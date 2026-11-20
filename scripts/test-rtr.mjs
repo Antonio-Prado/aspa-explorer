@@ -238,6 +238,7 @@ await test('a delta with VRPs announced again while held: the changes leave them
   assert.equal(proto.trigger, 'protocol_error');
   assert.equal(proto.repeated, 2255);
   assert.equal(proto.unknown, 3);
+  assert.equal(proto.unreadable, undefined);
   assert.equal(stat.repeated, 2255);
   assert.equal(stat.unknown, undefined);
   assert.equal(stat.raw.vrp_announced, 2276);                          // what the monitor measured stays as it is
@@ -249,6 +250,25 @@ await test('a delta with VRPs announced again while held: the changes leave them
   const plain = summarise(parseLines([sync(1, { vrp_announced: 5, vrp_withdrawn: 2 })].join('\n')), T0 + 5 * 60e3);
   assert.equal(plain.last_sync.vrp_repeated, undefined);
   assert.equal(plain.last_24h.vrp_repeated, 0);
+});
+
+await test('a record that the monitor could not read (code 0) is counted on the anomaly and named in the events', () => {
+  const lines = [
+    sync(0.1, { sync_type: 'full', vrp_announced: 1000 }),
+    JSON.stringify({ timestamp: at(20), cache: 'c', event_type: 'error', schema_version: 1, error_text: 'corrupt data', error_code: 0, error_origin: 'client', error_count: 2, proto_version: 2 }),
+    sync(20.001, { serial: 2, vrp_announced: 30, vrp_withdrawn: 10 }),
+    JSON.stringify({ timestamp: at(20), cache: 'c', event_type: 'anomaly', schema_version: 1, category: 'structural', trigger: 'protocol_error', severity: 'high' }),
+  ];
+  const d = summarise(parseLines(lines.join('\n')), T0 + 30 * 60e3);
+  const proto = d.anomalies.list.find((a) => a.trigger === 'protocol_error');
+  assert.equal(proto.unreadable, 2);
+  assert.equal(proto.repeated, undefined);
+  assert.equal(proto.unknown, undefined);
+  const ev = d.events.find((e) => e.found_by_monitor);
+  assert.equal(ev.code, 0);
+  assert.equal(ev.count, 2);
+  assert.equal(d.last_24h.vrp_announced, 30);                          // the counts of the delta are not corrected for it
+  assert.equal(d.last_24h.vrp_repeated, 0);
 });
 
 await test('a monitor that says what changed: the changes are the net counts, not the PDUs', () => {

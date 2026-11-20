@@ -115,7 +115,7 @@
     }
     drawCharts();
 
-    const faults = (a) => [a.repeated ? `${fmt.format(a.repeated)} VRP${a.repeated === 1 ? '' : 's'} announced again while held` : null, a.unknown ? `${fmt.format(a.unknown)} record${a.unknown === 1 ? '' : 's'} withdrawn while not held` : null].filter(Boolean).join('; ');
+    const faults = (a) => [a.repeated ? `${fmt.format(a.repeated)} VRP${a.repeated === 1 ? '' : 's'} announced again while held` : null, a.unknown ? `${fmt.format(a.unknown)} record${a.unknown === 1 ? '' : 's'} withdrawn while not held` : null, a.unreadable ? `${fmt.format(a.unreadable)} record${a.unreadable === 1 ? '' : 's'} that the monitor could not read` : null].filter(Boolean).join('; ');
     const values = (a) => a.trigger === 'protocol_error' ? faults(a) : [Object.keys(a.raw || {}).filter((k) => k === a.trigger || (a.z && Math.abs(a.z[k] || 0) >= 3)).map((k) => `${WHAT[k] || k}: ${value(k, a.raw[k])}${a.z && Number.isFinite(a.z[k]) ? ` (z ${a.z[k]})` : ''}`).join('; '), a.repeated ? `of the VRPs, ${fmt.format(a.repeated)} were announced again while held and changed nothing` : null].filter(Boolean).join('; ');
     // every anomaly has an address of its own (#rtr-a-<cache>-<time>-<trigger>): the first, should two share one
     const ids = new Set();
@@ -228,7 +228,7 @@
 
     $('rtr-events').replaceChildren(...(doc.events && doc.events.length ? doc.events.map((e) => el('tr', {},
       el('td', { text: when(e.at) }),
-      el('td', { text: e.probe ? 'Version probe refused' : e.found_by_monitor ? 'Records against the protocol' : (EVENT[e.type] || e.type) }),
+      el('td', { text: e.probe ? 'Version probe refused' : e.found_by_monitor ? (e.code === 0 ? 'Records that the monitor could not read' : 'Records against the protocol') : (EVENT[e.type] || e.type) }),
       el('td', { text: [e.reason, e.code !== undefined ? `code ${e.code}` : null, e.protocol !== undefined ? `RTR version ${e.protocol}` : null, e.next_protocol !== undefined ? `goes on with version ${e.next_protocol}` : null].filter(Boolean).join(', ') || '–' }))) : [el('tr', {}, el('td', { colspan: '3', text: 'No session event recorded.' }))]));
 
     $('rtr-note').replaceChildren(`In the last 24 hours the cache of the site announced ${fmt.format(d.vrp_announced || 0)} VRPs and withdrew ${fmt.format(d.vrp_withdrawn || 0)}, announced ${fmt.format(d.aspa_announced || 0)} ASPAs and withdrew ${fmt.format(d.aspa_withdrawn || 0)}${d.duration_max_ms ? `; the longest sync took ${fmt.format(d.duration_max_ms)} ms` : ''}. The same data is available as `, el('a', { href: '/api/v1/rtr.json', text: 'JSON' }), ', the raw telemetry of each monitor as NDJSON (/api/v1/rtr/<id>.ndjson, see the ', el('a', { href: '/api.html', text: 'API page' }), '), and whoever runs the site is told of every anomaly. RAVEN is BSD-3-Clause software by Nokia, with its ', ext('https://ritmukhe.github.io/raven-docs/user-guide/cli-reference/#raven-rtr-monitor', 'documentation of the monitor'), '; the idea is explained in the RIPE Labs article ', ext('https://labs.ripe.net/author/ritesh-mukherjee/your-router-trusts-its-validator-but-whos-watching-the-validator/', 'Your router trusts its validator. But who\'s watching the validator?'), ' by Ritesh Mukherjee.');

@@ -35,7 +35,7 @@
   };
 
   // The anomaly of that trigger written in the second `at` (as in rtr.json: UTC, no fraction), or null: {at, category, trigger, severity, z, raw} and,
-  // as there, `repeated` and `unknown` for the records against the protocol. A refused probe of the RTR version is not an anomaly.
+  // as there, `repeated`, `unknown` and `unreadable` for the records against the protocol. A refused probe of the RTR version is not an anomaly.
   function fromTelemetry(text, at, trigger) {
     const want = Date.parse(at);
     if (!Number.isFinite(want)) return null;
@@ -51,6 +51,7 @@
       raw: Object.fromEntries(Object.entries(a.raw || {}).map(([k, v]) => [k, round(v, 0)])),
       ...(faultsOf(7) && (a.trigger === 'protocol_error' || !net) ? { repeated: faultsOf(7) } : {}),
       ...(a.trigger === 'protocol_error' && faultsOf(6) ? { unknown: faultsOf(6) } : {}),
+      ...(a.trigger === 'protocol_error' && faultsOf(0) ? { unreadable: faultsOf(0) } : {}),
     };
   }
 

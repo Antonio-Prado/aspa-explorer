@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "ASPA Explorer API",
-    "version": "1.93.0",
+    "version": "1.94.0",
     "description": "ASPA objects validated by Routinator at rpki.ping6.it, their history and quality, for any AS. Open data, read-only, no key.",
     "contact": {
       "email": "antonio.prado@dei.unipd.it"
@@ -1263,6 +1263,10 @@
                               "unknown": {
                                 "type": "integer",
                                 "description": "on a protocol_error, the records withdrawn while the monitor did not hold them (error 6 of RFC 8210); absent when none"
+                              },
+                              "unreadable": {
+                                "type": "integer",
+                                "description": "on a protocol_error, the records that the monitor could not read and skipped, such as a prefix length or a maxLength out of range (error 0 of RFC 8210); absent when none"
                               }
                             },
                             "additionalProperties": true

@@ -133,7 +133,13 @@ export const describeRtrEvent = (a) => {
     const far = [(p.beyond || []).includes('vrp') ? n(p.vrp, 'VRP') : null, (p.beyond || []).includes('aspa') ? n(p.aspa, 'ASPA') : null].filter(Boolean).join(' and ');
     return `${sev} anomaly${where} at ${utc(a.at)}: it holds ${far} than the median of the other ${p.others} caches followed, and has since ${utc(a.since)}. Its own syncs look ordinary: a set that is old, or filtered in another way, or a validator that is losing records a few at a time, shows only next to the others.`;
   }
-  if (a.trigger === 'protocol_error') return `${sev} anomaly${where} at ${utc(a.at)}: ${what}${a.repeated ? `, ${a.repeated} VRP${a.repeated === 1 ? '' : 's'} announced again while held` : ''}${a.unknown ? `${a.repeated ? ' and' : ','} ${a.unknown} record${a.unknown === 1 ? '' : 's'} withdrawn while not held` : ''}. A router that applies such a delta as it comes can lose valid records, or drops the session (RFC 8210, errors 6 and 7).`;
+  if (a.trigger === 'protocol_error') {
+    const n = (v, one, many) => `${v} ${v === 1 ? one : many}`;
+    const parts = [a.repeated ? `${n(a.repeated, 'VRP', 'VRPs')} announced again while held` : null, a.unknown ? `${n(a.unknown, 'record', 'records')} withdrawn while not held` : null,
+      a.unreadable ? `${n(a.unreadable, 'record', 'records')} that the monitor could not read` : null].filter(Boolean);
+    const said = parts.length > 1 ? `, ${parts.slice(0, -1).join(', ')} and ${parts[parts.length - 1]}` : parts.length ? `, ${parts[0]}` : '';
+    return `${sev} anomaly${where} at ${utc(a.at)}: ${what}${said}. A router that applies such a delta as it comes can lose valid records, or drops the session (RFC 8210, errors ${a.unreadable ? '0, ' : ''}6 and 7).`;
+  }
   if (a.trigger === 'data_regressed') return `${sev} anomaly${where} at ${utc(a.at)}: ${what}. A router that follows it now holds an older set than before, as after a change of node behind an anycast address.`;
   if (a.category === 'structural') return `${sev} anomaly${where} at ${utc(a.at)}: ${what}. The session itself misbehaved.`;
   return `${sev} anomaly${where} at ${utc(a.at)}: ${what} was off the baseline${raw}. The sync was unlike the ones before it.`;
