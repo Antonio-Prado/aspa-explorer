@@ -9,6 +9,12 @@ A few numbers were deployed and folded into the next release without a tag of th
 
 ## [Unreleased]
 
+## [1.90.3] - 2026-11-20
+
+### Changed
+
+- The table *By type of incident* shows the tree of the types: the rows of a class have a light ground, and the types under it hang from a line, with a branch to the code of each and the last one closing it.
+
 ## [1.90.2] - 2026-11-20
 
 ### Changed

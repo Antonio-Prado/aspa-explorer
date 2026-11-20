@@ -623,10 +623,18 @@ table.live td.nowrap { white-space: nowrap; }
 table.live tr.hasnote > th, table.live tr.hasnote > td { border-bottom: 0; padding-bottom: 0.15rem; }
 table.live tr.hasnote > th { white-space: nowrap; }
 table.live tr.noterow > td { padding-top: 0; color: var(--muted); font-size: 0.8125rem; white-space: normal; overflow-wrap: normal; }
-table.live tr.noterow.sub > td:first-child { padding-left: 1.6rem; }
+/* The types under a class hang from it as the branches of a tree: a vertical line under the code of the class, a short
+   horizontal one to the code of each type, and the last type closes the line. The rows of the class have a light ground. */
+table.tight tr.cls > th, table.tight tr.cls > td { background: var(--wash); }
+table.live.tight { --branch: color-mix(in srgb, var(--muted) 60%, transparent); }
+table.live.tight tbody th.sub, table.live.tight tr.noterow.sub > td:first-child { padding-left: 2.3rem; background: linear-gradient(var(--branch), var(--branch)) 1.4rem 0 / 1px 100% no-repeat; }
+table.live.tight tbody th.sub { position: relative; }
+table.live.tight tbody th.sub::before { content: ""; position: absolute; left: 1.4rem; top: 1.25rem; width: 0.65rem; border-top: 1px solid var(--branch); }
+table.live.tight tbody th.sub.last { background-size: 1px 1.25rem; }
+table.live.tight tr.noterow.sub.last > td:first-child { background: none; }
 table.live tr.noterow > td.num { white-space: nowrap; }
 /* a table of many numeric columns: less room between them, and a name may take two lines, so that it fits the page */
-table.tight th.num, table.tight td.num { padding-left: 0.3rem; }
+table.tight th.num, table.tight td.num { padding-left: 0.2rem; }
 table.tight tr.hasnote > th { white-space: normal; }
 
 .measure .field { flex-wrap: wrap; max-width: none; align-items: center; }
