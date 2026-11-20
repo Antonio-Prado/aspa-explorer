@@ -156,7 +156,8 @@ async function send(sub, job, row) {
     const caches = (contactCaches(sub.asn) || []).join(', ');
     const text = welcome
       ? [`ASPA Explorer now follows your RTR cache${caches.includes(',') ? 's' : ''} (${caches}) next to the other caches on its Right now page, as a router would: one read-only RTR session, kept by an independent client.`, '',
-        'From now on this address is told when the monitor finds something on your cache that could matter to a router: a session that drops or misbehaves, a thousand VRPs or twenty ASPAs announced or withdrawn at once, records against the protocol, a serial that stops advancing for hours. Each message says whether the other caches saw the same, and you get a few a day at most.']
+        'From now on this address is told when the monitor finds something on your cache that could matter to a router: a session that drops or misbehaves, a thousand VRPs or twenty ASPAs announced or withdrawn at once, records against the protocol, a serial that stops advancing for hours. Each message says whether the other caches saw the same, and you get a few a day at most.',
+        ...(typeof job.note === 'string' && job.note ? ['', job.note] : [])]
       : [...describeContactEvents(job.events), ...(job.last ? ['', `This is message ${CONTACT_A_DAY + 1} in 24 hours: the next ones are not sent until a day has passed. The page has all of them.`] : [])];
     const page = `${SITE}/now.html#${welcome ? 'rtr-title' : periodOf(job.events)}`;
     if (sub.kind === 'email') {

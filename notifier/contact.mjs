@@ -2,7 +2,8 @@
 // A contact is a subscription whose topic names its caches (see rtr.mjs); it is made here by the operator of the site, after the
 // contact agreed, and never from the public form. The service that is running sends the first message, and the messages after it.
 //
-//   node notifier/contact.mjs add noc@example.net cache_id [cache_id ...]     (--quiet: no first message)
+//   node notifier/contact.mjs add noc@example.net cache_id [cache_id ...]     (--quiet: no first message;
+//                                                                             --note TEXT: a paragraph added to the first message)
 //   node notifier/contact.mjs list
 //   node notifier/contact.mjs remove noc@example.net
 //
@@ -17,14 +18,18 @@ export function run(args, store, now = Math.floor(Date.now() / 1000)) {
   if (cmd === 'list') return contacts().map((s) => `${s.id}\t${s.target}\t${contactCaches(s.asn).join(' ')}`);
   if (cmd === 'add') {
     const quiet = rest.includes('--quiet');
-    const [to, ...ids] = rest.filter((x) => x !== '--quiet');
+    // --note TEXT: what the first message has to say of these caches in particular (one of them is not reachable yet, for instance)
+    const at = rest.indexOf('--note');
+    const note = at >= 0 ? String(rest[at + 1] || '').replace(/\s+/g, ' ').trim().slice(0, 600) : '';
+    if (at >= 0 && !note) throw new Error('add: --note wants a text after it');
+    const [to, ...ids] = rest.filter((x, i) => x !== '--quiet' && (at < 0 || (i !== at && i !== at + 1)));
     if (!to || !EMAIL_RE.test(to)) throw new Error('add: an e-mail address, then the ids of its caches');
     const topic = contactTopic(ids);
     if (contacts().some((s) => s.target === to)) throw new Error(`${to} is a contact already: remove it first to change its caches`);
     return store.transaction(() => {
       const id = store.insert('email', to, topic, null, now);
       store.activate(id, now);
-      if (!quiet) store.outboxAdd(id, JSON.stringify({ type: 'rtr-welcome' }), now);
+      if (!quiet) store.outboxAdd(id, JSON.stringify({ type: 'rtr-welcome', ...(note ? { note } : {}) }), now);
       return [`contact ${id}: ${to} for ${contactCaches(topic).join(', ')}${quiet ? '' : '; the first message is queued'}`];
     });
   }
@@ -34,7 +39,7 @@ export function run(args, store, now = Math.floor(Date.now() / 1000)) {
     for (const s of mine) { store.outboxDropSub(s.id); store.remove(s.id); }
     return [`removed ${mine.length} contact${mine.length === 1 ? '' : 's'} of ${rest[0]}`];
   }
-  throw new Error('usage: contact.mjs add ADDRESS CACHE_ID... [--quiet] | list | remove ADDRESS');
+  throw new Error('usage: contact.mjs add ADDRESS CACHE_ID... [--quiet] [--note TEXT] | list | remove ADDRESS');
 }
 
 if (import.meta.url === `file://${process.argv[1]}`) {

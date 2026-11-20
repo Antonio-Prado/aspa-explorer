@@ -1412,6 +1412,11 @@ await test('rtr contacts: the operator adds, lists and removes a contact; the fi
   assert.deepEqual(contactRun(['list'], store), ['2\tb@example.net\tfort']);
   assert.throws(() => contactRun(['remove', 'noc@example.net'], store), /is not a contact/);
   assert.throws(() => contactRun(['what'], store), /usage/);
+  // --note TEXT: a paragraph of the first message, kept in the job; the text is not taken for a cache id, and it cannot be empty
+  contactRun(['add', 'c@example.net', 'karsolink', '--note', '  The second cache\n does not answer yet. ', 'karsolink2'], store, 2000);
+  assert.deepEqual(contactRun(['list'], store).slice(-1), ['3\tc@example.net\tkarsolink karsolink2']);
+  assert.deepEqual(JSON.parse(store.outboxDue(2000).slice(-1)[0].job), { type: 'rtr-welcome', note: 'The second cache does not answer yet.' });
+  assert.throws(() => contactRun(['add', 'd@example.net', 'fort', '--note'], store), /--note wants a text/);
   // a contact is not an audience of the changes of ASPAs or of the status alerts
   assert.deepEqual(audience({ customer: 'AS64496', kind: 'added', providers: ['AS64497'], added: ['AS64497'], dropped: [] }, store.allActive()), []);
   store.close();
