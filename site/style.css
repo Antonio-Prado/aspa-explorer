@@ -619,6 +619,10 @@ table.live th.probe { font-weight: 400; text-align: left; }
 .result.r-long { border-left-color: var(--s4); }
 .result.r-trombone { border-left-color: var(--s2); }
 table.live td.nowrap { white-space: nowrap; }
+/* a row whose note has a line of its own under it, as wide as the table (the caches side by side) */
+table.live tr.hasnote > th, table.live tr.hasnote > td { border-bottom: 0; padding-bottom: 0.15rem; }
+table.live tr.hasnote > th { white-space: nowrap; }
+table.live tr.noterow > td { padding-top: 0; color: var(--muted); font-size: 0.8125rem; white-space: normal; overflow-wrap: normal; }
 
 .measure .field { flex-wrap: wrap; max-width: none; align-items: center; }
 .measure .field select { max-width: 100%; padding: 0.4rem 0.5rem; font: inherit; }

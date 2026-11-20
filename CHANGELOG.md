@@ -9,6 +9,12 @@ A few numbers were deployed and folded into the next release without a tag of th
 
 ## [Unreleased]
 
+## [1.90.1] - 2026-11-20
+
+### Changed
+
+- The table of the caches side by side, on the *RTR caches* tab of *Right now*, is shorter and easier to read. The note of a cache has a line of its own under its row, as wide as the table: it was in the first column, a dozen short lines for each cache. The name of a cache drops what it said in brackets, which the note and the columns say. The *RTR* column gives the version only (the *ASPAs* column says when they are not carried), *Last sync* names the kind of sync only when it is a full one, and the version probes left out of the anomalies are counted in the note, not next to the number.
+
 ## [1.90.0] - 2026-11-20
 
 ### Added
