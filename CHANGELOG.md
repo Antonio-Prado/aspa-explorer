@@ -9,6 +9,16 @@ A few numbers were deployed and folded into the next release without a tag of th
 
 ## [Unreleased]
 
+## [1.92.0] - 2026-11-20
+
+### Added
+
+- A twelfth RTR cache: the second one that Karsolink (AS204471) runs for its own routers (`karsolink2`), with the same addresses for its telemetry, baseline and metrics as the others.
+
+### Changed
+
+- Every cache of the *RTR caches* tab has a name of the same form, the software and who runs it, with the place when one operator has two alike: *Routinator of Connesi S.p.A.*, *Routinator of DaKnObNET, Zurich*, *StayRTR of DaKnObNET, Amsterdam*, *RTR server of Level66 Network*. What some names said in brackets (the AS number, a public server, VRPs only) is in the note and in the columns of the table.
+
 ## [1.91.0] - 2026-11-20
 
 ### Added
