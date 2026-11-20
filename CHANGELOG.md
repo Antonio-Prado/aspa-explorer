@@ -9,6 +9,12 @@ A few numbers were deployed and folded into the next release without a tag of th
 
 ## [Unreleased]
 
+## [1.93.0] - 2026-11-20
+
+### Changed
+
+- The table of the caches side by side says who runs each cache, its AS number and its software in three columns, where it had a name and a note: *Run by* (with the place, when an operator has two caches), *AS*, and *Software*, with the version of the software and the version of RTR of the session. RTR does not carry the version of the software: the builder reads it from the software where it has an address for it (`version_url` in the list of the caches: Routinator answers at `/version`), takes it from the list where the operator told it (`version`), and leaves it out otherwise. The note under a row is kept for what is peculiar to a cache. `rtr.json` has the new fields for each cache: `operator`, `asn`, `place`, `software`, `version`.
+
 ## [1.92.0] - 2026-11-20
 
 ### Added

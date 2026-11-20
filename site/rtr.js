@@ -77,22 +77,24 @@
       ? [el('br'), el('small', { class: 'apart', text: `${fmt.format(Math.abs(c.apart[k]))} ${c.apart[k] < 0 ? 'fewer' : 'more'} than the others` })] : []);
     $('rtr-caches').replaceChildren(...caches.flatMap((c) => {
       const cs = c.session || {}, cl = c.last_sync, cd = c.last_24h || {}, ca = c.anomalies || {};
-      // the note of a cache has a line of its own under the row, as wide as the table: in the first column it was a dozen short lines.
-      // With the note there, the name drops what it says in brackets (the note and the columns say it)
-      const name = c.note ? (c.name || c.id).replace(/\s*\([^)]*\)\s*$/, '') : (c.name || c.id);
-      // the version probes left out of the count of the anomalies are said in the same line, not in the cell of the number
+      // A cache is who runs it (and where, when an operator has two), its AS number, and the software with its version and the
+      // version of RTR that the session speaks; what is peculiar to it has a line of its own under the row, as wide as the table.
+      // A file without those fields (an older one) shows the name of the cache in the first column.
       const note = [c.note ? `${c.note[0].toUpperCase()}${c.note.slice(1)}${/[.!?]$/.test(c.note) ? '' : '.'}` : '',
         ca.probes ? `${fmt.format(ca.probes)} version probe${ca.probes === 1 ? ' is' : 's are'} left out of its anomalies.` : ''].filter(Boolean).join(' ');
+      const proto = cs.protocol === null || cs.protocol === undefined ? '' : `RTR v${cs.protocol}`;
+      const soft = [c.software, c.software && c.version].filter(Boolean).join(' ');
       const row = el('tr', note ? { class: 'hasnote' } : {},
-        el('th', { scope: 'row', text: name }),
+        el('th', { scope: 'row' }, c.operator || c.name || c.id, c.operator && c.place ? el('small', { class: 'place', text: ` ${c.place}` }) : null),
+        el('td', { class: 'nowrap', text: c.asn ? `AS${c.asn}` : '–' }),
+        el('td', { class: 'nowrap' }, soft || (proto ? '' : '–'), soft && proto ? el('small', { class: 'place', text: ` ${proto}` }) : (soft ? null : proto)),
         el('td', {}, el('span', { class: `badge ${cs.connected && !cs.expired ? 'v-valid' : 'v-invalid'}`, text: cs.connected ? (cs.expired ? 'Up, data expired' : 'Up') : 'Down' })),
-        el('td', { text: cs.protocol === null || cs.protocol === undefined ? '–' : `v${cs.protocol}` }),
         el('td', { class: 'num' }, cl ? fmt.format(cl.vrp_total) : '–', ...apartNote(c, 'vrp')),
         el('td', { class: 'num' }, cl ? (cs.carries_aspa ? fmt.format(cl.aspa_total) : 'not carried') : '–', ...apartNote(c, 'aspa')),
         el('td', { class: 'nowrap', text: cl ? `${ago(now - Date.parse(cl.at))}${cl.type && cl.type !== 'incremental' ? `, ${cl.type}` : ''}` : 'none yet' }),
         el('td', { class: 'num', text: fmt.format(cd.syncs || 0) }),
         el('td', { class: 'num', text: fmt.format(ca.last_7_days || 0) }));
-      return note ? [row, el('tr', { class: 'noterow' }, el('td', { colspan: '8', text: note }))] : [row];
+      return note ? [row, el('tr', { class: 'noterow' }, el('td', { colspan: '9', text: note }))] : [row];
     }));
     if (caches.length > 1) {
       const withSync = caches.filter((c) => c.last_sync);

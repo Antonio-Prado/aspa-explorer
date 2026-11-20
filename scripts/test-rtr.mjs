@@ -1,7 +1,7 @@
 // Unit tests for scripts/build-rtr.mjs (no dependencies). Run with: node scripts/test-rtr.mjs
 import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
-import { parseLines, parseMetrics, summarise, cachesFromEnv, KEEP_DAYS, MAX_ANOMALIES, STALE_AFTER, apartOf, APART } from './build-rtr.mjs';
+import { parseLines, parseMetrics, summarise, cachesFromEnv, KEEP_DAYS, MAX_ANOMALIES, STALE_AFTER, apartOf, APART, versionIn } from './build-rtr.mjs';
 
 const { idOf, parseId, fromTelemetry, idOfWindow, parseWindow, windowOf } = createRequire(import.meta.url)('../site/rtr-anomaly.js');
 let passed = 0;
@@ -200,6 +200,19 @@ await test('the caches from the environment: one by default, several from JSON, 
   assert.deepEqual(two[1].mute, []);
   assert.deepEqual((await cachesFromEnv({ RTR_CACHES: '[{"id":"a","telemetry":"/a.ndjson","mute":["vrp_announced",3]}]' }))[0].mute, ['vrp_announced']);
   await assert.rejects(cachesFromEnv({ RTR_CACHES: '[{"name":"no id"}]' }));
+  // who runs a cache and with what: text fields trimmed, the AS number a positive integer, anything else left out
+  const who = (await cachesFromEnv({ RTR_CACHES: '[{"id":"a","telemetry":"/a.ndjson","operator":" Example S.p.A. ","asn":64500,"place":"Zurich","software":"Routinator","version":"0.15.1","version_url":"http://127.0.0.1:1/version"},{"id":"b","telemetry":"/b.ndjson","asn":"64501","operator":7,"software":""}]' }));
+  assert.equal(who[0].operator, 'Example S.p.A.');
+  assert.equal(who[0].asn, 64500);
+  assert.equal(who[0].place, 'Zurich');
+  assert.equal(who[0].software, 'Routinator');
+  assert.equal(who[0].version, '0.15.1');
+  assert.equal(who[0].version_url, 'http://127.0.0.1:1/version');
+  for (const k of ['operator', 'asn', 'software', 'version', 'place']) assert.equal(k in who[1], false, k);
+  assert.equal(versionIn('0.15.3\n'), '0.15.3');
+  assert.equal(versionIn('Routinator 0.15.1-rc2 (built ...)'), '0.15.1-rc2');
+  assert.equal(versionIn('fort 1.7.0'), '1.7.0');
+  assert.equal(versionIn('<html>not found</html>'), null);
   await assert.rejects(cachesFromEnv({ RTR_CACHES: '[]' }));
 });
 
