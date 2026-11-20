@@ -21,6 +21,7 @@
 #   raven_rtr_level66_prometheus="127.0.0.1:9596"
 #   raven_rtr_cloudflare_cache="rtr.rpki.cloudflare.com:8282"
 #   raven_rtr_cloudflare_prometheus="127.0.0.1:9597"
+#   raven_rtr_cloudflare_rtr_version="1"
 #
 # Without profiles a single monitor runs with the plain variables and writes straight into raven_rtr_dir. daemon(8) supervises and
 # restarts the process; chroot(8) with -u only drops privileges to the service user (the root directory stays /). The variable is
@@ -35,6 +36,7 @@ load_rc_config $name
 : ${raven_rtr_transport:=tcp}
 : ${raven_rtr_dir:=/var/db/raven}
 : ${raven_rtr_prometheus:=127.0.0.1:9595}
+: ${raven_rtr_rtr_version:=auto}
 : ${raven_rtr_profiles:=}
 
 if [ -n "$2" ]; then
@@ -43,7 +45,7 @@ if [ -n "$2" ]; then
     echo "$0: no profiles are configured" >&2
     exit 1
   fi
-  for var in enable runas cache transport prometheus; do
+  for var in enable runas cache transport prometheus rtr_version; do
     eval "raven_rtr_${var}=\${raven_rtr_${profile}_${var}:-\${raven_rtr_${var}}}"
   done
   eval "raven_rtr_dir=\${raven_rtr_${profile}_dir:-${raven_rtr_dir}/${profile}}"
@@ -62,7 +64,7 @@ else
 fi
 
 command=/usr/sbin/daemon
-command_args="-r -R 30 -P ${pidfile} -o ${logfile} /usr/sbin/chroot -u ${raven_rtr_runas} -g ${raven_rtr_runas} -G ${raven_rtr_runas} / /usr/local/bin/raven rtr monitor --cache ${raven_rtr_cache} --transport ${raven_rtr_transport} --log-file ${raven_rtr_dir}/rtr-telemetry.ndjson --anomaly-snapshot ${raven_rtr_dir}/anomaly-baseline.json --prometheus ${raven_rtr_prometheus} --log-format json"
+command_args="-r -R 30 -P ${pidfile} -o ${logfile} /usr/sbin/chroot -u ${raven_rtr_runas} -g ${raven_rtr_runas} -G ${raven_rtr_runas} / /usr/local/bin/raven rtr monitor --cache ${raven_rtr_cache} --transport ${raven_rtr_transport} --rtr-version ${raven_rtr_rtr_version} --log-file ${raven_rtr_dir}/rtr-telemetry.ndjson --anomaly-snapshot ${raven_rtr_dir}/anomaly-baseline.json --prometheus ${raven_rtr_prometheus} --log-format json"
 raven_dir_precmd() {
   install -d -o ${raven_rtr_runas} -g ${raven_rtr_runas} -m 755 "${raven_rtr_dir}"
 }
