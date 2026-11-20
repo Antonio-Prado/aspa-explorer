@@ -95,15 +95,25 @@
   }
 
   function rows(d) {
-    const cell = (n, of) => el('td', { class: 'num' }, of ? [fmt.format(n), el('span', { class: 'hint block', text: pct(n, of) })] : '–');
-    const line = (th, b) => el('tr', {}, th,
-      el('td', { class: 'num', text: fmt.format(b.incidents) }), el('td', { class: 'num', text: fmt.format(b.with_path) }),
-      cell(b.real[2], b.with_path), cell(b.real[1], b.with_path), cell(b.real[0], b.with_path),
-      cell(b.ideal[2], b.with_path), cell(b.ideal[1], b.with_path), cell(b.ideal[0], b.with_path));
+    // A type takes two lines. The first has its code, its name and the counts; the second has, under the name, what the name
+    // says in brackets (it was in the first column, in rows of four or five lines) and, under each count, its percentage.
+    const share = (n, of) => el('td', { class: 'num', text: of ? pct(n, of) : '' });
+    const count = (n, of) => el('td', { class: 'num', text: of ? fmt.format(n) : '–' });
+    const typeRows = (code, name, b, sub) => {
+      const m = /^(.*?)\s*\((.*)\)$/.exec(name);
+      const w = b.with_path;
+      return [
+        el('tr', { class: 'hasnote' }, el('th', { scope: 'row', class: sub ? 'sub' : null }, codeChip(code), ' ', m ? m[1] : name),
+          el('td', { class: 'num', text: fmt.format(b.incidents) }), el('td', { class: 'num', text: fmt.format(w) }),
+          count(b.real[2], w), count(b.real[1], w), count(b.real[0], w), count(b.ideal[2], w), count(b.ideal[1], w), count(b.ideal[0], w)),
+        el('tr', { class: sub ? 'noterow sub' : 'noterow' }, el('td', { colspan: '3', text: m ? `${m[2][0].toUpperCase()}${m[2].slice(1)}.` : '' }),
+          share(b.real[2], w), share(b.real[1], w), share(b.real[0], w), share(b.ideal[2], w), share(b.ideal[1], w), share(b.ideal[0], w)),
+      ];
+    };
     const subs = d.subtypes || {};
     $('inc-rows').replaceChildren(...typesOf(d).flatMap((k) => [
-      line(el('th', { scope: 'row' }, codeChip(k), ' ', NAMES[k] || k), d.by_type[k]),
-      ...Object.keys(SUBNAMES).filter((t) => t.startsWith(`${k}-`) && subs[t]).map((t) => line(el('th', { scope: 'row', class: 'sub' }, codeChip(t), ' ', SUBNAMES[t]), subs[t])),
+      ...typeRows(k, NAMES[k] || k, d.by_type[k], false),
+      ...Object.keys(SUBNAMES).filter((t) => t.startsWith(`${k}-`) && subs[t]).flatMap((t) => typeRows(t, SUBNAMES[t], subs[t], true)),
     ]));
     $('inc-note').textContent = 'Percentages are of the incidents with a path (flapping and mass withdrawals mostly have none: a dash). The lines under a class are the types of the survey that the detector tells apart; an incident is in one of them at most, and the ones that fit none are only in the line of the class. ASM is made of candidates: a link that CAIDA does not know may be a real one.';
   }

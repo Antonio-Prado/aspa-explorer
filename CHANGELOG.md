@@ -9,6 +9,12 @@ A few numbers were deployed and folded into the next release without a tag of th
 
 ## [Unreleased]
 
+## [1.90.2] - 2026-11-20
+
+### Changed
+
+- The table *By type of incident*, on the *Incidents* page, takes two lines for each type and fits the page. The first line has the code, the name and the counts; the second has, under the name, what the name said in brackets, and under each count its percentage. The explanation was in the first column with the name, in rows of four or five lines, and the last column fell out of a window of ordinary width.
+
 ## [1.90.1] - 2026-11-20
 
 ### Changed
