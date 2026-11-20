@@ -626,6 +626,7 @@ table.live tr.noterow > td { padding-top: 0; color: var(--muted); font-size: 0.8
 /* The types under a class hang from it as the branches of a tree: a vertical line under the code of the class, a short
    horizontal one to the code of each type, and the last type closes the line. The rows of the class have a light ground. */
 table.tight tr.cls > th, table.tight tr.cls > td { background: var(--wash); }
+table.live.tight tr.noterow.cls > td { color: var(--ink-2); }   /* the muted grey has too little contrast on the light ground */
 table.live.tight { --branch: color-mix(in srgb, var(--muted) 60%, transparent); }
 table.live.tight tbody th.sub, table.live.tight tr.noterow.sub > td:first-child { padding-left: 2.3rem; background: linear-gradient(var(--branch), var(--branch)) 1.4rem 0 / 1px 100% no-repeat; }
 table.live.tight tbody th.sub { position: relative; }
