@@ -1,0 +1,8 @@
+[Unit]
+Description=Send the finished incident archives of the backfill workers to aspa
+After=network-online.target
+
+[Service]
+Type=oneshot
+User=debian
+ExecStart=/bin/sh /home/debian/ship-to-aspa.sh

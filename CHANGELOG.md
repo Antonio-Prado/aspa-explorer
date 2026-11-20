@@ -11,6 +11,7 @@ A few numbers were deployed and folded into the next release without a tag of th
 
 ### Changed
 
+- A backfill machine sends its incident archives to the host by itself (`tools/backfill/ship-to-aspa.sh` with a systemd timer, and `tools/backfill/receive.py`, the forced command of its key on the host, which lets through only an rsync that receives into the two directories of the archives).
 - The first message to the contact of a cache can carry a paragraph of its own: `node notifier/contact.mjs add ADDRESS CACHE_ID... --note TEXT`, for what is to be said of those caches in particular (one of them does not answer yet, for instance).
 - The rc script of the RTR monitors (`deploy/freebsd/raven_rtr`) has a variable for the version of RTR of each profile, `raven_rtr_<profile>_rtr_version` (default `auto`, which negotiates from 2 down): `1` pins a monitor to that version. The monitor of Cloudflare's server is pinned to version 1, which the server speaks: the monitor went from 2 straight down to 0, where End of Data carries no intervals, and asked again for version 2 every hour.
 

@@ -1,0 +1,9 @@
+[Unit]
+Description=Every half hour: the incident archives to aspa
+
+[Timer]
+OnCalendar=*:20,50
+Persistent=true
+
+[Install]
+WantedBy=timers.target
