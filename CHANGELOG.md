@@ -9,6 +9,12 @@ A few numbers were deployed and folded into the next release without a tag of th
 
 ## [Unreleased]
 
+## [1.91.0] - 2026-11-20
+
+### Added
+
+- An eleventh RTR cache on the *RTR caches* tab of *Right now*: the one that Karsolink (AS204471) runs for its own routers and lets this site follow (`karsolink`). Another network, RTR version 2, with the ASPAs. Its telemetry, baseline and metrics have the same addresses as the other caches (`/api/v1/rtr/karsolink.ndjson`, `-baseline.json`, `.metrics`), and Karsolink is in the credits of the guide and of the README.
+
 ## [1.90.3] - 2026-11-20
 
 ### Changed
