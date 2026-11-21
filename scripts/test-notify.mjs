@@ -1065,7 +1065,35 @@ await test('mail: the domain of an address must have its mail servers on the pub
   assert.equal(await ok('example.org', {}, { 'example.org': ['::1'] }), false);
   assert.equal(await ok('example.org', { 'example.org': [{ exchange: '', priority: 0 }] }, {}), false);       // null MX: takes no mail
   assert.equal(await ok('example.org', { 'example.org': null }, {}), false);                                 // no such domain
-  assert.equal(await mailDomainOk('slow.example', { resolveMx: () => new Promise(() => {}), timeoutMs: 20 }), false);
+});
+
+await test('mail: name servers that do not answer say nothing about the domain, and are asked a second time', async () => {
+  const mx = [{ exchange: 'mx.example.org', priority: 10 }];
+  const lookup = async () => [{ address: '198.51.99.1', family: 4 }];
+  const fail = (code) => { const e = new Error(code); e.code = code; return e; };
+  let asked = 0;
+  assert.equal(await mailDomainOk('slow.example', { resolveMx: () => { asked++; return new Promise(() => {}); }, timeoutMs: 20 }), null);
+  assert.equal(asked, 2);
+  asked = 0;                                                                // slow the first time, answered the second: the address is taken
+  assert.equal(await mailDomainOk('example.org', { resolveMx: () => (++asked === 1 ? new Promise(() => {}) : Promise.resolve(mx)), lookup, timeoutMs: 20 }), true);
+  asked = 0;
+  assert.equal(await mailDomainOk('example.org', { resolveMx: async () => { if (++asked === 1) throw fail('ESERVFAIL'); return mx; }, lookup }), true);
+  assert.equal(await mailDomainOk('example.org', { resolveMx: async () => { throw fail('ETIMEOUT'); }, lookup }), null);
+  asked = 0;                                                                // the address of the mail server: a failure of the resolver, then an answer
+  assert.equal(await mailDomainOk('example.org', { resolveMx: async () => mx, lookup: async (h, o) => { if (++asked === 1) throw fail('EAI_AGAIN'); return lookup(h, o); } }), true);
+  asked = 0;                                                                // an answer that says no is final: nobody is asked again
+  assert.equal(await mailDomainOk('example.org', { resolveMx: async () => { asked++; throw fail('ENOTFOUND'); }, lookup }), false);
+  assert.equal(asked, 1);
+});
+
+await test('API: when the mail servers of a domain cannot be looked up the answer says to try again, and nothing is stored', async () => {
+  const { store, api, mails } = setup({ perIp: () => true, mailDomainOk: async () => null });
+  const r = await api.subscribe({ kind: 'email', target: 'x@example.org', asn: 'AS1' }, '1.1.1.1');
+  assert.equal(r.status, 503);
+  assert.match(r.body.error, /try again/);
+  assert.doesNotMatch(r.body.error, /no mail server/);
+  assert.equal(mails.length, 0);
+  assert.equal(store.counts().length, 0);
 });
 
 await test('API: an address whose domain cannot receive mail on the public Internet is refused, before anything is stored', async () => {

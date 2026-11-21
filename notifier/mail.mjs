@@ -11,25 +11,34 @@ export const EMAIL_RE = /^[A-Za-z0-9._%+-]{1,64}@[A-Za-z0-9-]+(?:\.[A-Za-z0-9-]+
 
 // Can the domain of an address receive mail on the public Internet? The mailer connects to its mail servers (MX), or to the domain itself when it
 // has none: every one of them must resolve, and only to public addresses, or a visitor could aim the server at a host of a private network on port 25.
-// A domain that says it takes no mail (null MX, ".") or that does not answer in time is refused as well.
-export async function mailDomainOk(domain, { resolveMx = dns.resolveMx, lookup = dns.lookup, timeoutMs = 5000 } = {}) {
+// A domain that says it takes no mail (null MX, ".") is refused as well. The answer is true, false, or null when the name servers gave no answer
+// (a failure of theirs, or nothing within timeoutMs): that says nothing about the domain, so the lookup is made a second time, when the resolver
+// has often the answer by then, and null is what comes back if that one fails too.
+const DNS_SAYS_NO = new Set(['ENOTFOUND', 'ENODATA', 'EBADNAME']);                  // an answer about the name, not a failure to get one
+export async function mailDomainOk(domain, { resolveMx = dns.resolveMx, lookup = dns.lookup, timeoutMs = 5000, tries = 2 } = {}) {
   const check = async () => {
     let hosts;
     try { hosts = (await resolveMx(domain)).sort((a, b) => a.priority - b.priority).map((m) => m.exchange); } catch (err) {
-      if (err.code !== 'ENODATA') return false;                                           // no such domain, or the name servers fail
+      if (err.code !== 'ENODATA') return DNS_SAYS_NO.has(err.code) ? false : null;          // no such domain; or the name servers fail
       hosts = [domain];                                                                    // no MX: the mail goes to the domain itself
     }
     if (!hosts.length || hosts.some((h) => !h || h === '.')) return false;
     for (const h of hosts.slice(0, 10)) {
       let addrs;
-      try { addrs = await lookup(h, { all: true }); } catch { return false; }
+      try { addrs = await lookup(h, { all: true }); } catch (err) { return err.code === 'EAI_AGAIN' ? null : false; }
       if (!addrs.length || !addrs.every((a) => isPublicIp(a.address))) return false;
     }
     return true;
   };
-  let timer;
-  const late = new Promise((resolve) => { timer = setTimeout(() => resolve(false), timeoutMs); });
-  try { return await Promise.race([check(), late]); } catch { return false; } finally { clearTimeout(timer); }
+  const once = async () => {
+    let timer;
+    const late = new Promise((resolve) => { timer = setTimeout(() => resolve(null), timeoutMs); });
+    try { return await Promise.race([check(), late]); } catch { return null; } finally { clearTimeout(timer); }
+  };
+  for (let i = 1; ; i++) {
+    const answer = await once();
+    if (answer !== null || i >= tries) return answer;
+  }
 }
 
 export function compose({ from, fromName = 'ASPA Explorer', to, subject, text, unsubscribeUrl, replyTo, domain, now = new Date() }) {

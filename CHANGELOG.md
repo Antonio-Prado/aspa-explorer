@@ -9,6 +9,12 @@ A few numbers were deployed and folded into the next release without a tag of th
 
 ## [Unreleased]
 
+## [1.94.1] - 2026-11-21
+
+### Fixed
+
+- Notifications, e-mail: an address was refused with *the domain of that address has no mail server on the public Internet* when the name servers were only slow to answer, which says nothing about the domain. The lookup of the mail servers is now made a second time when the first gets no answer (a failure of the name servers, or nothing in five seconds), and if the second fails too the answer is a `503` that says the mail servers could not be looked up and to try again in a moment. A domain is refused, with the `400` and the words of before, only on an answer: no such domain, a domain that takes no mail, a mail server on a private network. The schema of the API declares the `503` of `POST /api/v1/subscriptions`.
+
 ## [1.94.0] - 2026-11-20
 
 ### Changed

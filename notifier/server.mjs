@@ -99,7 +99,9 @@ export function makeApi(deps) {
       if (!perTargetFrom(`${target} ${ip}`)) return bad('too many confirmation messages were asked for this address from your network today; try again tomorrow', 429);
       if (!global('mail')) return bad('the service is busy, try again later', 503);
       // the mailer delivers to the mail servers of the domain: a domain whose servers are on a private network is refused (the server would connect there)
-      if (!(await mailDomainOk(target.slice(target.lastIndexOf('@') + 1)))) return bad('the domain of that address has no mail server on the public Internet', 400);
+      const domainOk = await mailDomainOk(target.slice(target.lastIndexOf('@') + 1));
+      if (domainOk === null) return bad('the mail servers of that domain could not be looked up just now (the name servers did not answer in time); try again in a moment', 503);
+      if (!domainOk) return bad('the domain of that address has no mail server on the public Internet', 400);
       let row = store.find('email', target, asn);
       if (row && row.status === 'active') return accepted;                              // do not tell whether it exists
       if (row && t - row.attempted < HOUR) return accepted;                             // one confirmation per hour per subscription
