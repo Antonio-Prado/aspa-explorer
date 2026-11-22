@@ -152,13 +152,23 @@ async function main() {
 
   const found = new Map(), sources = [], missing = [];
   for (const [name, url] of IRR_SOURCES) {
-    try {
-      const { lines, modified } = await linesOf(url);
-      const idx = sources.length;
-      let n = 0;
-      for await (const o of autNums(lines, wanted)) { pick(found, o.as, idx, o.attrs); n++; }
-      sources.push({ name, date: modified, objects: n });
-    } catch (err) { missing.push(name); console.error(`${name}: ${err.message}`); }
+    // a registry that does not answer is asked once more: what a broken download left behind is picked again, with the same result,
+    // or thrown away if the second request fails too
+    for (let attempt = 1; attempt <= 2; attempt++) {
+      try {
+        const { lines, modified } = await linesOf(url);
+        const idx = sources.length;
+        let n = 0;
+        for await (const o of autNums(lines, wanted)) { pick(found, o.as, idx, o.attrs); n++; }
+        sources.push({ name, date: modified, objects: n });
+        break;
+      } catch (err) {
+        console.error(`${name}: ${err.message}${attempt === 1 ? ', asking again' : ''}`);
+        if (attempt === 1) { await new Promise((ok) => { setTimeout(ok, 15000); }); continue; }
+        missing.push(name);
+        for (const [as, f] of found) if (f.source === sources.length) found.delete(as);     // what the broken copy left: its place goes to the next registry
+      }
+    }
   }
   if (!sources.length) throw new Error('no routing registry could be read: not publishing');
 
