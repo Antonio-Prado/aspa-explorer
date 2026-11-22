@@ -961,4 +961,9 @@ details.deeper > summary .q { margin-left: 0.6rem; color: var(--ink-2); font-siz
 .linechart .ctip { position: absolute; z-index: 2; pointer-events: none; max-width: 18rem; padding: 0.4rem 0.6rem; border-radius: 8px; background: var(--surface); color: var(--ink); box-shadow: 0 0 0 1px var(--grid), 0 4px 14px rgba(0, 0, 0, 0.18); font-size: 0.8125rem; line-height: 1.4; }
 .linechart .ctip strong { display: block; font-size: 0.95rem; font-variant-numeric: tabular-nums; }
 .linechart .ctip span { display: block; color: var(--ink-2); font-variant-numeric: tabular-nums; }
+.linechart .ctip.wide { max-width: 24rem; }
+.linechart .ctip .crow { display: grid; grid-template-columns: 10px auto; column-gap: 0.4rem; align-items: center; margin-top: 0.25rem; }
+.linechart .ctip .crow .sw { width: 10px; height: 10px; border-radius: 2px; }
+.linechart .ctip .crow b { color: var(--ink); }
+.linechart .ctip .crow span { grid-column: 2; }
 #inv-chart, #rtr-chart, #rtr-changes { min-height: 0; }

@@ -9,6 +9,12 @@ A few numbers were deployed and folded into the next release without a tag of th
 
 ## [Unreleased]
 
+## [1.94.2] - 2026-11-22
+
+### Changed
+
+- Incidents, *If more networks published an ASPA*: with the pointer on the chart (or a touch), a line marks the nearest point that was computed and a box says the two values there: the share of the networks that publish, and for each of the two orders the share of the incidents that would be Invalid, with the count behind it.
+
 ## [1.94.1] - 2026-11-21
 
 ### Fixed

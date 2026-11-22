@@ -127,7 +127,7 @@
 
   function points(d, type) {
     const base = d.adoption.base && d.adoption.base[type] !== undefined ? d.adoption.base[type] : (type === 'total' ? d.total.with_path : d.by_type[type].with_path);    // without the persistent valleys
-    return SERIES.map((s) => ({ ...s, values: ((d.adoption[s.key] || {})[type] || []).map((n) => (base ? (100 * n) / base : 0)) }));
+    return SERIES.map((s) => { const counts = (d.adoption[s.key] || {})[type] || []; return { ...s, base, counts, values: counts.map((n) => (base ? (100 * n) / base : 0)) }; });
   }
 
   function draw(box, d, type) {
@@ -146,7 +146,34 @@
     }
     g.append(svg('text', { class: 'axistitle', x: m.l + iw / 2, y: H - 6, 'text-anchor': 'middle' }, `Networks that publish an ASPA (% of the ${fmt.format(d.adoption.ases)} ASes of the CAIDA data)`),
       svg('text', { class: 'axistitle', transform: `translate(13 ${m.t + ih / 2}) rotate(-90)`, 'text-anchor': 'middle' }, 'Incidents that are Invalid (%)'));
-    box.replaceChildren(g);
+    // with the pointer on the chart, a line marks the nearest level that was computed and a box says the two values there
+    const cross = svg('line', { class: 'crossline', y1: m.t, y2: m.t + ih, visibility: 'hidden' });
+    const marks = series.map((s) => svg('circle', { class: `dot ${s.cls}`, r: 5, visibility: 'hidden' }));
+    g.append(cross, ...marks);
+    const tip = el('div', { class: 'ctip wide', hidden: '' }, el('strong', {}), ...series.map((s) => el('span', { class: 'crow' }, el('i', { class: `sw ${s.cls}`, 'aria-hidden': 'true' }), el('b', {}), el('span', {}))));
+    box.replaceChildren(g, tip);
+    const hide = () => { tip.hidden = true; for (const n of [cross, ...marks]) n.setAttribute('visibility', 'hidden'); };
+    const point = (e) => {
+      const r = g.getBoundingClientRect();
+      if (!r.width) return;
+      const px = ((e.clientX - r.left) / r.width) * W;          // the pointer in the units of the drawing
+      const i = Math.max(0, Math.min(levels.length - 1, Math.round(((px - m.l) / iw) * (levels.length - 1))));
+      cross.setAttribute('x1', x(i)); cross.setAttribute('x2', x(i)); cross.setAttribute('visibility', 'visible');
+      tip.firstChild.textContent = `${levels[i]}% of the networks publish`;
+      series.forEach((s, k) => {
+        const v = s.values[i], row = tip.children[k + 1];
+        marks[k].setAttribute('cx', x(i)); marks[k].setAttribute('cy', y(v)); marks[k].setAttribute('visibility', 'visible');
+        row.children[1].textContent = `${v.toFixed(v > 0 && v < 10 ? 1 : 0)}% Invalid, ${k ? 'random order' : 'most customers first'}`;
+        row.children[2].textContent = `${fmt.format(s.counts[i])} of ${fmt.format(s.base)} incidents`;
+      });
+      tip.hidden = false;
+      const at = (x(i) / W) * r.width, w = tip.offsetWidth;
+      tip.style.left = `${Math.max(0, Math.min(r.width - w, at + 12 + w > r.width ? at - 12 - w : at + 12))}px`;
+      tip.style.top = `${Math.max(0, Math.min(r.height - tip.offsetHeight, ((e.clientY - r.top) - tip.offsetHeight - 12)))}px`;
+    };
+    box.onpointermove = point;
+    box.onpointerdown = point;
+    box.onpointerleave = hide;
     return series;
   }
 
@@ -167,7 +194,7 @@
       $('inc-legend').replaceChildren(...series.map((s) => el('li', {}, el('span', { class: `sw ${s.cls}`, 'aria-hidden': 'true' }), el('span', { class: 'lg', text: s.label }), ' ', el('span', { class: 'lv', text: `${s.values[i10].toFixed(0)}% Invalid when 10% publish` }))));
       const [largest, random] = series, i50 = d.adoption.levels.indexOf(50), leaks = type === 'RLK';
       const pc = (v) => `${v.toFixed(0)}%`;
-      $('inc-curve-note').textContent = `How to read it: if only the 10% of the ${fmt.format(d.adoption.ases)} networks of the CAIDA data with the most customers published an ASPA, ${pc(largest.values[i10])} of these incidents would be Invalid; if 10% of the networks did it in random order, ${pc(random.values[i10])}. With half of the networks, ${pc(largest.values[i50])} and ${pc(random.values[i50])}. The dots are the points that were computed (every 10%); the lines between them only join them.${leaks ? ' For a valley the right end is always 100%, because the detector and the ASPAs use the same CAIDA relationships: look at the shape of the lines, not at the end. The persistent valleys (RLK-PV) are not in this chart.' : ''}`;
+      $('inc-curve-note').textContent = `How to read it: if only the 10% of the ${fmt.format(d.adoption.ases)} networks of the CAIDA data with the most customers published an ASPA, ${pc(largest.values[i10])} of these incidents would be Invalid; if 10% of the networks did it in random order, ${pc(random.values[i10])}. With half of the networks, ${pc(largest.values[i50])} and ${pc(random.values[i50])}. The dots are the points that were computed (every 10%); the lines between them only join them. Move the pointer over the chart for the two values at each point.${leaks ? ' For a valley the right end is always 100%, because the detector and the ASPAs use the same CAIDA relationships: look at the shape of the lines, not at the end. The persistent valleys (RLK-PV) are not in this chart.' : ''}`;
     };
     select.addEventListener('change', show);
     show();
