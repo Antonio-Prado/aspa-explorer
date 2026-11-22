@@ -61,7 +61,20 @@
     return { left: Math.round(left), top: Math.round(top) };
   }
 
-  const api = { asnOf, asnAt, holderOf, nameText, tooltipText, place };
+  // The flag of the country where an AS is registered (the delegation files of the registries, /api/v1/asn-registry.json):
+  // the file of a two-letter code, or null for a code that is no country (ZZ, unknown; AP, the Asia-Pacific region).
+  function flagSrc(cc) {
+    const c = String(cc || '').trim().toLowerCase();
+    return /^[a-z]{2}$/.test(c) && c !== 'zz' && c !== 'ap' ? `/img/flags/${c}.svg` : null;
+  }
+
+  // The country of a value of the registry file ("ITr": the code and a letter for the registry), or '' when it has none.
+  function countryIn(value) {
+    const m = /^([A-Z]{2})[a-z]?$/.exec(String(value || ''));
+    return m && m[1] !== 'ZZ' ? m[1] : '';
+  }
+
+  const api = { asnOf, asnAt, holderOf, nameText, tooltipText, place, flagSrc, countryIn };
   if (typeof module !== 'undefined' && module.exports) { module.exports = api; return; }
 
   const names = new Map();         // asn -> name ('' when the registry has none or the request failed)
@@ -80,9 +93,42 @@
     return asked.get(asn);
   }
 
+  // The name of a country in English, or its code where the browser has no names.
+  let regions = null;
+  try { regions = new Intl.DisplayNames(['en'], { type: 'region' }); } catch { /* the code is shown */ }
+  const countryName = (cc) => { try { return (regions && regions.of(cc)) || cc; } catch { return cc; } };
+
+  // The flag as an image, or null. It stands next to the name of the country or to an AS number, so it has no text of
+  // its own unless `alt` gives one; a flag that does not load takes itself away.
+  function flagEl(cc, alt) {
+    const src = flagSrc(cc);
+    if (!src) return null;
+    const img = document.createElement('img');
+    img.className = 'flag';
+    img.src = src;
+    img.alt = alt || '';
+    img.width = 20;
+    img.height = 15;
+    img.decoding = 'async';
+    img.addEventListener('error', () => img.remove());
+    return img;
+  }
+
+  // The country where an AS is registered: the registry file is asked once, the first time a country is wanted.
+  let registry = null;             // Promise of {asn: "ITr"}
+  const countryOf = (asn) => {
+    if (!registry) {
+      registry = fetch('/api/v1/asn-registry.json', { headers: { Accept: 'application/json' } })
+        .then((r) => (r.ok ? r.json() : null))
+        .then((j) => (j && j.asns) || {}, () => ({}));
+    }
+    return registry.then((m) => countryIn(m[asn]));
+  };
+  const countries = new Map();     // asn -> code, once known
+
   // For a page with a tooltip of its own (the charts of the statistics), which shows the name in it: the name when it
   // is known (undefined when it was not asked yet), and the promise of it.
-  root.AspaNames = { ...api, known: (asn) => names.get(asn), nameOf };
+  root.AspaNames = { ...api, known: (asn) => names.get(asn), nameOf, flagEl, countryName, countryOf };
 
   // The element that stands for an AS, and its number: a link to an AS (HTML or SVG) or an element with data-asn.
   // An element whose page set a title or a tooltip of its own (a title attribute, a <title> in SVG, data-own-tip)
@@ -149,11 +195,13 @@
     if (tip) tip.hidden = true;
   }
 
-  function render(t, text) {
+  function render(t, text, cc) {
     const b = box();
     const layer = t.e.closest('dialog[open]') || document.body;   // a modal dialog covers whatever is outside it
     if (b.parentNode !== layer) layer.append(b);
-    b.textContent = text;
+    b.textContent = cc ? `${text} · ${countryName(cc)}` : text;
+    const flag = cc ? flagEl(cc) : null;
+    if (flag) b.prepend(flag);
     b.hidden = false;
     const r = t.rect || t.e.getBoundingClientRect();
     const p = place(r, b.offsetWidth, b.offsetHeight, document.documentElement.clientWidth, window.innerHeight);
@@ -165,17 +213,20 @@
     current = t;
     if (!t.rect) describe(t.e, true);
     if (t.text) { render(t, t.text); return; }
-    if (names.has(t.asn)) {
-      const text = tooltipText(t.asn, names.get(t.asn));
-      if (text) render(t, text); else hide();
-      return;
-    }
-    render(t, `AS${t.asn}: …`);
-    nameOf(t.asn).then((name) => {
-      if (current !== t) return;
+    // the name first, and the country where the AS is registered when the registry file has arrived
+    const paint = (name) => {
       const text = tooltipText(t.asn, name);
-      if (text) render(t, text); else hide();
-    });
+      if (text) render(t, text, countries.get(t.asn)); else hide();
+    };
+    if (!countries.has(t.asn)) {
+      countryOf(t.asn).then((cc) => {
+        countries.set(t.asn, cc);
+        if (current === t && cc && tip && !tip.hidden && names.get(t.asn)) paint(names.get(t.asn));
+      });
+    }
+    if (names.has(t.asn)) { paint(names.get(t.asn)); return; }
+    render(t, `AS${t.asn}: …`);
+    nameOf(t.asn).then((name) => { if (current === t) paint(name); });
   }
 
   document.addEventListener('pointerover', (ev) => {

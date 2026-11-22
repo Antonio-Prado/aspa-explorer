@@ -12,7 +12,7 @@
 //   node scripts/build-rtr.mjs OUT_FILE
 //
 // Environment: RTR_CACHES, the caches as a JSON array or the path of a file with one, each {id, name, host, telemetry (the NDJSON file
-// of its monitor), metrics (its Prometheus endpoint, or none), note (shown under its row), operator, asn, place, software, version and version_url (the columns that say who runs it and with what), mute (the measures of its syncs, or the
+// of its monitor), metrics (its Prometheus endpoint, or none), note (shown under its row), operator, asn, country (the two-letter code of where the AS is registered), place, software, version and version_url (the columns that say who runs it and with what), mute (the measures of its syncs, or the
 // faults of its session such as protocol_error, that the alerts leave out, as `alerts_muted` in the file: for a cache with a known fault that would be told every day)}; without it one cache, from RTR_TELEMETRY (default
 // /var/db/raven/rtr-telemetry.ndjson), RTR_METRICS (default http://127.0.0.1:9595/metrics; empty to do without) and RTR_CACHE (the name
 // of the cache shown on the page, default rpki.ping6.it). ASPA_DATA, the URL or file of Routinator's jsonext (default
@@ -218,6 +218,7 @@ function described(c) {
   const out = {};
   for (const k of TEXT) if (typeof c[k] === 'string' && c[k].trim()) out[k] = c[k].trim().slice(0, 80);
   if (Number.isInteger(c.asn) && c.asn > 0) out.asn = c.asn;
+  if (typeof c.country === 'string' && /^[A-Za-z]{2}$/.test(c.country.trim())) out.country = c.country.trim().toUpperCase();   // where the AS is registered, for its flag
   return out;
 }
 export const versionIn = (text) => { const m = /\d+\.\d+(?:\.\d+)*(?:[-+][0-9A-Za-z.]+)?/.exec(String(text).slice(0, 200)); return m ? m[0] : null; };
@@ -264,7 +265,7 @@ async function readCache(c, now) {
   const version = await versionOf(c);
   return {
     id: c.id, name: c.name, host: c.host, ...(c.note ? { note: c.note } : {}), ...(c.mute && c.mute.length ? { alerts_muted: c.mute } : {}),
-    ...(c.operator ? { operator: c.operator } : {}), ...(c.asn ? { asn: c.asn } : {}), ...(c.place ? { place: c.place } : {}),
+    ...(c.operator ? { operator: c.operator } : {}), ...(c.asn ? { asn: c.asn } : {}), ...(c.country ? { country: c.country } : {}), ...(c.place ? { place: c.place } : {}),
     ...(c.software ? { software: c.software } : {}), ...(version ? { version } : {}),
     ...summarise(parseLines(text), now, metrics),
     metrics: metrics && Object.keys(metrics).length ? {

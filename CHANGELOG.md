@@ -9,6 +9,21 @@ A few numbers were deployed and folded into the next release without a tag of th
 
 ## [Unreleased]
 
+## [1.95.0] - 2026-11-22
+
+### Added
+
+- Flags. A small flag says where an AS is registered: in the tooltip with its name, after the name (*AS137: ... · Italy*); in the answer at the top of the page of an AS (*registered in Italy*); in the *AS* column of the table of the RTR caches; and next to the countries of the Adoption page (the largest transit networks, the table by country). The country is the one of the delegation files of the registries, which `/api/v1/asn-registry.json` already gave: where the number was registered, not where the network works. The flags are SVG files of the site (`site/img/flags`, from [flag-icons](https://github.com/lipis/flag-icons), MIT), so they are the same on every system, Windows included, where the flags of the emoji are two letters. A code that is no country (ZZ, AP) has no flag.
+- `rtr.json`: a cache has `country`, the two-letter code of where its AS is registered, when the list of the caches gives it (`country` in `rtr-caches.json`).
+
+### Changed
+
+- The credits in the footer: *Compared with* rpki-client and StayRTR, with the logos of the two projects, takes the place of *Made with vi*. They are the software of the caches that other people run and that the site sets next to its own Routinator and Fort.
+
+### Fixed
+
+- RTR caches: the titles of the last two columns of the table of the caches, *Syncs, 24 h* and *Anomalies, 7 days*, were cut in the middle of a word ("Sync s," and "Anomali es,"). A word of a title is no longer cut, and the note on a count that is apart from the others (*1,026 fewer than the others*) hangs to the left of its number instead of widening the column, which gives the room back.
+
 ## [1.94.2] - 2026-11-22
 
 ### Changed

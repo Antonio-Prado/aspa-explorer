@@ -366,8 +366,9 @@ td.rir { color: var(--ink-2); white-space: nowrap; }
 /* both logos have dark text on a transparent background: keep them readable in dark mode */
 .credits a img { background: #fff; padding: 2px 6px; border-radius: 4px; box-sizing: content-box; }
 .credits a img[src*="avatar"] { background: none; padding: 0; border-radius: 50%; }
-.credits a img[src*="vi-logo"] { background: none; padding: 0; }
-.credits code { font-size: inherit; color: inherit; }
+.credits a img[src*="stayrtr"] { padding: 0; }
+/* the flag of the country where an AS is registered, in front of the name of the country or of the AS number (asnames.js) */
+.flag { display: inline-block; width: 1.25em; height: 0.9375em; margin-right: 0.4em; vertical-align: -0.1em; border-radius: 2px; box-shadow: 0 0 0 1px var(--ring); object-fit: cover; }
 @media (max-width: 760px) {
   .toc ol { columns: 1; }
   .toc-groups { grid-template-columns: 1fr; }
@@ -637,7 +638,9 @@ table.live tr.noterow > td.num { white-space: nowrap; }
 /* a table of many numeric columns: less room between them, and a name may take two lines, so that it fits the page */
 table.tight th.num, table.tight td.num { padding-left: 0.2rem; }
 table.tight tr.hasnote > th { white-space: normal; }
-table.live.tight thead th.num { white-space: normal; }   /* a long title of a numeric column may take two lines */
+table.live.tight thead th.num { white-space: normal; overflow-wrap: normal; }   /* a long title of a numeric column may take two lines, and no word of it is cut */
+/* the note on a count that is apart from the others hangs to the left of its number and does not widen the column */
+table.live.tight td.num small.apart { display: inline-block; margin-left: -10rem; }
 table.live.tight th, table.live.tight td { padding-right: 0.6rem; }
 table.live.tight th:last-child, table.live.tight td:last-child { padding-right: 0.9rem; }
 #rtr-caches th[scope="row"] { white-space: nowrap; }   /* who runs a cache, and where, on one line */

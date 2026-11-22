@@ -86,7 +86,7 @@
       const soft = [c.software, c.software && c.version].filter(Boolean).join(' ');
       const row = el('tr', note ? { class: 'hasnote' } : {},
         el('th', { scope: 'row' }, c.operator || c.name || c.id, c.operator && c.place ? el('small', { class: 'place', text: ` ${c.place}` }) : null),
-        el('td', { class: 'nowrap', text: c.asn ? `AS${c.asn}` : '–' }),
+        el('td', { class: 'nowrap' }, (c.asn && c.country && window.AspaNames && window.AspaNames.flagEl(c.country, `registered in ${window.AspaNames.countryName(c.country)}`)) || '', c.asn ? `AS${c.asn}` : '–'),
         el('td', { class: 'nowrap' }, soft || (proto ? '' : '–'), soft && proto ? el('small', { class: 'place', text: ` ${proto}` }) : (soft ? null : proto)),
         el('td', {}, el('span', { class: `badge ${cs.connected && !cs.expired ? 'v-valid' : 'v-invalid'}`, text: cs.connected ? (cs.expired ? 'Up, data expired' : 'Up') : 'Down' })),
         el('td', { class: 'num' }, cl ? fmt.format(cl.vrp_total) : '–', ...apartNote(c, 'vrp')),

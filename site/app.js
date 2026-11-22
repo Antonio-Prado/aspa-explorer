@@ -1934,6 +1934,13 @@ function renderLookup(as) {
       el('p', { class: 'v-line' }, el('strong', { class: 'v-word', text: 'Not yet.' }), ` ${as} has no ASPA, so a router cannot check which networks may carry its routes.`),
       el('p', { class: 'v-links' }, el('a', { href: '/examples.html', text: 'How to publish one' })),
       el('p', { class: 'v-from', text: facts.join(' · ') }));
+  // where the AS is registered, with the flag, in front of the other facts: the registry file comes after the answer
+  getRegistry().then((lookup) => {
+    const reg = lookup && lookup(asNum(as)), from = verdict.querySelector('.v-from');
+    if (!reg || reg.cc === 'ZZ' || !from) return;
+    const flag = self.AspaNames ? self.AspaNames.flagEl(reg.cc) : null;
+    from.prepend(...(flag ? [flag] : []), `registered in ${countryName(reg.cc)} · `);
+  });
   const tabs = [
     ['aspa', 'ASPA', [el('div', { class: 'res-grid' }, left, right), el('div', { class: 'res-hist', id: 'as-quality' })]],
     ['routes', 'Routes and neighbours', [el('p', {}, el('a', { href: `#routes=${as}`, text: `Check the routes ${as} originates` }), ' against the ASPAs, and compare its neighbours with its providers.'), graphHolder(as)]],

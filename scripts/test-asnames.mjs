@@ -2,7 +2,7 @@
 import { createRequire } from 'node:module';
 import assert from 'node:assert/strict';
 
-const { asnOf, asnAt, holderOf, nameText, tooltipText, place } = createRequire(import.meta.url)('../site/asnames.js');
+const { asnOf, asnAt, holderOf, nameText, tooltipText, place, flagSrc, countryIn } = createRequire(import.meta.url)('../site/asnames.js');
 
 let passed = 0;
 const test = (name, fn) => { fn(); passed++; console.log('ok  ', name); };
@@ -90,6 +90,19 @@ test('inside the window: 8 px from the right edge, and from the left one on a na
   assert.deepEqual(place({ left: 1200, top: 200, bottom: 220 }, 180, 24, 1280, 800), { left: 1092, top: 226 });
   assert.deepEqual(place({ left: -40, top: 200, bottom: 220 }, 180, 24, 1280, 800), { left: 8, top: 226 });
   assert.deepEqual(place({ left: 50, top: 200, bottom: 220 }, 400, 24, 360, 800), { left: 8, top: 226 });
+});
+
+test('the flag of a country: the file of its two-letter code, and none for a code that is no country', () => {
+  assert.equal(flagSrc('IT'), '/img/flags/it.svg');
+  assert.equal(flagSrc(' us '), '/img/flags/us.svg');
+  assert.equal(flagSrc('EU'), '/img/flags/eu.svg');
+  for (const cc of ['ZZ', 'AP', '', null, 'ITA', 'I', '../x', 'i1']) assert.equal(flagSrc(cc), null, String(cc));
+});
+
+test('the country of a value of the registry file', () => {
+  assert.equal(countryIn('ITr'), 'IT');
+  assert.equal(countryIn('US'), 'US');
+  for (const v of ['ZZr', '', undefined, 'itr', 'ITALY']) assert.equal(countryIn(v), '', String(v));
 });
 
 console.log(`${passed} tests passed`);

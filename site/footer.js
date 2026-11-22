@@ -2,7 +2,7 @@
 
 // Site footer shared by all pages, and the floating button that goes back to the top of a long page. The footer has two rows:
 //   1. release, last commit, accessibility, visitor's address
-//   2. credits: Powered by DEI, Served by FreeBSD, Validated by Routinator, Made with vi
+//   2. credits: Powered by DEI, Served by FreeBSD, Validated by Routinator and Fort, Compared with rpki-client and StayRTR
 // The release comes from /version.json and the commit the running page was built
 // from comes from /build.json (written at deploy time by scripts/build-info.sh);
 // both are same-origin. The links go to the public copy of the project on GitHub: the
@@ -57,8 +57,8 @@
     }
   };
 
-  // Row 2. Logos are links; the vi icon is original and already reads "vi", so it has no text
-  // beside it and links to the Wikipedia article on vi.
+  // Row 2. Logos are links. The validators of the site, then the two that other people run and the site compares
+  // them with; the StayRTR logo is a drawing with no name in it, so the name stands beside it, as for Routinator.
   const credits = el('ul', { class: 'credits', 'aria-label': 'Credits' },
     el('li', {}, 'Powered by ',
       link('https://www.dei.unipd.it', logo('/img/dei-logo.png?v=1', 'DEI, Department of Information Engineering, University of Padova', 111, 28))),
@@ -68,9 +68,10 @@
       link('https://nlnetlabs.nl/projects/routinator/', logo('/img/routinator-avatar.png?v=1', '', 28, 28), el('span', {}, 'Routinator')),
       ' and ',
       link('https://nicmx.github.io/FORT-validator/', logo('/img/fort-logo.svg?v=1', 'Fort', 62, 28))),
-    el('li', {}, 'Made with ',
-      link('https://en.wikipedia.org/wiki/Vi_(text_editor)', logo('/img/vi-logo.svg?v=1', 'vi', 28, 28)),
-      ' ', el('code', {}, ':wq')),
+    el('li', {}, 'Compared with ',
+      link('https://www.rpki-client.org/', logo('/img/rpki-client-logo.png?v=1', 'rpki-client', 84, 28)),
+      ' and ',
+      link('https://github.com/bgp/stayrtr', logo('/img/stayrtr-logo.png?v=1', '', 28, 28), el('span', {}, 'StayRTR'))),
     el('li', {}, 'Inspired by passion ', el('span', { class: 'heart', 'aria-hidden': 'true' }, '\u2665')));
 
   footer.append(build, credits);

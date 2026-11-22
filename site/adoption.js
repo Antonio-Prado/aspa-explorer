@@ -12,6 +12,9 @@
     try { return (names && names.of(cc)) || cc; } catch { return cc; }
   };
 
+  // the flag of a country in front of its name (asnames.js draws it), or nothing for a code that has none
+  const flag = (cc) => (window.AspaNames && window.AspaNames.flagEl(cc)) || '';
+
   function el(tag, attrs, ...kids) {
     const n = document.createElement(tag);
     for (const [k, v] of Object.entries(attrs || {})) {
@@ -75,7 +78,7 @@
     const topRow = (t, i) => el('tr', {},
       el('td', { class: 'num', text: String(t.rank) }),
       el('td', {}, el('a', { class: 'chip', href: `/as/${t.asn}`, text: t.asn })),
-      el('td', { text: t.cc ? country(t.cc) : '' }),
+      el('td', {}, ...(t.cc ? [flag(t.cc), country(t.cc)] : [])),
       el('td', { class: 'num', text: fmt.format(t.cone) }),
       el('td', {}, t.aspa
         ? el('span', { class: 'badge v-valid', text: t.providers === 0 ? 'yes, AS0 (no transit providers)' : `yes, ${t.providers} provider${t.providers === 1 ? '' : 's'}` })
@@ -92,7 +95,7 @@
       const fill = el('span', { class: 'fill' });
       fill.style.width = `${Math.min(100, c.pct * 2)}%`;
       return el('tr', {},
-        el('th', { scope: 'row', text: country(c.cc) }),
+        el('th', { scope: 'row' }, flag(c.cc), country(c.cc)),
         el('td', { class: 'num', text: fmt.format(c.seen) }), el('td', { class: 'num', text: fmt.format(c.aspa) }),
         el('td', { class: 'cov-col' }, el('span', { class: 'mini' }, fill), ' ', pct(c.pct)));
     };
