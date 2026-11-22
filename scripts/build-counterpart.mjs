@@ -17,9 +17,12 @@ import { Readable } from 'node:stream';
 import { join } from 'node:path';
 import { createRequire } from 'node:module';
 import net from 'node:net';
+import dns from 'node:dns';
 
 const { roles, codeOf } = createRequire(import.meta.url)('../site/irr.js');
 if (net.setDefaultAutoSelectFamilyAttemptTimeout) net.setDefaultAutoSelectFamilyAttemptTimeout(3000);
+// The host of the site has no IPv6: a registry with an AAAA record was at times tried there first and given up as timed out.
+dns.setDefaultResultOrder('ipv4first');
 const UA = 'aspa-explorer (https://aspa.ping6.it; antonio.prado@dei.unipd.it)';
 
 // In order of preference: where two registries hold an object of the same AS, the first one with a policy is used.
@@ -152,9 +155,9 @@ async function main() {
 
   const found = new Map(), sources = [], missing = [];
   for (const [name, url] of IRR_SOURCES) {
-    // a registry that does not answer is asked once more: what a broken download left behind is picked again, with the same result,
-    // or thrown away if the second request fails too
-    for (let attempt = 1; attempt <= 2; attempt++) {
+    // a registry that does not answer is asked twice more: what a broken download left behind is picked again, with the same result,
+    // or thrown away if the last request fails too
+    for (let attempt = 1; attempt <= 3; attempt++) {
       try {
         const { lines, modified } = await linesOf(url);
         const idx = sources.length;
@@ -163,8 +166,8 @@ async function main() {
         sources.push({ name, date: modified, objects: n });
         break;
       } catch (err) {
-        console.error(`${name}: ${err.message}${attempt === 1 ? ', asking again' : ''}`);
-        if (attempt === 1) { await new Promise((ok) => { setTimeout(ok, 15000); }); continue; }
+        console.error(`${name}: ${err.message}${attempt < 3 ? ', asking again' : ''}`);
+        if (attempt < 3) { await new Promise((ok) => { setTimeout(ok, 15000); }); continue; }
         missing.push(name);
         for (const [as, f] of found) if (f.source === sources.length) found.delete(as);     // what the broken copy left: its place goes to the next registry
       }
