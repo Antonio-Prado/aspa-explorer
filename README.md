@@ -38,7 +38,7 @@
     <td align="center"><sub>Right now, in the dark theme</sub></td>
   </tr>
   <tr>
-    <td width="50%"><img src="assets/screenshots/lookup-light.jpg" alt="Looking up AS680: the answer first (it has an ASPA with 6 providers, and no issue), then the tabs with its ASPA, its routes, its history, the registry and the alerts"></td>
+    <td width="50%"><img src="assets/screenshots/lookup-light.jpg" alt="Looking up AS680: the answer first (it has an ASPA with 6 providers, and no issue, registered in Germany), then the tabs, its own ASPA and the ASPAs that name it, each with a line that says how many the other side does not confirm"></td>
     <td width="50%"><img src="assets/screenshots/statistics-dark.jpg" alt="The Adoption page in the dark theme: the links to its parts under the title, the tiles and the ASPAs over time, stacked by RIR"></td>
   </tr>
   <tr>
@@ -100,7 +100,7 @@
     <td align="center"><sub>Compare two dates for an AS</sub></td>
   </tr>
   <tr>
-    <td colspan="2" align="center"><img src="assets/screenshots/rtr-dark.jpg" width="70%" alt="The validator as a router sees it: the session, the last sync, the VRPs and ASPAs over RTR, the syncs and the anomalies, and the table of the six caches side by side: Routinator and Fort of the site, Level66, DaKnObNET in Zurich and in Amsterdam, and Cloudflare"></td>
+    <td colspan="2" align="center"><img src="assets/screenshots/rtr-dark.jpg" width="70%" alt="The validator as a router sees it: the session, the last sync, the VRPs and ASPAs over RTR, the syncs and the anomalies, and the table of the thirteen caches side by side, each with who runs it, the flag and the number of its AS, the software and the version of RTR: Routinator and Fort of the site, the caches of SBTAP, Connesi, Karsolink and Roberto Santo, and the public servers of Level66, DaKnObNET in Zurich and in Amsterdam, and Cloudflare"></td>
   </tr>
   <tr>
     <td colspan="2" align="center"><sub>The validator as a router sees it, with the caches side by side</sub></td>
@@ -134,6 +134,12 @@
   <tr>
     <td align="center"><sub>The IRR object, CAIDA and the ASPA side by side</sub></td>
     <td align="center"><sub>Many paths at once, with CSV and JSON download</sub></td>
+  </tr>
+  <tr>
+    <td colspan="2" align="center"><img src="assets/screenshots/counterpart-dark.jpg" width="70%" alt="The other side of the ASPAs that name AS41327 as a provider: 6 of 18 are not confirmed, and the table says for each AS what the IRR object of AS41327 declares, what CAIDA infers and the exchange points where both networks are"></td>
+  </tr>
+  <tr>
+    <td colspan="2" align="center"><sub>Does the other side of an ASPA agree? The IRR object of the provider, CAIDA and the exchange points in common</sub></td>
   </tr>
   <tr>
     <td width="50%"><img src="assets/screenshots/report-dark.jpg" alt="A shared result: the summary, the table of paths and the note that the report is unverified"></td>
@@ -203,7 +209,8 @@ The ASPAs shown here come from a [Routinator](https://github.com/NLnetLabs/routi
 
 - **Changes:** the ASPAs that appeared, changed or disappeared in the last 14 days, an Atom feed of them (`/changes.atom`), and the history of one AS. The series is rebuilt from the RIPE NCC RPKI archive (`tools/backfill-history.py`) and extended by the `aspa-snapshot` job every day and by the `history-refresh` job every hour, so a new ASPA shows in its history within the hour.
 - **A feed and a badge for every AS:** `/feed/AS3333.atom` lists the changes of its ASPA and of the ASPAs that add or drop it as a provider; `/badge/AS3333.svg` is a badge with its number of providers (Markdown and HTML to paste are in the lookup).
-- **IRR next to the ASPA:** a button on the page of an AS reads its `aut-num` object (RIPE database and mirrors) and compares the transit providers that it declares with the providers of the ASPA, telling customers, peers and route servers (`import-via`) apart.
+- **IRR next to the ASPA:** a button on the page of an AS reads its `aut-num` object (RIPE database and the mirrors of the other RIRs and JPIRR, not RADb) and compares the transit providers that it declares with the providers of the ASPA, telling customers, peers and route servers (`import-via`) apart.
+- **The other side of an ASPA:** an ASPA is written by the customer alone, so for every pair of customer and provider that an ASPA declares a nightly file (`/api/v1/counterpart.json`) says what the provider itself declares about that customer in its `aut-num` (the daily copies of the registries of RIPE, ARIN, APNIC, AFRINIC, LACNIC, JPIRR, NTTCOM and TC; RADb is left out), what CAIDA infers and, when neither confirms the pair, the exchange points where both networks are (PeeringDB). The page of an AS counts the pairs that nothing confirms under its providers and under the ASPAs that name it, which is how an ASPA that lists its peers as providers shows up.
 - **Alerts on invalid announcements:** a threshold on a subscription (5 to 1000 in ten minutes, once every six hours at most) from the live watcher; **recent checks** kept only in the browser, with what changed since; a **quick look at any AS** on a click, and its **name as a tooltip** when the pointer rests on an AS number (the registry name from RIPEstat, asked only for the ASes looked at; suggested by Leo Vegoda of PeeringDB), with the **flag of the country where the AS is registered** there, on the page of an AS, in the table of the RTR caches and on the Adoption page (SVG files of [flag-icons](https://github.com/lipis/flag-icons), MIT, in `site/img/flags`).
 - **Many paths and shared results:** a box that checks one AS path per line (CSV and JSON download) and a *Share this result* button that turns a result into a link `/r/<id>` kept 30 days, with its own preview in a chat; `POST /api/v1/reports`.
 - **Notifications:** subscribe an e-mail address (confirmed through a link, DKIM-signed mails with a one-click unsubscribe) or a webhook (verified by a challenge, signed with HMAC-SHA256, public https addresses only) to the changes of an AS, or to the state of the service (a part of it becoming late or down, and back). The people who run a cache that the site follows over RTR can be told of the anomalies of their own cache, with what the other caches did at the same time: the operator of the site adds them (`notifier/contact.mjs`) after they agreed. The service is `notifier/`, a small Node.js program with SQLite.
