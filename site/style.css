@@ -418,6 +418,7 @@ span.hint.block { display: block; margin-top: 0.2rem; white-space: normal; }
 .checks td.num { overflow-wrap: normal; white-space: nowrap; }     /* a number never breaks in two lines; its percentage is a block of its own */
 .checks th[scope="row"] { font-family: var(--mono); font-size: 0.85rem; font-weight: 500; }
 .checks { width: 100%; }
+#as-named .checks td:nth-child(2) { min-width: 9.5rem; }     /* the reading is the answer of the row: it keeps a width that reads in a few lines on a phone */
 .checks td.hop.yes::before { content: "✓ "; }
 .checks td.hop.no::before { content: "✗ "; }
 .checks td.hop.na::before { content: "? "; }

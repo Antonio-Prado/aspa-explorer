@@ -136,7 +136,57 @@
     return null;
   }
 
-  const api = { rules, roles, compare, say, threeWay };
+  // The other side of an ASPA: the ASes whose ASPAs name this AS (`n`) as a provider (`customers`, numbers), against what this AS itself declares
+  // in its object (`r`, from roles, or null when there is no object or it has no policy) and against CAIDA (`providersOf`: the providers of each
+  // AS, as in relations.json, or null when the file is not there). A row is confirmed when the object announces ANY to that AS, as to a customer,
+  // or when CAIDA puts this AS among its providers. The rows that nothing confirms come first: only the ASPA of the other AS says so.
+  function namedBy(customers, r, providersOf, n) {
+    const rows = customers.map((c) => {
+      const irr = r ? (r.customer.includes(c) ? 'customer' : say(r, c)) : null;
+      const list = providersOf ? providersOf[c] : null;
+      const caida = list ? list.includes(n) : null;        // null: no file, or CAIDA knows no provider of that AS
+      const irrYes = irr === 'customer';
+      let reading;
+      if (irrYes && caida) reading = 'the IRR object and CAIDA confirm it';
+      else if (irrYes) reading = 'the IRR object confirms it';
+      else if (caida) reading = 'CAIDA confirms it';
+      else if (irr) reading = 'the IRR object describes it otherwise';
+      else reading = 'only the ASPA says it';
+      return { as: c, irr, caida, confirmed: irrYes || caida === true, reading };
+    });
+    rows.sort((a, b) => (a.confirmed - b.confirmed) || a.as - b.as);
+    return {
+      rows,
+      confirmed: rows.filter((x) => x.confirmed).map((x) => x.as),
+      unconfirmed: rows.filter((x) => !x.confirmed).map((x) => x.as),
+      listsCustomers: !!(r && r.customer.length),
+    };
+  }
+
+  // The same question from the side of the customer: the providers in the ASPA of this AS (`n`), against what each of them declares in its own
+  // object (`rolesOf`: a Map from the number of the provider to its roles, to null when it has no object or no policy, to undefined when the
+  // registry was not read) and against CAIDA (`caida`: the providers of this AS, or null). A provider is confirmed when its object announces ANY
+  // to this AS, as to a customer, or when CAIDA has it among the providers of this AS. AS0 is not a provider and is left out.
+  function claimedProviders(n, providers, rolesOf, caida) {
+    const rows = providers.filter((p) => p !== 0).map((p) => {
+      const r = rolesOf.get(p);
+      const irr = r ? (r.customer.includes(n) ? 'customer' : say(r, n)) : null;
+      const state = r === undefined ? 'unread' : r === null ? 'none' : r.customer.length ? 'policy' : 'no customers';
+      const inCaida = caida ? caida.includes(p) : null;
+      const irrYes = irr === 'customer';
+      let reading;
+      if (irrYes && inCaida) reading = 'its IRR object and CAIDA confirm it';
+      else if (irrYes) reading = 'its IRR object confirms it';
+      else if (inCaida) reading = 'CAIDA confirms it';
+      else if (irr) reading = 'its IRR object describes it otherwise';
+      else reading = 'only the ASPA says it';
+      return { as: p, irr, state, caida: inCaida, confirmed: irrYes || inCaida === true, reading };
+    });
+    rows.sort((a, b) => (a.confirmed - b.confirmed) || a.as - b.as);
+    return { rows, confirmed: rows.filter((x) => x.confirmed).map((x) => x.as), unconfirmed: rows.filter((x) => !x.confirmed).map((x) => x.as) };
+  }
+
+  const api = { rules, roles, compare, say, threeWay, namedBy, claimedProviders };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.AspaIrr = api;
 })(typeof self !== 'undefined' ? self : this);

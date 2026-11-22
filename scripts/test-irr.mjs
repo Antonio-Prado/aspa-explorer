@@ -2,7 +2,7 @@
 import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
 
-const { rules, roles, compare, say, threeWay } = createRequire(import.meta.url)('../site/irr.js');
+const { rules, roles, compare, say, threeWay, namedBy, claimedProviders } = createRequire(import.meta.url)('../site/irr.js');
 let passed = 0;
 const test = (name, fn) => { fn(); passed++; console.log('ok  ', name); };
 const attrs = (...lines) => lines.map((l) => { const i = l.indexOf(': '); return { name: l.slice(0, i), value: l.slice(i + 2) }; });
@@ -147,6 +147,57 @@ test('the three sources side by side: who says what, and which one is the odd on
   // a provider that the object calls an exchange point is described, not hidden
   const ix = threeWay([57463], roles(attrs('remarks: Upstreams', 'import: from AS1299 accept ANY', 'export: to AS1299 announce AS5:AS-X', 'remarks: IXP', 'import-via: AS57463 from AS-ANY accept ANY')), []);
   assert.match(ix.rows.find((x) => x.as === 57463).irr, /intermediary/);
+});
+
+test('named as a provider: what the provider itself and CAIDA say about each AS that names it', () => {
+  const r = roles(attrs(
+    'remarks: Upstreams', 'import: from AS1299 accept ANY', 'export: to AS1299 announce AS41327:AS-CUSTOMERS',
+    'remarks: Private Network Interconnect', 'import: from AS174 accept AS174:AS-COGENT', 'export: to AS174 announce AS41327:AS-CUSTOMERS',
+    'remarks: Customers', 'import: from AS15605 accept AS15605:AS-CONNESI', 'export: to AS15605 announce ANY',
+    'import: from AS204471 accept AS204471', 'export: to AS204471 announce ANY'));
+  const caida = { 204471: [9002, 41327], 15605: [6461, 6762], 24492: [174, 3491], 174: [] };
+  const nb = namedBy([15605, 24492, 204471, 174, 99999], r, caida, 41327);
+  assert.deepEqual(nb.unconfirmed, [174, 24492, 99999]);                       // the ones to ask about come first
+  assert.deepEqual(nb.confirmed, [15605, 204471]);
+  assert.deepEqual(nb.rows.map((x) => x.as), [174, 24492, 99999, 15605, 204471]);
+  const row = (n) => nb.rows.find((x) => x.as === n);
+  assert.equal(row(204471).reading, 'the IRR object and CAIDA confirm it');
+  assert.equal(row(15605).reading, 'the IRR object confirms it');             // CAIDA misses the link, the object has it
+  assert.equal(row(15605).caida, false);
+  assert.equal(row(24492).reading, 'only the ASPA says it');
+  assert.equal(row(24492).irr, null);
+  assert.equal(row(174).reading, 'the IRR object describes it otherwise');     // a peer of the provider that calls it a provider
+  assert.match(row(174).irr, /sets of prefixes only/);
+  assert.equal(row(99999).caida, null);                                        // CAIDA knows no provider of that AS
+  assert.equal(nb.listsCustomers, true);
+  // without an object CAIDA alone decides; without CAIDA the object alone
+  const onlyCaida = namedBy([204471, 24492], null, caida, 41327);
+  assert.deepEqual([onlyCaida.confirmed, onlyCaida.unconfirmed, onlyCaida.listsCustomers], [[204471], [24492], false]);
+  assert.equal(onlyCaida.rows.find((x) => x.as === 204471).reading, 'CAIDA confirms it');
+  const onlyIrr = namedBy([15605, 24492], r, null, 41327);
+  assert.deepEqual([onlyIrr.confirmed, onlyIrr.unconfirmed], [[15605], [24492]]);
+  assert.equal(onlyIrr.rows[0].caida, null);
+});
+
+test('the providers of an ASPA: what each provider itself and CAIDA say about the customer', () => {
+  const fiber = roles(attrs('remarks: Customers', 'import: from AS15605 accept AS15605:AS-CONNESI', 'export: to AS15605 announce ANY',
+    'remarks: Peers', 'import: from AS24492 accept AS-WICAM', 'export: to AS24492 announce AS41327:AS-CUSTOMERS'));
+  const big = roles(attrs('import: from AS-ANY accept ANY', 'export: to AS-ANY announce ANY'));      // no neighbour named one by one
+  const rolesOf = new Map([[41327, fiber], [174, big], [3491, null], [9002, undefined]]);
+  const cp = claimedProviders(24492, [0, 174, 3491, 9002, 41327], rolesOf, [174]);
+  assert.deepEqual(cp.rows.map((x) => x.as), [3491, 9002, 41327, 174]);       // AS0 is left out, the unconfirmed come first
+  assert.deepEqual([cp.confirmed, cp.unconfirmed], [[174], [3491, 9002, 41327]]);
+  const row = (n) => cp.rows.find((x) => x.as === n);
+  assert.deepEqual([row(174).reading, row(174).state, row(174).irr], ['CAIDA confirms it', 'no customers', null]);
+  assert.deepEqual([row(41327).reading, row(41327).state], ['its IRR object describes it otherwise', 'policy']);
+  assert.match(row(41327).irr, /sets of prefixes only/);
+  assert.deepEqual([row(3491).reading, row(3491).state], ['only the ASPA says it', 'none']);
+  assert.equal(row(9002).state, 'unread');
+  // the customer that the provider does name
+  const ok = claimedProviders(15605, [41327], rolesOf, null);
+  assert.deepEqual([ok.rows[0].reading, ok.rows[0].caida, ok.unconfirmed], ['its IRR object confirms it', null, []]);
+  const both = claimedProviders(15605, [41327], rolesOf, [41327]);
+  assert.equal(both.rows[0].reading, 'its IRR object and CAIDA confirm it');
 });
 
 console.log(`${passed} tests passed`);

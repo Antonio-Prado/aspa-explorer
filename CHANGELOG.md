@@ -9,6 +9,12 @@ A few numbers were deployed and folded into the next release without a tag of th
 
 ## [Unreleased]
 
+## [1.97.0] - 2026-11-22
+
+### Added
+
+- The page of an AS asks the other side of an ASPA whether it agrees. An ASPA is written by the customer alone, and some list far more than their transit providers: AS24492 names 43 providers and AS18001 95, among them networks that only peer with them, so AS41327 was shown as *named as a provider* by ASes that are not its customers. Under *Named as a provider*, *Check them against what AS… declares* reads the `aut-num` object of the AS in the routing registry and, for every AS whose ASPA names it, says whether the object announces ANY to that AS, as to a customer, and whether CAIDA puts the AS among its providers. Under *Its own ASPA*, *Check them against what the providers declare* does the same from the side of the customer, with the object of each provider (one request for each, two at a time, a refused one asked again). The rows that neither source confirms come first and read *only the ASPA says it*, with a count above the table (*6 of 18 not confirmed*); a neighbour that the object describes with sets of prefixes only reads *the IRR object describes it otherwise*. Nothing is asked before a button is pressed, and the text says that it is a reading, not a verdict: an object can be out of date, many large networks name no customer one by one, and CAIDA can miss a link. `namedBy` and `claimedProviders` in `site/irr.js`, with tests.
+
 ## [1.96.0] - 2026-11-22
 
 ### Added

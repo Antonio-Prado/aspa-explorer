@@ -1874,6 +1874,132 @@ function irrBlock(as) {
     el('p', {}, btn, status), out);
 }
 
+// The other side of the ASPAs that name this AS as a provider: what the AS itself declares in its IRR object (the neighbours that it announces ANY
+// to are its customers) and what CAIDA infers. An AS that only an ASPA calls a customer may have listed a peer, or every AS that it sees upstream.
+// Asked when the button is pressed, as the registry tab does; if the registry does not answer, CAIDA alone is used.
+function namedByBlock(as, customers) {
+  const n = asNum(as);
+  const out = el('div', { 'aria-live': 'polite' });
+  const status = el('span', { class: 'hint' });
+  const btn = el('button', { type: 'button', class: 'linkish', text: `Check them against what ${as} declares` });
+  let holder;
+  const render = (o, rel) => {
+    const roles = o ? AspaIrr.roles(o.attrs, ixpSet.size ? ixpSet : null) : null;
+    const r = roles && roles.rules ? roles : null;
+    const nb = AspaIrr.namedBy(customers.map((c) => asNum(c)), r, rel && rel.providers ? rel.providers : null, n);
+    const names = someNames;
+    const kids = [];
+    if (!r && !rel) { out.replaceChildren(el('p', { text: `Neither an IRR object with a policy nor the CAIDA file is available for ${as}, so there is nothing to check the ASPAs against.` })); return; }
+    if (nb.unconfirmed.length) {
+      kids.push(el('p', { class: 'verdict v-unknown' }, el('strong', { text: `${nb.unconfirmed.length} of ${nb.rows.length} not confirmed` }),
+        ` Only ${nb.unconfirmed.length === 1 ? 'its own ASPA says' : 'their own ASPAs say'} that ${names(nb.unconfirmed)} ${nb.unconfirmed.length === 1 ? 'is a customer' : 'are customers'} of ${as}: ${r ? `the IRR object of ${as} does not announce ANY to ${nb.unconfirmed.length === 1 ? 'it' : 'them'}` : `${as} has no IRR object with a policy`}${rel ? `, and CAIDA does not put ${as} among ${nb.unconfirmed.length === 1 ? 'its' : 'their'} providers` : ''}.`));
+    } else {
+      kids.push(el('p', { class: 'verdict v-valid' }, el('strong', { text: 'Confirmed' }), ` Every AS that names ${as} as a provider is a customer of ${as} for its IRR object or for CAIDA.`));
+    }
+    const yes = (v) => (v === null ? 'no data' : v ? 'yes' : 'no');
+    const irrText = (x) => (x.irr === 'customer' ? 'customer' : x.irr || (r ? 'not named' : 'no policy'));
+    const rowOf = (x) => el('tr', {}, el('th', { scope: 'row' }, asChip('AS' + x.as)), el('td', { class: x.confirmed ? '' : 'hop na', text: x.reading }), el('td', { text: irrText(x) }), el('td', { class: 'nowrap', text: yes(x.caida) }));
+    const head = el('thead', {}, el('tr', {}, ['AS', 'Reading', 'IRR object', 'CAIDA'].map((t) => el('th', { scope: 'col', text: t }))));
+    kids.push(el('section', { class: 'table-wrap card', tabindex: '0', 'aria-label': `The ASes whose ASPAs name ${as} as a provider, and what ${as} and CAIDA say about each` },
+      el('table', { class: 'checks live' }, el('caption', { class: 'sr-only', text: `Each AS that names ${as} as a provider in its ASPA, what the IRR object of ${as} says about it, whether CAIDA calls ${as} its provider, and a reading` }), head, el('tbody', {}, nb.rows.map(rowOf)))));
+    const notes = [];
+    if (o && r) notes.push(`The IRR object column says what the aut-num of ${as} in ${o.source} declares about that AS${o.modified ? `, last changed ${o.modified.slice(0, 10)}` : ''}${nb.listsCustomers ? '' : ': it names no customer one by one, so its silence about an AS says little'}.`);
+    else if (o) notes.push(`The aut-num of ${as} in ${o.source} has no import or export lines, so only CAIDA is used.`);
+    else notes.push(o === null ? `No aut-num object of ${as} was found in the RIPE database or in the registries that it mirrors, so only CAIDA is used.` : 'The RIPE database could not be read just now, so only CAIDA is used.');
+    notes.push(rel ? `The CAIDA column says whether ${as} is among the providers of that AS in ${rel.source}: inferred from the routes, not declared by anybody.` : 'The CAIDA file is not available.');
+    notes.push(`A reading, not a verdict: the object can be out of date and CAIDA can miss a link. Where nothing confirms an ASPA, it may list a peer of ${as}, or every AS seen upstream, as a provider: a route that ${as} leaks would then pass the check. The owner of that ASPA is the one to ask.`);
+    kids.push(el('p', { class: 'hint', text: notes.join(' ') }));
+    out.replaceChildren(...kids);
+  };
+  btn.addEventListener('click', async () => {
+    btn.disabled = true; holder.hidden = false; status.replaceChildren(el('span', { class: 'busy', text: ' Asking the RIPE database' }));
+    const [o, rel] = await Promise.all([fetchIrr(n).catch(() => undefined), getRelations()]);
+    status.textContent = '';
+    render(o, rel);
+    btn.hidden = true;
+  });
+  return {
+    ask: el('p', {}, btn, status),
+    out: holder = el('div', { class: 'res-hist', id: 'as-named', hidden: '' }, el('h4', { text: `What ${as} says about them` }),
+      el('p', { class: 'hint', text: `An ASPA is written by the customer alone. The check reads the aut-num of ${as} in the routing registry, asked to the RIPE database (rest.db.ripe.net) from your browser, and the relationships that CAIDA infers.` }), out),
+  };
+}
+
+// A list of AS numbers in a sentence: the first twelve, then how many more (the table under it has them all).
+function someNames(list) {
+  const first = list.slice(0, 12).map((x) => 'AS' + x).join(', ');
+  return list.length > 12 ? `${first} and ${fmt.format(list.length - 12)} more` : first;
+}
+
+// The same check from the side of the customer: each provider in the ASPA of this AS, against the IRR object of that provider (does it announce
+// ANY to this AS, as to a customer?) and against CAIDA. One request to the registry for each provider, two at a time, when the button is pressed.
+function providersCheckBlock(as, providers) {
+  const n = asNum(as), list = providers.map((p) => asNum(p)).filter((p) => p !== 0);
+  const out = el('div', { 'aria-live': 'polite' });
+  const status = el('span', { class: 'hint' });
+  const btn = el('button', { type: 'button', class: 'linkish', text: 'Check them against what the providers declare' });
+  let holder;
+  const render = (rolesOf, sources, rel) => {
+    const caida = rel && rel.providers ? (rel.providers[n] || []) : null;
+    const cp = AspaIrr.claimedProviders(n, list, rolesOf, caida);
+    const kids = [];
+    const one = cp.unconfirmed.length === 1;
+    if (cp.unconfirmed.length) {
+      kids.push(el('p', { class: 'verdict v-unknown' }, el('strong', { text: `${cp.unconfirmed.length} of ${cp.rows.length} not confirmed` }),
+        ` Only the ASPA of ${as} says that ${someNames(cp.unconfirmed)} ${one ? 'is its provider' : 'are its providers'}: ${one ? 'its IRR object does' : 'their IRR objects do'} not announce ANY to ${as}${caida ? `, and CAIDA does not put ${one ? 'it' : 'them'} among the providers of ${as}` : ''}.`));
+    } else {
+      kids.push(el('p', { class: 'verdict v-valid' }, el('strong', { text: 'Confirmed' }), ` Every provider in the ASPA of ${as} treats it as a customer in its IRR object, or is one of its providers for CAIDA.`));
+    }
+    const yes = (v) => (v === null ? 'no data' : v ? 'yes' : 'no');
+    const irrText = (x) => (x.irr === 'customer' ? 'customer' : x.irr || { unread: 'not read', none: 'no policy', policy: 'not named', 'no customers': 'names no customer' }[x.state]);
+    const rowOf = (x) => el('tr', {}, el('th', { scope: 'row' }, asChip('AS' + x.as)), el('td', { class: x.confirmed ? '' : 'hop na', text: x.reading }), el('td', { text: irrText(x) }), el('td', { class: 'nowrap', text: yes(x.caida) }));
+    const head = el('thead', {}, el('tr', {}, ['Provider', 'Reading', 'Its IRR object', 'CAIDA'].map((t) => el('th', { scope: 'col', text: t }))));
+    kids.push(el('section', { class: 'table-wrap card', tabindex: '0', 'aria-label': `The providers in the ASPA of ${as}, and what each of them and CAIDA say about ${as}` },
+      el('table', { class: 'checks live' }, el('caption', { class: 'sr-only', text: `Each provider in the ASPA of ${as}, a reading, what the IRR object of the provider says about ${as}, and whether CAIDA calls it a provider of ${as}` }), head, el('tbody', {}, cp.rows.map(rowOf)))));
+    const unread = cp.rows.filter((x) => x.state === 'unread').length;
+    kids.push(el('p', { class: 'hint', text: [
+      `The IRR object column says what the aut-num of each provider declares about ${as}${sources.size ? ` (${[...sources].sort().join(', ')})` : ''}: "customer" when it announces ANY to ${as}. Many large networks do not name their customers one by one in the registry ("names no customer"), so their silence says little.`,
+      unread ? `${nOf(unread, 'object')} could not be read just now.` : '',
+      rel ? `The CAIDA column says whether that provider is among the providers of ${as} in ${rel.source}: inferred from the routes, not declared by anybody.` : 'The CAIDA file is not available.',
+      `A reading, not a verdict: an object can be out of date and CAIDA can miss a link. Where nothing confirms a provider, the ASPA may list a peer, or every AS seen upstream: a route leaked through that AS would then pass the check. The owner of the ASPA is the one to ask.`,
+    ].filter(Boolean).join(' ') }));
+    out.replaceChildren(...kids);
+  };
+  btn.addEventListener('click', async () => {
+    btn.disabled = true; holder.hidden = false;
+    const rolesOf = new Map(), sources = new Set();
+    let done = 0;
+    const say = () => status.replaceChildren(el('span', { class: 'busy', text: ` Asking the RIPE database: ${done} of ${list.length}` }));
+    say();
+    const queue = list.slice();
+    const worker = async () => {
+      for (let p = queue.shift(); p !== undefined; p = queue.shift()) {
+        rolesOf.set(p, undefined);
+        // the registry refuses a client that asks too fast: two requests at a time, and a refused one is asked again after a pause
+        for (let attempt = 0; attempt < 3; attempt++) {
+          try {
+            const o = await fetchIrr(p);
+            const roles = o ? AspaIrr.roles(o.attrs, ixpSet.size ? ixpSet : null) : null;
+            rolesOf.set(p, roles && roles.rules ? roles : null);
+            if (o) sources.add(o.source);
+            break;
+          } catch { await new Promise((ok) => { setTimeout(ok, 1500 * (attempt + 1)); }); }
+        }
+        done++; say();
+      }
+    };
+    const [rel] = await Promise.all([getRelations(), ...Array.from({ length: Math.min(2, list.length) }, worker)]);
+    status.textContent = '';
+    render(rolesOf, sources, rel);
+    btn.hidden = true;
+  });
+  return {
+    ask: el('p', {}, btn, status),
+    out: holder = el('div', { class: 'res-hist', id: 'as-claimed', hidden: '' }, el('h4', { text: `What its providers say about ${as}` }),
+      el('p', { class: 'hint', text: `An ASPA is written by the customer alone. The check reads the aut-num of each provider in the routing registry, asked to the RIPE database (rest.db.ripe.net) from your browser, one request for each provider, and the relationships that CAIDA infers.` }), out),
+  };
+}
+
 function renderLookup(as) {
   const out = $('result');
   // the page of an AS shows only the search above the answer: the tabs of the tools come back with another tool
@@ -1890,6 +2016,7 @@ function renderLookup(as) {
       el('a', { href: `https://stat.ripe.net/app/launchpad/AS${n}`, rel: 'noopener', target: '_blank' }, 'RIPEstat', el('span', { class: 'sr-only', text: ' (opens in a new tab)' }))));
 
   const left = el('div', {}, el('h4', { text: 'Its own ASPA' }));
+  let claimed = null;
   if (own) {
     const isZero = own.providers.length === 1 && own.providers[0] === 'AS0';
     left.append(el('p', {
@@ -1897,20 +2024,23 @@ function renderLookup(as) {
         ? `${as} declares that it has no transit providers (AS0), as networks at the top of the hierarchy do. It can still have peers.`
         : `${as} authorises ${own.providers.length} provider${own.providers.length === 1 ? '' : 's'}:`,
     }));
-    if (!isZero) left.append(chipList(own.providers, 40));
+    if (!isZero) { claimed = providersCheckBlock(as, own.providers); left.append(chipList(own.providers, 40)); }
     for (const s of own.source) {
       left.append(el('p', { class: 'src' },
         `${rirName(s.tal)} · valid ${fmtDay(s.validity && s.validity.notBefore)} → ${fmtDay(s.validity && s.validity.notAfter)}`,
         el('br'), el('span', { class: 'uri', text: s.uri })));
     }
+    if (claimed) left.append(claimed.ask);
   } else {
     left.append(el('p', { text: `${as} has not published an ASPA, so its upstream relationships cannot be verified.` }));
   }
 
   const right = el('div', {}, el('h4', { text: 'Named as a provider' }));
+  let named = null;
   if (customers.length) {
+    named = namedByBlock(as, customers);
     right.append(el('p', { text: `${fmt.format(customers.length)} ASPA${customers.length === 1 ? ' lists' : 's list'} ${as} as a provider:` }),
-      chipList(customers, 60));
+      chipList(customers, 60), named.ask);
   } else {
     right.append(el('p', { text: `No ASPA names ${as} as a provider.` }));
   }
@@ -1942,7 +2072,7 @@ function renderLookup(as) {
     from.prepend(...(flag ? [flag] : []), `registered in ${countryName(reg.cc)} · `);
   });
   const tabs = [
-    ['aspa', 'ASPA', [el('div', { class: 'res-grid' }, left, right), el('div', { class: 'res-hist', id: 'as-quality' })]],
+    ['aspa', 'ASPA', [el('div', { class: 'res-grid' }, left, right), ...(claimed ? [claimed.out] : []), ...(named ? [named.out] : []), el('div', { class: 'res-hist', id: 'as-quality' })]],
     ['routes', 'Routes and neighbours', [el('p', {}, el('a', { href: `#routes=${as}`, text: `Check the routes ${as} originates` }), ' against the ASPAs, and compare its neighbours with its providers.'), graphHolder(as)]],
     ['history', 'History', [el('div', { class: 'res-hist', id: 'as-history' }), el('div', { class: 'res-hist' }, el('h4', { text: 'Compare' }), compareBlock(as))]],
     ['irr', 'Registry (IRR)', [irrBlock(as)]],
