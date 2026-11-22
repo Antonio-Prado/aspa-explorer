@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "ASPA Explorer API",
-    "version": "1.97.0",
+    "version": "1.98.0",
     "description": "ASPA objects validated by Routinator at rpki.ping6.it, their history and quality, for any AS. Open data, read-only, no key.",
     "contact": {
       "email": "antonio.prado@dei.unipd.it"
@@ -1924,6 +1924,115 @@
                       "properties": {},
                       "description": "AS number (digits) -> array of provider AS numbers",
                       "additionalProperties": true
+                    }
+                  },
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "404": {
+            "$ref": "#/components/responses/NotBuilt"
+          }
+        }
+      }
+    },
+    "/api/v1/counterpart.json": {
+      "get": {
+        "operationId": "getCounterpartJson",
+        "summary": "The other side of the ASPAs: what each provider declares about the customers that name it",
+        "description": "Built once a day (scripts/build-counterpart.mjs). For every pair of customer and provider that an ASPA declares: what the aut-num object of the provider says about the customer, from the daily copies of the routing registries (RADb and LEVEL3 are left out), whether CAIDA has the provider among the providers of the customer, and the exchange points where both are present (PeeringDB) when neither confirms the pair.",
+        "responses": {
+          "200": {
+            "description": "The file",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "generated": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "sources": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      },
+                      "description": "the names of the registries, in the order that `providers` refers to"
+                    },
+                    "registries": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "name": {
+                            "type": "string"
+                          },
+                          "date": {
+                            "type": [
+                              "string",
+                              "null"
+                            ],
+                            "description": "the day of the copy"
+                          },
+                          "objects": {
+                            "type": "integer",
+                            "description": "aut-num objects of ASes that an ASPA names as a provider"
+                          }
+                        },
+                        "additionalProperties": true
+                      }
+                    },
+                    "caida": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "description": "the CAIDA relationships file, or null when it was not there"
+                    },
+                    "peeringdb": {
+                      "type": [
+                        "object",
+                        "null"
+                      ],
+                      "properties": {
+                        "from": {
+                          "type": "string"
+                        },
+                        "networks": {
+                          "type": "integer"
+                        },
+                        "exchanges": {
+                          "type": "integer"
+                        }
+                      },
+                      "additionalProperties": true
+                    },
+                    "missing": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      },
+                      "description": "the sources that could not be read in this run"
+                    },
+                    "providers": {
+                      "type": "object",
+                      "properties": {},
+                      "additionalProperties": true,
+                      "description": "provider AS number (digits) -> [index of the registry in `sources`, day of the last change or null, state: 0 an object without a policy, 1 a policy that names no customer one by one, 2 a policy that names customers]; a provider that is not here has no object"
+                    },
+                    "pairs": {
+                      "type": "object",
+                      "properties": {},
+                      "additionalProperties": true,
+                      "description": "customer AS number (digits) -> provider AS number (digits) -> [what the object of the provider says about the customer: c customer, t transit provider, p sets of prefixes only, v the same and an intermediary, x intermediary, b probably a transit provider, a accepted from ANY, null not named; CAIDA: 1 the provider is among the providers of the customer, 0 it is not, null CAIDA knows no provider of the customer; the ids of up to six exchange points where both are, only when neither confirms the pair]"
+                    },
+                    "ix": {
+                      "type": "object",
+                      "properties": {},
+                      "additionalProperties": true,
+                      "description": "exchange point id (PeeringDB) -> name, for the ids in `pairs`"
                     }
                   },
                   "additionalProperties": true

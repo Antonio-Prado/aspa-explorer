@@ -125,68 +125,62 @@
     return { rows, aspaMissesWhatTheOthersSay: rows.filter((x) => !x.aspa && (x.irr === 'transit' || x.irr === 'probable transit') && x.caida).map((x) => x.as), caidaAvailable: !!caida };
   }
 
-  // What the object says about one neighbour, in a few words (for a hop of a path).
-  function say(r, n) {
-    if (r.transit.includes(n)) return 'a transit provider';
-    if (r.customer.includes(n)) return 'a customer';
-    if (r.ixp.includes(n)) return 'an intermediary AS (in practice the route server of an exchange point)';
-    if (r.peer.includes(n)) return r.via.includes(n) ? 'sets of prefixes only, and also an intermediary (import-via)' : 'sets of prefixes only (a peer, a private link or a service)';
-    if ((r.probable || []).includes(n)) return 'probably a transit provider (accepted from ANY, not announced ANY to)';
-    if (r.candidate.includes(n)) return 'accepted from ANY (not said what it is)';
+  // What the object says about one neighbour, as a letter (the nightly file of the counterparts carries it) and in a few words (for a hop of a
+  // path): t a transit provider, c a customer, x an intermediary, p sets of prefixes only, v the same and an intermediary, b probably a
+  // transit provider, a accepted from ANY; null when the object does not name it.
+  function codeOf(r, n) {
+    if (r.transit.includes(n)) return 't';
+    if (r.customer.includes(n)) return 'c';
+    if (r.ixp.includes(n)) return 'x';
+    if (r.peer.includes(n)) return r.via.includes(n) ? 'v' : 'p';
+    if ((r.probable || []).includes(n)) return 'b';
+    if (r.candidate.includes(n)) return 'a';
     return null;
   }
+  const WORDS = {
+    t: 'a transit provider',
+    c: 'a customer',
+    x: 'an intermediary AS (in practice the route server of an exchange point)',
+    p: 'sets of prefixes only (a peer, a private link or a service)',
+    v: 'sets of prefixes only, and also an intermediary (import-via)',
+    b: 'probably a transit provider (accepted from ANY, not announced ANY to)',
+    a: 'accepted from ANY (not said what it is)',
+  };
+  const wordsOf = (code) => (code && WORDS[code]) || null;
+  const say = (r, n) => wordsOf(codeOf(r, n));
 
-  // The other side of an ASPA: the ASes whose ASPAs name this AS (`n`) as a provider (`customers`, numbers), against what this AS itself declares
-  // in its object (`r`, from roles, or null when there is no object or it has no policy) and against CAIDA (`providersOf`: the providers of each
-  // AS, as in relations.json, or null when the file is not there). A row is confirmed when the object announces ANY to that AS, as to a customer,
-  // or when CAIDA puts this AS among its providers. The rows that nothing confirms come first: only the ASPA of the other AS says so.
-  function namedBy(customers, r, providersOf, n) {
-    const rows = customers.map((c) => {
-      const irr = r ? (r.customer.includes(c) ? 'customer' : say(r, c)) : null;
-      const list = providersOf ? providersOf[c] : null;
-      const caida = list ? list.includes(n) : null;        // null: no file, or CAIDA knows no provider of that AS
-      const irrYes = irr === 'customer';
+  // The other side of an ASPA. An ASPA is written by the customer alone: for a pair (customer, provider) the nightly file says what the object
+  // of the provider declares about the customer (`code`, as codeOf; `state`: 'none' no object, 'no policy', 'no customers' a policy that names
+  // no customer one by one, 'policy'), whether CAIDA has the provider among the providers of the customer (`caida`: true, false, or null when
+  // CAIDA knows no provider of that AS) and the exchange points where both are (`ix`, names). `items` are the pairs of one page, each with the
+  // `as` of the other side; `whose` is 'the' on the page of the provider and 'its' on the page of the customer. A pair is confirmed when the
+  // object announces ANY to the customer or CAIDA agrees; the ones that nothing confirms come first: only the ASPA says so.
+  function counterpartRows(items, whose) {
+    const rows = items.map((x) => {
+      const irrYes = x.code === 'c';
       let reading;
-      if (irrYes && caida) reading = 'the IRR object and CAIDA confirm it';
-      else if (irrYes) reading = 'the IRR object confirms it';
-      else if (caida) reading = 'CAIDA confirms it';
-      else if (irr) reading = 'the IRR object describes it otherwise';
+      if (irrYes && x.caida) reading = `${whose} IRR object and CAIDA confirm it`;
+      else if (irrYes) reading = `${whose} IRR object confirms it`;
+      else if (x.caida) reading = 'CAIDA confirms it';
+      else if (x.code) reading = `${whose} IRR object describes it otherwise`;
       else reading = 'only the ASPA says it';
-      return { as: c, irr, caida, confirmed: irrYes || caida === true, reading };
-    });
-    rows.sort((a, b) => (a.confirmed - b.confirmed) || a.as - b.as);
-    return {
-      rows,
-      confirmed: rows.filter((x) => x.confirmed).map((x) => x.as),
-      unconfirmed: rows.filter((x) => !x.confirmed).map((x) => x.as),
-      listsCustomers: !!(r && r.customer.length),
-    };
-  }
-
-  // The same question from the side of the customer: the providers in the ASPA of this AS (`n`), against what each of them declares in its own
-  // object (`rolesOf`: a Map from the number of the provider to its roles, to null when it has no object or no policy, to undefined when the
-  // registry was not read) and against CAIDA (`caida`: the providers of this AS, or null). A provider is confirmed when its object announces ANY
-  // to this AS, as to a customer, or when CAIDA has it among the providers of this AS. AS0 is not a provider and is left out.
-  function claimedProviders(n, providers, rolesOf, caida) {
-    const rows = providers.filter((p) => p !== 0).map((p) => {
-      const r = rolesOf.get(p);
-      const irr = r ? (r.customer.includes(n) ? 'customer' : say(r, n)) : null;
-      const state = r === undefined ? 'unread' : r === null ? 'none' : r.customer.length ? 'policy' : 'no customers';
-      const inCaida = caida ? caida.includes(p) : null;
-      const irrYes = irr === 'customer';
-      let reading;
-      if (irrYes && inCaida) reading = 'its IRR object and CAIDA confirm it';
-      else if (irrYes) reading = 'its IRR object confirms it';
-      else if (inCaida) reading = 'CAIDA confirms it';
-      else if (irr) reading = 'its IRR object describes it otherwise';
-      else reading = 'only the ASPA says it';
-      return { as: p, irr, state, caida: inCaida, confirmed: irrYes || inCaida === true, reading };
+      const irr = irrYes ? 'customer' : wordsOf(x.code) || { none: 'no object', 'no policy': 'no policy', 'no customers': 'names no customer', policy: 'not named' }[x.state] || 'no data';
+      return { as: x.as, irr, caida: x.caida === undefined ? null : x.caida, ix: x.ix || [], confirmed: irrYes || x.caida === true, reading };
     });
     rows.sort((a, b) => (a.confirmed - b.confirmed) || a.as - b.as);
     return { rows, confirmed: rows.filter((x) => x.confirmed).map((x) => x.as), unconfirmed: rows.filter((x) => !x.confirmed).map((x) => x.as) };
   }
 
-  const api = { rules, roles, compare, say, threeWay, namedBy, claimedProviders };
+  // One pair out of the nightly file (`doc`, /api/v1/counterpart.json) as an item for counterpartRows; null when the file has not that pair.
+  function pairOf(doc, customer, provider) {
+    const row = doc && doc.pairs && doc.pairs[customer] && doc.pairs[customer][provider];
+    if (!row) return null;
+    const obj = doc.providers && doc.providers[provider];
+    const state = !obj ? 'none' : ['no policy', 'no customers', 'policy'][obj[2]] || 'none';
+    return { code: row[0], state, caida: row[1] === null ? null : row[1] === 1, ix: (row[2] || []).map((id) => (doc.ix && doc.ix[id]) || `exchange ${id}`), source: obj ? doc.sources[obj[0]] : null, modified: obj ? obj[1] : null };
+  }
+
+  const api = { rules, roles, compare, say, threeWay, codeOf, wordsOf, counterpartRows, pairOf };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.AspaIrr = api;
 })(typeof self !== 'undefined' ? self : this);

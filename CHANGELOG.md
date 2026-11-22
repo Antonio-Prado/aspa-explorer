@@ -9,6 +9,17 @@ A few numbers were deployed and folded into the next release without a tag of th
 
 ## [Unreleased]
 
+## [1.98.0] - 2026-11-22
+
+### Changed
+
+- The other side of an ASPA (1.97.0) is read from a file built every night, not asked to the RIPE database from the browser. The page of an AS shows it at once: under *Its own ASPA* and under *Named as a provider*, a line says how many pairs the other side does not confirm (*6 of 18 not confirmed by the other side*), with their chips, and *What each source says* opens the table. `scripts/build-counterpart.mjs` takes every pair of customer and provider that an ASPA declares and reads the `aut-num` of the provider in the daily copies of the routing registries (RIPE, ARIN, APNIC, AFRINIC, LACNIC, JPIRR, NTTCOM, TC), with CAIDA next to it; the result is `/api/v1/counterpart.json`. The request for each provider, which the RIPE database refused when they came too fast, is gone, and so is the wait.
+- RADb is not used any more, here or in the *Registry (IRR)* tab: it holds many objects that nobody keeps up to date. LEVEL3 is left out of the nightly file for the same reason.
+
+### Added
+
+- For the pairs that nothing confirms, the table says at which exchange points both networks are present (*Both at*, from PeeringDB, or from its daily copy at CAIDA when PeeringDB refuses the request): AS24492 names AS41327 as a provider and both are at NetIX, AS18001 does and both are at AMS-IX and DE-CIX. It is where a peer that an ASPA calls a provider usually comes from.
+
 ## [1.97.0] - 2026-11-22
 
 ### Added
