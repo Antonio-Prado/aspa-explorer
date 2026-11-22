@@ -1791,7 +1791,7 @@ function renderRecent() {
 }
 
 /* ---------- the routing registry (IRR) next to the ASPA ---------- */
-// The aut-num of the AS, from the RIPE database and the mirrors that it serves (the registries of the other RIRs and JPIRR; RADb is not asked, it holds many objects that nobody keeps up to date): asked only when the
+// The aut-num of the AS, from the RIPE database and the mirrors that it serves (the registries of the other RIRs and JPIRR): asked only when the
 // button is pressed, from the browser, with the number of the AS. Not every object has a policy: the ones in ARIN, for instance, have only the name.
 const IRR_SOURCES = ['RIPE', 'ARIN-GRS', 'APNIC-GRS', 'AFRINIC-GRS', 'LACNIC-GRS', 'JPIRR-GRS'].map((s) => `source=${s}`).join('&');
 let relationsDoc;
@@ -1876,7 +1876,7 @@ function irrBlock(as) {
 
 /* ---------- the other side of an ASPA ---------- */
 // An ASPA is written by the customer alone. A file built every night (scripts/build-counterpart.mjs) says, for each pair that an ASPA declares,
-// what the provider itself declares about the customer in its aut-num (the daily copies of the registries, without RADb), whether CAIDA infers
+// what the provider itself declares about the customer in its aut-num (the daily copies of the registries), whether CAIDA infers
 // the same, and the exchange points where both are. On the page of an AS it is read for the two lists: the providers of its ASPA (`side`
 // 'claimed') and the ASes whose ASPAs name it ('named'). Under the chips, how many the other side does not confirm; the table on request.
 let counterpartDoc;
@@ -1940,7 +1940,7 @@ function counterpartBlock(as, others, side) {
     } else {
       notes.push(`The IRR object column says what the aut-num of each provider declares about ${as}: "customer" when it announces ANY to ${as}. Many large networks do not name their customers one by one in the registry ("names no customer"), so their silence says little.`);
     }
-    notes.push(`The objects come from the daily copies of the registries (${doc.registries.map((r) => r.name).join(', ')}), read on ${day(doc.generated)}; RADb is not used, it holds many objects that nobody keeps up to date.`);
+    notes.push(`The objects come from the daily copies of the registries (${doc.registries.map((r) => r.name).join(', ')}), read on ${day(doc.generated)}.`);
     notes.push(doc.caida ? `The CAIDA column says whether ${named ? `${as} is among the providers of that AS` : `that provider is among the providers of ${as}`} in ${doc.caida}: inferred from the routes, not declared by anybody.` : 'The CAIDA file was not available.');
     if (withIx) notes.push(`Both at: the exchange points where the two networks are present (${doc.peeringdb.from}), for the rows that nothing confirms. Being at the same exchange point does not prove that two networks peer there, but it is where a peer that an ASPA calls a provider usually comes from.`);
     notes.push(`A reading, not a verdict: an object can be out of date and CAIDA can miss a link. Where nothing confirms a pair, the ASPA may list a peer, or every AS seen upstream, as a provider: a route leaked through that AS would then pass the check. The owner of the ASPA is the one to ask.`);

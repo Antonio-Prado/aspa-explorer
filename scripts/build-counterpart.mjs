@@ -6,8 +6,7 @@
 //   node scripts/build-counterpart.mjs OUT_FILE [RELATIONS_FILE]
 //
 // Sources: the ASPAs of the validator (ASPA_DATA, default http://127.0.0.1:8080/data/aspas.json); the daily copies of the routing registries
-// (IRR_SOURCES below: the five RIRs, JPIRR, NTTCOM and TC; RADb and LEVEL3 are left out, they hold many objects that nobody keeps up to
-// date); the CAIDA relationships as the adoption job wrote them (RELATIONS_FILE, default relations.json next to OUT_FILE); PeeringDB for the
+// (IRR_SOURCES below: the five RIRs, JPIRR, NTTCOM and TC); the CAIDA relationships as the adoption job wrote them (RELATIONS_FILE, default relations.json next to OUT_FILE); PeeringDB for the
 // exchange points (www.peeringdb.com/api, two requests, or its daily copy at CAIDA). A source that does not answer is left out and named in `missing`: the file is still
 // written, unless no registry at all could be read.
 import { readFile, writeFile, rename } from 'node:fs/promises';

@@ -82,9 +82,9 @@ await test('the pairs of the ASPAs against the objects, CAIDA and the exchange p
   assert.deepEqual(bare.pairs[24492][41327], ['p', null]);                     // without CAIDA and PeeringDB the object alone
 });
 
-await test('RADb is not among the registries', () => {
-  assert.ok(IRR_SOURCES.length >= 6);
-  assert.ok(!IRR_SOURCES.some(([name, url]) => /radb|level3/i.test(name + url)));
+await test('the registries that are read, in order of preference', () => {
+  assert.deepEqual(IRR_SOURCES.map(([name]) => name), ['RIPE', 'ARIN', 'APNIC', 'AFRINIC', 'LACNIC', 'JPIRR', 'NTTCOM', 'TC']);
+  assert.ok(IRR_SOURCES.every(([, url]) => url.startsWith('https://')));
 });
 
 console.log(`${passed} tests passed`);

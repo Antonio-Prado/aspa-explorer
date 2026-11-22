@@ -9,12 +9,22 @@ A few numbers were deployed and folded into the next release without a tag of th
 
 ## [Unreleased]
 
+## [1.98.1] - 2026-11-22
+
+### Changed
+
+- The notes on the routing registries, on the page of an AS, in the guide and in the description of the API, name the registries that are read and nothing else.
+
+### Fixed
+
+- The guide names the thirteenth RTR cache, the Routinator of Roberto Santo, where it lists the caches that are followed (it was only in the credits).
+
 ## [1.98.0] - 2026-11-22
 
 ### Changed
 
 - The other side of an ASPA (1.97.0) is read from a file built every night, not asked to the RIPE database from the browser. The page of an AS shows it at once: under *Its own ASPA* and under *Named as a provider*, a line says how many pairs the other side does not confirm (*6 of 18 not confirmed by the other side*), with their chips, and *What each source says* opens the table. `scripts/build-counterpart.mjs` takes every pair of customer and provider that an ASPA declares and reads the `aut-num` of the provider in the daily copies of the routing registries (RIPE, ARIN, APNIC, AFRINIC, LACNIC, JPIRR, NTTCOM, TC), with CAIDA next to it; the result is `/api/v1/counterpart.json`. The request for each provider, which the RIPE database refused when they came too fast, is gone, and so is the wait.
-- RADb is not used any more, here or in the *Registry (IRR)* tab: it holds many objects that nobody keeps up to date. LEVEL3 is left out of the nightly file for the same reason.
+- The *Registry (IRR)* tab asks the RIPE database for the object in RIPE and in the mirrors of the registries of the other RIRs and of JPIRR.
 
 ### Added
 

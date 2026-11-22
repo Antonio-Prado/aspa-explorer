@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "ASPA Explorer API",
-    "version": "1.98.0",
+    "version": "1.98.1",
     "description": "ASPA objects validated by Routinator at rpki.ping6.it, their history and quality, for any AS. Open data, read-only, no key.",
     "contact": {
       "email": "antonio.prado@dei.unipd.it"
@@ -1941,7 +1941,7 @@
       "get": {
         "operationId": "getCounterpartJson",
         "summary": "The other side of the ASPAs: what each provider declares about the customers that name it",
-        "description": "Built once a day (scripts/build-counterpart.mjs). For every pair of customer and provider that an ASPA declares: what the aut-num object of the provider says about the customer, from the daily copies of the routing registries (RADb and LEVEL3 are left out), whether CAIDA has the provider among the providers of the customer, and the exchange points where both are present (PeeringDB) when neither confirms the pair.",
+        "description": "Built once a day (scripts/build-counterpart.mjs). For every pair of customer and provider that an ASPA declares: what the aut-num object of the provider says about the customer, from the daily copies of the routing registries, whether CAIDA has the provider among the providers of the customer, and the exchange points where both are present (PeeringDB) when neither confirms the pair.",
         "responses": {
           "200": {
             "description": "The file",
