@@ -9,6 +9,12 @@ A few numbers were deployed and folded into the next release without a tag of th
 
 ## [Unreleased]
 
+## [1.95.2] - 2026-11-22
+
+### Changed
+
+- The tooltip with the name of an AS stays on one line: with the flag and the country after the name it often took two, the country alone on the second (*AS206810: UGLETELECOM GUP DNR "UGLETELECOM"* and, under it, *· Russia*), because the box was never wider than 24 rem. It is now as wide as its text, and takes a second line only when the text is longer than the window.
+
 ## [1.95.1] - 2026-11-22
 
 ### Fixed

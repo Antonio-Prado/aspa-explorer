@@ -292,7 +292,8 @@ figcaption .s { display: block; color: var(--muted); font-size: 0.8125rem; }
   padding: 0.3rem 0.55rem;
   font-size: 0.8125rem;
   line-height: 1.35;
-  max-width: min(24rem, calc(100vw - 16px));
+  width: max-content;                 /* one line, whatever is on its right: the name and the country are read together */
+  max-width: calc(100vw - 16px);      /* two lines only for a name longer than the window */
   overflow-wrap: anywhere;
 }
 .as-tip[hidden] { display: none; }
