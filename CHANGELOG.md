@@ -9,7 +9,12 @@ A few numbers were deployed and folded into the next release without a tag of th
 
 ## [Unreleased]
 
-## [1.95.2] - 2026-11-22
+## [1.96.0] - 2026-11-22
+
+### Added
+
+- A thirteenth RTR cache on the *RTR caches* tab of *Right now*: the Routinator 0.16.1 that Roberto Santo runs in the network of AS41720 and lets this site follow (`rsanto`), RTR version 2 with the ASPAs, with the same addresses for its telemetry, baseline and metrics as the others. Eight operators run the thirteen caches.
+
 
 ### Changed
 
