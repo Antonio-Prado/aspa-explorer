@@ -5,9 +5,19 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 Each version is a tag, and its release, with these notes, is on [GitHub](https://github.com/Antonio-Prado/aspa-explorer/releases).
-A few numbers were deployed and folded into the next release without a tag of their own (1.13.0, 1.14.0, 1.16.0, 1.17.0, 1.18.3, 1.20.1, 1.20.2, 1.39.3, 1.43.9, whose changes are in 1.43.10, and 1.58.0, whose changes are in 1.58.1), and 1.23.2 was not used.
+A few numbers were deployed and folded into the next release without a tag of their own (1.13.0, 1.14.0, 1.16.0, 1.17.0, 1.18.3, 1.20.1, 1.20.2, 1.39.3, 1.43.9, whose changes are in 1.43.10, 1.58.0, whose changes are in 1.58.1, and 1.95.0, corrected by 1.95.1 the same hour), and 1.23.2 was not used.
 
 ## [Unreleased]
+
+## [1.95.1] - 2026-11-22
+
+### Fixed
+
+- The new credit in the footer, *Compared with rpki-client and StayRTR*, was wider than a narrow screen where the letters are wider than on the machine it was tried on, and the page scrolled sideways by 12 px (the accessibility check of the pipeline on GitHub found it, a few minutes after 1.95.0 went online). A credit that does not fit takes two lines.
+
+### Changed
+
+- *Inspired by passion*, which the longer credits had left alone on a line of its own, is at the top of the footer, on the right of the links to the pages.
 
 ## [1.95.0] - 2026-11-22
 

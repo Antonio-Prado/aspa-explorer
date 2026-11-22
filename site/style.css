@@ -359,7 +359,7 @@ td.rir { color: var(--ink-2); white-space: nowrap; }
 .build .ver:hover { text-decoration: underline; }
 .build .ip { overflow-wrap: anywhere; font-family: var(--mono); font-size: 0.92em; }
 .credits { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem 1.25rem; margin: 0.75rem 0 0; padding: 0; list-style: none; color: var(--muted); }
-.credits li { display: inline-flex; align-items: center; gap: 0.35rem; white-space: nowrap; }
+.credits li { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 0.35rem; max-width: 100%; white-space: nowrap; }   /* a long credit takes two lines on a narrow screen */
 .credits a { display: inline-flex; align-items: center; gap: 0.35rem; border-radius: 4px; }
 .credits a span { color: var(--ink); font-weight: 600; }
 .credits img { display: block; height: 28px; width: auto; }
@@ -543,7 +543,7 @@ td.muted { color: var(--muted); }
 .status-dot.ok { background: #1f9d55; }
 .status-dot.warn { background: #d97706; }
 .status-dot.down { background: #d92d20; }
-.credits .heart { color: #e0245e; font-size: 1.1em; }
+.heart { color: #e0245e; font-size: 1.1em; }
 
 /* a shorter page: the home fits a laptop screen without scrolling */
 .masthead { padding-top: 1.5rem; padding-bottom: 0.9rem; }
@@ -948,6 +948,10 @@ body { overflow-x: clip; }
 /* every page ends with the list of the pages */
 .footnav { display: flex; flex-wrap: wrap; gap: 0 1.25rem; margin: 0 0 0.75rem; padding-top: 0.75rem; border-top: 1px solid var(--grid); font-size: 0.875rem; }
 .footnav a { padding: 0.45rem 0; }
+/* the links and, on their right, what the site is inspired by (footer.js puts the two together) */
+.foothead { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 0 1.25rem; margin: 0 0 0.75rem; padding-top: 0.75rem; border-top: 1px solid var(--grid); font-size: 0.875rem; }
+.foothead .footnav { margin: 0; padding-top: 0; border-top: 0; font-size: inherit; }
+.foothead .passion { margin: 0; padding: 0.45rem 0; color: var(--muted); white-space: nowrap; }
 
 
 /* 1.74: less to read before the first choice. Adoption: the chart of the ASPAs is lower, by size and by RIR are two tabs,

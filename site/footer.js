@@ -71,10 +71,17 @@
     el('li', {}, 'Compared with ',
       link('https://www.rpki-client.org/', logo('/img/rpki-client-logo.png?v=1', 'rpki-client', 84, 28)),
       ' and ',
-      link('https://github.com/bgp/stayrtr', logo('/img/stayrtr-logo.png?v=1', '', 28, 28), el('span', {}, 'StayRTR'))),
-    el('li', {}, 'Inspired by passion ', el('span', { class: 'heart', 'aria-hidden': 'true' }, '\u2665')));
+      link('https://github.com/bgp/stayrtr', logo('/img/stayrtr-logo.png?v=1', '', 28, 28), el('span', {}, 'StayRTR'))));
 
   footer.append(build, credits);
+  // What the site is inspired by stands at the top of the footer, on the right of the links to the pages: it was the
+  // last of the credits, and the longer credits left it alone on a line of its own.
+  const nav = footer.querySelector('nav.footnav');
+  if (nav) {
+    const head = el('div', { class: 'foothead' });
+    nav.replaceWith(head);
+    head.append(nav, el('p', { class: 'passion' }, 'Inspired by passion ', el('span', { class: 'heart', 'aria-hidden': 'true' }, '\u2665')));
+  }
   refresh();
 
   const showRelease = (tag) => {
