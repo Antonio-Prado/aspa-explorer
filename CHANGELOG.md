@@ -9,6 +9,12 @@ A few numbers were deployed and folded into the next release without a tag of th
 
 ## [Unreleased]
 
+## [1.100.1] - 2026-11-23
+
+### Fixed
+
+- The notice at the foot of the pages starts where the other lines of the footer start: it took the padding of a box of the subscription page, which has the same class name.
+
 ## [1.100.0] - 2026-11-23
 
 ### Added
