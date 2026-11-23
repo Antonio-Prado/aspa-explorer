@@ -406,7 +406,7 @@ Releases follow [Semantic Versioning](https://semver.org/); the version shown in
 
 ## Citation
 
-The downstream verification implemented by the path check is analysed in the following paper (proceedings forthcoming in IEEE Xplore); the <a href="site/paper/prado-centenaro-vangelista-cscn2026.pdf" target="_blank" rel="noopener">author's accepted version (PDF)</a> is in the repository and at <a href="https://aspa.ping6.it/paper/prado-centenaro-vangelista-cscn2026.pdf" target="_blank" rel="noopener">aspa.ping6.it</a> (© 2026 IEEE; copyright may be transferred without notice, after which this version may no longer be accessible); the repository also provides a <a href="CITATION.cff" target="_blank" rel="noopener"><code>CITATION.cff</code></a>.
+The downstream verification implemented by the path check is analysed in the following paper, published in <a href="https://doi.org/10.1109/CSCN71666.2026.11771817" target="_blank" rel="noopener">IEEE Xplore</a>; the <a href="site/paper/prado-centenaro-vangelista-cscn2026.pdf" target="_blank" rel="noopener">author's accepted version (PDF)</a> is in the repository and at <a href="https://aspa.ping6.it/paper/prado-centenaro-vangelista-cscn2026.pdf" target="_blank" rel="noopener">aspa.ping6.it</a> (© 2026 IEEE; personal use is permitted, any other use requires permission from IEEE); the repository also provides a <a href="CITATION.cff" target="_blank" rel="noopener"><code>CITATION.cff</code></a>.
 
 ```bibtex
 @inproceedings{prado2026aspa,
@@ -416,7 +416,8 @@ The downstream verification implemented by the path check is analysed in the fol
   address   = {London, UK},
   month     = sep,
   year      = {2026},
-  note      = {Proceedings forthcoming in IEEE Xplore}
+  pages     = {484--490},
+  doi       = {10.1109/CSCN71666.2026.11771817}
 }
 ```
 

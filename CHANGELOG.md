@@ -9,6 +9,12 @@ A few numbers were deployed and folded into the next release without a tag of th
 
 ## [Unreleased]
 
+## [1.101.1] - 2026-11-23
+
+### Changed
+
+- The paper behind the path check is now in the proceedings of IEEE CSCN 2026 (pp. 484–490, doi: 10.1109/CSCN71666.2026.11771817): the guide, the README and `CITATION.cff` give pages and DOI and link to IEEE Xplore, and the note next to the author's accepted version carries the IEEE notice for a published paper.
+
 ## [1.101.0] - 2026-11-23
 
 ### Added

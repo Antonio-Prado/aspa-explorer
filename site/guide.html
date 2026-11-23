@@ -23,16 +23,16 @@
 <meta name="twitter:card" content="summary_large_image">
 <meta name="color-scheme" content="light dark">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
-<link rel="stylesheet" href="/style.css?v=1.101.0">
-<script src="/status-checks.js?v=1.101.0" defer></script>
-<script src="/asnames.js?v=1.101.0" defer></script>
-<script src="/footer.js?v=1.101.0" defer></script>
+<link rel="stylesheet" href="/style.css?v=1.101.1">
+<script src="/status-checks.js?v=1.101.1" defer></script>
+<script src="/asnames.js?v=1.101.1" defer></script>
+<script src="/footer.js?v=1.101.1" defer></script>
 </head>
 <body>
 <a class="skip" href="#main">Skip to main content</a>
 <header class="wrap masthead">
   <div class="top">
-    <p class="back"><a class="brandlink" href="/" title="Back to ASPA Explorer"><img class="brand" src="/img/logo-mark.svg?v=1.101.0" alt="" width="40" height="40"><span>ASPA Explorer</span></a></p>
+    <p class="back"><a class="brandlink" href="/" title="Back to ASPA Explorer"><img class="brand" src="/img/logo-mark.svg?v=1.101.1" alt="" width="40" height="40"><span>ASPA Explorer</span></a></p>
     <nav class="topnav" aria-label="Main"><a class="sect a-look" href="/network.html">Look up</a><a class="sect a-adopt" href="/statistics.html">Adoption</a><a class="sect a-now" href="/now.html">Right now</a><a class="sect a-inc" href="/incidents.html">Incidents</a><a class="minor" href="/guide.html" aria-current="page">Guide</a><a class="minor" href="/examples.html">Examples</a><a class="minor" href="/api.html">API</a><a class="minor" href="/status.html">Status</a></nav>
   </div>
   <h1>Guide</h1>
@@ -121,8 +121,8 @@
       <dd>The attested hops prove that the path cannot have the expected shape. For a route from a customer or a peer, one hop attested as not customer-to-provider is enough; for a route from a provider it takes one on each side, so that the climb from the origin and the descent from the neighbour cannot meet. The path contains a valley, which is how a route leak or a forged path segment looks.</dd>
     </dl>
     <p>Limits: repeated ASes (prepending) are removed before checking; paths with an AS_SET are not accepted (the procedure treats them as Invalid); the neighbour check and route-origin validation are not part of this tool; and the result reflects the validated ASPA snapshot shown on this page, not your own router's view. The procedure follows the IETF draft <a href="https://datatracker.ietf.org/doc/draft-ietf-sidrops-aspa-verification/" target="_blank" rel="noopener">BGP AS_PATH Verification Based on ASPA Objects<span class="sr-only"> (opens in a new tab)</span></a>, which is still work in progress.</p>
-    <p><strong>Background.</strong> The downstream procedure is analysed in A. Prado, M. Centenaro and L. Vangelista, <em>Securing Multi-domain 5G/6G Routing: Towards Path Verification with ASPA</em>, IEEE Conference on Standards for Communications and Networking (CSCN), London, 7–9 September 2026 (proceedings forthcoming in IEEE Xplore). The paper shows that, when every AS of the path publishes an ASPA, downstream ASPA validity is equivalent to a unimodality test on the compressed AS path.</p>
-    <p><a href="/paper/prado-centenaro-vangelista-cscn2026.pdf" target="_blank" rel="noopener">Download the paper (PDF, 7 pages)<span class="sr-only"> (opens in a new tab)</span></a>. This is the author's accepted version, posted for personal use. This work has been accepted for publication in the proceedings of IEEE CSCN 2026; copyright may be transferred without notice, after which this version may no longer be accessible. © 2026 IEEE.</p>
+    <p><strong>Background.</strong> The downstream procedure is analysed in A. Prado, M. Centenaro and L. Vangelista, <em>Securing Multi-domain 5G/6G Routing: Towards Path Verification with ASPA</em>, IEEE Conference on Standards for Communications and Networking (CSCN), London, 7–9 September 2026, pp. 484–490, doi: <a href="https://doi.org/10.1109/CSCN71666.2026.11771817" target="_blank" rel="noopener">10.1109/CSCN71666.2026.11771817<span class="sr-only"> (opens in a new tab)</span></a>. The paper shows that, when every AS of the path publishes an ASPA, downstream ASPA validity is equivalent to a unimodality test on the compressed AS path.</p>
+    <p><a href="/paper/prado-centenaro-vangelista-cscn2026.pdf" target="_blank" rel="noopener">Download the paper (PDF, 7 pages)<span class="sr-only"> (opens in a new tab)</span></a>. This is the author's accepted version; the published version is in <a href="https://ieeexplore.ieee.org/document/11771817" target="_blank" rel="noopener">IEEE Xplore<span class="sr-only"> (opens in a new tab)</span></a>. © 2026 IEEE. Personal use of this material is permitted. Permission from IEEE must be obtained for all other uses, in any current or future media, including reprinting or republishing this material for advertising or promotional purposes, creating new collective works, for resale or redistribution to servers or lists, or reuse of any copyrighted component of this work in other works.</p>
 
     <p><strong>Many paths at once.</strong> Under the form, <em>Check many paths at once</em> takes one path on each line (for example the paths of a <code>show bgp</code> printed by a script; a prefix in front of a path is kept in the table; empty lines and lines starting with <code>#</code> are skipped, up to 5000 lines) and gives the verdict and a few words of reason for each, with the totals. The table can be downloaded as CSV or JSON; nothing is sent anywhere for that, it is made in your browser.</p>
   </section>
