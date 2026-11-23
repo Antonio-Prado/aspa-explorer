@@ -9,6 +9,12 @@ A few numbers were deployed and folded into the next release without a tag of th
 
 ## [Unreleased]
 
+## [1.101.2] - 2026-11-23
+
+### Changed
+
+- The author's accepted version of the paper carries the IEEE copyright notice and the reference to the published version (proceedings, pages and DOI) at the foot of its first page. Nothing else in the file has changed.
+
 ## [1.101.1] - 2026-11-23
 
 ### Changed
