@@ -73,7 +73,9 @@
       ' and ',
       link('https://github.com/bgp/stayrtr', logo('/img/stayrtr-logo.png?v=1', '', 28, 28), el('span', {}, 'StayRTR'))));
 
-  footer.append(build, credits);
+  // Nothing the site gives is guaranteed: the last line of every page says so and leads to the guide.
+  const notice = el('p', { class: 'build notice' }, 'Best effort, no guarantee: ', link('/guide.html#no-guarantee', 'check the data on your own'), '.');
+  footer.append(build, credits, notice);
   // What the site is inspired by stands at the top of the footer, on the right of the links to the pages: it was the
   // last of the credits, and the longer credits left it alone on a line of its own.
   const nav = footer.querySelector('nav.footnav');

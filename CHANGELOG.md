@@ -9,6 +9,12 @@ A few numbers were deployed and folded into the next release without a tag of th
 
 ## [Unreleased]
 
+## [1.100.0] - 2026-11-23
+
+### Added
+
+- A notice that everything the site gives is best effort, with no guarantee, and that whoever uses it is expected to check the data on their own: a line at the foot of every page, a section of the guide (*No guarantee*), a paragraph on the page of the API and in the description of its schema, in the README, and a closing line in every message by mail.
+
 ## [1.99.0] - 2026-11-23
 
 ### Added

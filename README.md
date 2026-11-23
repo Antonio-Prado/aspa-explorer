@@ -187,6 +187,8 @@ ASPA Explorer shows every ASPA that the validator currently considers valid, so 
 
 The ASPAs shown here come from a [Routinator](https://github.com/NLnetLabs/routinator) instance run at **[rpki.ping6.it](https://rpki.ping6.it/)**, which also publishes its own web UI (<https://rpki.ping6.it/ui/>) and the raw ASPA data (<https://rpki.ping6.it/jsonext?exclude=routeOrigins,routerKeys>). A second validator, [Fort](https://github.com/NICMx/FORT-validator), runs on the same host for comparison. When that instance fails or does not answer, the site reads the same three addresses from a second Routinator, the one that AS59715 runs for its own routers (`rpki.as59715.net`), and the status page says so; the second one is asked only then, through the same two-minute cache.
 
+**No guarantee.** Everything this site gives, its pages, its API, the alerts and the messages by mail or webhook, is offered as it is, on a best-effort basis and with no guarantee of any kind. The data can be late, incomplete or wrong, and a message can be late or never arrive. Nothing here should be the only ground for a decision on a network: whoever uses it is expected to check the data on their own.
+
 ## Features
 
 **Look up and check**

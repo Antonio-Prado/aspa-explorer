@@ -23,16 +23,16 @@
 <meta name="twitter:card" content="summary_large_image">
 <meta name="color-scheme" content="light dark">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
-<link rel="stylesheet" href="/style.css?v=1.99.0">
-<script src="/status-checks.js?v=1.99.0" defer></script>
-<script src="/asnames.js?v=1.99.0" defer></script>
-<script src="/footer.js?v=1.99.0" defer></script>
+<link rel="stylesheet" href="/style.css?v=1.100.0">
+<script src="/status-checks.js?v=1.100.0" defer></script>
+<script src="/asnames.js?v=1.100.0" defer></script>
+<script src="/footer.js?v=1.100.0" defer></script>
 </head>
 <body>
 <a class="skip" href="#main">Skip to main content</a>
 <header class="wrap masthead">
   <div class="top">
-    <p class="back"><a class="brandlink" href="/" title="Back to ASPA Explorer"><img class="brand" src="/img/logo-mark.svg?v=1.99.0" alt="" width="40" height="40"><span>ASPA Explorer</span></a></p>
+    <p class="back"><a class="brandlink" href="/" title="Back to ASPA Explorer"><img class="brand" src="/img/logo-mark.svg?v=1.100.0" alt="" width="40" height="40"><span>ASPA Explorer</span></a></p>
     <nav class="topnav" aria-label="Main"><a class="sect a-look" href="/network.html">Look up</a><a class="sect a-adopt" href="/statistics.html">Adoption</a><a class="sect a-now" href="/now.html">Right now</a><a class="sect a-inc" href="/incidents.html">Incidents</a><a class="minor" href="/guide.html" aria-current="page">Guide</a><a class="minor" href="/examples.html">Examples</a><a class="minor" href="/api.html">API</a><a class="minor" href="/status.html">Status</a></nav>
   </div>
   <h1>Guide</h1>
@@ -41,7 +41,7 @@
 
 <main class="wrap prose" id="main" tabindex="-1">
   <nav class="toc toc-groups card" aria-label="Contents">
-    <div><p class="toc-g">Start here</p><ul><li><a href="#what">What you are looking at</a></li><li><a href="#home">The home page</a></li><li><a href="#reading">Reading the results</a></li></ul></div>
+    <div><p class="toc-g">Start here</p><ul><li><a href="#what">What you are looking at</a></li><li><a href="#no-guarantee">No guarantee</a></li><li><a href="#home">The home page</a></li><li><a href="#reading">Reading the results</a></li></ul></div>
     <div><p class="toc-g">Look up</p><ul><li><a href="#lookup">Looking up an AS</a></li><li><a href="#path-check">Checking an AS path</a></li><li><a href="#live-routes">Checking the routes seen in BGP</a></li><li><a href="#changes">Recent changes and the history of an AS</a></li><li><a href="#quality">ASPA quality</a></li><li><a href="#examples">Writing your ASPA</a></li><li><a href="#notify">Notifications by e-mail and webhook</a></li><li><a href="#share-result">Sharing a result</a></li></ul></div>
     <div><p class="toc-g">Adoption</p><ul><li><a href="#statistics">The state of ASPA</a></li><li><a href="#overview">The charts of the ASPAs</a></li><li><a href="#trends">Networks with an ASPA over time</a></li><li><a href="#adoption">Adoption</a></li><li><a href="#resources">From allocation to ASPA</a></li><li><a href="#coverage">Valid routes by address space, and IPv6 and IPv4 side by side</a></li></ul></div>
     <div><p class="toc-g">Right now</p><ul><li><a href="#right-now">The four tabs</a></li><li><a href="#invalid">Invalid announcements, as they happen</a></li><li><a href="#leaks">Valleys today</a></li><li><a href="#validators">Validators compared</a></li><li><a href="#rtr">The validator as a router sees it</a></li><li><a href="#incidents">Incidents and ASPA</a></li></ul></div>
@@ -55,6 +55,11 @@
     <p>ASPA Explorer shows every ASPA that a Routinator validator currently considers valid. The ASPAs are shown as the validator gives them, with no edits, so you can search them and see the big picture. The checks built on them, such as the evidence about the providers, the valleys and the quality findings, are readings, and each is explained below.</p>
     <p>The menu has four areas, one page each, named after what you do there: <em>Look up</em> (an AS, an AS path, the routes of an AS in BGP), <em>Adoption</em> (the state of ASPA: the numbers and the charts first, the long tables under <em>Go deeper</em>), <em>Right now</em> (four tabs: the invalid announcements as they happen, the valleys of the day, the validators compared and the RTR sessions) and <em>Incidents</em>. Each area has a colour, which marks it in the menu, at the top of its pages and on its card in the home page, and is used for nothing else. Then come the guide, the examples, the API and the status, and every page ends with the list of the pages. This guide follows the same order.</p>
     <p>Every address keeps working, old ones too: <code>/#AS680</code> opens the page of the AS, <code>/#path=…</code> and <code>/#routes=…</code> open those tools on the <em>Look up</em> page, <code>/#changes</code> and <code>/#quality</code> open their tabs on the <em>Adoption</em> page, the parts that moved from the <em>Adoption</em> page to <em>Right now</em> follow there, and the method of the incidents is in this guide. The full list of ASPAs is a download on the <a href="/api.html#download">API page</a> (an old <code>#all</code> link goes there).</p>
+  </section>
+
+  <section aria-labelledby="no-guarantee">
+    <h2 id="no-guarantee">No guarantee</h2>
+    <p>Everything this site gives, its pages, its API, the alerts and the messages by mail or webhook, is offered as it is, on a best-effort basis and with no guarantee of any kind. The data can be late, incomplete or wrong, and a message can be late or never arrive. Nothing here should be the only ground for a decision on a network: whoever uses it is expected to check the data on their own.</p>
   </section>
 
   <section aria-labelledby="home">
@@ -195,7 +200,7 @@
     <h3>What is kept</h3>
     <p>The address (or the webhook address and its secret), the AS and the dates of subscription and of the last notification, for as long as the subscription lasts, and the notifications that are waiting to be delivered (at most two days). A request that is never confirmed is deleted after two days, and a subscription that was switched off after failed deliveries after thirty. The service does not store visitor addresses: it only counts them in memory to limit abuse, a few requests an hour. The web server, like any, writes the address of each request, with the time and the page asked, in its access log; the logs are compressed every day, kept 365 days and then deleted, and are used only to run and protect the service. Nothing is used for anything else or given to anyone; stopping deletes the record. Questions: <a href="mailto:antonio.prado@dei.unipd.it">antonio.prado@dei.unipd.it</a>.</p>
     <p>The privacy information of the University of Padova is at <a href="https://www.unipd.it/en/privacy" target="_blank" rel="noopener">unipd.it/en/privacy<span class="sr-only"> (opens in a new tab)</span></a>.</p>
-    <p>This is a research service run without guarantees: a notification may be late or, if a mail server rejects the message, lost.</p>
+    <p>This is a research service run without guarantees (see <a href="#no-guarantee">No guarantee</a>): a notification may be late or, if a mail server rejects the message, lost.</p>
   </section>
 
   <section aria-labelledby="share-result">

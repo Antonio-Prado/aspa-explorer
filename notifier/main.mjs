@@ -67,8 +67,10 @@ const dkimPath = env('NOTIFY_DKIM_KEY', '/var/db/aspa-notify/dkim.key');
 const dkim = existsSync(dkimPath) ? { domain: DOMAIN, selector: env('NOTIFY_SELECTOR', 'aspa2026'), privateKey: readFileSync(dkimPath, 'utf8') } : null;
 if (!dkim) log('no DKIM key: mails are sent unsigned');
 
+// the last line of every message: nothing the site says is guaranteed
+const BEST_EFFORT = 'This message is sent on a best-effort basis, with no guarantee: please check the data on your own before acting on it.';
 const mailTo = (to, subject, text, unsubscribeUrl) =>
-  sendmail(serialize(compose({ from: FROM, to, subject, text, unsubscribeUrl, replyTo: REPLY_TO, domain: DOMAIN }), dkim), FROM, to);
+  sendmail(serialize(compose({ from: FROM, to, subject, text: `${text}\n\n${BEST_EFFORT}`, unsubscribeUrl, replyTo: REPLY_TO, domain: DOMAIN }), dkim), FROM, to);
 
 async function sendConfirmation({ to, asn, token, site, leaks, invalid }) {
   if (asn === STATUS) {
