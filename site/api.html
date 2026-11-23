@@ -23,18 +23,18 @@
 <meta name="twitter:card" content="summary_large_image">
 <meta name="color-scheme" content="light dark">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
-<link rel="stylesheet" href="/style.css?v=1.100.1">
-<script src="/download.js?v=1.100.1" defer></script>
-<script src="/datasets.js?v=1.100.1" defer></script>
-<script src="/status-checks.js?v=1.100.1" defer></script>
-<script src="/asnames.js?v=1.100.1" defer></script>
-<script src="/footer.js?v=1.100.1" defer></script>
+<link rel="stylesheet" href="/style.css?v=1.101.0">
+<script src="/download.js?v=1.101.0" defer></script>
+<script src="/datasets.js?v=1.101.0" defer></script>
+<script src="/status-checks.js?v=1.101.0" defer></script>
+<script src="/asnames.js?v=1.101.0" defer></script>
+<script src="/footer.js?v=1.101.0" defer></script>
 </head>
 <body>
 <a class="skip" href="#main">Skip to main content</a>
 <header class="wrap masthead">
   <div class="top">
-    <p class="back"><a class="brandlink" href="/" title="Back to ASPA Explorer"><img class="brand" src="/img/logo-mark.svg?v=1.100.1" alt="" width="40" height="40"><span>ASPA Explorer</span></a></p>
+    <p class="back"><a class="brandlink" href="/" title="Back to ASPA Explorer"><img class="brand" src="/img/logo-mark.svg?v=1.101.0" alt="" width="40" height="40"><span>ASPA Explorer</span></a></p>
     <nav class="topnav" aria-label="Main"><a class="sect a-look" href="/network.html">Look up</a><a class="sect a-adopt" href="/statistics.html">Adoption</a><a class="sect a-now" href="/now.html">Right now</a><a class="sect a-inc" href="/incidents.html">Incidents</a><a class="minor" href="/guide.html">Guide</a><a class="minor" href="/examples.html">Examples</a><a class="minor" href="/api.html" aria-current="page">API</a><a class="minor" href="/status.html">Status</a></nav>
   </div>
   <h1>API</h1>
@@ -145,7 +145,9 @@ X-ASPA-Signature: sha256=…      HMAC-SHA256(secret, timestamp + "." + body), h
  "time": "2026-10-17T10:00:00.000Z",
  "change": {"customer": "AS3333", "kind": "changed", "providers": ["AS174", "AS1299", "AS3356"], "added": ["AS1299"], "dropped": []},
  "page": "https://aspa.ping6.it/as/AS3333",
- "unsubscribe": "https://aspa.ping6.it/api/v1/subscriptions/unsubscribe?token=…"}</code></pre>
+ "unsubscribe": "https://aspa.ping6.it/api/v1/subscriptions/unsubscribe?token=…",
+ "notice": "This message is sent on a best-effort basis, with no guarantee: please check the data on your own before acting on it."}</code></pre>
+    <p>Every delivery, of any type, has the <code>notice</code> field: a message can be late, wrong or never arrive, and nothing in it is guaranteed (see <a href="#no-guarantee">below</a>).</p>
     <p>Add <code>"leaks": true</code> to the body to receive, once a day, the new places of valley that involve the AS as well (only <code>true</code> counts; it cannot be changed later, subscribe again). Such a delivery has <code>"type": "aspa.leak"</code>, the same signature and a <code>place</code> object: <code>{"role": "valley" | "gap", "kind": "leak" | "gap", "from": "AS…", "to": "AS…", "between": ["AS…"], "feeders": 5, "routes": 10}</code>. The data comes from <a href="/api/v1/leaks-by-as.json">/api/v1/leaks-by-as.json</a> (the places seen by at least three feeders, for each AS), the totals of each day from <a href="/api/v1/leaks-history.json">/api/v1/leaks-history.json</a> and the file of an earlier day (the last 60) from <code>/api/v1/leaks-by-as/YYYYMMDD.json</code>.</p>
     <p>Add <code>"invalid": N</code> (a whole number from 5 to 100000) to be told when the AS is the origin of at least N announcements that the ASPAs prove invalid in a ten-minute run of the watcher, at most once every six hours. Such a delivery has <code>"type": "aspa.invalid"</code>, the same signature and an <code>invalid</code> object: <code>{"announcements": 300, "invalid": 30, "prefixes": [{"prefix": "192.0.2.0/24", "invalid": 20}], "from": "2026-10-18T11:51:00Z", "to": "2026-10-18T12:00:00Z"}</code>. What the last run saw, for the origins with at least five invalid announcements, is in <a href="/api/v1/invalid-last.json">/api/v1/invalid-last.json</a>.</p>
     <p>The alerts on the state of the service and on the RTR sessions are for whoever runs a site: on this one the topic is closed, and a request for it is refused with <code>403</code>. The two paragraphs below describe what the operator of a site receives (the notifier opens the topic with <code>NOTIFY_STATUS_OPEN=yes</code>).</p>

@@ -9,6 +9,12 @@ A few numbers were deployed and folded into the next release without a tag of th
 
 ## [Unreleased]
 
+## [1.101.0] - 2026-11-23
+
+### Added
+
+- Every delivery to a webhook carries a `notice` field with the same words as the last line of the mails: best effort, no guarantee, check the data on your own. The page of the API and the guide say so.
+
 ## [1.100.1] - 2026-11-23
 
 ### Fixed

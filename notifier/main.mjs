@@ -69,6 +69,8 @@ if (!dkim) log('no DKIM key: mails are sent unsigned');
 
 // the last line of every message: nothing the site says is guaranteed
 const BEST_EFFORT = 'This message is sent on a best-effort basis, with no guarantee: please check the data on your own before acting on it.';
+// a delivery to a webhook says the same in a field of its own
+const hook = (url, payload, opts) => post(url, { ...payload, notice: BEST_EFFORT }, opts);
 const mailTo = (to, subject, text, unsubscribeUrl) =>
   sendmail(serialize(compose({ from: FROM, to, subject, text: `${text}\n\n${BEST_EFFORT}`, unsubscribeUrl, replyTo: REPLY_TO, domain: DOMAIN }), dkim), FROM, to);
 
@@ -133,7 +135,7 @@ async function send(sub, job, row) {
         'The data is the output of the validator at rpki.ping6.it, checked every ten minutes.',
       ].join('\n'), unsub);
     } else {
-      ok(await post(sub.target, {
+      ok(await hook(sub.target, {
         event_id, type: 'aspa.change', asn: sub.asn, relation, text: line, time: new Date().toISOString(),
         change: { customer: e.customer, kind: e.kind, providers: e.providers, added: e.added, dropped: e.dropped },
         page: `${SITE}/as/${sub.asn}`, unsubscribe: unsub,
@@ -150,7 +152,7 @@ async function send(sub, job, row) {
         'An independent RTR client follows the validator of the site as a router would; its detector compares each sync with the ones before it. An anomaly is a sync out of the ordinary, not a verdict on the data.',
       ].join('\n'), unsub);
     } else {
-      ok(await post(sub.target, { event_id, type: 'aspa.rtr', text: text.join(' '), time: new Date().toISOString(), anomalies: job.events.map((a) => ({ at: a.at, cache: a.cache || null, cache_id: a.cache_id || null, severity: a.severity, category: a.category, trigger: a.trigger, values: a.raw || {}, z: a.z || {} })), page: `${SITE}/now.html#rtr-title`, unsubscribe: unsub }, { secret: sub.secret }));
+      ok(await hook(sub.target, { event_id, type: 'aspa.rtr', text: text.join(' '), time: new Date().toISOString(), anomalies: job.events.map((a) => ({ at: a.at, cache: a.cache || null, cache_id: a.cache_id || null, severity: a.severity, category: a.category, trigger: a.trigger, values: a.raw || {}, z: a.z || {} })), page: `${SITE}/now.html#rtr-title`, unsubscribe: unsub }, { secret: sub.secret }));
     }
   } else if (job.type === 'rtr-contact' || job.type === 'rtr-welcome') {
     // to the people who run a cache that the site follows (notifier/contact.mjs): the anomalies of their cache, or the first message
@@ -171,7 +173,7 @@ async function send(sub, job, row) {
         'The telemetry of each cache and its anomalies are public on the page. An anomaly is a sync out of the ordinary, not a verdict on the data. Replies reach the person who runs the site.',
       ].join('\n'), unsub);
     } else {
-      ok(await post(sub.target, { event_id, type: welcome ? 'aspa.rtr.welcome' : 'aspa.rtr.cache', text: text.filter(Boolean).join(' '), time: new Date().toISOString(), anomalies: (job.events || []).map((a) => ({ at: a.at, cache: a.cache || null, cache_id: a.cache_id || null, severity: a.severity, category: a.category, trigger: a.trigger, values: a.raw || {}, also: a.also || [] })), page, unsubscribe: unsub }, { secret: sub.secret }));
+      ok(await hook(sub.target, { event_id, type: welcome ? 'aspa.rtr.welcome' : 'aspa.rtr.cache', text: text.filter(Boolean).join(' '), time: new Date().toISOString(), anomalies: (job.events || []).map((a) => ({ at: a.at, cache: a.cache || null, cache_id: a.cache_id || null, severity: a.severity, category: a.category, trigger: a.trigger, values: a.raw || {}, also: a.also || [] })), page, unsubscribe: unsub }, { secret: sub.secret }));
     }
   } else if (job.type === 'status') {
     const text = job.events.map(describeStatusEvent);
@@ -184,7 +186,7 @@ async function send(sub, job, row) {
         'A change is announced when two checks in a row (15 minutes apart) show it. If the server itself is down, no message can be sent.',
       ].join('\n'), unsub);
     } else {
-      ok(await post(sub.target, { event_id, type: 'aspa.status', text: text.join(' '), time: new Date().toISOString(), changes: job.events.map((e) => ({ part: e.id, name: e.name, from: e.from, to: e.to, at: new Date(e.at * 1000).toISOString() })), page: `${SITE}/status.html`, unsubscribe: unsub }, { secret: sub.secret }));
+      ok(await hook(sub.target, { event_id, type: 'aspa.status', text: text.join(' '), time: new Date().toISOString(), changes: job.events.map((e) => ({ part: e.id, name: e.name, from: e.from, to: e.to, at: new Date(e.at * 1000).toISOString() })), page: `${SITE}/status.html`, unsubscribe: unsub }, { secret: sub.secret }));
     }
   } else {
     const { subject, line, type, extra, footer = FOOTER_LEAKS } = job;
@@ -197,7 +199,7 @@ async function send(sub, job, row) {
         footer,
       ].join('\n'), unsub);
     } else {
-      ok(await post(sub.target, { event_id, type, asn: sub.asn, text: line, time: new Date().toISOString(), ...extra, page: `${SITE}/as/${sub.asn}`, unsubscribe: unsub }, { secret: sub.secret }));
+      ok(await hook(sub.target, { event_id, type, asn: sub.asn, text: line, time: new Date().toISOString(), ...extra, page: `${SITE}/as/${sub.asn}`, unsubscribe: unsub }, { secret: sub.secret }));
     }
   }
 }

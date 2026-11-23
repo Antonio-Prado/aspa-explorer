@@ -23,16 +23,16 @@
 <meta name="twitter:card" content="summary_large_image">
 <meta name="color-scheme" content="light dark">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
-<link rel="stylesheet" href="/style.css?v=1.100.1">
-<script src="/status-checks.js?v=1.100.1" defer></script>
-<script src="/asnames.js?v=1.100.1" defer></script>
-<script src="/footer.js?v=1.100.1" defer></script>
+<link rel="stylesheet" href="/style.css?v=1.101.0">
+<script src="/status-checks.js?v=1.101.0" defer></script>
+<script src="/asnames.js?v=1.101.0" defer></script>
+<script src="/footer.js?v=1.101.0" defer></script>
 </head>
 <body>
 <a class="skip" href="#main">Skip to main content</a>
 <header class="wrap masthead">
   <div class="top">
-    <p class="back"><a class="brandlink" href="/" title="Back to ASPA Explorer"><img class="brand" src="/img/logo-mark.svg?v=1.100.1" alt="" width="40" height="40"><span>ASPA Explorer</span></a></p>
+    <p class="back"><a class="brandlink" href="/" title="Back to ASPA Explorer"><img class="brand" src="/img/logo-mark.svg?v=1.101.0" alt="" width="40" height="40"><span>ASPA Explorer</span></a></p>
     <nav class="topnav" aria-label="Main"><a class="sect a-look" href="/network.html">Look up</a><a class="sect a-adopt" href="/statistics.html">Adoption</a><a class="sect a-now" href="/now.html">Right now</a><a class="sect a-inc" href="/incidents.html">Incidents</a><a class="minor" href="/guide.html" aria-current="page">Guide</a><a class="minor" href="/examples.html">Examples</a><a class="minor" href="/api.html">API</a><a class="minor" href="/status.html">Status</a></nav>
   </div>
   <h1>Guide</h1>
@@ -196,7 +196,7 @@
     <h3>E-mail</h3>
     <p>Type your address. A message with a link comes to it; nothing is sent until you open the link and press the button. One network can ask for at most three such messages to the same address a day, so that nobody can fill a mailbox with them, and an address whose domain has no mail server on the public Internet is refused. A subscription gets at most 24 messages about changes in 24 hours: the next one says so, and the page and the feed of the AS keep every change. Every notification has a link to stop, and a <code>List-Unsubscribe</code> header that mail programs show as an unsubscribe button. The messages come from <code>notifications@aspa.ping6.it</code>, are signed with DKIM and are plain text. If they land in the spam folder, mark them as not spam.</p>
     <h3>Webhook</h3>
-    <p>Give an <code>https</code> address with a public host name (port 443 or 8443; not an IP address, not a private network). The service first sends a <code>verification</code> request with a random challenge in the <code>X-ASPA-Challenge</code> header, and the address must answer with a 2xx status and <code>{"challenge": "…"}</code> with that value; only then the subscription is active, and the <strong>secret</strong> is shown once. Each delivery is a JSON <code>POST</code> signed in the <code>X-ASPA-Signature</code> header (HMAC-SHA256 of the timestamp, a dot and the body, with the secret). The <a href="/api.html#subscriptions">API page</a> has the format. A message that cannot be delivered is kept and tried again after 10 minutes, 30 minutes, 1 hour and 2 hours; the messages of one subscription go in order. A subscription, e-mail or webhook, that fails five attempts in a row is switched off (asking for it again and confirming starts it again), and a message that is more than two days old is dropped.</p>
+    <p>Give an <code>https</code> address with a public host name (port 443 or 8443; not an IP address, not a private network). The service first sends a <code>verification</code> request with a random challenge in the <code>X-ASPA-Challenge</code> header, and the address must answer with a 2xx status and <code>{"challenge": "…"}</code> with that value; only then the subscription is active, and the <strong>secret</strong> is shown once. Each delivery is a JSON <code>POST</code> signed in the <code>X-ASPA-Signature</code> header (HMAC-SHA256 of the timestamp, a dot and the body, with the secret). The <a href="/api.html#subscriptions">API page</a> has the format; every delivery has a <code>notice</code> field that says what the last line of every e-mail says: the message is sent on a best-effort basis, with no guarantee (see <a href="#no-guarantee">No guarantee</a>). A message that cannot be delivered is kept and tried again after 10 minutes, 30 minutes, 1 hour and 2 hours; the messages of one subscription go in order. A subscription, e-mail or webhook, that fails five attempts in a row is switched off (asking for it again and confirming starts it again), and a message that is more than two days old is dropped.</p>
     <h3>What is kept</h3>
     <p>The address (or the webhook address and its secret), the AS and the dates of subscription and of the last notification, for as long as the subscription lasts, and the notifications that are waiting to be delivered (at most two days). A request that is never confirmed is deleted after two days, and a subscription that was switched off after failed deliveries after thirty. The service does not store visitor addresses: it only counts them in memory to limit abuse, a few requests an hour. The web server, like any, writes the address of each request, with the time and the page asked, in its access log; the logs are compressed every day, kept 365 days and then deleted, and are used only to run and protect the service. Nothing is used for anything else or given to anyone; stopping deletes the record. Questions: <a href="mailto:antonio.prado@dei.unipd.it">antonio.prado@dei.unipd.it</a>.</p>
     <p>The privacy information of the University of Padova is at <a href="https://www.unipd.it/en/privacy" target="_blank" rel="noopener">unipd.it/en/privacy<span class="sr-only"> (opens in a new tab)</span></a>.</p>
