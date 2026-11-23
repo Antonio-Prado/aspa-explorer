@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "ASPA Explorer API",
-    "version": "1.98.1",
+    "version": "1.99.0",
     "description": "ASPA objects validated by Routinator at rpki.ping6.it, their history and quality, for any AS. Open data, read-only, no key.",
     "contact": {
       "email": "antonio.prado@dei.unipd.it"
@@ -2277,6 +2277,7 @@
                 "karsolink",
                 "karsolink2",
                 "rsanto",
+                "hyperbit",
                 "level66",
                 "daknob_zrh2",
                 "daknob_ams1",
@@ -2325,6 +2326,7 @@
                 "karsolink",
                 "karsolink2",
                 "rsanto",
+                "hyperbit",
                 "level66",
                 "daknob_zrh2",
                 "daknob_ams1",
@@ -2373,6 +2375,7 @@
                 "karsolink",
                 "karsolink2",
                 "rsanto",
+                "hyperbit",
                 "level66",
                 "daknob_zrh2",
                 "daknob_ams1",

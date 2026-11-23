@@ -9,6 +9,12 @@ A few numbers were deployed and folded into the next release without a tag of th
 
 ## [Unreleased]
 
+## [1.99.0] - 2026-11-23
+
+### Added
+
+- A fourteenth RTR cache on the *RTR caches* tab of *Right now*: the Routinator that HyperBit SRLs (AS208437) runs and lets this site follow (`hyperbit`), with the same addresses for its telemetry, baseline and metrics as the others. It speaks RTR version 2 and carries no ASPA today; its version is read from the validator itself. Nine operators run the fourteen caches.
+
 ## [1.98.1] - 2026-11-22
 
 ### Changed
