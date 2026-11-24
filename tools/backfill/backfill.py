@@ -24,7 +24,8 @@ usage: backfill.py BASE FROM TO [--warmup N] [--until YYYY-MM-DDTHH:MM] [--limit
                  open stay open. This is how a collector without a recorder is followed live: one such block for each,
                  starting where its other blocks end
 BACKFILL_DETECTOR_LOCK=FILE runs the detector under an exclusive lock on FILE: the blocks that follow several collectors on
-one host give it the same file, so that their detectors (some GB each) do not all run at once at the top of the hour.
+one host give it the same file, so that their detectors (some GB each) do not all run at once at the top of the hour;
+BACKFILL_DETECTOR_SLOTS=N lets N of them run at once (FILE.0 ... FILE.N-1), which a long catching up needs.
 BACKFILL_DROP_DONE_WORK=1 removes the working files of a block when it is done (keep them for a block to be extended).
 A day that is done is not read again: a block that was stopped starts again from the day it was reading. `touch BASE/STOP`
 ends every block after the day it is reading. Each day adds a line to BASE/days.jsonl (incidents, files, notes, seconds).
@@ -288,16 +289,27 @@ def main():
 
 
 def run_detector(cmd, work, lg):
-    """The detector, under the lock of BACKFILL_DETECTOR_LOCK when it is set."""
+    """The detector, under the lock of BACKFILL_DETECTOR_LOCK when it is set: one of BACKFILL_DETECTOR_SLOTS files
+    (FILE.0, FILE.1, ...; default 1, FILE itself), so that at most that many detectors of the workers that share it run at once."""
     lock = os.environ.get("BACKFILL_DETECTOR_LOCK")
     if not lock:
         return subprocess.run(cmd, cwd=work, stdout=lg, stderr=subprocess.STDOUT)
-    with open(lock, "a") as lf:
-        fcntl.flock(lf, fcntl.LOCK_EX)
-        try:
-            return subprocess.run(cmd, cwd=work, stdout=lg, stderr=subprocess.STDOUT)
-        finally:
-            fcntl.flock(lf, fcntl.LOCK_UN)
+    slots = max(1, int(os.environ.get("BACKFILL_DETECTOR_SLOTS", "1")))
+    paths = [lock] if slots == 1 else [f"{lock}.{i}" for i in range(slots)]
+    while True:
+        for p in paths:
+            lf = open(p, "a")
+            try:
+                fcntl.flock(lf, fcntl.LOCK_EX | (fcntl.LOCK_NB if slots > 1 else 0))
+            except BlockingIOError:
+                lf.close()
+                continue
+            try:
+                return subprocess.run(cmd, cwd=work, stdout=lg, stderr=subprocess.STDOUT)
+            finally:
+                fcntl.flock(lf, fcntl.LOCK_UN)
+                lf.close()
+        time.sleep(2)
 
 
 def run_days(a, base, first, name_of_block, block, work, tmp, archive, done, done_file, days, until, py):

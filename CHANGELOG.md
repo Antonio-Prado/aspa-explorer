@@ -11,7 +11,7 @@ A few numbers were deployed and folded into the next release without a tag of th
 
 ### Added
 
-- The collectors without a recorder can be followed live from the archive of RIPE RIS: `tools/backfill/backfill.py --follow` reads a block that has no end (`FROM open`), each hour of the day that is going on as soon as its update files are published (`BACKFILL_FOLLOW_DELAY`, 20 minutes after the end of the hour), and goes on day after day with its state never closed. The days it writes are the same as those of the backfill, in the same working directory, so the host and the page take them as they are. `start-workers.sh` starts such a worker for a line `COLLECTOR MEMLIMIT_KB live` of `~/workers.conf`, and these workers run their detector one at a time (`BACKFILL_DETECTOR_LOCK`).
+- The collectors without a recorder can be followed live from the archive of RIPE RIS: `tools/backfill/backfill.py --follow` reads a block that has no end (`FROM open`), each hour of the day that is going on as soon as its update files are published (`BACKFILL_FOLLOW_DELAY`, 20 minutes after the end of the hour), and goes on day after day with its state never closed. The days it writes are the same as those of the backfill, in the same working directory, so the host and the page take them as they are. `start-workers.sh` starts such a worker for a line `COLLECTOR MEMLIMIT_KB live` of `~/workers.conf`, and these workers run their detector three at a time at most (`BACKFILL_DETECTOR_LOCK`, `BACKFILL_DETECTOR_SLOTS`), so that catching up on the days since the end of the backfill does not take days.
 
 ## [1.101.2] - 2026-11-23
 
