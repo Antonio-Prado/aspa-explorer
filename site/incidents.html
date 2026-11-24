@@ -23,17 +23,17 @@
 <meta name="twitter:card" content="summary_large_image">
 <meta name="color-scheme" content="light dark">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
-<link rel="stylesheet" href="/style.css?v=1.101.3">
-<script src="/incidents.js?v=1.101.3" defer></script>
-<script src="/asnames.js?v=1.101.3" defer></script>
-<script src="/status-checks.js?v=1.101.3" defer></script>
-<script src="/footer.js?v=1.101.3" defer></script>
+<link rel="stylesheet" href="/style.css?v=1.102.0">
+<script src="/incidents.js?v=1.102.0" defer></script>
+<script src="/asnames.js?v=1.102.0" defer></script>
+<script src="/status-checks.js?v=1.102.0" defer></script>
+<script src="/footer.js?v=1.102.0" defer></script>
 </head>
 <body class="area-inc">
 <a class="skip" href="#main">Skip to main content</a>
 <header class="wrap masthead">
   <div class="top">
-    <p class="back"><a class="brandlink" href="/" title="Back to ASPA Explorer"><img class="brand" src="/img/logo-mark.svg?v=1.101.3" alt="" width="40" height="40"><span>ASPA Explorer</span></a></p>
+    <p class="back"><a class="brandlink" href="/" title="Back to ASPA Explorer"><img class="brand" src="/img/logo-mark.svg?v=1.102.0" alt="" width="40" height="40"><span>ASPA Explorer</span></a></p>
     <nav class="topnav" aria-label="Main"><a class="sect a-look" href="/network.html">Look up</a><a class="sect a-adopt" href="/statistics.html">Adoption</a><a class="sect a-now" href="/now.html">Right now</a><a class="sect a-inc" href="/incidents.html" aria-current="page">Incidents</a><a class="minor" href="/guide.html">Guide</a><a class="minor" href="/examples.html">Examples</a><a class="minor" href="/api.html">API</a><a class="minor" href="/status.html">Status</a></nav>
   </div>
   <div class="pagetop">
@@ -96,6 +96,21 @@
       </table>
     </section>
     <p class="hint" id="inc-note"></p>
+  </section>
+
+  <section aria-labelledby="inc-irr-title" id="inc-irr" hidden>
+    <h2 id="inc-irr-title" class="subhead">Would a filter built from the IRR have stopped them?</h2>
+    <p class="hint">Many networks accept a route from a customer or a peer only when the IRR has a route object for that prefix and its origin, and some accept the more specifics of a route object as well. For each prefix hijack (PRH) and each more specific announced by another network (DEG-MA) of the last 30 days, this table looks for the origin in <span id="inc-irr-sources">the route objects of the IRR databases of the RIRs</span>, as they were on the day of the incident. Route leaks are not checked: their origin is the legitimate one, so its route object says nothing about the leak.</p>
+    <section class="card table-wrap" tabindex="0" aria-label="Table of the route objects of the origins of the hijacks and of the more specifics">
+      <table class="checks live tight">
+        <caption class="sr-only">For the prefix hijacks and the more specifics announced by another network: how many were checked, and how many had a route object for the prefix and its origin, only one for a less specific prefix of the same origin, none, or began before the archive of the IRR databases</caption>
+        <thead>
+          <tr><th scope="col">Type</th><th scope="col" class="num">Incidents</th><th scope="col" class="num">Route object for the prefix</th><th scope="col" class="num">Only for a less specific prefix</th><th scope="col" class="num">No route object</th><th scope="col" class="num">Before the archive</th></tr>
+        </thead>
+        <tbody id="inc-irr-rows"></tbody>
+      </table>
+    </section>
+    <p class="hint" id="inc-irr-note"></p>
   </section>
 
   <section aria-labelledby="inc-curve-title">

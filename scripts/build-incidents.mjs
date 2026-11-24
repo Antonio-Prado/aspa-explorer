@@ -13,6 +13,9 @@
 // Environment:
 //   INCIDENTS_EVENTS   URL or file of the history of changes (the events.json of the history branch), default as build-leaks.mjs
 //   ASPA_DATA          URL or file of today's ASPAs, used for a day that the history does not cover
+//   IRR_ARCHIVE        folder of the daily archive of the IRR databases (scripts/irr-registered.mjs), default
+//                      /home/thinker/ring-archive/irr; when it is not there, no incident is covered and the page says so
+//   IRR_CACHE          folder of the verdicts of each IRR snapshot kept between runs, default the cache folder + /irr
 import { readFile, writeFile, rename, readdir, stat, rm } from 'node:fs/promises';
 import { createReadStream, createWriteStream } from 'node:fs';
 import { once } from 'node:events';
@@ -23,6 +26,7 @@ import { createRequire } from 'node:module';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import { classify, aspaMap, EVENTS } from './build-leaks.mjs';
+import { irrChecker, listSnapshots, SOURCES as IRR_SOURCES } from './irr-registered.mjs';
 
 const History = createRequire(import.meta.url)('../site/history.js');
 const UA = 'aspa-explorer (https://aspa.ping6.it; antonio.prado@dei.unipd.it)';
@@ -70,7 +74,7 @@ function parseLine(line) {
 }
 
 // The incidents of the files (plain or gzipped), one at a time and in the order of the files: nothing is kept. With `only`,
-// a line that does not match it is not even parsed (the first reading wants the leaks alone, a tenth of the lines).
+// a line that does not match it is not even parsed (the first reading wants the leaks, the hijacks and the more specifics alone).
 export async function* readIncidents(list, only = null) {
   for (const file of list) {
     let input = createReadStream(file);
@@ -82,7 +86,8 @@ export async function* readIncidents(list, only = null) {
     }
   }
 }
-const LEAKS_ONLY = /"incident_type"\s*:\s*"RLK"/;
+// the first reading: the leaks, and the hijacks and more specifics whose route objects are looked up
+const FIRST_READING = /"incident_type"\s*:\s*"(RLK|PRH|DEG)"/;
 
 // The paths that an incident carries, origin first and without prepending, as the ASPA procedure wants them: the path of the
 // valley (RLK) and the ones of the announcements it kept. incident.py has them neighbour first.
@@ -195,14 +200,15 @@ export function leakTracker() {
 const stamp = (t) => (/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}/.test(t || '') ? t.slice(0, 19) : null);
 
 // incidents: parsed; aspasOf(day): the ASPA lookup of a day (Map AS number -> Set of providers); ideal, degree: complete ASPAs
-export function analyse(incidents, aspasOf, ideal, degree, detail = null) {
-  const a = analyser(aspasOf, ideal, degree, leakers(incidents));
+export function analyse(incidents, aspasOf, ideal, degree, detail = null, irrOf = null) {
+  const a = analyser(aspasOf, ideal, degree, leakers(incidents), irrOf);
   for (const inc of incidents) { const row = a.add(inc); detail?.push(row); }
   return a.result();
 }
 // The same, an incident at a time: add(incident) counts it and gives back its line of the detail file, result() the aggregate.
 // lk: the leaking ASes of all the incidents (leakers, leakTracker), which have to be known before the first one is counted.
-export function analyser(aspasOf, ideal, degree, lk) {
+// irrOf(incident): its route object verdict (irrChecker().verdict), counted as `irr` of its type and subtype; null leaves it out.
+export function analyser(aspasOf, ideal, degree, lk, irrOf = null) {
   const ord = orders(ideal, degree);
   const byType = {}, bySub = {}, adoption = { random: {}, largest: {} };
   const bucket = (t) => (byType[t] ||= empty());
@@ -221,8 +227,11 @@ export function analyser(aspasOf, ideal, degree, lk) {
     const t0 = stamp(inc.start), t1 = stamp(inc.end) || t0;
     if (t0 && (!from || t0 < from)) from = t0;
     if (t1 && (!to || t1 > to)) to = t1;
+    const irr = irrOf ? irrOf(inc) : null;
+    if (irr) for (const x of all) { x.irr ||= { registered: 0, less_specific: 0, unregistered: 0, not_covered: 0 }; x.irr[irr]++; }
+    const withIrr = (row) => (irr ? { ...row, irr } : row);
     const paths = pathsOf(inc);
-    if (!paths.length) return { type: t, subtype: sub, actor: inc.actor_key, start: inc.start, end: inc.end, end_reason: inc.end_reason, paths: 0 };
+    if (!paths.length) return withIrr({ type: t, subtype: sub, actor: inc.actor_key, start: inc.start, end: inc.end, end_reason: inc.end_reason, paths: 0 });
     const real = verdictOf(aspasOf(s), paths), full = verdictOf(ideal, paths);
     for (const x of all) { x.with_path++; x.real[real]++; x.ideal[full]++; }
     if (sub !== 'RLK-PV') {
@@ -234,8 +243,8 @@ export function analyser(aspasOf, ideal, degree, lk) {
         });
       }
     }
-    return { type: t, subtype: sub, actor: inc.actor_key, start: inc.start, end: inc.end, end_reason: inc.end_reason, paths: paths.length,
-      real: ['valid', 'unknown', 'invalid'][real], complete: ['valid', 'unknown', 'invalid'][full] };
+    return withIrr({ type: t, subtype: sub, actor: inc.actor_key, start: inc.start, end: inc.end, end_reason: inc.end_reason, paths: paths.length,
+      real: ['valid', 'unknown', 'invalid'][real], complete: ['valid', 'unknown', 'invalid'][full] });
   };
   const result = () => {
     for (const o of ['random', 'largest']) for (const t of [...Object.keys(byType), 'total']) curve(o, t);
@@ -313,9 +322,13 @@ async function main() {
   today = aspaMap(current.aspas);
 
   // first reading: the leaking ASes; second reading: the verdicts, each line of the detail file written as soon as it is known
+  // and the prefix and origin of the hijacks and more specifics, whose route objects are then looked up in the IRR archive
   const tracker = leakTracker();
-  for await (const inc of readIncidents(list, LEAKS_ONLY)) tracker.add(inc);
-  const a = analyser(aspasOf, ideal, degree, tracker.result());
+  const snapshots = await listSnapshots(process.env.IRR_ARCHIVE || '/home/thinker/ring-archive/irr');
+  const irr = irrChecker(snapshots, process.env.IRR_CACHE || join(cache, 'irr'));
+  for await (const inc of readIncidents(list, FIRST_READING)) { tracker.add(inc); irr.need(inc); }
+  await irr.load();
+  const a = analyser(aspasOf, ideal, degree, tracker.result(), irr.verdict);
   let count = 0;
   const rows = async function* () {
     for await (const inc of readIncidents(list)) { count++; yield a.add(inc); }
@@ -329,6 +342,8 @@ async function main() {
     files: list.length,
     aspas: events ? (fallbacks ? 'history, today for days it does not cover' : 'history') : 'today',
     relationships: rel.source,
+    irr: { sources: IRR_SOURCES, types: ['PRH', 'DEG-MA'], snapshots: snapshots.length,
+      first: snapshots.length ? snapshots[0].day : null, last: snapshots.length ? snapshots[snapshots.length - 1].day : null },
     ...res,
   };
   const write = async (file, text) => { const tmp = `${file}.tmp`; await writeFile(tmp, text); await rename(tmp, file); };

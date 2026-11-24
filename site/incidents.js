@@ -119,6 +119,27 @@
     $('inc-note').textContent = 'Percentages are of the incidents with a path (flapping and mass withdrawals mostly have none: a dash). The lines under a class are the types of the survey that the detector tells apart; an incident is in one of them at most, and the ones that fit none are only in the line of the class. ASM is made of candidates: a link that CAIDA does not know may be a real one.';
   }
 
+  // The route objects of the origins of the hijacks and of the more specifics of another network (`irr` of incidents.json,
+  // scripts/irr-registered.mjs): always the window of the last 30 days, whatever period the table above shows.
+  function irrTable(d) {
+    const box = $('inc-irr');
+    const lines = [['PRH', NAMES.PRH, d.by_type.PRH], ['DEG-MA', SUBNAMES['DEG-MA'], (d.subtypes || {})['DEG-MA']]].filter(([, , b]) => b && b.irr);
+    if (!d.irr || !lines.length) { box.hidden = true; return; }
+    const cell = (n, of) => el('td', { class: 'num', text: of ? `${fmt.format(n)} (${pct(n, of)})` : '–' });
+    $('inc-irr-rows').replaceChildren(...lines.map(([code, name, b]) => {
+      const r = b.irr, of = r.registered + r.less_specific + r.unregistered + r.not_covered;
+      const m = /^(.*?)\s*\(/.exec(name || '');
+      return el('tr', {}, el('th', { scope: 'row' }, codeChip(code), ' ', m ? m[1] : name || code),
+        el('td', { class: 'num', text: fmt.format(of) }), cell(r.registered, of), cell(r.less_specific, of), cell(r.unregistered, of), cell(r.not_covered, of));
+    }));
+    if (d.irr.sources) $('inc-irr-sources').textContent = d.irr.sources;
+    $('inc-irr-note').textContent = (d.irr.first
+      ? `The archive of the IRR databases starts on ${day(d.irr.first)} and has ${plural(d.irr.snapshots, 'daily snapshot')}: each incident is checked against the newest one taken before it began, and one that began before the archive is counted as such, not as having no route object. `
+      : 'The archive of the IRR databases is not available: no incident could be checked. ')
+      + 'A route object does not prove that an announcement is legitimate, nor does its absence prove that it is not: many networks register none, and a route object can outlive the use of its prefix.';
+    box.hidden = false;
+  }
+
   // The curve: the share of the incidents with a path that would be Invalid, for 0 to 100% of the networks publishing.
   const SVG = 'http://www.w3.org/2000/svg';
   // eslint-disable-next-line no-restricted-syntax -- the element builder: its keys come from the code that calls it
@@ -355,6 +376,7 @@
       for (const id of ['inc-types-title', 'inc-curve-title']) $(id).parentElement.hidden = true;
       return;
     }
+    if (d) irrTable(d);
     const where = `in the updates of RIPE RIS ${history ? `${history.collector}${PLACE[history.collector] ? ` (${PLACE[history.collector]})` : ''}` : 'rrc00'}`;
     const recent = () => {
       const length = span(d.period.from, d.period.to);

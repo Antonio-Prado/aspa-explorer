@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "ASPA Explorer API",
-    "version": "1.101.3",
+    "version": "1.102.0",
     "description": "ASPA objects validated by Routinator at rpki.ping6.it, their history and quality, for any AS. Open data, read-only, no key. Best effort, with no guarantee of any kind: the data can be late, incomplete or wrong, and whoever uses it is expected to check it on their own.",
     "contact": {
       "email": "antonio.prado@dei.unipd.it"
@@ -1454,6 +1454,37 @@
                     "relationships": {
                       "type": "string"
                     },
+                    "irr": {
+                      "type": "object",
+                      "description": "The route object check of the hijacks (PRH) and of the more specifics announced by another AS (DEG-MA): the sources, the types checked, and the number, first and last day of the daily snapshots of the IRR databases read. Each checked type and subtype has `irr`: {registered, less_specific, unregistered, not_covered}, the incidents whose origin had a route object for the prefix, only one for a less specific prefix, none, or that began before the archive (or too long after its last snapshot).",
+                      "properties": {
+                        "sources": {
+                          "type": "string"
+                        },
+                        "types": {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          }
+                        },
+                        "snapshots": {
+                          "type": "integer"
+                        },
+                        "first": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "last": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        }
+                      },
+                      "additionalProperties": true
+                    },
                     "period": {
                       "type": "object",
                       "properties": {
@@ -2440,7 +2471,7 @@
       "get": {
         "operationId": "getIncidentsDetailJsonl",
         "summary": "Every incident of the detectors, one record a line",
-        "description": "The file that the aggregates of incidents.json come from, written once a day: for each incident its type and subtype, actor, start and end (UTC), why it ended, the number of AS paths kept, and the verdicts of the downstream ASPA verification with the ASPAs of the day (real) and with complete ASPAs (complete). Tens of megabytes.",
+        "description": "The file that the aggregates of incidents.json come from, written once a day: for each incident its type and subtype, actor, start and end (UTC), why it ended, the number of AS paths kept, and the verdicts of the downstream ASPA verification with the ASPAs of the day (real) and with complete ASPAs (complete); for a hijack (PRH) or a more specific announced by another AS (DEG-MA), whether its origin had a route object in the IRR databases of the RIRs on that day (irr: registered, less_specific, unregistered or not_covered). Tens of megabytes.",
         "responses": {
           "200": {
             "description": "The incidents",
@@ -2448,7 +2479,7 @@
               "application/x-ndjson": {
                 "schema": {
                   "type": "string",
-                  "description": "one JSON object a line: {type, subtype, actor, start, end, end_reason, paths, real, complete}"
+                  "description": "one JSON object a line: {type, subtype, actor, start, end, end_reason, paths, real, complete, irr}"
                 }
               }
             }

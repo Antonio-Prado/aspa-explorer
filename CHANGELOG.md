@@ -9,6 +9,13 @@ A few numbers were deployed and folded into the next release without a tag of th
 
 ## [Unreleased]
 
+## [1.102.0] - 2026-11-24
+
+### Added
+
+- The Incidents page says whether a prefix filter built from the IRR would have stopped the prefix hijacks (PRH) and the more specifics announced by another network (DEG-MA) of the last 30 days: for each one, whether its origin had a route object for the prefix in the IRR databases of AFRINIC, APNIC, ARIN, LACNIC and the RIPE NCC on the day it began, only one for a less specific prefix, or none (`scripts/irr-registered.mjs`, `irr` in `/api/v1/incidents.json` and in the detail file). The incidents that began before the archive of these databases are counted as such, never as having no route object. Route leaks are not checked: their origin is the legitimate one.
+- A daily archive of the IRR databases of the five RIRs, the authoritative ones only (`tools/irr-archive/`): route, route6, aut-num, as-set and route-set objects, one folder a day since 24 November 2026, with an index of the route objects in canonical form.
+
 ## [1.101.3] - 2026-11-24
 
 ### Added
