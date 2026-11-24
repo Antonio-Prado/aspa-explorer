@@ -9,6 +9,12 @@ A few numbers were deployed and folded into the next release without a tag of th
 
 ## [Unreleased]
 
+## [1.103.0] - 2026-11-24
+
+### Added
+
+- For a network with no ASPA, the home page and the page of the AS have a button, *Ask ASx to publish one*: it looks up the contact that the network publishes on PeeringDB (NOC, else technical, else policy; never abuse or sales) and opens the visitor's mail program with a short message to it, for the visitor to read and send (`site/ask-aspa.js`). The site sends nothing and keeps nothing; PeeringDB is asked from the browser only when the button is pressed.
+
 ## [1.102.0] - 2026-11-24
 
 ### Added

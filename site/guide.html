@@ -23,16 +23,16 @@
 <meta name="twitter:card" content="summary_large_image">
 <meta name="color-scheme" content="light dark">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
-<link rel="stylesheet" href="/style.css?v=1.102.0">
-<script src="/status-checks.js?v=1.102.0" defer></script>
-<script src="/asnames.js?v=1.102.0" defer></script>
-<script src="/footer.js?v=1.102.0" defer></script>
+<link rel="stylesheet" href="/style.css?v=1.103.0">
+<script src="/status-checks.js?v=1.103.0" defer></script>
+<script src="/asnames.js?v=1.103.0" defer></script>
+<script src="/footer.js?v=1.103.0" defer></script>
 </head>
 <body>
 <a class="skip" href="#main">Skip to main content</a>
 <header class="wrap masthead">
   <div class="top">
-    <p class="back"><a class="brandlink" href="/" title="Back to ASPA Explorer"><img class="brand" src="/img/logo-mark.svg?v=1.102.0" alt="" width="40" height="40"><span>ASPA Explorer</span></a></p>
+    <p class="back"><a class="brandlink" href="/" title="Back to ASPA Explorer"><img class="brand" src="/img/logo-mark.svg?v=1.103.0" alt="" width="40" height="40"><span>ASPA Explorer</span></a></p>
     <nav class="topnav" aria-label="Main"><a class="sect a-look" href="/network.html">Look up</a><a class="sect a-adopt" href="/statistics.html">Adoption</a><a class="sect a-now" href="/now.html">Right now</a><a class="sect a-inc" href="/incidents.html">Incidents</a><a class="minor" href="/guide.html" aria-current="page">Guide</a><a class="minor" href="/examples.html">Examples</a><a class="minor" href="/api.html">API</a><a class="minor" href="/status.html">Status</a></nav>
   </div>
   <h1>Guide</h1>
@@ -65,6 +65,7 @@
   <section aria-labelledby="home">
     <h2 id="home">The home page</h2>
     <p>The home page opens on the network you are on. The server looks up the address you come from in a map of the routes that the RIPE RIS collectors see (prefix and origin AS, rebuilt once a day from their public dumps, with only the routes seen by ten peers or more), and the page says whether that AS has an ASPA, with how many providers and how many things its quality checks find to look at, or that it has none yet, with a link to its page and to what it should publish. The lookup happens on the server of this site: your address is not sent to anybody else. An address that no route covers gets no answer, and the page starts from the search.</p>
+    <p id="ask-aspa">For a network with no ASPA, the home page and the page of the AS have a button, <em>Ask ASx to publish one</em>. It looks up the contact that the network publishes on PeeringDB (its NOC, or else its technical or policy contact; never the abuse or sales one) and opens your mail program with a short message to it: what an ASPA is, the page of the AS and the examples. You read it, change it if you like, and send it yourself, from your own address: this site sends nothing and keeps nothing. PeeringDB is asked from your browser only when you press the button, so it sees your address; a network that publishes no such contact gets no message, and the page says so.</p>
     <p>The search takes you to the page of an AS, and the links next to it to the check of an AS path, to the routes of an AS in BGP and to the examples of how to write an ASPA. <em>ASPAs validated today</em> is the count of the validator of this site, with how many of the networks seen in BGP have one, as a sentence and as a bar; the chart of their growth is on the <em>Adoption</em> page. The four areas of the site, each with a line on what is there, and a line for who is new to ASPA close the page.</p>
   </section>
 

@@ -2018,7 +2018,7 @@ function renderLookup(as) {
       el('p', { class: 'v-from', text: facts.join(' · ') }))
     : el('div', { class: 'you v-no res-verdict' },
       el('p', { class: 'v-line' }, el('strong', { class: 'v-word', text: 'Not yet.' }), ` ${as} has no ASPA, so a router cannot check which networks may carry its routes.`),
-      el('p', { class: 'v-links' }, el('a', { href: '/examples.html', text: 'How to publish one' })),
+      el('p', { class: 'v-links' }, el('a', { href: '/examples.html', text: 'How to publish one' }), window.AspaAsk ? window.AspaAsk.button(as) : null),
       el('p', { class: 'v-from', text: facts.join(' · ') }));
   // where the AS is registered, with the flag, in front of the other facts: the registry file comes after the answer
   getRegistry().then((lookup) => {

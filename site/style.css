@@ -134,6 +134,15 @@ button {
   font-weight: 600;
 }
 button:hover { background: var(--btn-hover); }
+/* a button that reads as a link (ask-aspa.js); on the home page it has the weight and the height of the links next to it */
+button.linkish { background: none; color: var(--accent); padding: 0; border-radius: 0; text-decoration: underline; text-underline-offset: 2px; font: inherit; }
+button.linkish:hover { background: none; text-decoration-thickness: 2px; }
+button.linkish:disabled { color: var(--muted); cursor: progress; }
+.ask-aspa { margin-left: 1.25rem; }
+.ask-note { display: block; margin-top: 0.25rem; color: var(--muted); font-size: 0.875rem; font-weight: 400; }
+.ask-note:empty { display: none; }
+.you-do .ask-aspa { margin-left: 0; }
+.you-do button.linkish { font-weight: 600; min-height: 2.75rem; }
 .hint { margin: 0.6rem 0 0; color: var(--muted); font-size: 0.875rem; }
 
 #result:not(:empty) { margin-top: 1.25rem; border-top: 1px solid var(--grid); padding-top: 1.25rem; }
