@@ -37,8 +37,9 @@ test('the mailto: address: the recipient, the subject and the approved text, enc
   assert.equal(q.get('subject'), 'An ASPA for AS64500?');
   const text = q.get('body');
   assert.ok(text.startsWith('Hello,\n\nI looked up AS64500 on ASPA Explorer'));
-  assert.ok(text.includes('https://aspa.ping6.it/as/AS64500'));
-  assert.ok(text.includes('https://aspa.ping6.it/examples.html'));
+  const lines = text.split('\n');
+  assert.equal(lines[3], 'https://aspa.ping6.it/as/AS64500', 'the page of the AS, on a line of its own');
+  assert.equal(lines.at(-4), 'https://aspa.ping6.it/examples.html', 'the examples, on a line of their own');
   assert.ok(text.endsWith('Best regards,\n'));
   assert.ok(!link.includes(' ') && !link.includes('\n'), 'nothing left unencoded');
 });
