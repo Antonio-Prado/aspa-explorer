@@ -5,7 +5,7 @@ BASE/archive. The days of a block are read in order, with the state of incident.
 nightly job; a block starts with an empty state, so it reads some days before its first one only to fill the state
 (the incidents written while it does are thrown away). The blocks can be run in any order: the newest first, to go back.
 
-usage: backfill.py BASE FROM TO [--warmup N] [--until YYYY-MM-DDTHH:MM] [--limit-files N] [--collector NAME] [--chunk-hours N]
+usage: backfill.py BASE FROM TO [--warmup N] [--until YYYY-MM-DDTHH:MM] [--limit-files N] [--collector NAME] [--chunk-hours N] [--follow]
   BASE    working directory (code/ with incident.py, extra_detectors.py, mrt2records.py, rib-links.mjs, mrt.mjs; venv/ with mrtparse;
           with code/incident-rs, tools/incident-rs built for the host, the incidents are found by it, and code/export_state.py
           brings over the state of a block that incident.py began)
@@ -18,11 +18,18 @@ usage: backfill.py BASE FROM TO [--warmup N] [--until YYYY-MM-DDTHH:MM] [--limit
   --chunk-hours N  read each day in parts of N hours (default 24, or BACKFILL_CHUNK_HOURS): the update files and the
                    records of one part are on the disk at a time, which a small disk needs (a day of a busy collector
                    takes 2 GB at once); the incidents are the same as in one reading of the day
+  --follow       a block that has no end (TO is "open"): after the days that are over it reads the day that is going on, a
+                 part as soon as RIPE RIS has published its update files (BACKFILL_FOLLOW_DELAY minutes after the end of the
+                 part, default 20), and goes on with the next day, for good. Its state is never closed: the incidents that are
+                 open stay open. This is how a collector without a recorder is followed live: one such block for each,
+                 starting where its other blocks end
+BACKFILL_DETECTOR_LOCK=FILE runs the detector under an exclusive lock on FILE: the blocks that follow several collectors on
+one host give it the same file, so that their detectors (some GB each) do not all run at once at the top of the hour.
 BACKFILL_DROP_DONE_WORK=1 removes the working files of a block when it is done (keep them for a block to be extended).
 A day that is done is not read again: a block that was stopped starts again from the day it was reading. `touch BASE/STOP`
 ends every block after the day it is reading. Each day adds a line to BASE/days.jsonl (incidents, files, notes, seconds).
 The downloaded files come from outside: they stay under BASE/blocks/<block>/tmp, and the parser runs with python -I."""
-import argparse, bz2, gzip, json, lzma, os, shutil, subprocess, sys, time, urllib.request, urllib.error
+import argparse, bz2, fcntl, gzip, json, lzma, os, shutil, subprocess, sys, time, urllib.request, urllib.error
 from datetime import date, datetime, timedelta, timezone
 
 UA = "aspa-explorer-backfill"
@@ -32,6 +39,20 @@ CAIDA = "https://publicdata.caida.org/datasets/as-relationships/serial-2"
 ROAS = "https://ftp.ripe.net/rpki"
 TALS = ("afrinic", "apnic", "arin", "lacnic", "ripencc")
 MIN_FREE_MB = int(os.environ.get("BACKFILL_MIN_FREE_MB", "1200"))   # a day is not begun with less free space than this
+FOLLOW_DELAY = timedelta(minutes=int(os.environ.get("BACKFILL_FOLLOW_DELAY", "20")))   # --follow: how long after its end a part is read
+
+
+def stopped(base):
+    return os.path.exists(os.path.join(base, "STOP"))
+
+
+def wait_until(base, t):
+    """--follow: sleeps until t (UTC, naive), looking for STOP every minute. -> False when STOP is there."""
+    while datetime.now(timezone.utc).replace(tzinfo=None) < t:
+        if stopped(base):
+            return False
+        time.sleep(min(60, max(1, (t - datetime.now(timezone.utc).replace(tzinfo=None)).total_seconds())))
+    return True
 
 
 def log(*a):
@@ -221,35 +242,73 @@ def main():
     ap.add_argument("--limit-files", type=int)
     ap.add_argument("--collector", default="rrc00")
     ap.add_argument("--chunk-hours", type=int, default=int(os.environ.get("BACKFILL_CHUNK_HOURS", "24")))
+    ap.add_argument("--follow", action="store_true")
     a = ap.parse_args()
     global COLLECTOR
     COLLECTOR = a.collector
     base = os.path.abspath(a.base)
-    first, last = date.fromisoformat(a.first), date.fromisoformat(a.last)
+    if a.follow and a.until:
+        ap.error("--follow has no --until: it never ends")
+    first = date.fromisoformat(a.first)
+    last = None if a.follow else date.fromisoformat(a.last)
     until = datetime.fromisoformat(a.until) if a.until else None
-    block = os.path.join(base, "blocks", f"{first}_{last}")
+    name_of_block = f"{first}_{a.last if a.follow else last}"      # --follow: FIRST_open
+    block = os.path.join(base, "blocks", name_of_block)
     work, tmp, archive = os.path.join(block, "work"), os.path.join(block, "tmp"), os.path.join(base, "archive")
     for p in (os.path.join(work, "data"), archive):
         os.makedirs(p, exist_ok=True)
     done_file = os.path.join(block, "done.json")
     done = json.load(open(done_file)) if os.path.exists(done_file) else []
 
-    days = [(first - timedelta(days=i), True) for i in range(a.warmup, 0, -1)]
-    d = first
-    while d <= last:
-        days.append((d, False))
-        d += timedelta(days=1)
-    if until:
-        days.append((until.date(), False))
+    def make_days():
+        """The days of the block, the warm-up first; with --follow, up to the day that is going on (UTC)."""
+        out = [(first - timedelta(days=i), True) for i in range(a.warmup, 0, -1)]
+        end = datetime.now(timezone.utc).date() if a.follow else last
+        d = first
+        while d <= end:
+            out.append((d, False))
+            d += timedelta(days=1)
+        if until:
+            out.append((until.date(), False))
+        return out
     py = os.path.join(base, "venv", "bin", "python")
 
+    while True:
+        days = make_days()
+        if not run_days(a, base, first, name_of_block, block, work, tmp, archive, done, done_file, days, until, py):
+            return
+        if not a.follow:
+            break
+    # with BACKFILL_DROP_DONE_WORK=1 the working files of a block that is done (its state, ROAs, delegation files and links:
+    # about 100 MB) go: no other block uses them, each starting from an empty state, but a block that is to be extended
+    # later (--until, to meet the recorder) needs its state, so they stay by default; done.json and incident.log stay
+    if os.environ.get("BACKFILL_DROP_DONE_WORK") == "1" and os.path.exists(work):
+        shutil.rmtree(work)
+    log(f"block {name_of_block}: done")
+
+
+def run_detector(cmd, work, lg):
+    """The detector, under the lock of BACKFILL_DETECTOR_LOCK when it is set."""
+    lock = os.environ.get("BACKFILL_DETECTOR_LOCK")
+    if not lock:
+        return subprocess.run(cmd, cwd=work, stdout=lg, stderr=subprocess.STDOUT)
+    with open(lock, "a") as lf:
+        fcntl.flock(lf, fcntl.LOCK_EX)
+        try:
+            return subprocess.run(cmd, cwd=work, stdout=lg, stderr=subprocess.STDOUT)
+        finally:
+            fcntl.flock(lf, fcntl.LOCK_UN)
+
+
+def run_days(a, base, first, name_of_block, block, work, tmp, archive, done, done_file, days, until, py):
+    """Reads the days of the block that are not done. -> False when STOP ended it."""
     for i, (d, warm) in enumerate(days):
         key = f"{d}"
         if key in done:
             continue
-        if os.path.exists(os.path.join(base, "STOP")):       # touch BASE/STOP: the workers end after the day they are reading
+        if stopped(base):       # touch BASE/STOP: the workers end after the day they are reading
             log("STOP is there: ending")
-            return
+            return False
         # a day takes some hundreds of megabytes while it is read (update files, records, ROAs, table): on a small disk the
         # worker waits (it tries the block again every 15 minutes) instead of filling it
         free = shutil.disk_usage(base).free
@@ -262,7 +321,7 @@ def main():
         epoch = int(datetime(d.year, d.month, d.day, tzinfo=timezone.utc).timestamp())
         name = f"records_{epoch}"
         partial = until if until and d == until.date() else None
-        is_last = i == len(days) - 1
+        is_last = not a.follow and i == len(days) - 1      # --follow: the state is never closed
         # The day is read in parts of --chunk-hours hours (24: the whole day at once): the update files of a part are
         # downloaded, turned into a record file, read by the detector and removed before the next part, so a small disk
         # holds one part and not a whole day. The detector keeps its state from one part to the next, and its incidents are
@@ -291,6 +350,15 @@ def main():
             if c < prog["chunks"]:
                 continue
             last_part = c == len(chunks) - 1
+            # --follow: a part is read once RIPE RIS has published its update files (the last one is written five minutes
+            # after its name; BACKFILL_FOLLOW_DELAY more for the archive to have it)
+            if a.follow and part:
+                ready = part[-1][0] + timedelta(minutes=5) + FOLLOW_DELAY
+                if datetime.now(timezone.utc).replace(tzinfo=None) < ready:
+                    log(f"{d}: waiting for {ready:%H:%M} UTC to read {part[0][0]:%H:%M}-{part[-1][0]:%H:%M}")
+                    if not wait_until(base, ready):
+                        log("STOP is there: ending")
+                        return False
             ce = int(part[0][0].replace(tzinfo=timezone.utc).timestamp()) if part else epoch
             cname = f"records_{ce}"
             rec = os.path.join(work, "data", cname + ".jsonl.gz")
@@ -330,7 +398,7 @@ def main():
                 # the last part of the last day of the block also writes the incidents that are still open: no later day of
                 # this block will close them
                 cmd = ([rs, "run"] if use_rs else [py, os.path.join(base, "code", "incident.py")]) + (["--flush-open"] if is_last and last_part else [])
-                r = subprocess.run(cmd, cwd=work, stdout=lg, stderr=subprocess.STDOUT)
+                r = run_detector(cmd, work, lg)
             if os.path.exists(rec) and (r.returncode or not os.path.exists(cout)):
                 raise RuntimeError(f"{d}: {os.path.basename(cmd[0])} ended with {r.returncode} (see {block}/incident.log)")
             t_inc += time.time() - tb
@@ -370,7 +438,7 @@ def main():
                 json.dump(done, f)
             os.replace(done_file + ".tmp", done_file)
             with open(os.path.join(base, "days.jsonl"), "a") as f:
-                f.write(json.dumps({"day": key, "block": f"{first}_{last}", "collector": COLLECTOR, "warmup": warm, "partial": bool(partial), "incidents": 0,
+                f.write(json.dumps({"day": key, "block": name_of_block, "collector": COLLECTOR, "warmup": warm, "partial": bool(partial), "incidents": 0,
                                     "update_files": 0, "missing_files": n_missing, "roas": n_roas, "notes": notes}) + "\n")
             log(f"{d}: no update files, day skipped")
             continue
@@ -396,18 +464,13 @@ def main():
         with open(done_file + ".tmp", "w") as f:
             json.dump(done, f)
         os.replace(done_file + ".tmp", done_file)
-        row = {"day": key, "block": f"{first}_{last}", "collector": COLLECTOR, "warmup": warm, "partial": bool(partial), "incidents": n_inc, "update_files": n_files,
+        row = {"day": key, "block": name_of_block, "collector": COLLECTOR, "warmup": warm, "partial": bool(partial), "incidents": n_inc, "update_files": n_files,
                "missing_files": n_missing, "roas": n_roas, "notes": notes,
                "seconds": {"inputs": round(t1 - t0), "records": round(t2 - t1), "incidents": round(t3 - t2), "all": round(time.time() - t0)}}
         with open(os.path.join(base, "days.jsonl"), "a") as f:
             f.write(json.dumps(row) + "\n")
         log(f"{d}: done, {n_inc} incidents, {round((time.time() - t0) / 60)} min" + (f" ({'; '.join(notes)})" if notes else ""))
-    # with BACKFILL_DROP_DONE_WORK=1 the working files of a block that is done (its state, ROAs, delegation files and links:
-    # about 100 MB) go: no other block uses them, each starting from an empty state, but a block that is to be extended
-    # later (--until, to meet the recorder) needs its state, so they stay by default; done.json and incident.log stay
-    if os.environ.get("BACKFILL_DROP_DONE_WORK") == "1" and os.path.exists(work):
-        shutil.rmtree(work)
-    log(f"block {first}_{last}: done")
+    return True
 
 
 if __name__ == "__main__":
