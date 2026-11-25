@@ -1,217 +1,188 @@
 {
- "generated": "2026-11-25T20:51:55Z",
+ "generated": "2026-11-25T23:05:59Z",
  "collectors": [
   "rrc00"
  ],
  "period": {
   "from": "2026-09-01",
   "to": "2026-10-25",
-  "days": 55
+  "days": 54
  },
  "window": 30,
  "history_to": "2026-11-25",
- "routes_read": 3012525989,
- "invalid_routes": 2431197,
- "places": 6136,
+ "routes_read": 2956757037,
+ "invalid_routes": 1869229,
+ "places": 5137,
  "classes": {
   "places": {
-   "2": 2288,
+   "2": 2277,
    "3": 0,
-   "4": 310,
-   "5": 2103,
-   "1a": 1336,
-   "1b": 99,
-   "1c": 0
-  },
-  "pairs": {
-   "2": 937,
-   "3": 0,
-   "4": 127,
-   "5": 747,
-   "1a": 879,
-   "1b": 54,
+   "4": 304,
+   "5": 1996,
+   "1a": 505,
+   "1b": 55,
    "1c": 0
   },
   "routes": {
-   "2": 1316642,
+   "2": 1293135,
    "3": 0,
-   "4": 259059,
-   "5": 291269,
-   "1a": 561997,
-   "1b": 2230,
+   "4": 253480,
+   "5": 283860,
+   "1a": 36893,
+   "1b": 1861,
    "1c": 0
   }
  },
  "totals": {
-  "places": 6136,
-  "pairs": 2744,
-  "routes": 2431197
+  "places": 5137,
+  "routes": 1869229
+ },
+ "corrections": {
+  "pairs": 122,
+  "customers": 93
  },
  "biggest_place": {
-  "routes": 485583,
-  "cls": "1a",
-  "at_feeder": true
+  "routes": 131777,
+  "cls": "2",
+  "feeder_fix": false
  },
- "feeder_routes": {
-  "at_feeder": 523147,
-  "of": 561997
+ "feeder_fixes": {
+  "places": 0,
+  "routes": 0,
+  "of_routes": 36893
+ },
+ "already": {
+  "places": 1398,
+  "fixed": 74
+ },
+ "appeared": {
+  "places": 3739,
+  "fixed": 431
  },
  "fix": {
-  "places": 1336,
-  "median": 1,
-  "q1": 1,
-  "q3": 4,
+  "places": 505,
+  "timed": 431,
+  "median": 5,
+  "q1": 2,
+  "q3": 14,
   "by_day": [
-   857,
-   78,
-   53,
-   43,
-   24,
-   8,
+   104,
+   45,
+   38,
+   25,
+   21,
    9,
-   27,
-   27,
-   15,
-   3,
-   13,
-   8,
-   8,
-   10,
-   14,
-   5,
-   23,
-   2,
-   9,
-   7,
-   3,
-   12,
    18,
-   23,
+   28,
    2,
    4,
-   17,
+   8,
+   9,
+   4,
    10,
-   4
+   5,
+   3,
+   7,
+   17,
+   0,
+   14,
+   4,
+   7,
+   6,
+   8,
+   1,
+   4,
+   6,
+   17,
+   4,
+   3
   ],
-  "up": 1296,
-  "down": 44
+  "by_source": {
+   "ripe": {
+    "places_seen": 2662,
+    "fixed": 306,
+    "day1": 66
+   },
+   "aspa": {
+    "places_seen": 1077,
+    "fixed": 125,
+    "day1": 38
+   }
+  },
+  "up": 502,
+  "down": 4
  },
  "evidence": [
   {
    "id": "all",
    "name": "All the places",
-   "places": 6136,
-   "fixed": 1336
+   "places": 5137,
+   "fixed": 505
   },
   {
    "id": "caida_provider",
    "name": "CAIDA has the missing AS as a provider of the customer",
-   "places": 2957,
-   "fixed": 258
+   "places": 2744,
+   "fixed": 171
   },
   {
    "id": "caida_none",
    "name": "CAIDA has a peer or a customer at both ends",
-   "places": 713,
-   "fixed": 99
+   "places": 647,
+   "fixed": 41
   },
   {
    "id": "irr_transit",
-   "name": "The IRR says transit at a failing pair",
-   "places": 1583,
-   "fixed": 500
+   "name": "The IRR says transit at one of the two ends",
+   "places": 1091,
+   "fixed": 134
   },
   {
    "id": "short",
    "name": "Seen on one or two days",
-   "places": 2026,
-   "fixed": 987
+   "places": 1065,
+   "fixed": 193
   },
   {
    "id": "long",
    "name": "Seen on more than seven days",
-   "places": 2936,
-   "fixed": 162
+   "places": 2911,
+   "fixed": 149
   },
   {
    "id": "many_feeders",
    "name": "Seen by three or more feeders on a day",
-   "places": 1469,
-   "fixed": 334
+   "places": 1235,
+   "fixed": 120
   },
   {
    "id": "one_feeder",
    "name": "Seen by a single feeder",
-   "places": 4183,
-   "fixed": 884
-  },
-  {
-   "id": "at_feeder",
-   "name": "The ASPA that misses the provider is the feeder's own",
-   "places": 1388,
-   "fixed": 367
+   "places": 3509,
+   "fixed": 351
   },
   {
    "id": "new_aspa",
    "name": "The ASPA was at most seven days old",
-   "places": 724,
-   "fixed": 209
+   "places": 578,
+   "fixed": 78
   },
   {
    "id": "old_aspa",
    "name": "The ASPA was more than 90 days old",
-   "places": 3742,
-   "fixed": 744
+   "places": 3138,
+   "fixed": 263
   }
  ],
  "rules": {
   "probable_fp": {
-   "picks": 2839,
-   "fixed": 293,
-   "of_fixed": 293
+   "picks": 2717,
+   "fixed": 188,
+   "of_fixed": 188
   },
   "short_no_evidence": {
-   "picks": 945,
-   "fixed": 527
-  }
- },
- "incidents": {
-  "total": 25566,
-  "alone": 7071,
-  "full_window": 569,
-  "from": "2026-10-07",
-  "to": "2026-11-25",
-  "by_subtype": {
-   "RLK-UL": {
-    "2": 0,
-    "3": 22,
-    "4": 6,
-    "5": 0,
-    "incidents": 28,
-    "1a": 0,
-    "1b": 0,
-    "1c": 0
-   },
-   "RLK-LL": {
-    "2": 0,
-    "3": 3,
-    "4": 0,
-    "5": 0,
-    "incidents": 3,
-    "1a": 0,
-    "1b": 0,
-    "1c": 0
-   },
-   "RLK-PV": {
-    "2": 105,
-    "3": 0,
-    "4": 0,
-    "5": 362,
-    "incidents": 538,
-    "1a": 68,
-    "1b": 3,
-    "1c": 0
-   }
+   "picks": 522,
+   "fixed": 110
   }
  }
 }

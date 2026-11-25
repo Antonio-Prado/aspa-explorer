@@ -24,6 +24,7 @@ import { execFileSync } from 'node:child_process';
 import { join } from 'node:path';
 import { aspaMap, classify, relations } from '../../scripts/build-leaks.mjs';
 import { autNums, IRR_SOURCES } from '../../scripts/build-counterpart.mjs';
+import { stateFor } from './state.mjs';
 
 const require = createRequire(import.meta.url);
 const History = require('../../site/history.js');
@@ -38,11 +39,11 @@ const MANY_FEEDERS = 3;
 const addDays = (iso, n) => new Date(Date.parse(`${iso}T00:00:00Z`) + n * 864e5).toISOString().slice(0, 10);
 
 // ASPA state at the start of each day, computed once per day
-function statesFor(events) {
-  const memo = new Map();
+function statesFor(events, history) {
+  const memo = new Map(), at = stateFor(events, history);
   return (iso) => {
     if (!memo.has(iso)) {
-      const st = History.replayBefore(events, iso);
+      const st = at(iso);
       memo.set(iso, { raw: st, map: aspaMap([...st].map(([customer, providers]) => ({ customer, providers }))) });
     }
     return memo.get(iso);
@@ -150,7 +151,9 @@ async function main() {
   const events = JSON.parse(await readFile(join(DATA, 'events.json'), 'utf8'));
   const lastEvent = events.at(-1)[0];
   const ixp = new Set(JSON.parse(await readFile(join(DATA, 'adoption.json'), 'utf8')).ixp || []);
-  const state = statesFor(events), caida = caidaFor(), org = await orgs();
+  const history = JSON.parse(await readFile(join(DATA, 'history.json'), 'utf8'));
+  const srcOf = new Map((Array.isArray(history) ? history : history.rows || history.history || []).map((r) => [r.date, r.src]));
+  const state = statesFor(events, history), caida = caidaFor(), org = await orgs();
   // the day each customer's ASPA first appeared (age of the ASPA at the first sighting of a place)
   const born = new Map();
   for (const [d, c, prov] of events) if (prov && !born.has(c)) born.set(c, d);
@@ -160,6 +163,8 @@ async function main() {
   const agg = new Map();
   for (const f of files) {
     const doc = JSON.parse(await readFile(join(out, f), 'utf8'));
+    // the first day of the hourly job has no state near its dump (the one before it is the archive's, 19 hours older): left out
+    if (srcOf.get(doc.day) === 'aspa' && srcOf.get(addDays(doc.day, -1)) === 'ripe') { console.error(`${doc.day}: left out, no ASPA state near its dump`); continue; }
     days.push({ day: doc.day, total: doc.total, places: doc.places.length });
     for (const g of doc.places) {
       const key = `${g.from}|${g.between.join('-')}|${g.to}`;
@@ -205,12 +210,13 @@ async function main() {
     else if (sibling || scrub) cls = '4';
     else if (transit && (a.days > SHORT_DAYS || a.maxFeeders >= MANY_FEEDERS)) cls = '2';
     else cls = '5';
-    // the failing ASPA is the one of a feeder of the collector (the down end is the feeder itself)
-    const atFeeder = a.feeders.has(a.to) && !(state(a.first).map.get(a.to) || new Set()).has(a.between.at(-1));
+    // the ASPA that was fixed is the one of a feeder of the collector: the fix came at the down end, and that AS feeds the collector.
+    // (A place that merely ends at a feeder with an ASPA says nothing: a feeder also sends the routes of its customers and peers.)
+    const atFeeder = Boolean(fix && fix.sub === '1a' && fix.added.some((x) => x.startsWith('down:')) && a.feeders.has(a.to));
     rows.push({ key: a.key, from: a.from, between: a.between, to: a.to, first: a.first, last: a.last, days: a.days, censored, routes: a.routes, max_routes: a.maxRoutes,
       feeders: a.feeders.size, max_feeders: a.maxFeeders, evidence: ev, sibling, scrub, full_window: full, fix, cls,
       would2: transit && (a.days > SHORT_DAYS || a.maxFeeders >= MANY_FEEDERS), would3: !transit && short,
-      at_feeder: atFeeder, single_feeder: a.feeders.size === 1, age_up: ageOf(a.from, a.first), age_down: ageOf(a.to, a.first) });
+      feeder_fix: atFeeder, left_cut: a.first === period.from, src: srcOf.get(a.first) || null, single_feeder: a.feeders.size === 1, age_up: ageOf(a.from, a.first), age_down: ageOf(a.to, a.first) });
   }
 
   // incidents: is the triple fixed afterwards, and the evidence on the two sides of the leaker

@@ -9,6 +9,17 @@ A few numbers were deployed and folded into the next release without a tag of th
 
 ## [Unreleased]
 
+## [1.105.2] - 2026-11-25
+
+### Fixed
+
+- The page *False positives* overstated what it measured, and its figures are computed again. Each table dump of 00:00 UTC was checked with the state of the ASPAs of the day before, which for the days of the RIPE NCC archive is a snapshot some 19 hours older than the dump: the routes whose ASPA had been completed in those hours counted as Invalid, and then as fixed the next day. Each dump is now checked with the two states around it, the one known at 00:00 and the one after the changes that may or may not have been there (the timeline of the ASPAs, `scripts/aspa-timeline.mjs`, with the time each daily file of the archive says it was generated at and the time of each commit of the hourly job), and a route counts only when it is Invalid with both. The dump of 16 October, which falls between the archive and the job, is left out. The places fixed by the operator are 505 of 5,137 (9.8%), not 1,336 of 6,136 (21.8%); the median time to the fix is 5 days, not 1; and the one feeder whose own ASPA accounted for most of the routes of the fixed places is gone, being such a case itself.
+- The same page counted a pair of customer and missing AS as fixed when either end of its place had been fixed: it now counts what the operators added, 122 providers by 93 networks. The line of the evidence on the feeders, which counted every place that ends at a feeder, is removed, and so is the table of the route leaks of the detector, whose incidents were judged with a daily state. The text no longer says that a fix proves the AS to be a provider (it is what the operator says), nor that the fixed ASPAs had forgotten a provider (one that follows a change of provider late looks the same).
+
+### Added
+
+- `scripts/aspa-timeline.mjs` and `scripts/build-timeline.mjs`: the history of the ASPAs with the time each change was first seen and the time of the look before it, from the RIPE NCC archive (the time is the one each file says it was generated at, `scripts/data/archive-times.json`: on some thirty days that is hours after the usual 04:00 to 06:00 UTC) and from the commits of the hourly job; the builder checks the whole document against the events at each run and writes nothing when a check fails.
+
 ## [1.105.1] - 2026-11-25
 
 ### Fixed

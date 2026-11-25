@@ -1,8 +1,10 @@
 // Every place of valley of one day (all of them, not the top of the site's files): the routes of the table dumps of 00:00 UTC
-// of the given collectors, checked with the ASPAs as they were at the start of the day; each Invalid path is grouped by its
-// place (the AS where the up ramp stops, the ASes between, the AS where the down ramp stops).
+// of the given collectors, checked with one of the two states of the ASPAs around that time (state.mjs): `before`, the one
+// known at 00:00, or `day` (the default), the one after the changes that may or may not have been there at 00:00. Each Invalid
+// path is grouped by its place (the AS where the up ramp stops, the ASes between, the AS where the down ramp stops).
+// A day is dumped with both, and robust.mjs keeps the places that are Invalid with both.
 //
-//   node dump-places.mjs YYYYMMDD OUT_DIR collector[,collector...]
+//   node dump-places.mjs YYYYMMDD OUT_DIR collector[,collector...] [before|day]
 //
 // Writes OUT_DIR/places-YYYYMMDD.json: {day, aspas, collectors, total, places: [...]}.
 import { createRequire } from 'node:module';
@@ -13,10 +15,10 @@ import { Readable } from 'node:stream';
 import { join } from 'node:path';
 import { classify, aspaMap, dayDumpUrls, intact, isRis } from '../../scripts/build-leaks.mjs';
 import { readRib, openDump } from '../../scripts/mrt.mjs';
+import { stateFor, stateBefore } from './state.mjs';
 
 const require = createRequire(import.meta.url);
 const { verify } = require('../../site/verify.js');
-const History = require('../../site/history.js');
 const DATA = (process.env.FP_DATA || new URL('./data/', import.meta.url).pathname);
 const UA = 'aspa-explorer';
 const MAX_PATHS = 8;
@@ -48,11 +50,10 @@ async function download1(urls, path) {
 }
 
 async function main() {
-  const [day, out, list] = process.argv.slice(2);
-  if (!/^\d{8}$/.test(day || '') || !out || !list) { console.error('usage: dump-places.mjs YYYYMMDD OUT_DIR collectors'); process.exit(2); }
+  const [day, out, list, mode = 'day'] = process.argv.slice(2);
+  if (!/^\d{8}$/.test(day || '') || !out || !list || !['before', 'day'].includes(mode)) { console.error('usage: dump-places.mjs YYYYMMDD OUT_DIR collectors [before|day]'); process.exit(2); }
   const iso = `${day.slice(0, 4)}-${day.slice(4, 6)}-${day.slice(6)}`;
-  const events = JSON.parse(await readFile(join(DATA, 'events.json'), 'utf8'));
-  const state = History.replayBefore(events, iso);
+  const state = (mode === 'before' ? stateBefore() : stateFor())(iso);
   const aspas = aspaMap([...state].map(([customer, providers]) => ({ customer, providers })));
   const ixp = new Set(JSON.parse(await readFile(join(DATA, 'adoption.json'), 'utf8')).ixp || []);
   const groups = new Map();
