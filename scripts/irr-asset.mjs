@@ -34,6 +34,7 @@ export const SET_FILES = ['ripe.db.as-set.gz', 'apnic.db.as-set.gz', 'arin.db.gz
 export const AUTNUM_FILES = ['ripe.db.aut-num.gz', 'apnic.db.aut-num.gz', 'arin.db.gz', 'afrinic.db.gz', 'lacnic.db.gz'];
 export const PEERINGDB_DUMP = (day) => `https://publicdata.caida.org/datasets/peeringdb/${day.slice(0, 4)}/${day.slice(5, 7)}/peeringdb_2_dump_${day.replaceAll('-', '_')}.json`;
 export const VERDICTS = ['passes', 'partly', 'stopped', 'unknown'];
+export const PEERINGDB_BACK = 2;          // days before the snapshot whose PeeringDB copy may stand in for it
 const VIA = { a: 'aut-num', p: 'peeringdb', n: 'none' };
 
 // "RIPE::AS-FOO", "AS-FOO@RIPE", "as123:as-foo" -> "AS123:AS-FOO" (the source is dropped: a name is looked for in every database)
@@ -77,9 +78,9 @@ export const setsOfFilter = (filter) => String(filter || '').toUpperCase().split
 // The table of a snapshot: {sets: {name: [members]}, exports: {sender: {receiver: [names]}}, pdb: {asn: [names]}, origins: {asn: count}, total}.
 // Only the exports that name a set are kept.
 export async function buildTable(dir, pdbFile) {
-  const sets = {};
+  const sets = {}, missing = [];
   for (const f of SET_FILES) {
-    try { for await (const [name, members] of asSets(gzLines(join(dir, f)))) if (!(name in sets)) sets[name] = members; } catch (err) { if (err.code !== 'ENOENT') console.error(`${f}: ${err.message}`); }
+    try { for await (const [name, members] of asSets(gzLines(join(dir, f)))) if (!(name in sets)) sets[name] = members; } catch (err) { missing.push(f); if (err.code !== 'ENOENT') console.error(`${f}: ${err.message}`); }
   }
   const exports = {}, seen = new Set();
   for (const f of AUTNUM_FILES) {
@@ -93,7 +94,7 @@ export async function buildTable(dir, pdbFile) {
           if (names.length) ((exports[as] ||= {})[r.as] ||= []).push(...names.filter((n) => !(exports[as][r.as] || []).includes(n)));
         }
       }
-    } catch (err) { if (err.code !== 'ENOENT') console.error(`${f}: ${err.message}`); }
+    } catch (err) { if (!missing.includes(f)) missing.push(f); if (err.code !== 'ENOENT') console.error(`${f}: ${err.message}`); }
   }
   const pdb = {};
   if (pdbFile) {
@@ -102,8 +103,8 @@ export async function buildTable(dir, pdbFile) {
         const names = String(n.irr_as_set || '').split(/[\s,]+/).filter(Boolean).map(setName).filter(isSetName);
         if (names.length && Number.isInteger(n.asn)) pdb[n.asn] = names;
       }
-    } catch (err) { console.error(`PeeringDB: ${err.message}`); }
-  }
+    } catch (err) { console.error(`PeeringDB: ${err.message}`); missing.push('peeringdb'); }
+  } else missing.push('peeringdb');
   const origins = {};
   let total = 0;
   for await (const line of gzLines(join(dir, 'index.tsv.gz'))) {
@@ -112,7 +113,7 @@ export async function buildTable(dir, pdbFile) {
     if (o === null) continue;
     origins[o] = (origins[o] || 0) + 1; total++;
   }
-  return { sets, exports, pdb: pdbFile ? pdb : null, origins, total };
+  return { sets, exports, pdb: pdbFile && !missing.includes('peeringdb') ? pdb : null, origins, total, missing };
 }
 
 // Expansion of the sets of a table, each one kept as a sorted Int32Array (a few bytes an AS, also for a set of the whole table).
@@ -236,23 +237,36 @@ export function assetChecker(snapshots, cacheDir) {
     if (!needs.has(snap.file)) needs.set(snap.file, new Map());
     needs.get(snap.file).set(s.key, s);
   };
+  // The table of a snapshot. It is kept only when nothing was missing: a database file of the day, or PeeringDB (the copy of the
+  // day at CAIDA, else of one of the PEERINGDB_BACK days before, which is published a day late), so that a bad night is built
+  // again by the next run instead of being kept for good. `complete` says whether it was kept.
   const tableOf = async (snap) => {
     const file = join(cacheDir, `table-${snap.day}.json`);
-    try { return JSON.parse(await readFile(file, 'utf8')); } catch { /* to build */ }
-    let pdbFile = join(cacheDir, `peeringdb-${snap.day}.json`);
-    try { await stat(pdbFile); } catch { try { await fetchTo(PEERINGDB_DUMP(snap.day), pdbFile); } catch (err) { console.error(`PeeringDB of ${snap.day}: ${err.message}`); pdbFile = null; } }
+    try { const t = JSON.parse(await readFile(file, 'utf8')); if (t.snapshot === snap.time) return { table: t, complete: true }; } catch { /* to build */ }
+    let pdbFile = null, pdbDay = null;
+    for (let back = 0; back <= PEERINGDB_BACK && !pdbFile; back++) {
+      const d = new Date(Date.parse(`${snap.day}T00:00:00Z`) - back * 864e5).toISOString().slice(0, 10);
+      const f = join(cacheDir, `peeringdb-${d}.json`);
+      try { await stat(f); pdbFile = f; pdbDay = d; } catch {
+        try { await fetchTo(PEERINGDB_DUMP(d), f); pdbFile = f; pdbDay = d; } catch (err) { console.error(`PeeringDB of ${d}: ${err.message}`); }
+      }
+    }
     const t = await buildTable(dirname(snap.file), pdbFile);
-    await writeFile(`${file}.tmp`, JSON.stringify(t));
-    await rename(`${file}.tmp`, file);
+    t.snapshot = snap.time; t.peeringdb_day = pdbDay;
+    const complete = !t.missing.length;
+    if (complete) {
+      await writeFile(`${file}.tmp`, JSON.stringify(t));
+      await rename(`${file}.tmp`, file);
+    } else console.error(`IRR set table of ${snap.day} not kept, missing: ${t.missing.join(', ')}`);
     if (pdbFile) await unlink(pdbFile).catch(() => {});      // the table keeps what is needed of it
-    return t;
+    return { table: t, complete };
   };
   const load = async () => {
     if (!needs.size) return;
     await mkdir(cacheDir, { recursive: true });
     for (const [file, subjects] of needs) {
       const snap = byFile.get(file);
-      const table = await tableOf(snap);
+      const { table, complete } = await tableOf(snap);
       const wanted = new Set();
       for (const s of subjects.values()) for (const p of s.prefixes) { wanted.add(p); for (const q of lessSpecifics(p)) wanted.add(q); }
       const originsOf = new Map();
@@ -269,6 +283,7 @@ export function assetChecker(snapshots, cacheDir) {
       const expand = expander(table), wideMemo = new Map();
       const m = await cached(snap);
       for (const s of subjects.values()) m.set(s.key, verdictOf(s, table, expand, originsOf, wideMemo));
+      if (!complete) continue;                // verdicts of an incomplete table are used by this run only
       await writeFile(`${cacheFile(snap)}.tmp`, JSON.stringify({ snapshot: snap.time, verdicts: Object.fromEntries(m) }));
       await rename(`${cacheFile(snap)}.tmp`, cacheFile(snap));
     }

@@ -23,17 +23,17 @@
 <meta name="twitter:card" content="summary_large_image">
 <meta name="color-scheme" content="light dark">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
-<link rel="stylesheet" href="/style.css?v=1.104.0">
-<script src="/incidents.js?v=1.104.0" defer></script>
-<script src="/asnames.js?v=1.104.0" defer></script>
-<script src="/status-checks.js?v=1.104.0" defer></script>
-<script src="/footer.js?v=1.104.0" defer></script>
+<link rel="stylesheet" href="/style.css?v=1.104.1">
+<script src="/incidents.js?v=1.104.1" defer></script>
+<script src="/asnames.js?v=1.104.1" defer></script>
+<script src="/status-checks.js?v=1.104.1" defer></script>
+<script src="/footer.js?v=1.104.1" defer></script>
 </head>
 <body class="area-inc">
 <a class="skip" href="#main">Skip to main content</a>
 <header class="wrap masthead">
   <div class="top">
-    <p class="back"><a class="brandlink" href="/" title="Back to ASPA Explorer"><img class="brand" src="/img/logo-mark.svg?v=1.104.0" alt="" width="40" height="40"><span>ASPA Explorer</span></a></p>
+    <p class="back"><a class="brandlink" href="/" title="Back to ASPA Explorer"><img class="brand" src="/img/logo-mark.svg?v=1.104.1" alt="" width="40" height="40"><span>ASPA Explorer</span></a></p>
     <nav class="topnav" aria-label="Main"><a class="sect a-look" href="/network.html">Look up</a><a class="sect a-adopt" href="/statistics.html">Adoption</a><a class="sect a-now" href="/now.html">Right now</a><a class="sect a-inc" href="/incidents.html" aria-current="page">Incidents</a><a class="minor" href="/guide.html">Guide</a><a class="minor" href="/examples.html">Examples</a><a class="minor" href="/api.html">API</a><a class="minor" href="/status.html">Status</a></nav>
   </div>
   <div class="pagetop">
@@ -113,7 +113,7 @@
     <p class="hint" id="inc-irr-note"></p>
     <div id="inc-irr-set" hidden>
       <h3 class="subhead">And with the AS-SET of the network that sent them?</h3>
-      <p class="hint">A network usually builds the filter of a customer or of a peer from the AS-SET that this one registers: the route objects of every AS in the set. Here the network that sent the routes is the origin, for a hijack and a more specific, and the AS that leaked, for a route leak; the filter is the one of the network that received them from it. Its set is the one that its aut-num exports to that network, or else the one it gives in PeeringDB; with neither, only its own route objects count. Only this first filter is looked at, not the ones further on.</p>
+      <p class="hint">A network usually builds the filter of a customer or of a peer from the AS-SET that this one registers: the route objects of every AS in the set, and their more specifics. Here the network that sent the routes is the origin, for a hijack and a more specific, and the AS that leaked, for a route leak; the filter is the one of the network that received them from it. Its set is the one that its aut-num exports to that network, or else the one it gives in PeeringDB; with neither, only its own route objects count. Only this first filter is looked at, not the ones further on.</p>
       <section class="card table-wrap" tabindex="0" aria-label="Table of the filters built from the AS-SET of the network that sent the routes">
         <table class="checks live tight">
           <caption class="sr-only">For the prefix hijacks, the more specifics announced by another network and the route leaks: how many were checked, and how many of them a filter built from the AS-SET of the network that sent them would have let through entirely, in part, stopped, could not tell, or began before the archive of the IRR databases</caption>

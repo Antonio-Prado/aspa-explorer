@@ -1,6 +1,7 @@
 // Unit tests for scripts/irr-asset.mjs (no dependencies, no network). Run with: node scripts/test-irr-asset.mjs
 import assert from 'node:assert/strict';
 import { mkdtemp, mkdir, writeFile, rm } from 'node:fs/promises';
+import { existsSync } from 'node:fs';
 import { gzipSync } from 'node:zlib';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -16,7 +17,7 @@ const linesOf = (text) => createInterface({ input: Readable.from([text]), crlfDe
 
 await test('set names: the source and the case do not matter, AS-ANY and AS numbers are not sets', () => {
   assert.equal(setName('RIPE::AS-Foo'), 'AS-FOO');
-  assert.equal(setName('as-foo@radb'), 'AS-FOO');
+  assert.equal(setName('as-foo@example'), 'AS-FOO');
   assert.equal(setName('as123:as-cust'), 'AS123:AS-CUST');
   assert.ok(isSetName('AS-FOO') && isSetName('AS123:AS-CUST'));
   assert.ok(!isSetName('AS123') && !isSetName('AS-ANY') && !isSetName('ANY'));
@@ -89,6 +90,7 @@ await test('the checker on an archive: table and verdicts kept in the cache, inc
     await writeFile(join(day, 'index.tsv.gz'), gzipSync('# snapshot 2026-11-24T18:00:00Z canonical\n192.0.2.0/24\tAS100\tRIPE\n198.51.100.0/24\tAS200\tARIN\n203.0.113.0/24\tAS400\tARIN\n203.0.114.0/24\tAS400\tARIN\n'));
     await writeFile(join(day, 'ripe.db.as-set.gz'), gzipSync('as-set: AS20:AS-CUST\nmembers: AS100\nsource: RIPE\n'));
     await writeFile(join(day, 'ripe.db.aut-num.gz'), gzipSync('aut-num: AS20\nexport: to AS30 announce AS20:AS-CUST\nsource: RIPE\n'));
+    for (const f of ['apnic.db.as-set.gz', 'apnic.db.aut-num.gz', 'arin.db.gz', 'afrinic.db.gz', 'lacnic.db.gz']) await writeFile(join(day, f), gzipSync(''));
     const snaps = await listSnapshots(join(dir, 'irr'));
     const cache = join(dir, 'cache');
     await mkdir(cache, { recursive: true });
@@ -102,6 +104,7 @@ await test('the checker on an archive: table and verdicts kept in the cache, inc
     assert.equal(decode(a.verdict(leak2)).verdict, 'stopped');
     assert.deepEqual(decode(a.verdict(leak3)), { verdict: 'unknown', via: 'peeringdb', wide: false });
     assert.equal(a.verdict(early), 'not_covered');
+    assert.ok(existsSync(join(cache, 'table-2026-11-24.json')) && existsSync(join(cache, 'verdicts-2026-11-24.json')));
     // a second run reads the verdicts from the cache, with no need to load anything
     const b = assetChecker(snaps, cache);
     await b.need(leak);
@@ -111,6 +114,25 @@ await test('the checker on an archive: table and verdicts kept in the cache, inc
     const { providers, degree } = relationSets('');
     const res = analyse([leak, leak2, leak3, early], () => new Map(), providers, degree, null, null, a.verdict);
     assert.deepEqual(res.by_type.RLK.irr_set, { passes: 1, partly: 0, stopped: 1, unknown: 1, not_covered: 1, via: { 'aut-num': 2, peeringdb: 1, none: 0 }, wide: 0 });
+  } finally { await rm(dir, { recursive: true, force: true }); }
+});
+
+await test('a snapshot with a database missing, or with no PeeringDB copy, gives verdicts for the run but keeps nothing', async () => {
+  const dir = await mkdtemp(join(tmpdir(), 'irr-asset-'));
+  try {
+    const day = join(dir, 'irr', '2026', '11', '24');
+    await mkdir(day, { recursive: true });
+    await writeFile(join(day, 'index.tsv.gz'), gzipSync('# snapshot 2026-11-24T18:00:00Z canonical\n192.0.2.0/24\tAS100\tRIPE\n'));
+    await writeFile(join(day, 'ripe.db.as-set.gz'), gzipSync('as-set: AS-X\nmembers: AS100\n'));
+    const cache = join(dir, 'cache');
+    await mkdir(cache, { recursive: true });
+    await writeFile(join(cache, 'peeringdb-2026-11-24.json'), JSON.stringify({ net: { data: [{ asn: 20, irr_as_set: 'AS-X' }] } }));
+    const a = assetChecker(await listSnapshots(join(dir, 'irr')), cache);
+    const leak = RLK(['192.0.2.0/24'], 10, 20, 30);
+    await a.need(leak);
+    await a.load();
+    assert.deepEqual(decode(a.verdict(leak)), { verdict: 'passes', via: 'peeringdb', wide: true });
+    assert.ok(!existsSync(join(cache, 'table-2026-11-24.json')) && !existsSync(join(cache, 'verdicts-2026-11-24.json')));
   } finally { await rm(dir, { recursive: true, force: true }); }
 });
 

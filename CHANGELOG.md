@@ -9,6 +9,12 @@ A few numbers were deployed and folded into the next release without a tag of th
 
 ## [Unreleased]
 
+## [1.104.1] - 2026-11-25
+
+### Fixed
+
+- The AS-SET check of the Incidents page kept the table of a snapshot even when an input was missing: a database file of the day, or the PeeringDB copy at CAIDA, which is published a day after the IRR snapshot is taken. The sets that come from PeeringDB, most of them, would have been counted for good as naming none. The table and the verdicts are now kept only when nothing was missing, so that the next run builds them again; PeeringDB falls back to the copy of one of the two days before; and the table is tied to the time of its snapshot. The text above the table says that the more specifics of the route objects count too.
+
 ## [1.104.0] - 2026-11-25
 
 ### Added
