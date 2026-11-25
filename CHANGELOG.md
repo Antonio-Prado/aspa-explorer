@@ -9,6 +9,12 @@ A few numbers were deployed and folded into the next release without a tag of th
 
 ## [Unreleased]
 
+## [1.105.1] - 2026-11-25
+
+### Fixed
+
+- The page *False positives* could be found only from a closed box of the Incidents page: it is now in the links at the foot of every page, and the top of the Incidents page points to it.
+
 ## [1.105.0] - 2026-11-25
 
 ### Added
