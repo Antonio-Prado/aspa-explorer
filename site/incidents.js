@@ -138,6 +138,33 @@
       : 'The archive of the IRR databases is not available: no incident could be checked. ')
       + 'A route object does not prove that an announcement is legitimate, nor does its absence prove that it is not: many networks register none, and a route object can outlive the use of its prefix.';
     box.hidden = false;
+    setTable(d);
+  }
+
+  // The filter built from the AS-SET of the network that sent the routes (`irr_set` of incidents.json, scripts/irr-asset.mjs).
+  // The persistent valleys (RLK-PV) are left out: relationships that CAIDA gets wrong, where a route let through can be legitimate.
+  function setTable(d) {
+    const box = $('inc-irr-set');
+    const sub = d.subtypes || {};
+    const lines = [['PRH', NAMES.PRH, d.by_type.PRH], ['DEG-MA', SUBNAMES['DEG-MA'], sub['DEG-MA']],
+      ['RLK-UL', SUBNAMES['RLK-UL'], sub['RLK-UL']], ['RLK-LL', SUBNAMES['RLK-LL'], sub['RLK-LL']], ['RLK-FP', SUBNAMES['RLK-FP'], sub['RLK-FP']]]
+      .filter(([, , b]) => b && b.irr_set);
+    if (!d.irr || !d.irr.set || !lines.length) { box.hidden = true; return; }
+    const cell = (n, of) => el('td', { class: 'num', text: of ? `${fmt.format(n)} (${pct(n, of)})` : '–' });
+    let checked = 0, wide = 0, viaA = 0, viaP = 0, viaN = 0;
+    $('inc-irr-set-rows').replaceChildren(...lines.map(([code, name, b]) => {
+      const r = b.irr_set, of = r.passes + r.partly + r.stopped + r.unknown + r.not_covered;
+      checked += of - r.not_covered; wide += r.wide; viaA += r.via['aut-num']; viaP += r.via.peeringdb; viaN += r.via.none;
+      const m = /^(.*?)\s*\(/.exec(name || '');
+      return el('tr', {}, el('th', { scope: 'row' }, codeChip(code), ' ', m ? m[1] : name || code),
+        el('td', { class: 'num', text: fmt.format(of) }), cell(r.passes, of), cell(r.partly, of), cell(r.stopped, of), cell(r.unknown, of), cell(r.not_covered, of));
+    }));
+    $('inc-irr-set-note').textContent = (checked
+      ? `Of the ${fmt.format(checked)} incidents checked, the set came from the aut-num for ${fmt.format(viaA)}, from PeeringDB for ${fmt.format(viaP)}, and ${fmt.format(viaN)} senders named none. `
+        + `For ${fmt.format(wide)} the set admits at least ${Math.round(d.irr.set.wide_share * 100)}% of all the route objects: a filter in name only. `
+      : '')
+      + '“Cannot tell” is a set with members that these databases do not hold: what it admits is not known, so nothing is counted as stopped. A set is followed through its members, not through mbrs-by-ref. The persistent valleys (RLK-PV) are left out: they are relationships that CAIDA gets wrong.';
+    box.hidden = false;
   }
 
   // The curve: the share of the incidents with a path that would be Invalid, for 0 to 100% of the networks publishing.

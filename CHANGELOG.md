@@ -9,6 +9,12 @@ A few numbers were deployed and folded into the next release without a tag of th
 
 ## [Unreleased]
 
+## [1.104.0] - 2026-11-25
+
+### Added
+
+- The Incidents page also asks whether the filter that most networks build from the AS-SET of a customer or a peer would have stopped an incident: the route objects of every AS in the set of the network that sent the routes, with their more specifics, as the network that received them would build it (`scripts/irr-asset.mjs`, `irr_set` in `/api/v1/incidents.json` and in the detail file). The sender is the origin for a prefix hijack (PRH) and a more specific of another network (DEG-MA), and the AS that leaked for a route leak, which this makes checkable; the receiver is the AS after the origin in the paths, or the one the leak was sent to. The set is the one that the aut-num of the sender exports to the receiver, else the one it gives in PeeringDB (`irr_as_set`, from the daily copy at CAIDA), else none, and then only its own route objects count. An incident is let through, in part, stopped, or *cannot tell* when the set has members that the five databases do not hold and none of its prefixes was admitted; a set that admits half or more of all the route objects is counted as wide. Only the first filter after the sender is looked at, and the persistent valleys (RLK-PV) are left out of the table. The tables of a snapshot and the verdicts are kept in the cache (`IRR_SET_CACHE`).
+
 ## [1.103.0] - 2026-11-24
 
 ### Added

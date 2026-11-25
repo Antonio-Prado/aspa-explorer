@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "ASPA Explorer API",
-    "version": "1.103.0",
+    "version": "1.104.0",
     "description": "ASPA objects validated by Routinator at rpki.ping6.it, their history and quality, for any AS. Open data, read-only, no key. Best effort, with no guarantee of any kind: the data can be late, incomplete or wrong, and whoever uses it is expected to check it on their own.",
     "contact": {
       "email": "antonio.prado@dei.unipd.it"
@@ -1456,10 +1456,18 @@
                     },
                     "irr": {
                       "type": "object",
-                      "description": "The route object check of the hijacks (PRH) and of the more specifics announced by another AS (DEG-MA): the sources, the types checked, and the number, first and last day of the daily snapshots of the IRR databases read. Each checked type and subtype has `irr`: {registered, less_specific, unregistered, not_covered}, the incidents whose origin had a route object for the prefix, only one for a less specific prefix, none, or that began before the archive (or too long after its last snapshot).",
+                      "description": "The route object check of the hijacks (PRH) and of the more specifics announced by another AS (DEG-MA): the sources, the types checked, and the number, first and last day of the daily snapshots of the IRR databases read. Each checked type and subtype has `irr`: {registered, less_specific, unregistered, not_covered}, the incidents whose origin had a route object for the prefix, only one for a less specific prefix, none, or that began before the archive (or too long after its last snapshot). `set` describes the second check, with the AS-SET of the network that sent the routes (PRH, DEG-MA and the route leaks): each checked type and subtype has `irr_set`: {passes, partly, stopped, unknown, not_covered, via: {aut-num, peeringdb, none}, wide}, the incidents whose prefixes a filter built from that set would have let through, in part, none (set expanded completely), none but the set has members outside these databases, or that began before the archive; where the set came from; and how many sets admit `set.wide_share` or more of all the route objects.",
                       "properties": {
                         "sources": {
                           "type": "string"
+                        },
+                        "set": {
+                          "type": "object",
+                          "properties": {
+                            "types": { "type": "array", "items": { "type": "string" } },
+                            "wide_share": { "type": "number" },
+                            "sources": { "type": "string" }
+                          }
                         },
                         "types": {
                           "type": "array",

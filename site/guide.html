@@ -23,16 +23,16 @@
 <meta name="twitter:card" content="summary_large_image">
 <meta name="color-scheme" content="light dark">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
-<link rel="stylesheet" href="/style.css?v=1.103.0">
-<script src="/status-checks.js?v=1.103.0" defer></script>
-<script src="/asnames.js?v=1.103.0" defer></script>
-<script src="/footer.js?v=1.103.0" defer></script>
+<link rel="stylesheet" href="/style.css?v=1.104.0">
+<script src="/status-checks.js?v=1.104.0" defer></script>
+<script src="/asnames.js?v=1.104.0" defer></script>
+<script src="/footer.js?v=1.104.0" defer></script>
 </head>
 <body>
 <a class="skip" href="#main">Skip to main content</a>
 <header class="wrap masthead">
   <div class="top">
-    <p class="back"><a class="brandlink" href="/" title="Back to ASPA Explorer"><img class="brand" src="/img/logo-mark.svg?v=1.103.0" alt="" width="40" height="40"><span>ASPA Explorer</span></a></p>
+    <p class="back"><a class="brandlink" href="/" title="Back to ASPA Explorer"><img class="brand" src="/img/logo-mark.svg?v=1.104.0" alt="" width="40" height="40"><span>ASPA Explorer</span></a></p>
     <nav class="topnav" aria-label="Main"><a class="sect a-look" href="/network.html">Look up</a><a class="sect a-adopt" href="/statistics.html">Adoption</a><a class="sect a-now" href="/now.html">Right now</a><a class="sect a-inc" href="/incidents.html">Incidents</a><a class="minor" href="/guide.html" aria-current="page">Guide</a><a class="minor" href="/examples.html">Examples</a><a class="minor" href="/api.html">API</a><a class="minor" href="/status.html">Status</a></nav>
   </div>
   <h1>Guide</h1>
@@ -276,6 +276,7 @@
     <p>The page covers the time <strong>since the first ASPA</strong>, 12 October 2023. The incident files of the recorder of the site are kept since 23 October 2026; the days before are read again from the archive of RIPE RIS (the update files of the same collector, rrc00), with the relationships, the ROAs and the delegations of each day, and are added to the page as they are done: the chart <em>Day by day</em> has a bar for each day read so far. You choose the period: <em>everything</em>, a year, or the last 30 days. Everything and the years add up the days, each judged on its own (a network is a persistent valley when its leaks begin in 12 hours of one day); the last 30 days are read as one window, so their lines FP, PV, UL and LL are not the sum of the days. The archive is read a month at a time and each month starts with an empty state: an incident still open at the end of a month is written then, and may be found again in the next. Every incident of a day, with its verdicts, is in <a href="/api/v1/incidents-history.json">a file for each day</a>. The archive of RIPE RIS is also read for other collectors: the menu <em>Collector</em> above the page offers each one that has a history, with the days read so far (the first is rrc18, in Barcelona, read in full to 31 October 2026), and choosing one shows its periods, its chart and the files of its days. A collector sees the routes of its own peers, so the numbers of two collectors are not the same incidents counted twice, nor comparable as totals. The window of the last 30 days is of the collector of the recorder only.</p>
 
     <p>A second table asks another question: <strong>would a filter built from the IRR have stopped them?</strong> Many networks accept a route from a customer or a peer only when the IRR has a route object for that prefix and its origin, and some accept the more specifics of a route object too. For each prefix hijack (PRH) and each more specific announced by another network (DEG-MA) of the last 30 days, the origin is looked up in the route and route6 objects of the IRR databases of AFRINIC, APNIC, ARIN, LACNIC and the RIPE NCC, as they were on the day of the incident (the newest daily snapshot taken before it began, kept by this site since 24 November 2026). The table counts the ones whose origin had a route object for the prefix, only one for a less specific prefix, none, and the ones that began before the archive, which are not counted as having none. Route leaks are not checked: their origin is the legitimate one. A route object does not prove that an announcement is legitimate, nor does its absence prove that it is not.</p>
+    <p>Under it, a third table asks the question in the way most filters are built: <strong>with the AS-SET of the network that sent the routes</strong>. That network is the origin for a hijack and a more specific, and the AS that leaked for a route leak, which this way can be checked too; the filter is the one of the network that received the routes from it: the route objects of every AS in the set, with their more specifics. The set is the one that the aut-num of the sender exports to that network, else the one it gives in PeeringDB, else none, and then only the sender's own route objects count. An incident is let through, let through in part, stopped, or <em>cannot tell</em>: the set has members that the five databases do not hold, and none of the prefixes was admitted by the rest. The note under the table counts the sets that admit half or more of all the route objects, a filter in name only. Only this first filter is looked at, not the ones of the networks further on, and the persistent valleys (RLK-PV) are left out.</p>
 
     <h3 id="inc-tax-title">The taxonomy of routing incidents</h3>
     <p class="hint">These are the types of the taxonomy of our survey of Internet routing security (Sec. III; the reference is at the end of the section), with the acronyms that the survey uses.</p>

@@ -16,6 +16,7 @@
 //   IRR_ARCHIVE        folder of the daily archive of the IRR databases (scripts/irr-registered.mjs), default
 //                      /home/thinker/ring-archive/irr; when it is not there, no incident is covered and the page says so
 //   IRR_CACHE          folder of the verdicts of each IRR snapshot kept between runs, default the cache folder + /irr
+//   IRR_SET_CACHE      folder of the tables and verdicts of the AS-SET check (scripts/irr-asset.mjs), default the cache folder + /irr-set
 import { readFile, writeFile, rename, readdir, stat, rm } from 'node:fs/promises';
 import { createReadStream, createWriteStream } from 'node:fs';
 import { once } from 'node:events';
@@ -27,6 +28,7 @@ import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import { classify, aspaMap, EVENTS } from './build-leaks.mjs';
 import { irrChecker, listSnapshots, SOURCES as IRR_SOURCES } from './irr-registered.mjs';
+import { assetChecker, decode as decodeAsset, WIDE_SHARE } from './irr-asset.mjs';
 
 const History = createRequire(import.meta.url)('../site/history.js');
 const UA = 'aspa-explorer (https://aspa.ping6.it; antonio.prado@dei.unipd.it)';
@@ -200,15 +202,17 @@ export function leakTracker() {
 const stamp = (t) => (/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}/.test(t || '') ? t.slice(0, 19) : null);
 
 // incidents: parsed; aspasOf(day): the ASPA lookup of a day (Map AS number -> Set of providers); ideal, degree: complete ASPAs
-export function analyse(incidents, aspasOf, ideal, degree, detail = null, irrOf = null) {
-  const a = analyser(aspasOf, ideal, degree, leakers(incidents), irrOf);
+export function analyse(incidents, aspasOf, ideal, degree, detail = null, irrOf = null, assetOf = null) {
+  const a = analyser(aspasOf, ideal, degree, leakers(incidents), irrOf, assetOf);
   for (const inc of incidents) { const row = a.add(inc); detail?.push(row); }
   return a.result();
 }
 // The same, an incident at a time: add(incident) counts it and gives back its line of the detail file, result() the aggregate.
 // lk: the leaking ASes of all the incidents (leakers, leakTracker), which have to be known before the first one is counted.
 // irrOf(incident): its route object verdict (irrChecker().verdict), counted as `irr` of its type and subtype; null leaves it out.
-export function analyser(aspasOf, ideal, degree, lk, irrOf = null) {
+// assetOf(incident): the verdict of the filter built from the sender's AS-SET (assetChecker().verdict: a code or 'not_covered'),
+// counted as `irr_set` of its type and subtype.
+export function analyser(aspasOf, ideal, degree, lk, irrOf = null, assetOf = null) {
   const ord = orders(ideal, degree);
   const byType = {}, bySub = {}, adoption = { random: {}, largest: {} };
   const bucket = (t) => (byType[t] ||= empty());
@@ -229,7 +233,21 @@ export function analyser(aspasOf, ideal, degree, lk, irrOf = null) {
     if (t1 && (!to || t1 > to)) to = t1;
     const irr = irrOf ? irrOf(inc) : null;
     if (irr) for (const x of all) { x.irr ||= { registered: 0, less_specific: 0, unregistered: 0, not_covered: 0 }; x.irr[irr]++; }
-    const withIrr = (row) => (irr ? { ...row, irr } : row);
+    const set = assetOf ? assetOf(inc) : null;
+    if (set) {
+      const v = set === 'not_covered' ? null : decodeAsset(set);
+      for (const x of all) {
+        const c = (x.irr_set ||= { passes: 0, partly: 0, stopped: 0, unknown: 0, not_covered: 0, via: { 'aut-num': 0, peeringdb: 0, none: 0 }, wide: 0 });
+        if (!v) { c.not_covered++; continue; }
+        c[v.verdict]++; c.via[v.via]++; if (v.wide) c.wide++;
+      }
+    }
+    const withIrr = (row) => {
+      const r = irr ? { ...row, irr } : row;
+      if (!set) return r;
+      const v = set === 'not_covered' ? null : decodeAsset(set);
+      return { ...r, irr_set: v ? v.verdict : 'not_covered', ...(v ? { irr_set_via: v.via, irr_set_wide: v.wide } : {}) };
+    };
     const paths = pathsOf(inc);
     if (!paths.length) return withIrr({ type: t, subtype: sub, actor: inc.actor_key, start: inc.start, end: inc.end, end_reason: inc.end_reason, paths: 0 });
     const real = verdictOf(aspasOf(s), paths), full = verdictOf(ideal, paths);
@@ -326,9 +344,11 @@ async function main() {
   const tracker = leakTracker();
   const snapshots = await listSnapshots(process.env.IRR_ARCHIVE || '/home/thinker/ring-archive/irr');
   const irr = irrChecker(snapshots, process.env.IRR_CACHE || join(cache, 'irr'));
-  for await (const inc of readIncidents(list, FIRST_READING)) { tracker.add(inc); irr.need(inc); }
+  const asset = assetChecker(snapshots, process.env.IRR_SET_CACHE || join(cache, 'irr-set'));
+  for await (const inc of readIncidents(list, FIRST_READING)) { tracker.add(inc); irr.need(inc); await asset.need(inc); }
   await irr.load();
-  const a = analyser(aspasOf, ideal, degree, tracker.result(), irr.verdict);
+  await asset.load();
+  const a = analyser(aspasOf, ideal, degree, tracker.result(), irr.verdict, asset.verdict);
   let count = 0;
   const rows = async function* () {
     for await (const inc of readIncidents(list)) { count++; yield a.add(inc); }
@@ -343,7 +363,8 @@ async function main() {
     aspas: events ? (fallbacks ? 'history, today for days it does not cover' : 'history') : 'today',
     relationships: rel.source,
     irr: { sources: IRR_SOURCES, types: ['PRH', 'DEG-MA'], snapshots: snapshots.length,
-      first: snapshots.length ? snapshots[0].day : null, last: snapshots.length ? snapshots[snapshots.length - 1].day : null },
+      first: snapshots.length ? snapshots[0].day : null, last: snapshots.length ? snapshots[snapshots.length - 1].day : null,
+      set: { types: ['PRH', 'DEG-MA', 'RLK'], wide_share: WIDE_SHARE, sources: 'the as-set and aut-num objects of the same databases, and PeeringDB (irr_as_set) from its daily copy at CAIDA' } },
     ...res,
   };
   const write = async (file, text) => { const tmp = `${file}.tmp`; await writeFile(tmp, text); await rename(tmp, file); };

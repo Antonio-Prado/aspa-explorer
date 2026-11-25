@@ -23,18 +23,18 @@
 <meta name="twitter:card" content="summary_large_image">
 <meta name="color-scheme" content="light dark">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
-<link rel="stylesheet" href="/style.css?v=1.103.0">
-<script src="/download.js?v=1.103.0" defer></script>
-<script src="/datasets.js?v=1.103.0" defer></script>
-<script src="/status-checks.js?v=1.103.0" defer></script>
-<script src="/asnames.js?v=1.103.0" defer></script>
-<script src="/footer.js?v=1.103.0" defer></script>
+<link rel="stylesheet" href="/style.css?v=1.104.0">
+<script src="/download.js?v=1.104.0" defer></script>
+<script src="/datasets.js?v=1.104.0" defer></script>
+<script src="/status-checks.js?v=1.104.0" defer></script>
+<script src="/asnames.js?v=1.104.0" defer></script>
+<script src="/footer.js?v=1.104.0" defer></script>
 </head>
 <body>
 <a class="skip" href="#main">Skip to main content</a>
 <header class="wrap masthead">
   <div class="top">
-    <p class="back"><a class="brandlink" href="/" title="Back to ASPA Explorer"><img class="brand" src="/img/logo-mark.svg?v=1.103.0" alt="" width="40" height="40"><span>ASPA Explorer</span></a></p>
+    <p class="back"><a class="brandlink" href="/" title="Back to ASPA Explorer"><img class="brand" src="/img/logo-mark.svg?v=1.104.0" alt="" width="40" height="40"><span>ASPA Explorer</span></a></p>
     <nav class="topnav" aria-label="Main"><a class="sect a-look" href="/network.html">Look up</a><a class="sect a-adopt" href="/statistics.html">Adoption</a><a class="sect a-now" href="/now.html">Right now</a><a class="sect a-inc" href="/incidents.html">Incidents</a><a class="minor" href="/guide.html">Guide</a><a class="minor" href="/examples.html">Examples</a><a class="minor" href="/api.html" aria-current="page">API</a><a class="minor" href="/status.html">Status</a></nav>
   </div>
   <h1>API</h1>
@@ -200,7 +200,7 @@ X-ASPA-Signature: sha256=…      HMAC-SHA256(secret, timestamp + "." + body), h
       <li><code>/data/validity/AS{number}/{prefix}</code>, for example <a href="/data/validity/AS3333/193.0.0.0/21">/data/validity/AS3333/193.0.0.0/21</a>: the origin validation of one route (the ROAs, not the ASPAs) by Routinator, in its own format, with the VRPs that match and those that do not. The page uses it in the box of the routes of an AS; please keep to a few requests a second.</li>
       <li><a href="/data/root-sites.json">/data/root-sites.json</a>: where the instances of the DNS root servers are (latitude, longitude and a place code for each instance name), which the page uses to tell a RIPE Atlas probe that is not where it says. Built by hand from RIPE Atlas measurements and OurAirports, a few times a year; the file names its sources.</li>
       <li><a href="/api/v1/resources.json">/api/v1/resources.json</a>: AS numbers allocated, advertised and with an ASPA by RIR, region, economy, year of allocation and width, per million Internet users, and the ASPAs that name numbers that are not allocated. Built once a day.</li>
-      <li><a href="/api/v1/incidents.json">/api/v1/incidents.json</a>: what the ASPAs say about the routing incidents found by the detectors of the project, by type: how many, the verdicts of the ASPAs of the day and of complete ASPAs, and the share that would be Invalid when a part of the networks publish an ASPA; for the hijacks and the more specifics announced by another AS, whether their origin had a route object in the IRR databases of the RIRs on that day (<code>irr</code>). Aggregates only, no AS number. Built from the incident files by <code>scripts/build-incidents.mjs</code>.</li>
+      <li><a href="/api/v1/incidents.json">/api/v1/incidents.json</a>: what the ASPAs say about the routing incidents found by the detectors of the project, by type: how many, the verdicts of the ASPAs of the day and of complete ASPAs, and the share that would be Invalid when a part of the networks publish an ASPA; for the hijacks and the more specifics announced by another AS, whether their origin had a route object in the IRR databases of the RIRs on that day (<code>irr</code>); for those and for the route leaks, whether a filter built from the AS-SET of the network that sent the routes would have let them through (<code>irr_set</code>). Aggregates only, no AS number. Built from the incident files by <code>scripts/build-incidents.mjs</code>.</li>
       <li><a href="/api/v1/incidents-detail.jsonl">/api/v1/incidents-detail.jsonl</a>: every incident of the detectors in the study period, one JSON record a line (type, subtype, actor, start, end, paths, the verdicts of the ASPAs of the day and of complete ASPAs), the file that the aggregates come from; tens of megabytes, written once a day.</li>
       <li><a href="/api/v1/incidents-history.json">/api/v1/incidents-history.json</a>: the incidents of every day since the first ASPA (12 October 2023): a line for each day that was read, with the verdicts of the ASPAs of the day and the count of each type, and the aggregates of <code>incidents.json</code> for all the days and for each year. The days before the recorder was started come from the archive of RIPE RIS and are added as they are read. Built once a day by <code>scripts/build-incidents-history.mjs</code>.</li>
       <li><a href="/api/v1/incidents-collectors.json">/api/v1/incidents-collectors.json</a>: the collectors of RIPE RIS whose incidents have a history, each with the address of its file, the days read so far and the first and the last of them. The collector of the recorder (rrc00) is <code>incidents-history.json</code>; the others are read from the archive of RIPE RIS and their files are <code>/api/v1/incidents-history-&lt;collector&gt;.json</code>, with the same fields. Every hour.</li>
