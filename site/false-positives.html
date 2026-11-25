@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ASPA false positives</title>
+<meta name="description" content="How many of the routes that the ASPAs prove Invalid come from an ASPA that misses a provider, and how soon the networks fix it: measured on the routes of a RIPE RIS collector and the history of the ASPAs.">
+<meta name="author" content="Antonio Prado">
+<link rel="canonical" href="https://aspa.ping6.it/false-positives.html">
+<meta name="theme-color" content="#2a78d6">
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="apple-touch-icon" href="/img/apple-touch-icon.png">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="ASPA Explorer">
+<meta property="og:locale" content="en_GB">
+<meta property="og:title" content="ASPA false positives">
+<meta property="og:description" content="How many of the routes that the ASPAs prove Invalid come from an ASPA that misses a provider, and how soon the networks fix it.">
+<meta property="og:url" content="https://aspa.ping6.it/false-positives.html">
+<meta property="og:image" content="https://aspa.ping6.it/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="ASPA Explorer: explore, check and follow the ASPA objects of the RPKI">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="color-scheme" content="light dark">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/style.css?v=1.105.0">
+<script src="/false-positives.js?v=1.105.0" defer></script>
+<script src="/status-checks.js?v=1.105.0" defer></script>
+<script src="/footer.js?v=1.105.0" defer></script>
+</head>
+<body>
+<a class="skip" href="#main">Skip to main content</a>
+<header class="wrap masthead">
+  <div class="top">
+    <p class="back"><a class="brandlink" href="/" title="Back to ASPA Explorer"><img class="brand" src="/img/logo-mark.svg?v=1.105.0" alt="" width="40" height="40"><span>ASPA Explorer</span></a></p>
+    <nav class="topnav" aria-label="Main"><a class="sect a-look" href="/network.html">Look up</a><a class="sect a-adopt" href="/statistics.html">Adoption</a><a class="sect a-now" href="/now.html">Right now</a><a class="sect a-inc" href="/incidents.html">Incidents</a><a class="minor" href="/guide.html">Guide</a><a class="minor" href="/examples.html">Examples</a><a class="minor" href="/api.html">API</a><a class="minor" href="/status.html">Status</a></nav>
+  </div>
+  <h1>False positives</h1>
+  <p class="lede">When the ASPAs prove a route Invalid, is it a leak, or an ASPA that forgot a provider? Measured on the routes of a route collector and on what the networks did with their ASPAs afterwards.</p>
+</header>
+
+<main class="wrap prose" id="main" tabindex="-1">
+  <section aria-labelledby="fp-question">
+    <h2 id="fp-question">The question</h2>
+    <p>The verification of an AS path is only as right as the ASPAs it reads. An ASPA that leaves out one of the providers of its network makes the routes that come through that provider Invalid, with no leak anywhere: a false positive (see <a href="/examples.html#mistakes">Forgetting a provider</a>). Counting the Invalid routes says how many there are, not how many of them are mistakes of this kind. This page tries to tell them apart, and takes as proof the one thing that only the network can say: whether it later added that provider to its ASPA.</p>
+  </section>
+
+  <section aria-labelledby="fp-method">
+    <h2 id="fp-method">How it is measured</h2>
+    <p>Every route of the table dump of 00:00 UTC of <span id="fp-collectors">a RIPE RIS collector</span>, for each day from <span id="fp-from">–</span> to <span id="fp-to">–</span>, is checked with the downstream procedure against the ASPAs as they were at the start of that day. The Invalid routes are grouped by their <em>place</em>: the AS where the climb from the origin stops, the ASes in between, and the AS where the descent to the collector stops. At both of those ends an ASPA misses the AS next to it; that pair, the customer and the AS that its ASPA misses, is the <em>failing pair</em>.</p>
+    <p>Each place is then followed for <span id="fp-window">30</span> days in the history of the ASPAs. When its paths stop being Invalid because the customer added exactly the AS it was missing, the network has said itself that the AS is one of its providers: a false positive confirmed by the operator. The other places are sorted by what can be said of them, first that applies:</p>
+    <ul>
+      <li><strong>Fixed</strong>: the missing provider was added within the window.</li>
+      <li><strong>ASPA withdrawn</strong>: an ASPA of the path was withdrawn and the paths were no longer Invalid.</li>
+      <li><strong>Structural</strong>: the failing pair belongs to the same organisation (CAIDA AS Organizations), or the AS in between is a DDoS scrubbing network (a short list by hand).</li>
+      <li><strong>Probable false positive</strong>: CAIDA or the IRR (the aut-num of either side) says that the AS in between is a transit provider of the customer, and the place lasted more than two days or was seen by three feeders or more.</li>
+      <li><strong>Undetermined</strong>: everything else, including the short ones without evidence. A dump of 00:00 cannot tell a short leak from a gap fixed the next day, and most short places turned out to be the latter.</li>
+    </ul>
+    <p>The code is in <code>tools/false-positives</code> of the repository, and the figures on this page in <a href="/data/false-positives.json">/data/false-positives.json</a>. No AS number is published here.</p>
+  </section>
+
+  <section aria-labelledby="fp-results">
+    <h2 id="fp-results">What came out</h2>
+    <div class="tiles" id="fp-tiles" aria-live="polite"></div>
+    <section class="card table-wrap" tabindex="0" aria-label="Table of the places of valley by class">
+      <table class="checks live tight">
+        <caption class="sr-only">The places of valley, the failing pairs and the Invalid routes, by class</caption>
+        <thead><tr><th scope="col">Class</th><th scope="col" class="num">Places</th><th scope="col" class="num">Failing pairs</th><th scope="col" class="num">Invalid routes</th></tr></thead>
+        <tbody id="fp-classes"></tbody>
+      </table>
+    </section>
+    <p class="hint" id="fp-classes-note"></p>
+  </section>
+
+  <section aria-labelledby="fp-when">
+    <h2 id="fp-when">How soon the networks fixed it</h2>
+    <p class="hint" id="fp-when-note"></p>
+    <section class="card table-wrap" tabindex="0" aria-label="Table of the fixes by days after the first sighting">
+      <table class="checks live tight">
+        <caption class="sr-only">The places fixed by the operator, by the number of days between the first sighting and the fix</caption>
+        <thead><tr><th scope="col">Days after the first sighting</th><th scope="col" class="num">Places fixed</th></tr></thead>
+        <tbody id="fp-when-rows"></tbody>
+      </table>
+    </section>
+  </section>
+
+  <section aria-labelledby="fp-evidence">
+    <h2 id="fp-evidence">Which evidence goes with a fix</h2>
+    <p>For each kind of evidence, how many places had it and how many of those the operator fixed. A share above the first line means that the evidence goes with a fix more often than the average place.</p>
+    <section class="card table-wrap" tabindex="0" aria-label="Table of the evidence and of the fixes">
+      <table class="checks live tight">
+        <caption class="sr-only">For each kind of evidence: the places that had it and the share of them that the operator fixed</caption>
+        <thead><tr><th scope="col">Evidence</th><th scope="col" class="num">Places</th><th scope="col" class="num">Fixed by the operator</th></tr></thead>
+        <tbody id="fp-evidence-rows"></tbody>
+      </table>
+    </section>
+    <p class="hint" id="fp-evidence-note"></p>
+  </section>
+
+  <section aria-labelledby="fp-leaks">
+    <h2 id="fp-leaks">The route leaks of the detector</h2>
+    <p>The table dumps miss the leaks that last minutes. The leaks that the detector of the <a href="/incidents.html">Incidents</a> page finds in the updates, and that the ASPAs of the day prove Invalid, are sorted in the same way, with one difference: there a leak with no evidence of transit at either end, and not a persistent valley, is a <strong>probable leak</strong>. Only the leaks whose three ASes (where it came from, the AS that leaked, where it went) are Invalid by themselves can be followed; for the others the Invalid comes from elsewhere in the path.</p>
+    <section class="card table-wrap" tabindex="0" aria-label="Table of the route leaks of the detector by class">
+      <table class="checks live tight">
+        <caption class="sr-only">The route leaks of the detector that the ASPAs prove Invalid, by type and class</caption>
+        <thead><tr><th scope="col">Type</th><th scope="col" class="num">Leaks</th><th scope="col" class="num">Fixed</th><th scope="col" class="num">Structural</th><th scope="col" class="num">Probable leak</th><th scope="col" class="num">Probable false positive</th><th scope="col" class="num">Undetermined</th></tr></thead>
+        <tbody id="fp-leak-rows"></tbody>
+      </table>
+    </section>
+    <p class="hint" id="fp-leaks-note"></p>
+  </section>
+
+  <section aria-labelledby="fp-limits">
+    <h2 id="fp-limits">What this cannot say</h2>
+    <ul>
+      <li>A place that nobody fixed is not shown to be right: most long-lived places with evidence of transit were never fixed either. The fixes are a lower bound of the false positives, not their count.</li>
+      <li>One collector sees what its feeders send it. When the ASPA that misses a provider is the one of a feeder itself, all the routes of that feeder are Invalid at once: counts of routes say more about the feeders than about the Internet.</li>
+      <li>The history of the ASPAs keeps the last state of each day: an ASPA published and fixed on the same day is never seen.</li>
+      <li>CAIDA infers its relationships from the same kind of paths, so it is not an independent witness for a place that lasts; the IRR objects are today's, as the registries keep no history; the ASes of the exchange points are left out of the paths, so a route server that adds its own AS cannot show up as a cause; the list of scrubbing networks is short and by hand.</li>
+    </ul>
+  </section>
+</main>
+
+<footer class="wrap foot">
+  <nav class="footnav" aria-label="All pages"><a href="/network.html">Look up</a><a href="/statistics.html">Adoption</a><a href="/now.html">Right now</a><a href="/incidents.html">Incidents</a><a href="/guide.html">Guide</a><a href="/examples.html">Examples</a><a href="/api.html">API</a><a href="/api.html#badge">Badge for your site</a><a href="/status.html">Status</a></nav>
+  <p><a href="/">&larr; Back to ASPA Explorer</a></p>
+</footer>
+</body>
+</html>

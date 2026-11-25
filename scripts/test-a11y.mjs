@@ -57,7 +57,7 @@ const base = `http://127.0.0.1:${server.address().port}`;
 const PAGES = [
   ['home', '/'], ['network', '/network.html'], ['as', '/as/AS12779'], ['path', '/network.html#path=3356+12779&from=up'], ['changes', '/statistics.html#changes'], ['quality', '/statistics.html#quality'],
   ['statistics', '/statistics.html'], ['now', '/now.html'], ['incidents', '/incidents.html'], ['guide', '/guide.html'], ['api', '/api.html'],
-  ['examples', '/examples.html'], ['embed', '/embed.html?country=IT'], ['status', '/status.html'], ['subscription', '/subscription.html#confirm=abc'],
+  ['examples', '/examples.html'], ['false-positives', '/false-positives.html'], ['embed', '/embed.html?country=IT'], ['status', '/status.html'], ['subscription', '/subscription.html#confirm=abc'],
   ['bulk', '/network.html#path=3356+12779&from=up'], ['peek', '/as/AS12779'], ['irr', '/as/AS12779'], ['valley', '/network.html#routes=AS12779'], ['ixp', '/network.html#path=12779+1200+24796&from=up'], ['recent', '/as/AS12779'], ['report', '/r/0123456789ab'],
 ];
 const VIEWPORTS = [['desktop', { width: 1280, height: 800 }], ['narrow', { width: 320, height: 640 }]];

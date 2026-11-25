@@ -9,6 +9,12 @@ A few numbers were deployed and folded into the next release without a tag of th
 
 ## [Unreleased]
 
+## [1.105.0] - 2026-11-25
+
+### Added
+
+- A page, *False positives* (`/false-positives.html`, linked from the Incidents page): how many of the routes that the ASPAs prove Invalid come from an ASPA that forgot a provider, and how soon the networks fix it. Every route of the table dumps of 00:00 UTC of the RIPE RIS collector rrc00, each day from 1 September to 25 October 2026, is checked against the ASPAs of that day; the Invalid ones are grouped by place of valley, and each place is followed for 30 days in the history of the ASPAs. A place whose customer then added exactly the AS it was missing is a false positive confirmed by the operator; the others are structural (siblings, scrubbing), probable false positives (CAIDA or the IRR say transit, and the place lasted), or undetermined. The page also says how soon the fixes came, which evidence goes with a fix, the share of the routes that a feeder's own ASPA accounts for, and the route leaks of the detector sorted the same way. The code is in `tools/false-positives`, the figures in `/data/false-positives.json`, with no AS number.
+
 ## [1.104.2] - 2026-11-25
 
 ### Changed

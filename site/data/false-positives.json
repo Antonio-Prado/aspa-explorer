@@ -1,0 +1,217 @@
+{
+ "generated": "2026-11-25T20:51:55Z",
+ "collectors": [
+  "rrc00"
+ ],
+ "period": {
+  "from": "2026-09-01",
+  "to": "2026-10-25",
+  "days": 55
+ },
+ "window": 30,
+ "history_to": "2026-11-25",
+ "routes_read": 3012525989,
+ "invalid_routes": 2431197,
+ "places": 6136,
+ "classes": {
+  "places": {
+   "2": 2288,
+   "3": 0,
+   "4": 310,
+   "5": 2103,
+   "1a": 1336,
+   "1b": 99,
+   "1c": 0
+  },
+  "pairs": {
+   "2": 937,
+   "3": 0,
+   "4": 127,
+   "5": 747,
+   "1a": 879,
+   "1b": 54,
+   "1c": 0
+  },
+  "routes": {
+   "2": 1316642,
+   "3": 0,
+   "4": 259059,
+   "5": 291269,
+   "1a": 561997,
+   "1b": 2230,
+   "1c": 0
+  }
+ },
+ "totals": {
+  "places": 6136,
+  "pairs": 2744,
+  "routes": 2431197
+ },
+ "biggest_place": {
+  "routes": 485583,
+  "cls": "1a",
+  "at_feeder": true
+ },
+ "feeder_routes": {
+  "at_feeder": 523147,
+  "of": 561997
+ },
+ "fix": {
+  "places": 1336,
+  "median": 1,
+  "q1": 1,
+  "q3": 4,
+  "by_day": [
+   857,
+   78,
+   53,
+   43,
+   24,
+   8,
+   9,
+   27,
+   27,
+   15,
+   3,
+   13,
+   8,
+   8,
+   10,
+   14,
+   5,
+   23,
+   2,
+   9,
+   7,
+   3,
+   12,
+   18,
+   23,
+   2,
+   4,
+   17,
+   10,
+   4
+  ],
+  "up": 1296,
+  "down": 44
+ },
+ "evidence": [
+  {
+   "id": "all",
+   "name": "All the places",
+   "places": 6136,
+   "fixed": 1336
+  },
+  {
+   "id": "caida_provider",
+   "name": "CAIDA has the missing AS as a provider of the customer",
+   "places": 2957,
+   "fixed": 258
+  },
+  {
+   "id": "caida_none",
+   "name": "CAIDA has a peer or a customer at both ends",
+   "places": 713,
+   "fixed": 99
+  },
+  {
+   "id": "irr_transit",
+   "name": "The IRR says transit at a failing pair",
+   "places": 1583,
+   "fixed": 500
+  },
+  {
+   "id": "short",
+   "name": "Seen on one or two days",
+   "places": 2026,
+   "fixed": 987
+  },
+  {
+   "id": "long",
+   "name": "Seen on more than seven days",
+   "places": 2936,
+   "fixed": 162
+  },
+  {
+   "id": "many_feeders",
+   "name": "Seen by three or more feeders on a day",
+   "places": 1469,
+   "fixed": 334
+  },
+  {
+   "id": "one_feeder",
+   "name": "Seen by a single feeder",
+   "places": 4183,
+   "fixed": 884
+  },
+  {
+   "id": "at_feeder",
+   "name": "The ASPA that misses the provider is the feeder's own",
+   "places": 1388,
+   "fixed": 367
+  },
+  {
+   "id": "new_aspa",
+   "name": "The ASPA was at most seven days old",
+   "places": 724,
+   "fixed": 209
+  },
+  {
+   "id": "old_aspa",
+   "name": "The ASPA was more than 90 days old",
+   "places": 3742,
+   "fixed": 744
+  }
+ ],
+ "rules": {
+  "probable_fp": {
+   "picks": 2839,
+   "fixed": 293,
+   "of_fixed": 293
+  },
+  "short_no_evidence": {
+   "picks": 945,
+   "fixed": 527
+  }
+ },
+ "incidents": {
+  "total": 25566,
+  "alone": 7071,
+  "full_window": 569,
+  "from": "2026-10-07",
+  "to": "2026-11-25",
+  "by_subtype": {
+   "RLK-UL": {
+    "2": 0,
+    "3": 22,
+    "4": 6,
+    "5": 0,
+    "incidents": 28,
+    "1a": 0,
+    "1b": 0,
+    "1c": 0
+   },
+   "RLK-LL": {
+    "2": 0,
+    "3": 3,
+    "4": 0,
+    "5": 0,
+    "incidents": 3,
+    "1a": 0,
+    "1b": 0,
+    "1c": 0
+   },
+   "RLK-PV": {
+    "2": 105,
+    "3": 0,
+    "4": 0,
+    "5": 362,
+    "incidents": 538,
+    "1a": 68,
+    "1b": 3,
+    "1c": 0
+   }
+  }
+ }
+}
