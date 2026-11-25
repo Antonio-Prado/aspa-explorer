@@ -9,6 +9,12 @@ A few numbers were deployed and folded into the next release without a tag of th
 
 ## [Unreleased]
 
+## [1.104.2] - 2026-11-25
+
+### Changed
+
+- The two IRR tables of the Incidents page give their percentages over the incidents that were checked, not over all of them: most incidents began before the archive of the IRR databases, and a share of all of them made the ones checked look rare (a prefix hijack let through read 0.6% instead of about 16%). The column of the incidents that began before the archive keeps its count, with no percentage.
+
 ## [1.104.1] - 2026-11-25
 
 ### Fixed

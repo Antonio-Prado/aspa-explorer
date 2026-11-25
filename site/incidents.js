@@ -125,16 +125,18 @@
     const box = $('inc-irr');
     const lines = [['PRH', NAMES.PRH, d.by_type.PRH], ['DEG-MA', SUBNAMES['DEG-MA'], (d.subtypes || {})['DEG-MA']]].filter(([, , b]) => b && b.irr);
     if (!d.irr || !lines.length) { box.hidden = true; return; }
-    const cell = (n, of) => el('td', { class: 'num', text: of ? `${fmt.format(n)} (${pct(n, of)})` : '–' });
+    // the shares are of the incidents checked: the ones that began before the archive are only counted
+    const cell = (n, of) => el('td', { class: 'num', text: of ? `${fmt.format(n)} (${pct(n, of)})` : fmt.format(n) });
+    const plain = (n) => el('td', { class: 'num', text: fmt.format(n) });
     $('inc-irr-rows').replaceChildren(...lines.map(([code, name, b]) => {
       const r = b.irr, of = r.registered + r.less_specific + r.unregistered + r.not_covered;
       const m = /^(.*?)\s*\(/.exec(name || '');
       return el('tr', {}, el('th', { scope: 'row' }, codeChip(code), ' ', m ? m[1] : name || code),
-        el('td', { class: 'num', text: fmt.format(of) }), cell(r.registered, of), cell(r.less_specific, of), cell(r.unregistered, of), cell(r.not_covered, of));
+        el('td', { class: 'num', text: fmt.format(of) }), cell(r.registered, of - r.not_covered), cell(r.less_specific, of - r.not_covered), cell(r.unregistered, of - r.not_covered), plain(r.not_covered));
     }));
     if (d.irr.sources) $('inc-irr-sources').textContent = d.irr.sources;
     $('inc-irr-note').textContent = (d.irr.first
-      ? `The archive of the IRR databases starts on ${day(d.irr.first)} and has ${plural(d.irr.snapshots, 'daily snapshot')}: each incident is checked against the newest one taken before it began, and one that began before the archive is counted as such, not as having no route object. `
+      ? `The archive of the IRR databases starts on ${day(d.irr.first)} and has ${plural(d.irr.snapshots, 'daily snapshot')}: each incident is checked against the newest one taken before it began, and one that began before the archive is counted as such, not as having no route object. The percentages are of the incidents checked, without those. `
       : 'The archive of the IRR databases is not available: no incident could be checked. ')
       + 'A route object does not prove that an announcement is legitimate, nor does its absence prove that it is not: many networks register none, and a route object can outlive the use of its prefix.';
     box.hidden = false;
@@ -150,17 +152,19 @@
       ['RLK-UL', SUBNAMES['RLK-UL'], sub['RLK-UL']], ['RLK-LL', SUBNAMES['RLK-LL'], sub['RLK-LL']], ['RLK-FP', SUBNAMES['RLK-FP'], sub['RLK-FP']]]
       .filter(([, , b]) => b && b.irr_set);
     if (!d.irr || !d.irr.set || !lines.length) { box.hidden = true; return; }
-    const cell = (n, of) => el('td', { class: 'num', text: of ? `${fmt.format(n)} (${pct(n, of)})` : '–' });
+    // the shares are of the incidents checked: the ones that began before the archive are only counted
+    const cell = (n, of) => el('td', { class: 'num', text: of ? `${fmt.format(n)} (${pct(n, of)})` : fmt.format(n) });
+    const plain = (n) => el('td', { class: 'num', text: fmt.format(n) });
     let checked = 0, wide = 0, viaA = 0, viaP = 0, viaN = 0;
     $('inc-irr-set-rows').replaceChildren(...lines.map(([code, name, b]) => {
       const r = b.irr_set, of = r.passes + r.partly + r.stopped + r.unknown + r.not_covered;
       checked += of - r.not_covered; wide += r.wide; viaA += r.via['aut-num']; viaP += r.via.peeringdb; viaN += r.via.none;
       const m = /^(.*?)\s*\(/.exec(name || '');
       return el('tr', {}, el('th', { scope: 'row' }, codeChip(code), ' ', m ? m[1] : name || code),
-        el('td', { class: 'num', text: fmt.format(of) }), cell(r.passes, of), cell(r.partly, of), cell(r.stopped, of), cell(r.unknown, of), cell(r.not_covered, of));
+        el('td', { class: 'num', text: fmt.format(of) }), cell(r.passes, of - r.not_covered), cell(r.partly, of - r.not_covered), cell(r.stopped, of - r.not_covered), cell(r.unknown, of - r.not_covered), plain(r.not_covered));
     }));
     $('inc-irr-set-note').textContent = (checked
-      ? `Of the ${fmt.format(checked)} incidents checked, the set came from the aut-num for ${fmt.format(viaA)}, from PeeringDB for ${fmt.format(viaP)}, and ${fmt.format(viaN)} senders named none. `
+      ? `The percentages are of the incidents checked, as above. Of the ${fmt.format(checked)} incidents checked, the set came from the aut-num for ${fmt.format(viaA)}, from PeeringDB for ${fmt.format(viaP)}, and ${fmt.format(viaN)} senders named none. `
         + `For ${fmt.format(wide)} the set admits at least ${Math.round(d.irr.set.wide_share * 100)}% of all the route objects: a filter in name only. `
       : '')
       + '“Cannot tell” is a set with members that these databases do not hold: what it admits is not known, so nothing is counted as stopped. A set is followed through its members, not through mbrs-by-ref. The persistent valleys (RLK-PV) are left out: they are relationships that CAIDA gets wrong.';

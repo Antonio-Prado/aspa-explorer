@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "ASPA Explorer API",
-    "version": "1.104.1",
+    "version": "1.104.2",
     "description": "ASPA objects validated by Routinator at rpki.ping6.it, their history and quality, for any AS. Open data, read-only, no key. Best effort, with no guarantee of any kind: the data can be late, incomplete or wrong, and whoever uses it is expected to check it on their own.",
     "contact": {
       "email": "antonio.prado@dei.unipd.it"
