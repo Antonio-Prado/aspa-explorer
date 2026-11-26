@@ -9,6 +9,13 @@ A few numbers were deployed and folded into the next release without a tag of th
 
 ## [Unreleased]
 
+## [1.113.1] - 2026-11-26
+
+### Fixed
+
+- *The changes of another day* on the Adoption page: the calendar does not go before 12 October 2023, the first day of the history, from the moment the page opens (the limit was set only when the changes had been read), and a date typed before the first day or after the last one is taken to that day, with a line that says so, instead of only saying that the history does not go that far.
+
+
 ## [1.113.0] - 2026-11-26
 
 ### Changed

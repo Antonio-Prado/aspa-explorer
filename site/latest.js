@@ -72,15 +72,21 @@
     const go = (d) => { input.value = d; show(); };
     const near = (label, d) => (d ? el('button', { type: 'button', class: 'linkish', text: `${label}: ${day(d)}`, onclick: () => go(d) }) : null);
     const show = () => {
-      const d = input.value;
+      let d = input.value, moved = null;
       if (!/^\d{4}-\d{2}-\d{2}$/.test(d)) { out.replaceChildren(); return; }
-      if (d < days[0] || d > days[days.length - 1]) { out.replaceChildren(el('p', { class: 'hint', text: `The history goes from ${day(days[0])} to ${day(days[days.length - 1])}.` })); return; }
+      // the calendar does not go before the first day of the history nor after the last one; a date typed outside them is
+      // taken to the nearest of the two, and the page says so
+      if (d < days[0] || d > days[days.length - 1]) {
+        moved = `The history goes from ${day(days[0])} to ${day(days[days.length - 1])}: this is its ${d < days[0] ? 'first' : 'last'} day.`;
+        d = d < days[0] ? days[0] : days[days.length - 1];
+        input.value = d;
+      }
       // the days with changes right before and right after the one chosen (the list is in order)
       let lo = 0, hi = days.length;
       while (lo < hi) { const m = (lo + hi) >> 1; if (days[m] < d) lo = m + 1; else hi = m; }
       const has = days[lo] === d, before = days[lo - 1], after = days[has ? lo + 1 : lo];
       const steps = el('p', { class: 'hint daysteps' }, near('The day with changes before', before), near('The day with changes after', after));
-      out.replaceChildren(has ? dayBox(d, byDay.get(d), true) : el('p', { class: 'hint', text: `No ASPA changed on ${day(d)}.` }), steps);
+      out.replaceChildren(...[moved ? el('p', { class: 'hint', text: moved }) : null, has ? dayBox(d, byDay.get(d), true) : el('p', { class: 'hint', text: `No ASPA changed on ${day(d)}.` }), steps].filter(Boolean));
     };
     input.addEventListener('change', show);
     ctl.hidden = false;
