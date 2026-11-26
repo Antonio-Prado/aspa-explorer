@@ -87,7 +87,7 @@
     const past = rows.filter((r) => r.rule === 2);
     if (!past.length) return '';
     const soft = past.reduce((n, r) => n + (r.leak_soft || 0) + (r.gap_soft || 0), 0), all = past.reduce((n, r) => n + r.leak + r.gap, 0);
-    return ` The ${fmt.format(past.length)} days rebuilt from the table dumps of 00:00 UTC are judged with the ASPAs known at that time, which for the days of the RIPE NCC archive are some 19 hours old: ${fmt.format(soft)} of their ${fmt.format(all)} places (${all ? ((100 * soft) / all).toFixed(1) : '0'}%) would not be there with the ASPAs of some hours later.`;
+    return ` The ${fmt.format(past.length)} days read from the table dumps of 00:00 UTC are judged with the ASPAs known at that time, which for the days of the RIPE NCC archive are some 19 hours old: ${fmt.format(soft)} of their ${fmt.format(all)} places (${all ? ((100 * soft) / all).toFixed(1) : '0'}%) would not be there with the ASPAs of some hours later.`;
   }
 
   // 449,000,000 -> "449 M", 580,000 -> "580 k", 6,700,000,000 -> "6.7 billion"

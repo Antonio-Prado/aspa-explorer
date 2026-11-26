@@ -435,9 +435,13 @@ async function main() {
   };
   for (const c of collectors) {
     const ext = isRis(c) ? 'gz' : 'bz2';
-    const file = join(cache, dayIso ? `dump-${c}-${dayFlag}.${ext}` : `dump-${c}.${ext}`);
-    if (dayIso) await downloadDay(c, dayFlag, file);
-    else if (!(await fresh(file, 4 * 3600e3))) {
+    let file = join(cache, dayIso ? `dump-${c}-${dayFlag}.${ext}` : `dump-${c}.${ext}`), kept = false;
+    if (dayIso) {
+      // the dump that the run of today keeps in the cache is the one of 00:00 UTC for many collectors: when it says that time
+      // it is read as it is, and stays there (the row of the day is written right after the page of the day: run-leaks.sh)
+      const ofToday = join(cache, `dump-${c}.${ext}`);
+      if ((await dumpTime(ofToday).catch(() => null)) === Date.parse(`${dayIso}T00:00:00Z`) / 1000) { file = ofToday; kept = true; } else await downloadDay(c, dayFlag, file);
+    } else if (!(await fresh(file, 4 * 3600e3))) {
       let url;
       try { url = await withRetry(() => latestDumpUrl(c).catch((err) => { if (err.code === 'NO_RIB') return null; throw err; })); } catch (err) { throw new Error(`${c}: ${err.message}`); }
       if (url === null) { leftOut(c, null); continue; }
@@ -456,7 +460,7 @@ async function main() {
     const stats = await readRib(openDump(file), (peerAs, path, n, plen, v6) => leaks.add(peerAs, c, Array.from(path.subarray(0, n)), plen, v6));
     used.push({ collector: c, routes: stats.entries, built: new Date((await stat(file)).mtimeMs).toISOString().replace(/\.\d+Z$/, 'Z'), dump: isoOf(taken) });
     console.error(`${c}: ${stats.entries} routes in ${Math.round((Date.now() - t0) / 1000)} s`);
-    if (dayIso) await unlink(file);                  // a day of the past is read once
+    if (dayIso && !kept) await unlink(file);         // a day of the past is read once
   }
   const generated = dayIso ? `${dayIso}T00:00:00Z` : new Date().toISOString().replace(/\.\d+Z$/, 'Z');
   const res = leaks.result();

@@ -9,6 +9,12 @@ A few numbers were deployed and folded into the next release without a tag of th
 
 ## [Unreleased]
 
+## [1.107.0] - 2026-11-26
+
+### Changed
+
+- The point of each day in *Places of valley over time* is read from the table dumps of 00:00 UTC of that day and judged with the ASPAs known at that time (the timeline of the ASPAs), as the days rebuilt afterwards are. The job of the day wrote it from the latest dumps (the ones of 00:00 UTC for RIPE RIS, of 04:00 for RouteViews) with the ASPAs of 05:10 UTC: ASPAs up to five hours newer than the routes they judged. `scripts/run-leaks.sh` is now the job of the day: `build-leaks.mjs` for the page of today, as before, then `build-leaks.mjs --day` for the row of the day, with the collectors that the page read. A dump of 00:00 UTC that is already in the cache of the page (the latest one of a RIPE RIS collector) is read from there and not fetched again. When the dumps of 00:00 UTC cannot all be read the row stays the one of the page, with no `rule`. On the host the line of cron runs `run-leaks.sh` instead of `build-leaks.mjs`.
+
 ## [1.106.1] - 2026-11-26
 
 ### Fixed

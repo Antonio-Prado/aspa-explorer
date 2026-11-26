@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "ASPA Explorer API",
-    "version": "1.106.1",
+    "version": "1.107.0",
     "description": "ASPA objects validated by Routinator at rpki.ping6.it, their history and quality, for any AS. Open data, read-only, no key. Best effort, with no guarantee of any kind: the data can be late, incomplete or wrong, and whoever uses it is expected to check it on their own.",
     "contact": {
       "email": "antonio.prado@dei.unipd.it"
@@ -796,7 +796,7 @@
       "get": {
         "operationId": "getLeaksHistoryJson",
         "summary": "The daily totals of the places of valley",
-        "description": "One row a day since 1 September 2026, written by the valley job. A day rebuilt from the table dumps of 00:00 UTC with the timeline of the ASPAs has `rule` 2 and says how much of it depends on the state the ASPAs had at that time: `invalid_soft`, the Invalid routes that are not so with another state the ASPAs may have had; `invalid_could`, the routes that would be Invalid with it; `leak_soft`, `gap_soft` and `unclear_soft`, the places with no route that is Invalid either way. `collectors` is the number of collectors read that day (in the rows written since version 1.106.1).",
+        "description": "One row a day since 1 September 2026, written by the valley job right after the page of the day. A day read from the table dumps of 00:00 UTC with the timeline of the ASPAs has `rule` 2 and says how much of it depends on the state the ASPAs had at that time: `invalid_soft`, the Invalid routes that are not so with another state the ASPAs may have had; `invalid_could`, the routes that would be Invalid with it; `leak_soft`, `gap_soft` and `unclear_soft`, the places with no route that is Invalid either way. `collectors` is the number of collectors read that day (in the rows written since version 1.106.1). A day whose dumps of 00:00 UTC could not all be read keeps the numbers of the page of that day (the latest dumps, the ASPAs of that moment) and has no `rule`.",
         "responses": {
           "200": {
             "description": "The file",
