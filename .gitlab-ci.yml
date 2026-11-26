@@ -17,6 +17,11 @@ workflow:
     # (Settings > CI/CD > CI/CD configuration file: .gitlab-ci.yml@<this project>:main), so a commit on another branch cannot bring jobs of its own.
     - if: $CI_COMMIT_BRANCH == "history"
       when: never
+    # A scheduled pipeline is not cancelled by a push to its branch (the jobs are interruptible by default, and a push two
+    # seconds after the hourly look at the ASPAs cancelled it, 26 November 2026: the look of that hour was not recorded).
+    - if: $CI_PIPELINE_SOURCE == "schedule"
+      auto_cancel:
+        on_new_commit: none
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
     - if: $CI_COMMIT_BRANCH && $CI_OPEN_MERGE_REQUESTS
       when: never
@@ -136,6 +141,7 @@ aspa-snapshot:
 history-refresh:
   stage: security
   tags: [aspa]
+  interruptible: false
   rules:
     - if: ($CI_PIPELINE_SOURCE == "schedule" || $CI_PIPELINE_SOURCE == "web" || $CI_PIPELINE_SOURCE == "api") && $SCHEDULE == "history" && $CI_COMMIT_REF_PROTECTED == "true"
   script:
