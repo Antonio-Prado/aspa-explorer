@@ -57,7 +57,7 @@
   async function main() {
     let d;
     try {
-      const r = await fetch('/api/v1/adoption.json', { headers: { Accept: 'application/json' } });
+      const r = await fetch('/api/v1/adoption.json', { headers: { Accept: 'application/json' }, cache: 'no-cache' });   // asked again at every visit: a file built again shows at once
       if (!r.ok) throw new Error(`HTTP ${r.status}`);
       d = await r.json();
     } catch (err) {
@@ -120,8 +120,10 @@
     applyCc();
 
     $('sources').textContent = `Sources, and the moment each one is of: ASPAs from ${d.sources.aspas}${of(m.aspas, (t) => `its run of ${when(t)}`)};${d.sources.roas ? ` ROAs from ${d.sources.roas}${of(m.roas, (t) => `its run of ${when(t)}`)};` : ''} networks seen: ${d.sources.bgp}${of(m.bgp, (t) => `the tables of ${when(t)}`)}; country and registry: ${d.sources.registry}${regDays.length ? ` (of ${regDays.map(dayText).join(' and ')})` : ''}; size: ${d.sources.size} (The CAIDA AS Relationships Dataset, www.caida.org/catalog/datasets/as-relationships/). ${fmt.format(d.aspa_not_seen)} ASPA customers are not seen in BGP and are not counted. These numbers, the ones by size, by RIR and by country and the largest networks were built together, ${when(d.generated)}.`;
-    const ccAsOf = $('cc-asof');
-    if (ccAsOf) ccAsOf.textContent = `Numbers of ${when(d.generated)}${m.bgp ? `: the networks in the tables of the collectors at ${when(m.bgp)}` : ''}${m.aspas ? `, the ASPAs${m.roas ? ' and the ROAs' : ''} of the validator at ${when(m.aspas)}` : ''}.`;
+    // the same sentence at the top of every part that these numbers fill
+    const asOf = `Numbers of ${when(d.generated)}${m.bgp ? `: the networks in the tables of the collectors at ${when(m.bgp)}` : ''}${m.aspas ? `, the ASPAs${m.roas ? ' and the ROAs' : ''} of the validator at ${when(m.aspas)}` : ''}.`;
+    for (const id of ['cc-asof', 'who-asof']) if ($(id)) $(id).textContent = asOf;
+    if ($('top-sub')) $('top-sub').textContent = `${$('top-sub').textContent} ${asOf}`;
   }
 
   // "Who has an ASPA": by size and by RIR are two tabs, with the arrow keys, Home and End; the old addresses of the two

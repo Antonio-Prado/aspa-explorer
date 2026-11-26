@@ -9,6 +9,14 @@ A few numbers were deployed and folded into the next release without a tag of th
 
 ## [Unreleased]
 
+## [1.113.2] - 2026-11-26
+
+### Fixed
+
+- The Adoption page: the moment of the numbers is at the top of every part, in the same place. *By age of the AS number*, *The largest transit networks*, the ASPAs that name numbers that should not be there, *Who has an ASPA* and *IPv6 and IPv4 side by side* did not say it (the first three use the numbers of another part, which did).
+- The files of the Adoption page are asked to the server at every visit (`cache: 'no-cache'`: the server answers that nothing changed, or sends the new file). A browser kept them for up to an hour, and after the numbers were built again it showed the ones of before: the new column of the ROAs was empty until then.
+
+
 ## [1.113.1] - 2026-11-26
 
 ### Fixed

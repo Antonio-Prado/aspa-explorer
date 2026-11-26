@@ -84,7 +84,7 @@
     const sub = document.getElementById('tr-sub');
     let doc;
     try {
-      const r = await fetch('/api/v1/trends.json', { headers: { Accept: 'application/json' } });
+      const r = await fetch('/api/v1/trends.json', { headers: { Accept: 'application/json' }, cache: 'no-cache' });
       if (!r.ok) throw new Error(`HTTP ${r.status}`);
       doc = await r.json();
     } catch (err) { sub.textContent = `The numbers over time are not available (${err.message}). They are rebuilt once a day.`; return; }

@@ -65,7 +65,7 @@
     if (!$('cov-rows-v4')) return;
     let d;
     try {
-      const r = await fetch('/api/v1/leaks.json', { headers: { Accept: 'application/json' } });
+      const r = await fetch('/api/v1/leaks.json', { headers: { Accept: 'application/json' }, cache: 'no-cache' });
       if (!r.ok) throw new Error(`HTTP ${r.status}`);
       d = await r.json();
     } catch (err) {
@@ -81,7 +81,7 @@
     const dumps = (d.collectors || []).map((c) => c.dump).filter((x) => typeof x === 'string').sort();
     const asOf = dumps.length ? ` The table dumps were taken from ${at(dumps[0])} to ${at(dumps[dumps.length - 1])}, and are checked with the ASPAs of ${at(d.generated)}; rebuilt once a day.` : (d.generated ? ` Built ${at(d.generated)}, once a day.` : '');
     $('cov-sub').textContent = `The routes of the ${(d.collectors || []).length || 30} collectors, ${fmt.format(d.total.routes)} in all, checked with the downstream verification.${asOf} By address space each route counts for the addresses it covers (IPv6 in /48s), so a /16 weighs 256 times a /24; the same space seen by several collectors counts each time, and prefixes shorter than /8 in IPv4 or /16 in IPv6 (default routes and tests) are left out of it. In the bars, valid is green, unknown amber and invalid red (often too thin to see).`;
-    $('fam-sub').textContent = 'The same routes told apart by the family of the prefix, with the ratio IPv6 / IPv4 in the last column, as in a comparison of the two tables.';
+    $('fam-sub').textContent = `The same routes told apart by the family of the prefix, with the ratio IPv6 / IPv4 in the last column, as in a comparison of the two tables.${asOf}`;
     sideBySide($('fam-rows'), d);
   }
   main();
