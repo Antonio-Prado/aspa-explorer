@@ -72,6 +72,8 @@
     return n;
   }
   const pct = (a, b) => (b ? `${((100 * a) / b).toFixed(a / b < 0.1 && a ? 1 : 0)}%` : '0%');
+  // a share that can be far below 0.1%: two decimals there, so that it does not read as none
+  const fine = (a, b) => { const p = b ? (100 * a) / b : 0; return p >= 0.1 || !a ? pct(a, b) : p < 0.01 ? 'less than 0.01%' : `${p.toFixed(2)}%`; };
   const day = (iso) => new Date(iso + 'T00:00:00Z').toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' });
   // "2026-10-22 11:42:03" (UTC) -> "22 Oct 2026, 11:42 UTC"; an older file has the day only
   const utc = (t) => (/^\d{4}-\d{2}-\d{2}$/.test(t) ? day(t) : `${new Date(t.replace(' ', 'T') + 'Z').toLocaleString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', timeZone: 'UTC' })} UTC`);
@@ -87,11 +89,21 @@
 
   function tiles(d) {
     const t = d.total;
+    // an ASPA that changed around an incident leaves its verdict open: the count lies between the two numbers of range()
+    const r = range(t, 2);
     $('inc-tiles').replaceChildren(
       tile('Incidents', fmt.format(t.incidents), `${fmt.format(t.with_path)} with an AS path`),
-      tile('Invalid, ASPAs of the day', pct(t.real[2], t.with_path), `${fmt.format(t.real[2])} of ${fmt.format(t.with_path)}`, 'v-invalid'),
-      tile('Unknown, ASPAs of the day', pct(t.real[1], t.with_path), 'no ASPA to say', 'v-unknown'),
+      tile('Invalid, ASPAs of the time', pct(t.real[2], t.with_path), `${fmt.format(t.real[2])} of ${fmt.format(t.with_path)}${r ? `; between ${fmt.format(r[0])} and ${fmt.format(r[1])}` : ''}`, 'v-invalid'),
+      tile('Unknown, ASPAs of the time', pct(t.real[1], t.with_path), 'no ASPA to say', 'v-unknown'),
     );
+  }
+
+  // The least and the most that the count of a verdict (0 valid, 1 unknown, 2 invalid) can be: `soft` are the incidents whose
+  // verdict is not the same with every state the ASPAs may have had then, `could` the ones that would have this verdict with
+  // another of those states. Null when the two are the same as the count, or the data has no such counts.
+  function range(b, v) {
+    if (!b.soft || !b.could || !(b.soft[v] || b.could[v])) return null;
+    return [b.real[v] - b.soft[v], b.real[v] + b.could[v]];
   }
 
   function rows(d) {
@@ -116,7 +128,10 @@
       ...typeRows(k, NAMES[k] || k, d.by_type[k], false),
       ...Object.keys(SUBNAMES).filter((t) => t.startsWith(`${k}-`) && subs[t]).flatMap((t, i, all) => typeRows(t, SUBNAMES[t], subs[t], i === all.length - 1 ? 'sub last' : 'sub')),
     ]));
-    $('inc-note').textContent = 'Percentages are of the incidents with a path (flapping and mass withdrawals mostly have none: a dash). The lines under a class are the types of the survey that the detector tells apart; an incident is in one of them at most, and the ones that fit none are only in the line of the class. ASM is made of candidates: a link that CAIDA does not know may be a real one.';
+    const t = d.total, soft = t.soft ? t.soft[0] + t.soft[1] + t.soft[2] : 0, inv = range(t, 2);
+    $('inc-note').textContent = 'Percentages are of the incidents with a path (flapping and mass withdrawals mostly have none: a dash). The lines under a class are the types of the survey that the detector tells apart; an incident is in one of them at most, and the ones that fit none are only in the line of the class. ASM is made of candidates: a link that CAIDA does not know may be a real one.'
+      + (soft ? ` For ${fmt.format(soft)} of the incidents with a path (${fine(soft, t.with_path)}) an ASPA of their paths changed around the incident or while it lasted, in a way that changes the verdict: they are counted with the ASPAs known when they began${inv ? `, and the Invalid ones are between ${fmt.format(inv[0])} and ${fmt.format(inv[1])}` : ''}.` : '')
+      + (d.timeline && d.timeline.late ? ` ${fmt.format(d.timeline.late)} ${soft ? 'more ' : 'incidents '}ended after the newest record of the ASPAs (${new Date(d.timeline.horizon).toLocaleString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit', timeZone: 'UTC' })} UTC): whether an ASPA changed around them is known when the next one is written.` : '');
   }
 
   // The route objects of the origins of the hijacks and of the more specifics of another network (`irr` of incidents.json,
@@ -264,8 +279,8 @@
     const types = ORDER.filter((t) => h.days.some((r) => r.types[t]));
     const metrics = [
       ['incidents', 'Incidents', 'Incidents', (r) => r.incidents, (v) => fmt.format(v)],
-      ['invalid', 'Invalid with the ASPAs of the day (% of the incidents with a path)', 'Invalid (%)', (r) => (r.with_path ? (100 * r.real[2]) / r.with_path : 0), (v) => `${v.toFixed(v < 10 ? 1 : 0)}%`],
-      ['unknown', 'Unknown with the ASPAs of the day (% of the incidents with a path)', 'Unknown (%)', (r) => (r.with_path ? (100 * r.real[1]) / r.with_path : 0), (v) => `${v.toFixed(v < 10 ? 1 : 0)}%`],
+      ['invalid', 'Invalid with the ASPAs of the time (% of the incidents with a path)', 'Invalid (%)', (r) => (r.with_path ? (100 * r.real[2]) / r.with_path : 0), (v) => `${v.toFixed(v < 10 ? 1 : 0)}%`],
+      ['unknown', 'Unknown with the ASPAs of the time (% of the incidents with a path)', 'Unknown (%)', (r) => (r.with_path ? (100 * r.real[1]) / r.with_path : 0), (v) => `${v.toFixed(v < 10 ? 1 : 0)}%`],
       ...types.map((t) => [t, `${t}, ${(NAMES[t] || t).replace(/^(?!AS )./, (c) => c.toLowerCase())}`, `${t} incidents`, (r) => r.types[t] || 0, (v) => fmt.format(v)]),
     ];
     select.replaceChildren(...metrics.map(([v, t]) => el('option', { value: v, text: t })));
@@ -434,10 +449,14 @@
       const key = select.value;
       if (key === 'recent') { $('inc-period-note').textContent = ''; recent(); return; }
       const p = history.periods[key], of = expected(key);
-      $('inc-period-note').textContent = p.days < of ? `${fmt.format(p.days)} of the ${fmt.format(of)} days of this period have been read so far` : '';
+      // a collector whose days are still being read again with the ASPAs of the time: said next to the period and under the table
+      const before = !history.rule ? 'The incidents of this collector are still judged with the ASPAs of the day before each one, the rule until 1.105: they are being read again with the ASPAs of the time'
+        : history.files_of_the_rule_before ? `${fmt.format(history.files_of_the_rule_before)} of the files of this collector are still judged with the ASPAs of the day before each incident, the rule until 1.105: they are being read again, the newest first` : '';
+      $('inc-period-note').textContent = [p.days < of ? `${fmt.format(p.days)} of the ${fmt.format(of)} days of this period have been read so far` : '', before].filter(Boolean).join('. ');
       render(p, `${plural(p.total.incidents, 'incident')} ${where}, in ${plural(p.days, 'day')} from ${day(p.first)} to ${day(p.last)} · ${built(history.generated)}`,
         `ASPAs: ${history.aspas}. Relationships: ${history.relationships}. Detectors: the research project (data_scripts).`,
-        'In this period the leaking networks (FP, PV) are judged within each day.');
+        'In this period the leaking networks (FP, PV) are judged within each day.'
+          + (before ? ` ${before}.` : ''));
     };
     select.addEventListener('change', show);
     $('inc-period-box').hidden = false;

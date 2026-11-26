@@ -1,8 +1,9 @@
 // What the ASPAs say about the routing incidents that the project's detectors found (data_scripts, incident.py).
 // For each incident (the files incidents_*.jsonl[.gz] written by incident.py) the AS paths it kept (the path of the valley, the
 // paths of its messages) are checked with the downstream procedure, in three ways:
-//   - with the ASPAs as they were at the start of the day the incident began (the last state of the day before, replayed
-//     from the history of changes: the state of the day itself can hold ASPAs published after the incident);
+//   - with the ASPAs known when the incident began (the newest state of the timeline of the ASPAs seen by then, never one
+//     seen after: scripts/aspa-timeline.mjs); the verdict is `firm` unless an ASPA of its paths changed around the incident
+//     or while it went on, in a way that changes the verdict;
 //   - with complete ASPAs: every AS publishes the providers that CAIDA infers for it (the best case, and not independent of CAIDA);
 //   - with a part of the ASes publishing those complete ASPAs, from 0 to 100%, in a random order and the largest networks first.
 // The result is an aggregate (no AS number; `period` is the time, in UTC, of the first incident and of the last), served as /api/v1/incidents.json; with --detail the verdict of each incident goes to a
@@ -11,8 +12,8 @@
 // only looks at the leaks, to know which ASes leak to many neighbours or all day; the second gives each incident its verdicts.
 //   node scripts/build-incidents.mjs OUT_FILE [FILE_OR_DIR ...] [--detail=FILE] [--caida=FILE] [--cache=DIR]
 // Environment:
-//   INCIDENTS_EVENTS   URL or file of the history of changes (the events.json of the history branch), default as build-leaks.mjs
-//   ASPA_DATA          URL or file of today's ASPAs, used for a day that the history does not cover
+//   ASPA_TIMELINE      file of the timeline of the ASPAs (scripts/build-timeline.mjs), default timeline.json next to OUT_FILE;
+//                      ASPA_TIMELINE_MAX_AGE, the seconds since it was last checked past which it is not used (default 3 hours)
 //   IRR_ARCHIVE        folder of the daily archive of the IRR databases (scripts/irr-registered.mjs), default
 //                      /home/thinker/ring-archive/irr; when it is not there, no incident is covered and the page says so
 //   IRR_CACHE          folder of the verdicts of each IRR snapshot kept between runs, default the cache folder + /irr
@@ -26,11 +27,11 @@ import { createGunzip } from 'node:zlib';
 import { createRequire } from 'node:module';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
-import { classify, aspaMap, EVENTS } from './build-leaks.mjs';
+import { classify } from './build-leaks.mjs';
+import { loadTimeline } from './aspa-timeline.mjs';
 import { irrChecker, listSnapshots, SOURCES as IRR_SOURCES } from './irr-registered.mjs';
 import { assetChecker, decode as decodeAsset, WIDE_SHARE } from './irr-asset.mjs';
 
-const History = createRequire(import.meta.url)('../site/history.js');
 const UA = 'aspa-explorer (https://aspa.ping6.it; antonio.prado@dei.unipd.it)';
 
 export const TYPES = ['RLK', 'PRH', 'DEG', 'VOL', 'ATR', 'ASM'];
@@ -132,7 +133,12 @@ export function orders(ideal, degree) {
 // The complete ASPAs of the first `level` percent of the ASes of an order.
 const limited = (ideal, rank, cut) => ({ get: (as) => (rank.get(as) < cut ? ideal.get(as) : undefined) });
 
-const empty = () => ({ incidents: 0, with_path: 0, real: [0, 0, 0], ideal: [0, 0, 0] });
+// `soft`: the incidents of `real`, by verdict, that have another verdict with a state the ASPAs may have had then (an ASPA of
+// their paths changed around them: see scripts/aspa-timeline.mjs); `could`: by verdict, the incidents that have another
+// verdict in `real` but would have this one with such a state. The count of a verdict lies between real - soft and real + could.
+// An incident that ended after the horizon of the timeline is in neither until its file is read again: it is not firm yet
+// because the changes around it are not all known, and byTimeline counts it apart (`late`).
+const empty = () => ({ incidents: 0, with_path: 0, real: [0, 0, 0], soft: [0, 0, 0], could: [0, 0, 0], ideal: [0, 0, 0] });
 // The type of the survey that an incident has, when the detector says (extra_detectors.py of the copy of the scripts):
 // RLK-UL, RLK-LL (the leak type that incident.py records), RLK-FP (the same AS leaks to FP_MIN_NEIGHBOURS neighbours or more
 // within an hour: it takes the place of UL and LL), RLK-PV (a persistent valley, see leakers()), PRH-AB, ASM-FI, ASM-PS, ASM-PE,
@@ -163,6 +169,30 @@ export function subtypeOf(inc, leakers) {
 
 const day = (start) => (/^\d{4}-\d{2}-\d{2}/.test(start || '') ? start.slice(0, 10) : null);
 const epoch = (t) => { const ms = Date.parse(`${(t || '').slice(0, 19).replace(' ', 'T')}Z`); return Number.isNaN(ms) ? null : ms / 1000; };
+
+// The rule by which the ASPAs of an incident are chosen: what is kept of the verdicts (the cache of build-incidents-history.mjs)
+// says which rule it was made with, and is made again when this number changes. 1: the state before the day the incident began.
+// 2: the timeline, the state known when it began, with `firm`.
+export const RULE = 2;
+
+// How the verdict of the ASPAs of the time is given to analyser(): a function (incident, paths) -> {verdict, firm}.
+// byTimeline: with the ASPAs known when the incident began (the newest step of the timeline seen by then), firm when the
+// verdict is the same with every state the ASPAs may have had from its start to its end. An incident with no start has no ASPA.
+export function byTimeline(tl) {
+  const f = (inc, paths) => {
+    const t0 = epoch(inc.start);
+    if (t0 === null) return { verdict: verdictOf(new Map(), paths), firm: false, others: [] };
+    let ases = null;
+    const r = tl.at(t0, (state) => verdictOf(state, paths), (c) => (ases ||= new Set(paths.flat())).has(c), Math.max(t0, epoch(inc.end) ?? t0));
+    if (r.late) f.late++;
+    return r;
+  };
+  f.timed = true;
+  f.late = 0;                 // how many verdicts were asked for incidents that end after the horizon of the timeline
+  return f;
+}
+// byDay: with one state for each day (aspasOf(day)), every verdict taken as firm: for the tests and for data that has no times.
+export const byDay = (aspasOf) => (inc, paths) => ({ verdict: verdictOf(aspasOf(day(inc.start)), paths), firm: true, others: [] });
 
 // The leaking ASes of the incidents (details.by of a RLK): `fp`, the ones that leaked to FP_MIN_NEIGHBOURS different
 // neighbours or more within FP_WINDOW_SECONDS; `persistent`, the ones with leaks beginning in PERSISTENT_MIN_HOURS different
@@ -213,6 +243,7 @@ export function analyse(incidents, aspasOf, ideal, degree, detail = null, irrOf 
 // assetOf(incident): the verdict of the filter built from the sender's AS-SET (assetChecker().verdict: a code or 'not_covered'),
 // counted as `irr_set` of its type and subtype.
 export function analyser(aspasOf, ideal, degree, lk, irrOf = null, assetOf = null) {
+  const realOf = aspasOf.timed ? aspasOf : byDay(aspasOf);
   const ord = orders(ideal, degree);
   const byType = {}, bySub = {}, adoption = { random: {}, largest: {} };
   const bucket = (t) => (byType[t] ||= empty());
@@ -227,7 +258,6 @@ export function analyser(aspasOf, ideal, degree, lk, irrOf = null, assetOf = nul
     const sb = sub ? (bySub[sub] ||= empty()) : null;
     const all = sb ? [b, total, sb] : [b, total];
     for (const x of all) x.incidents++;
-    const s = day(inc.start);
     const t0 = stamp(inc.start), t1 = stamp(inc.end) || t0;
     if (t0 && (!from || t0 < from)) from = t0;
     if (t1 && (!to || t1 > to)) to = t1;
@@ -250,8 +280,9 @@ export function analyser(aspasOf, ideal, degree, lk, irrOf = null, assetOf = nul
     };
     const paths = pathsOf(inc);
     if (!paths.length) return withIrr({ type: t, subtype: sub, actor: inc.actor_key, start: inc.start, end: inc.end, end_reason: inc.end_reason, paths: 0 });
-    const real = verdictOf(aspasOf(s), paths), full = verdictOf(ideal, paths);
-    for (const x of all) { x.with_path++; x.real[real]++; x.ideal[full]++; }
+    const { verdict: real, firm, others, late } = realOf(inc, paths);
+    const full = verdictOf(ideal, paths);
+    for (const x of all) { x.with_path++; x.real[real]++; x.ideal[full]++; if (others.length) x.soft[real]++; for (const v of others) x.could[v]++; }
     if (sub !== 'RLK-PV') {
       base[t] = (base[t] || 0) + 1;
       base.total = (base.total || 0) + 1;
@@ -262,7 +293,7 @@ export function analyser(aspasOf, ideal, degree, lk, irrOf = null, assetOf = nul
       }
     }
     return withIrr({ type: t, subtype: sub, actor: inc.actor_key, start: inc.start, end: inc.end, end_reason: inc.end_reason, paths: paths.length,
-      real: ['valid', 'unknown', 'invalid'][real], complete: ['valid', 'unknown', 'invalid'][full] });
+      real: ['valid', 'unknown', 'invalid'][real], ...(firm ? {} : { firm: false, ...(others.length ? { or: others.map((v) => ['valid', 'unknown', 'invalid'][v]) } : {}), ...(late ? { late: true } : {}) }), complete: ['valid', 'unknown', 'invalid'][full] });
   };
   const result = () => {
     for (const o of ['random', 'largest']) for (const t of [...Object.keys(byType), 'total']) curve(o, t);
@@ -324,20 +355,10 @@ async function main() {
   const rel = await caidaText(flag('caida'), cache);
   const { providers: ideal, degree } = relationSets(rel.text);
 
-  // the ASPAs at the start of each day on which an incident began; a day that the history does not cover has today's
-  let events = null;
-  try { events = await readJson(process.env.INCIDENTS_EVENTS || EVENTS); } catch (err) { console.error(`history not available (${err.message}): today's ASPAs are used`); }
-  const cacheDays = new Map();
-  let today = null, fallbacks = 0;
-  const aspasOf = (d) => {
-    if (cacheDays.has(d)) return cacheDays.get(d);
-    let m = events && d ? aspaMap([...History.replayBefore(events, d)].map(([customer, providers]) => ({ customer, providers }))) : null;
-    if (!m || !m.size) { m = today; fallbacks++; }
-    cacheDays.set(d, m);
-    return m;
-  };
-  const current = await readJson(process.env.ASPA_DATA || 'http://127.0.0.1:8080/data/aspas.json');
-  today = aspaMap(current.aspas);
+  // the ASPAs known when each incident began, from the timeline that build-timeline.mjs keeps: without a good one the run ends
+  // here and what was published before stays
+  const tl = await loadTimeline(process.env.ASPA_TIMELINE || join(dirname(outFile), 'timeline.json'), Number(process.env.ASPA_TIMELINE_MAX_AGE) || undefined);
+  const aspasOf = byTimeline(tl);
 
   // first reading: the leaking ASes; second reading: the verdicts, each line of the detail file written as soon as it is known
   // and the prefix and origin of the hijacks and more specifics, whose route objects are then looked up in the IRR archive
@@ -360,7 +381,9 @@ async function main() {
   const doc = {
     generated: new Date().toISOString().replace(/\.\d+Z$/, 'Z'),
     files: list.length,
-    aspas: events ? (fallbacks ? 'history, today for days it does not cover' : 'history') : 'today',
+    aspas: 'timeline',
+    // `late`: the incidents that ended after the horizon, the newest record of the ASPAs: whether their verdicts are firm is not known yet
+    timeline: { steps: tl.steps.length, horizon: new Date(tl.horizon * 1000).toISOString().replace(/\.\d+Z$/, 'Z'), late: aspasOf.late },
     relationships: rel.source,
     irr: { sources: IRR_SOURCES, types: ['PRH', 'DEG-MA'], snapshots: snapshots.length,
       first: snapshots.length ? snapshots[0].day : null, last: snapshots.length ? snapshots[snapshots.length - 1].day : null,

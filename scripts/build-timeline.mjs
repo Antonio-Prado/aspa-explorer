@@ -23,25 +23,30 @@ export const API = 'https://gitlab.dei.unipd.it/api/v4/projects/5246';
 const sha256 = (text) => createHash('sha256').update(text).digest('hex');
 const archiveText = (events) => JSON.stringify(events.filter((e) => e[0] <= ARCHIVE_TO));
 
-// The commits of the history branch after `after` (epoch), oldest first: {sha, time, events(): the parsed events.json or null}.
+// The commits of the history branch after `after` (epoch), oldest first: {sha, parent, time, events(): the parsed events.json
+// or null}. `parent` is the commit before it on the branch: extend() checks that none is skipped.
 export async function gitCommits(dir, after) {
   const git = async (...a) => (await run('git', ['-C', dir, ...a], { maxBuffer: 1 << 28 })).stdout;
-  const lines = (await git('log', '--reverse', '--format=%H %ct', 'origin/history')).trim().split('\n');
-  return lines.map((l) => l.split(' ')).map(([sha, ct]) => ({ sha, time: Number(ct) })).filter((c) => c.time > after)
+  const lines = (await git('log', '--reverse', '--first-parent', '--format=%H %ct %P', 'origin/history')).trim().split('\n');
+  return lines.map((l) => l.split(' ')).map(([sha, ct, parent]) => ({ sha, time: Number(ct), parent: parent || null })).filter((c) => c.time > after)
     .map((c) => ({ ...c, events: async () => { try { return JSON.parse(await git('show', `${c.sha}:events.json`)); } catch (err) { if (/exists on disk, but not in|does not exist in/.test(err.stderr || '')) return null; throw err; } } }));
 }
+// From the GitLab API: the list comes newest first, a page at a time, and is read until a commit that is not after `after`
+// (the `since` parameter is not used: with it the server gave back a part of the commits only).
 export async function apiCommits(base, after, get = getJson) {
   const out = [];
-  const since = new Date((after + 1) * 1000).toISOString();
-  for (let page = 1; page < 200; page++) {
-    const list = await get(`${base}/repository/commits?ref_name=history&since=${encodeURIComponent(since)}&per_page=100&page=${page}`);
+  pages: for (let page = 1; page < 500; page++) {
+    const list = await get(`${base}/repository/commits?ref_name=history&per_page=100&page=${page}`);
     if (!Array.isArray(list)) throw new Error('the list of commits is not a list');
-    for (const c of list) out.push({ sha: c.id, time: Date.parse(c.committed_date) / 1000 });
+    for (const c of list) {
+      const time = Date.parse(c.committed_date) / 1000;
+      if (!/^[0-9a-f]{40}$/.test(c.id) || !Number.isFinite(time)) throw new Error('a commit without a hash or a date');
+      if (time <= after) break pages;
+      out.push({ sha: c.id, time, parent: (c.parent_ids || [])[0] || null });
+    }
     if (list.length < 100) break;
   }
-  for (const c of out) if (!/^[0-9a-f]{40}$/.test(c.sha) || !Number.isFinite(c.time)) throw new Error('a commit without a hash or a date');
-  return out.filter((c) => c.time > after).sort((a, b) => a.time - b.time)
-    .map((c) => ({ ...c, events: async () => get(`${base}/repository/files/events.json/raw?ref=${c.sha}`, true) }));
+  return out.reverse().map((c) => ({ ...c, events: async () => get(`${base}/repository/files/events.json/raw?ref=${c.sha}`, true) }));
 }
 async function getJson(url, missingIsNull = false) {
   for (let i = 1; ; i++) {
@@ -58,8 +63,12 @@ async function getJson(url, missingIsNull = false) {
 export async function extend(doc, commits, times, max = Infinity) {
   let state = doc ? new Timeline(doc).raw(doc.steps.length) : null;
   let added = 0;
+  // each commit has to be the child of the one read before it: a commit that is skipped, or a branch written again, ends the run
+  let last = doc && doc.head ? doc.head.sha : null;
   for (const c of commits) {
     if (added >= max) break;
+    if (last && c.parent !== last) throw new Error(`${c.sha}: its parent is ${c.parent}, not ${last}, the commit read before it`);
+    last = c.sha;
     const events = await c.events();
     if (!events) continue;                                             // a commit from before the history had events
     if (!Array.isArray(events) || !events.length) throw new Error(`${c.sha}: events.json is empty or not a list`);
@@ -103,8 +112,8 @@ async function main() {
   const events = head ? await head.events() : (flag('git') ? null : await getJson(`${flag('api') || API}/repository/files/events.json/raw?ref=${doc.head.sha}`));
   if (events) validate(doc, events, times);
   doc.built = new Date().toISOString().replace(/\.\d+Z$/, 'Z');
-  await writeFile(`${out}.tmp`, JSON.stringify(doc) + '\n');
-  await rename(`${out}.tmp`, out);
+  await writeFile(`${out}.${process.pid}.tmp`, JSON.stringify(doc) + "\n");
+  await rename(`${out}.${process.pid}.tmp`, out);
   console.log(`${doc.built}: ${doc.steps.length} steps, ${r.added} new commits, horizon ${new Date(doc.horizon * 1000).toISOString()}`);
 }
 

@@ -62,12 +62,21 @@
     if (!rows.length) return;
     $('leaks-history-note').textContent = rows.length < 2
       ? 'One point a day: the history starts on ' + dayLabel(rows[0].date) + ' and grows every day.'
-      : `Places of valley, one point a day, ${rows.length} days. The places that CAIDA cannot classify (unclear) are not drawn. A change can come from the routes, from the ASPAs published that day or from the relationships dataset.`;
+      : `Places of valley, one point a day, ${rows.length} days. The places that CAIDA cannot classify (unclear) are not drawn. A change can come from the routes, from the ASPAs published that day or from the relationships dataset.${softNote(rows)}`;
     const legend = $('leaks-history-legend');
     legend.replaceChildren(...SERIES.map((s) => el('li', {}, el('span', { class: `sw ${s.cls}`, 'aria-hidden': 'true' }), el('span', { class: 'lg', text: s.label }), ' ', el('span', { class: 'lv', text: fmt.format(rows[rows.length - 1][s.key]) }))));
     drawHistory(box, rows);
     let t = 0;
     window.addEventListener('resize', () => { clearTimeout(t); t = setTimeout(() => drawHistory(box, rows), 150); });
+  }
+
+  // The days rebuilt from the dumps of 00:00 UTC say how many of their places depend on the state the ASPAs had at that time
+  // (leak_soft, gap_soft: places with no route that is Invalid either way): a sentence for the note of the chart.
+  function softNote(rows) {
+    const past = rows.filter((r) => r.rule === 2);
+    if (!past.length) return '';
+    const soft = past.reduce((n, r) => n + (r.leak_soft || 0) + (r.gap_soft || 0), 0), all = past.reduce((n, r) => n + r.leak + r.gap, 0);
+    return ` The ${fmt.format(past.length)} days rebuilt from the table dumps of 00:00 UTC are judged with the ASPAs known at that time, which for the days of the RIPE NCC archive are some 19 hours old: ${fmt.format(soft)} of their ${fmt.format(all)} places (${all ? ((100 * soft) / all).toFixed(1) : '0'}%) would not be there with the ASPAs of some hours later.`;
   }
 
   // 449,000,000 -> "449 M", 580,000 -> "580 k", 6,700,000,000 -> "6.7 billion"

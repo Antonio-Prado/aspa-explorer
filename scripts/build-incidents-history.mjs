@@ -18,9 +18,8 @@
 //   --max-files at most N files are read in a run (the others at the next one); the output has the days read so far
 // A day is the UTC day an incident ended, not the day in the name of its file: a file of the recorder can hold more days
 // (data read again, or read late), and the incidents that end around midnight are in the file of the day after. The
-// leaking ASes (RLK-FP, RLK-PV) are judged within each day of each file. The ASPAs are the ones at the start of the day
-// each incident began, from the history of changes (INCIDENTS_EVENTS, as build-incidents.mjs); a day before the history
-// has no ASPA.
+// leaking ASes (RLK-FP, RLK-PV) are judged within each day of each file. The ASPAs are the ones known when each incident
+// began, from the timeline of the ASPAs (ASPA_TIMELINE, as build-incidents.mjs): before the first ASPA there is none.
 import { readFile, writeFile, rename, readdir, stat, mkdir, rm } from 'node:fs/promises';
 import { createReadStream, createWriteStream } from 'node:fs';
 import { once } from 'node:events';
@@ -30,10 +29,9 @@ import { createGzip } from 'node:zlib';
 import { createRequire } from 'node:module';
 import { execFile, spawn } from 'node:child_process';
 import { promisify } from 'node:util';
-import { aspaMap, EVENTS } from './build-leaks.mjs';
-import { relationSets, analyser, leakTracker, LEVELS } from './build-incidents.mjs';
+import { relationSets, analyser, leakTracker, byTimeline, RULE, LEVELS } from './build-incidents.mjs';
+import { loadTimeline } from './aspa-timeline.mjs';
 
-const History = createRequire(import.meta.url)('../site/history.js');
 const UA = 'aspa-explorer (https://aspa.ping6.it; antonio.prado@dei.unipd.it)';
 export const FIRST_DAY = '2023-10-12';
 const NAME = /^incidents_(records|open)_(\d+)\.jsonl\.xz$/;
@@ -113,10 +111,14 @@ async function caidaFiles(dirs) {
   return out.sort((a, b) => a.date.localeCompare(b.date)).filter((f) => !seen.has(f.date) && seen.add(f.date));
 }
 
+// A result made before the rule of the timeline has no `soft` and `could`: none of its verdicts was looked at for that.
+const zero3 = (b) => ({ ...b, soft: b.soft || [0, 0, 0], could: b.could || [0, 0, 0] });
+export const withCounts = (r) => ({ ...r, total: zero3(r.total), by_type: Object.fromEntries(Object.entries(r.by_type).map(([k, b]) => [k, zero3(b)])), subtypes: Object.fromEntries(Object.entries(r.subtypes).map(([k, b]) => [k, zero3(b)])) });
+
 // The sum of the results of analyser() of several days (every number is a count; `ases` is the one of the last day).
 export function sum(results) {
   const add3 = (a, b) => a.map((v, i) => v + b[i]);
-  const bucket = (a, b) => (a ? { incidents: a.incidents + b.incidents, with_path: a.with_path + b.with_path, real: add3(a.real, b.real), ideal: add3(a.ideal, b.ideal) } : structuredClone(b));
+  const bucket = (a, b) => (a ? { incidents: a.incidents + b.incidents, with_path: a.with_path + b.with_path, real: add3(a.real, b.real), soft: add3(a.soft, b.soft), could: add3(a.could, b.could), ideal: add3(a.ideal, b.ideal) } : structuredClone(b));
   const out = { period: { from: null, to: null }, total: null, by_type: {}, subtypes: {}, adoption: { levels: LEVELS, ases: 0, base: {}, random: {}, largest: {} } };
   for (const r of results) {
     if (r.period.from && (!out.period.from || r.period.from < out.period.from)) out.period.from = r.period.from;
@@ -130,7 +132,7 @@ export function sum(results) {
       for (const [k, list] of Object.entries(r.adoption[o])) out.adoption[o][k] = out.adoption[o][k] ? add3(out.adoption[o][k], list) : [...list];
     }
   }
-  out.total ||= { incidents: 0, with_path: 0, real: [0, 0, 0], ideal: [0, 0, 0] };
+  out.total ||= { incidents: 0, with_path: 0, real: [0, 0, 0], soft: [0, 0, 0], could: [0, 0, 0], ideal: [0, 0, 0] };
   return out;
 }
 
@@ -189,7 +191,7 @@ async function assemble(parts, file) {
 
 // The line of a day for the chart: the counts, without the curves.
 export const rowOf = (day, r) => ({
-  day, incidents: r.total.incidents, with_path: r.total.with_path, real: r.total.real,
+  day, incidents: r.total.incidents, with_path: r.total.with_path, real: r.total.real, soft: r.total.soft, could: r.total.could,
   types: Object.fromEntries(Object.entries(r.by_type).map(([k, b]) => [k, b.incidents])),
 });
 
@@ -223,41 +225,42 @@ async function main() {
   const caida = await caidaFiles(dirs('caida'));
   if (!caida.length) throw new Error('no CAIDA relationships file in --caida');
 
-  const events = await readJson(process.env.INCIDENTS_EVENTS || EVENTS);
-  if (!Array.isArray(events) || !events.length) throw new Error('the history of changes is empty: not building');
-  const aspaDays = new Map();
-  const aspasOf = (d) => {
-    if (!aspaDays.has(d)) {
-      if (aspaDays.size > 400) aspaDays.clear();
-      aspaDays.set(d, d ? aspaMap([...History.replayBefore(events, d)].map(([customer, providers]) => ({ customer, providers }))) : new Map());
-    }
-    return aspaDays.get(d);
-  };
+  // the ASPAs known when each incident began: the timeline (scripts/build-timeline.mjs keeps it); without a good one the run
+  // ends here and what was published before stays
+  const tl = await loadTimeline(process.env.ASPA_TIMELINE || join(outFile, '..', 'timeline.json'), Number(process.env.ASPA_TIMELINE_MAX_AGE) || undefined);
+  const aspasOf = byTimeline(tl);
 
   const unbz = async (f) => (await promisify(execFile)('bunzip2', ['-c', f], { maxBuffer: 1 << 30 })).stdout;
   let rel = null;
   const perDay = new Map(), parts = new Map(), dirty = new Set(), used = new Set();      // day -> results, day -> part files
-  let built = 0, waiting = 0;
+  let built = 0, waiting = 0, other = 0;
   for (const x of [...src].reverse()) {          // the newest first: a first run shows the recent days soon
     const key = keyOf(x), file = join(daysDir, `${x.name}.json`), partsDir = join(daysDir, x.name);
     let cached = null;
     try { cached = JSON.parse(await readFile(file, 'utf8')); } catch { /* not built yet */ }
-    if (!cached || cached.key !== key) {
+    // a file is read again when it changed, when what is kept of it was made with another rule, and when some of its incidents
+    // ended after the horizon the timeline had then (whether their verdicts are firm was not known) and the timeline has moved on
+    if (!cached || cached.key !== key || cached.rule !== RULE || (cached.late && tl.horizon > cached.horizon)) {
       if (built >= max) { waiting++; if (!cached) continue; }
       else {
         const c = caidaFor(caida, x.day);
         if (!rel || rel.date !== c.date) rel = { date: c.date, ...relationSets(await unbz(c.file)) };
+        aspasOf.late = 0;
         const days = await buildFile(x, aspasOf, rel, partsDir);
         for (const d of Object.keys((cached || {}).days || {})) dirty.add(d);
-        cached = { key, caida: c.date, days: Object.fromEntries(days) };
+        cached = { key, rule: RULE, horizon: tl.horizon, late: aspasOf.late, caida: c.date, days: Object.fromEntries(days) };
         await write(file, JSON.stringify(cached) + '\n');
         for (const d of days.keys()) dirty.add(d);
         built++;
         console.log(`${x.name}: ${[...days.values()].reduce((n, r) => n + r.total.incidents, 0)} incidents in ${days.size} day${days.size === 1 ? '' : 's'} (CAIDA ${c.date})`);
       }
     }
-    for (const [d, r] of Object.entries(cached.days)) {
+    // a file that waits to be read again with the rule of now is counted, so that the document says how much of it is of the
+    // rule before (the first runs after a change of rule: the newest files are read first)
+    if (cached.rule !== RULE) other++;
+    for (const [d, r0] of Object.entries(cached.days)) {
       if (d < FIRST_DAY) continue;
+      const r = cached.rule === RULE ? r0 : withCounts(r0);
       if (!perDay.has(d)) { perDay.set(d, []); parts.set(d, []); }
       perDay.get(d).push(r);
       parts.get(d).push(join(partsDir, `${d}.jsonl.gz`));
@@ -285,14 +288,17 @@ async function main() {
     first_day: FIRST_DAY,
     days_expected: expected,
     days_covered: all.length,
-    aspas: 'history',
+    aspas: 'timeline',
+    rule: RULE,
+    files_of_the_rule_before: other,
+    timeline: { steps: tl.steps.length, horizon: new Date(tl.horizon * 1000).toISOString().replace(/\.\d+Z$/, 'Z') },
     relationships: `CAIDA AS Relationships, serial-2, the file of the month of each day (${months[0]} to ${months[months.length - 1]})`,
     detail: '/api/v1/incidents/{collector}/{day}.jsonl.gz',
     days: all.map((d) => rowOf(d, byDay.get(d))),
     periods: periods(byDay),
   };
   await write(outFile, JSON.stringify(doc) + '\n');
-  console.log(`${doc.generated}: ${all.length} of ${expected} days, ${doc.periods.all.total.incidents} incidents, ${built} files read${waiting ? `, ${waiting} waiting` : ''}`);
+  console.log(`${doc.generated}: ${all.length} of ${expected} days, ${doc.periods.all.total.incidents} incidents, ${built} files read${waiting ? `, ${waiting} waiting` : ''}${other ? `, ${other} still of the rule before` : ''}`);
 }
 
 if (import.meta.url === `file://${process.argv[1]}`) main().catch((err) => { console.error(err.message); process.exit(1); });

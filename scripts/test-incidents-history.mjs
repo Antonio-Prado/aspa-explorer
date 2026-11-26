@@ -113,11 +113,11 @@ await test('the sum of results adds every count and keeps the whole time frame',
   assert.equal(t.adoption.base.RLK, 2);
   assert.equal(t.adoption.largest.RLK[t.adoption.levels.length - 1], 2, 'with every AS publishing the two leaks are Invalid');
   assert.equal(day1.by_type.RLK.incidents, 1, 'the results are not changed');
-  assert.deepEqual(sum([]).total, { incidents: 0, with_path: 0, real: [0, 0, 0], ideal: [0, 0, 0] });
+  assert.deepEqual(sum([]).total, { incidents: 0, with_path: 0, real: [0, 0, 0], soft: [0, 0, 0], could: [0, 0, 0], ideal: [0, 0, 0] });
 });
 
 await test('the line of a day and the periods: everything and each year', () => {
-  assert.deepEqual(rowOf('2026-10-04', day1), { day: '2026-10-04', incidents: 1, with_path: 1, real: [0, 0, 1], types: { RLK: 1 } });
+  assert.deepEqual(rowOf('2026-10-04', day1), { day: '2026-10-04', incidents: 1, with_path: 1, real: [0, 0, 1], soft: [0, 0, 0], could: [0, 0, 0], types: { RLK: 1 } });
   const p = periods(new Map([['2026-10-05', day1], ['2025-09-30', day2]]));
   assert.deepEqual(Object.keys(p).sort(), ['2025', '2026', 'all']);
   assert.equal(p.all.days, 2);

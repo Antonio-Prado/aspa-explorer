@@ -50,6 +50,8 @@ await test('archive steps: a step for each day with changes, from the day before
 
 const JOB = [...EV, ['2026-10-16', 'AS12', ['AS1']], ['2026-10-17', 'AS10', ['AS1', 'AS2', 'AS3']]];
 const commit = (sha, iso, events) => ({ sha, time: T(iso), events: async () => events });
+// each commit the child of the one before it (the first one of `first`, the head of the document that is extended)
+const chain = (cs, first = null) => cs.map((c, i) => ({ ...c, parent: i ? cs[i - 1].sha : first }));
 
 await test('commits: the first look of the job is after the last archive, a commit with no change moves the look, the archive written again is not a look', async () => {
   const commits = [
@@ -59,7 +61,7 @@ await test('commits: the first look of the job is after the last archive, a comm
     commit('d', '2026-10-17T03:23:00Z', JOB.slice(0, 5)),                   // a look, nothing changed
     commit('e', '2026-10-17T04:23:00Z', JOB),
   ];
-  const { doc, added } = await extend(null, commits, TIMES);
+  const { doc, added } = await extend(null, chain(commits), TIMES);
   assert.equal(added, 4);
   assert.equal(doc.steps.length, 5);
   assert.deepEqual(doc.steps[3], [T('2026-10-15T04:30:00Z') - FETCH_MARGIN, T('2026-10-16T20:30:00Z'), [[12, [1]]]]);
@@ -68,16 +70,19 @@ await test('commits: the first look of the job is after the last archive, a comm
   assert.deepEqual(doc.head, { sha: 'e', time: T('2026-10-17T04:23:00Z') });
   assert.equal(validate(doc, JOB, TIMES), true);
   // more commits later: the same document goes on
-  const more = await extend(doc, [commit('f', '2026-10-17T05:23:00Z', [...JOB, ['2026-10-17', 'AS13', ['AS9']]])], TIMES);
+  const more = await extend(doc, chain([commit('f', '2026-10-17T05:23:00Z', [...JOB, ['2026-10-17', 'AS13', ['AS9']]])], 'e'), TIMES);
   assert.equal(more.doc.steps.length, 6);
   assert.deepEqual(more.doc.steps[5], [T('2026-10-17T04:23:00Z'), T('2026-10-17T05:23:00Z'), [[13, [9]]]]);
 });
 
 await test('what must never pass: archive events that changed, time going back, a document that does not give the events back', async () => {
-  const { doc } = await extend(null, [commit('c', '2026-10-16T20:30:00Z', JOB.slice(0, 5))], TIMES);
+  const { doc } = await extend(null, chain([commit('c', '2026-10-16T20:30:00Z', JOB.slice(0, 5))]), TIMES);
   const forged = [['2026-10-10', 'AS10', ['AS9']], ...JOB.slice(1)];
-  await assert.rejects(extend(structuredClone(doc), [commit('x', '2026-10-17T04:23:00Z', forged)], TIMES), /archive period are not the ones/);
-  await assert.rejects(extend(structuredClone(doc), [commit('x', '2026-10-16T20:00:00Z', JOB)], TIMES), /not after/);
+  await assert.rejects(extend(structuredClone(doc), chain([commit('x', '2026-10-17T04:23:00Z', forged)], 'c'), TIMES), /archive period are not the ones/);
+  await assert.rejects(extend(structuredClone(doc), chain([commit('x', '2026-10-16T20:00:00Z', JOB)], 'c'), TIMES), /not after/);
+  // a commit whose parent is not the one read before it: one was skipped, or the branch was written again
+  await assert.rejects(extend(structuredClone(doc), chain([commit('x', '2026-10-17T04:23:00Z', JOB)], 'another'), TIMES), /its parent is another, not c/);
+  await assert.rejects(extend(structuredClone(doc), [{ ...commit('x', '2026-10-17T04:23:00Z', JOB), parent: 'c' }, { ...commit('z', '2026-10-17T05:23:00Z', JOB), parent: 'y' }], TIMES), /its parent is y, not x/);
   const broken = structuredClone(doc); broken.steps[1][2] = [[10, [1, 7]]];
   assert.throws(() => validate(broken, JOB.slice(0, 5), TIMES), /differ for/);
   const unordered = structuredClone(doc); unordered.steps[2][0] = 0; unordered.steps[2][1] = unordered.steps[1][1];
@@ -87,7 +92,7 @@ await test('what must never pass: archive events that changed, time going back, 
 });
 
 await test('lookup: the state known at a time, and the verdict that is firm only when no change around the event matters', async () => {
-  const { doc } = await extend(null, [commit('c', '2026-10-16T20:30:00Z', JOB.slice(0, 5)), commit('e', '2026-10-17T04:23:00Z', JOB), commit('g', '2026-10-17T09:23:00Z', JOB)], TIMES);
+  const { doc } = await extend(null, chain([commit('c', '2026-10-16T20:30:00Z', JOB.slice(0, 5)), commit('e', '2026-10-17T04:23:00Z', JOB), commit('g', '2026-10-17T09:23:00Z', JOB)]), TIMES);
   const tl = new Timeline(doc);
   assert.equal(tl.indexAt(T('2026-10-10T04:33:59Z')), 0);
   assert.equal(tl.indexAt(T('2026-10-10T04:34:00Z')), 1);
@@ -97,33 +102,39 @@ await test('lookup: the state known at a time, and the verdict that is firm only
   const lists2 = (state) => ((state.get(10) || new Set()).has(2) ? 0 : 2);
   const on10 = (c) => c === 10, on99 = (c) => c === 99;
   // 11 October, noon: AS2 is not listed; the step that adds it runs from the 10th at 04:00 to the 12th at 05:44: not firm
-  assert.deepEqual(tl.at(T('2026-10-11T12:00:00Z'), lists2, on10), { verdict: 2, firm: false });
+  assert.deepEqual(tl.at(T('2026-10-11T12:00:00Z'), lists2, on10), { verdict: 2, firm: false, others: [0] });
   // the same event for a path that AS10 is not in: firm
-  assert.deepEqual(tl.at(T('2026-10-11T12:00:00Z'), () => 1, on99), { verdict: 1, firm: true });
+  assert.deepEqual(tl.at(T('2026-10-11T12:00:00Z'), () => 1, on99), { verdict: 1, firm: true, others: [] });
   // 13 October: AS2 is listed, and the next step (the 15th) does not touch AS10
-  assert.deepEqual(tl.at(T('2026-10-13T12:00:00Z'), lists2, on10), { verdict: 0, firm: true });
+  assert.deepEqual(tl.at(T('2026-10-13T12:00:00Z'), lists2, on10), { verdict: 0, firm: true, others: [] });
   // a change of AS10 around the event that does not change the verdict (AS3 added on the 17th): firm
-  assert.deepEqual(tl.at(T('2026-10-17T04:00:00Z'), lists2, on10), { verdict: 0, firm: true });
+  assert.deepEqual(tl.at(T('2026-10-17T04:00:00Z'), lists2, on10), { verdict: 0, firm: true, others: [] });
   // later than the last commit read: not firm yet
-  assert.deepEqual(tl.at(T('2026-10-17T10:00:00Z'), lists2, on10), { verdict: 0, firm: false, late: true });
+  assert.deepEqual(tl.at(T('2026-10-17T10:00:00Z'), lists2, on10), { verdict: 0, firm: false, others: [], late: true });
   // an event that lasts: firm at its start (the 13th), not firm when it goes on until AS11 is removed (the 15th) and reads AS11
   const has11 = (state) => (state.has(11) ? 2 : 1);
-  assert.deepEqual(tl.at(T('2026-10-13T12:00:00Z'), has11, (c) => c === 11), { verdict: 2, firm: true });
-  assert.deepEqual(tl.at(T('2026-10-13T12:00:00Z'), has11, (c) => c === 11, T('2026-10-15T12:00:00Z')), { verdict: 2, firm: false });
+  assert.deepEqual(tl.at(T('2026-10-13T12:00:00Z'), has11, (c) => c === 11), { verdict: 2, firm: true, others: [] });
+  assert.deepEqual(tl.at(T('2026-10-13T12:00:00Z'), has11, (c) => c === 11, T('2026-10-15T12:00:00Z')), { verdict: 2, firm: false, others: [1] });
   assert.equal(tl.open(T('2026-10-11T12:00:00Z')), 1);
   assert.equal(tl.open(T('2026-10-13T12:00:00Z')), 0);
 });
 
-await test('the API source: pages of commits newest first, given back oldest first with their events', async () => {
-  const pages = { 1: Array.from({ length: 100 }, (_, i) => ({ id: String(i).padStart(40, '0'), committed_date: new Date((2000 - i) * 1000).toISOString() })), 2: [{ id: 'f'.repeat(40), committed_date: new Date(1500 * 1000).toISOString() }] };
+await test('the API source: pages of commits newest first, read until one that is not new, given back oldest first with parent and events', async () => {
+  const id = (i) => String(i).padStart(40, '0');
+  // 150 commits at times 2000, 1999, ...: a page of 100 and one of 50
+  const all = Array.from({ length: 150 }, (_, i) => ({ id: id(i), committed_date: new Date((2000 - i) * 1000).toISOString(), parent_ids: i < 149 ? [id(i + 1)] : [] }));
   const asked = [];
-  const get = async (url) => { asked.push(url); const m = /page=(\d+)$/.exec(url); return m ? pages[m[1]] : [['2026-10-16', 'AS1', ['AS2']]]; };
-  const list = await apiCommits('https://x/api', 1000, get);
-  assert.equal(list.length, 101);
-  assert.equal(list[0].time, 1500);
-  assert.equal(list[100].time, 2000);
+  const get = async (url) => { asked.push(url); const m = /page=(\d+)$/.exec(url); return m ? all.slice((m[1] - 1) * 100, m[1] * 100) : [['2026-10-16', 'AS1', ['AS2']]]; };
+  const list = await apiCommits('https://x/api', 0, get);
+  assert.equal(list.length, 150);
+  assert.deepEqual([list[0].time, list[0].parent, list[149].time, list[149].parent], [1851, null, 2000, id(1)]);
   assert.deepEqual(await list[0].events(), [['2026-10-16', 'AS1', ['AS2']]]);
-  assert.match(asked[0], /since=1970-01-01T00%3A16%3A41/);
+  // only the commits after a time: the reading stops at the first one that is not, without asking the next page
+  asked.length = 0;
+  const some = await apiCommits('https://x/api', 1995, get);
+  assert.deepEqual(some.map((c) => c.time), [1996, 1997, 1998, 1999, 2000]);
+  assert.equal(asked.length, 1);
+  assert.ok(!asked[0].includes('since'));
   await assert.rejects(apiCommits('https://x/api', 0, async () => [{ id: 'short', committed_date: 'x' }]), /without a hash/);
 });
 

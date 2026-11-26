@@ -85,6 +85,11 @@ for f in incidents_*.jsonl; do
   if xz -T2 -c "$f" > "$BASE/archive/$f.xz.tmp"; then mv "$BASE/archive/$f.xz.tmp" "$BASE/archive/$f.xz"; else rm -f "$BASE/archive/$f.xz.tmp"; echo "$f could not be archived" >&2; fi
 done
 
+# the timeline of the ASPAs, which steps 4 and 5 judge the incidents with (scripts/build-timeline.mjs: the new commits of the
+# history branch, checked as a whole before it is written). When it cannot be brought up to date the builders still run with
+# the one of before, unless it was last checked more than three hours ago: then they refuse it, and the pages stay as they are
+"$NODE" "$SCRIPTS/build-timeline.mjs" "$GEN/timeline.json" || echo "the timeline of the ASPAs could not be brought up to date" >&2
+
 # 4. the page: the incident files of the last KEEP_INCIDENT_DAYS days (the period shown is the one of these)
 find . -maxdepth 1 -name 'incidents_*.jsonl' -mtime +"$KEEP_INCIDENT_DAYS" -delete
 if ls incidents_*.jsonl >/dev/null 2>&1; then

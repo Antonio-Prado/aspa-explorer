@@ -20,6 +20,8 @@ GEN=${INCIDENTS_GEN:-/var/db/aspa-gen}
 SCRIPTS=${INCIDENTS_SCRIPTS:-/usr/local/libexec/aspa-gen/scripts}
 NODE=${NODE:-/usr/local/bin/node}
 MAX=${INCIDENTS_COLLECTOR_FILES:-300}
+# the timeline of the ASPAs, as in run-incidents.sh (the two jobs may both write it: the file is replaced whole)
+"$NODE" "$SCRIPTS/build-timeline.mjs" "$GEN/timeline.json" || echo "the timeline of the ASPAs could not be brought up to date" >&2
 for c in "$BASE"/collectors/*/; do
   [ -d "$c" ] || continue
   name=$(basename "$c")

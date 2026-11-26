@@ -4,15 +4,17 @@
 //
 //   node scripts/build-leaks.mjs OUT_FILE [CACHE_DIR] [--day=YYYYMMDD]
 //
-// With --day the table dumps of that day (the ones of 00:00 UTC) and the ASPAs as they were at its start (the last state
-// of the day before, replayed from the history of changes) are used, and only the by-AS file of that day, the line of the
-// history and the whole document of the day (leaks-full/YYYYMMDD.json, for the study of a period) are written: this is
-// how the history of the leaks is filled in backwards.
+// With --day the table dumps of that day (the ones of 00:00 UTC) and the ASPAs known at that time (the timeline of the
+// ASPAs, scripts/aspa-timeline.mjs) are used, and only the by-AS file of that day, the line of the history and the whole
+// document of the day (leaks-full/YYYYMMDD.json, for the study of a period) are written: this is how the history of the
+// leaks is filled in backwards. The routes whose verdict depends on a change of an ASPA that may or may not have been
+// there at 00:00 are counted apart (`soft`, `could`): for a day of the RIPE NCC archive the state known at 00:00 is some
+// 19 hours old.
 //
 // Inputs (environment, with defaults for the production host):
 //   ASPA_DATA        URL or file of Routinator's jsonext     http://127.0.0.1:8080/data/aspas.json
 //   LEAKS_COLLECTORS comma separated collectors              nineteen of RIPE RIS and fourteen of RouteViews (COLLECTORS below)
-//   LEAKS_EVENTS     URL or file of the history of changes   the events.json of the history branch (only with --day)
+//   ASPA_TIMELINE    file of the timeline of the ASPAs       timeline.json next to OUT_FILE (only with --day: scripts/build-timeline.mjs)
 //   LEAKS_ADOPTION   file with the Tier-1 clique and the IXP ASes (adoption.json), next to OUT_FILE
 //
 // Next to OUT_FILE it also writes leaks-by-as.json (the places of valley that involve each AS, for the page of an AS
@@ -73,7 +75,6 @@ export async function latestDumpUrl(collector, now = new Date()) {
   throw new Error(`no RIB file found for ${collector}`);
 }
 export const EVENTS = 'https://gitlab.dei.unipd.it/api/v4/projects/5246/repository/files/events.json/raw?ref=history';
-const History = createRequire(import.meta.url)('../site/history.js');
 const UA = 'aspa-explorer (https://aspa.ping6.it; antonio.prado@dei.unipd.it)';
 
 // What the CAIDA relationships say about two ASes: relOf(c, n) is 'provider' when n is a provider of c,
@@ -148,9 +149,14 @@ const HOP_BUCKETS = 9;                                             // paths of 1
 export const MAX_PLACES = 500000;
 
 export class Leaks {
-  constructor(aspas, ixp = new Set(), relOf = () => 'unknown') {
+  // open: for a dump of the past, the other states that the ASPAs may have had at the time of the dump ({states: [Map], delta:
+  // the customers they change}, from the timeline: scripts/aspa-timeline.mjs). A route whose verdict is not the same with all of
+  // them is counted in `soft` under its verdict, and in `could` under the others; a place has `soft`, its routes that are so.
+  constructor(aspas, ixp = new Set(), relOf = () => 'unknown', open = null) {
     this.aspas = aspas; this.ixp = ixp; this.relOf = relOf;
+    this.open = open && open.states.length ? open : null;
     this.total = { routes: 0, valid: 0, unknown: 0, invalid: 0 };
+    this.soft = { valid: 0, unknown: 0, invalid: 0 }; this.could = { valid: 0, unknown: 0, invalid: 0 };
     this.groups = new Map();
     // the places of valley kept in memory: a day of 33 collectors has a few tens of thousands; peers that sent crafted paths could make far more,
     // and the places past this many are only counted (omitted), so that the run of the day ends
@@ -181,6 +187,16 @@ export class Leaks {
     this.cur.routes++; this.cur.feeders.add(feeder);
     const k = classify(this.aspas, p);
     this.total[VERDICT[k]]++;
+    let firm = true;
+    if (this.open) {
+      let touched = false;
+      for (let i = 0; i < p.length; i++) if (this.open.delta.has(p[i])) { touched = true; break; }
+      if (touched) {
+        let seen = 0;                                               // the other verdicts, as bits
+        for (const st of this.open.states) { const v = classify(st, p); if (v !== k) seen |= 1 << v; }
+        if (seen) { firm = false; this.soft[VERDICT[k]]++; for (let v = 0; v < 3; v++) if (seen & (1 << v)) this.could[VERDICT[v]]++; }
+      }
+    }
     if (plen !== undefined) {
       const f = this.fam[v6 ? 'v6' : 'v4'], b = f.byLen[Math.min(Math.max(p.length, 1), HOP_BUCKETS) - 1];
       f.routes[k]++; f.origins.add(p[0]); f.lenSum += p.length; f.n++; b.routes[k]++;
@@ -199,17 +215,18 @@ export class Leaks {
     if (!g) {
       if (this.groups.size >= this.maxGroups) { this.omitted++; return; }
       const caida = this.relOf(from, between[0]);
-      g = { from, to, between, caida, kind: KIND[caida], routes: 0, feeders: new Set(), origins: new Set(), sources: new Set(), example: p.slice().reverse() };
+      g = { from, to, between, caida, kind: KIND[caida], routes: 0, soft: 0, feeders: new Set(), origins: new Set(), sources: new Set(), example: p.slice().reverse() };
       this.groups.set(key, g);
     }
     g.routes++; g.feeders.add(feeder); g.origins.add(p[0]); g.sources.add(collector);
+    if (!firm) g.soft++;
   }
 
   result(limit = 40) {
     if (this.omitted) console.error(`${this.omitted} routes in places of valley beyond the first ${this.maxGroups} were only counted`);
     const list = [...this.groups.values()].map((g) => ({
       from: 'AS' + g.from, to: 'AS' + g.to, between: g.between.map((a) => 'AS' + a), caida: g.caida, kind: g.kind,
-      routes: g.routes, feeders: g.feeders.size, origins: g.origins.size,
+      routes: g.routes, ...(this.open ? { soft: g.soft } : {}), feeders: g.feeders.size, origins: g.origins.size,
       example: g.example.map((a) => 'AS' + a),
     })).sort((a, b) => b.feeders - a.feeders || b.routes - a.routes);
     const sum = (rows, keyOf, extra) => {
@@ -251,8 +268,10 @@ export class Leaks {
     return {
       families: { v4: famDoc(this.fam.v4, 'addresses'), v6: famDoc(this.fam.v6, '/48s') },
       per_collector: per, comparison: cmp,
-      total: { ...this.total, feeders: this.feederSet.size }, places: list.length,
+      total: { ...this.total, feeders: this.feederSet.size, ...(this.open ? { soft: this.soft, could: this.could } : {}) }, places: list.length,
       kinds: { gap: list.filter((g) => g.kind === 'gap').length, leak: list.filter((g) => g.kind === 'leak').length, unclear: list.filter((g) => g.kind === 'unclear').length },
+      // the places none of whose routes is firm: they are there, or not, according to which state the ASPAs had at the time
+      ...(this.open ? { soft_places: Object.fromEntries(['gap', 'leak', 'unclear'].map((kind) => [kind, list.filter((g) => g.kind === kind && g.soft === g.routes).length])) } : {}),
       // the most seen places of each kind, so that no kind crowds the others out
       groups: ['leak', 'gap', 'unclear'].flatMap((k) => list.filter((g) => g.kind === k).slice(0, k === 'unclear' ? 20 : limit)).sort((a, b) => b.feeders - a.feeders || b.routes - a.routes),
       // the ASes that passed on up what they should not have, and the ASPAs that seem to miss a provider
@@ -288,6 +307,10 @@ export function byAs(list, minFeeders = MIN_FEEDERS, perAs = PER_AS) {
 export function addHistory(rows, date, doc) {
   const t = doc.total;
   const row = { date, routes: t.routes, invalid: t.invalid, unknown: t.unknown, feeders: t.feeders, places: doc.places, leak: doc.kinds.leak, gap: doc.kinds.gap, unclear: doc.kinds.unclear };
+  // a day of the past, judged with the timeline: `rule` 2, and how much of it depends on the state the ASPAs had at the time of
+  // the dumps (invalid_soft: Invalid routes that are not so with another state; invalid_could: the ones that would be; *_soft:
+  // places with no firm route)
+  if (t.soft) Object.assign(row, { rule: 2, invalid_soft: t.soft.invalid, invalid_could: t.could.invalid, leak_soft: doc.soft_places.leak, gap_soft: doc.soft_places.gap, unclear_soft: doc.soft_places.unclear });
   if (doc.families) {                                  // the share of the address space whose routes are valid, by family
     const share = (f) => { const t = f.span.valid + f.span.unknown + f.span.invalid; return t ? Math.round((f.span.valid / t) * 10000) / 100 : 0; };
     row.v4_valid_span = share(doc.families.v4); row.v6_valid_span = share(doc.families.v6);
@@ -368,19 +391,30 @@ async function main() {
   await mkdir(cache, { recursive: true });
   const readJson = async (src) => (/^https?:/.test(src)
     ? await (await fetch(src, { headers: { 'User-Agent': UA } })).json() : JSON.parse(await readFile(src, 'utf8')));
-  let aspas;
+  // the ASPAs: today's from the validator; for a day of the past the ones known at 00:00 UTC of that day, the time of its
+  // dumps, from the timeline of the ASPAs, with the states that the changes open at that time may have made (no timeline, no run)
+  let state, open = null, count;
   if (dayIso) {
-    const events = await readJson(process.env.LEAKS_EVENTS || EVENTS);
-    aspas = [...History.replayBefore(events, dayIso)].map(([customer, providers]) => ({ customer, providers }));
+    const { loadTimeline } = await import('./aspa-timeline.mjs');
+    const tl = await loadTimeline(process.env.ASPA_TIMELINE || join(outFile, '..', 'timeline.json'), Number(process.env.ASPA_TIMELINE_MAX_AGE) || undefined);
+    const t0 = Date.parse(`${dayIso}T00:00:00Z`) / 1000, n = tl.indexAt(t0), k = tl.open(t0, n);
+    if (t0 > tl.horizon) throw new Error(`${dayIso} is after the horizon of the timeline`);
+    state = tl.state(n);
+    const delta = new Set();
+    for (let j = 0; j < k; j++) for (const [c] of tl.steps[n + j][2]) delta.add(c);
+    open = { states: Array.from({ length: k }, (_, j) => tl.state(n + j + 1)), delta };
+    count = state.size;
   } else {
-    aspas = (await readJson(process.env.ASPA_DATA || 'http://127.0.0.1:8080/data/aspas.json')).aspas;
+    const aspas = (await readJson(process.env.ASPA_DATA || 'http://127.0.0.1:8080/data/aspas.json')).aspas;
+    if (!Array.isArray(aspas) || !aspas.length) throw new Error('the ASPA data is empty: not publishing');
+    state = aspaMap(aspas); count = aspas.length;
   }
-  if (!Array.isArray(aspas) || !aspas.length) throw new Error('the ASPA data is empty: not publishing');
+  if (!state.size) throw new Error('the ASPA data is empty: not publishing');
   let ixp = new Set();
   try { ixp = new Set(JSON.parse(await readFile(process.env.LEAKS_ADOPTION || join(outFile, '..', 'adoption.json'), 'utf8')).ixp || []); } catch { /* no list */ }
   const collectors = (process.env.LEAKS_COLLECTORS || COLLECTORS).split(',').map((s) => s.trim()).filter(Boolean);
   const rel = await caidaRelations(cache);
-  const leaks = new Leaks(aspaMap(aspas), ixp, rel.relOf);
+  const leaks = new Leaks(state, ixp, rel.relOf, open);
   const used = [];
   for (const c of collectors) {
     const ext = isRis(c) ? 'gz' : 'bz2';
@@ -396,7 +430,7 @@ async function main() {
   const res = leaks.result();
   for (const u of used) Object.assign(u, res.per_collector[u.collector]);
   delete res.per_collector;
-  const doc = { generated, aspas: aspas.length, collectors: used, relationships: rel.source, ...res };
+  const doc = { generated, aspas: count, collectors: used, relationships: rel.source, ...res };
   const write = async (file, value) => { const tmp = `${file}.tmp`; await writeFile(tmp, JSON.stringify(value) + '\n'); await rename(tmp, file); };
   const dir = join(outFile, '..'), day = generated.slice(0, 10);
   const perAs = { generated, min_feeders: MIN_FEEDERS, as: byAs(leaks.list) };

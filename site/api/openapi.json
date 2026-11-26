@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "ASPA Explorer API",
-    "version": "1.105.2",
+    "version": "1.106.0",
     "description": "ASPA objects validated by Routinator at rpki.ping6.it, their history and quality, for any AS. Open data, read-only, no key. Best effort, with no guarantee of any kind: the data can be late, incomplete or wrong, and whoever uses it is expected to check it on their own.",
     "contact": {
       "email": "antonio.prado@dei.unipd.it"
@@ -769,7 +769,7 @@
       "get": {
         "operationId": "getLeaksHistoryJson",
         "summary": "The daily totals of the places of valley",
-        "description": "One row a day since 1 September 2026, written by the valley job.",
+        "description": "One row a day since 1 September 2026, written by the valley job. A day rebuilt from the table dumps of 00:00 UTC with the timeline of the ASPAs has `rule` 2 and says how much of it depends on the state the ASPAs had at that time: `invalid_soft`, the Invalid routes that are not so with another state the ASPAs may have had; `invalid_could`, the routes that would be Invalid with it; `leak_soft`, `gap_soft` and `unclear_soft`, the places with no route that is Invalid either way.",
         "responses": {
           "200": {
             "description": "The file",
@@ -1450,6 +1450,10 @@
                     },
                     "aspas": {
                       "type": "string"
+                    },
+                    "timeline": {
+                      "type": "object",
+                      "description": "the timeline of the ASPAs that was used: the number of its steps, its horizon (the time of the newest record of the ASPAs: the hourly job writes one when something changed) and `late`, the incidents that ended after it: whether an ASPA changed around them is not known until the next record is written, and they are in neither `soft` nor `could`"
                     },
                     "relationships": {
                       "type": "string"
@@ -2479,7 +2483,7 @@
       "get": {
         "operationId": "getIncidentsDetailJsonl",
         "summary": "Every incident of the detectors, one record a line",
-        "description": "The file that the aggregates of incidents.json come from, written once a day: for each incident its type and subtype, actor, start and end (UTC), why it ended, the number of AS paths kept, and the verdicts of the downstream ASPA verification with the ASPAs of the day (real) and with complete ASPAs (complete); for a hijack (PRH) or a more specific announced by another AS (DEG-MA), whether its origin had a route object in the IRR databases of the RIRs on that day (irr: registered, less_specific, unregistered or not_covered). Tens of megabytes.",
+        "description": "The file that the aggregates of incidents.json come from, written once a day: for each incident its type and subtype, actor, start and end (UTC), why it ended, the number of AS paths kept, and the verdicts of the downstream ASPA verification with the ASPAs of the time, the ones known when it began (real; `firm: false` when an ASPA of its paths changed around it in a way that changes the verdict, with the other verdicts in `or`, or when the incident ended after the newest record of the ASPAs, with `late: true`) and with complete ASPAs (complete); for a hijack (PRH) or a more specific announced by another AS (DEG-MA), whether its origin had a route object in the IRR databases of the RIRs on that day (irr: registered, less_specific, unregistered or not_covered). Tens of megabytes.",
         "responses": {
           "200": {
             "description": "The incidents",
@@ -2502,7 +2506,7 @@
       "get": {
         "operationId": "getIncidentsHistoryJson",
         "summary": "The incidents of every day since the first ASPA",
-        "description": "Built once a day (scripts/build-incidents-history.mjs) from every incident file that is kept: the ones of the recorder and the ones read from the archive of RIPE RIS for the days before it was started, back to 12 October 2023. `days` has a line for each day that was read (the UTC day its incidents ended): the incidents, the ones with an AS path, the verdicts of the ASPAs of the day and the count of each type. `periods` has the same aggregates as incidents.json for all the days (`all`) and for each calendar year, with the number of days read. The leaking networks (RLK-FP, RLK-PV) are judged within each day, and complete ASPAs use the CAIDA file of the month of the day. `days_covered` of `days_expected` days have been read so far. Aggregates only, no AS number.",
+        "description": "Built once a day (scripts/build-incidents-history.mjs) from every incident file that is kept: the ones of the recorder and the ones read from the archive of RIPE RIS for the days before it was started, back to 12 October 2023. `days` has a line for each day that was read (the UTC day its incidents ended): the incidents, the ones with an AS path, the verdicts of the ASPAs of the time (`real`, with `soft` and `could`: see incidents.json) and the count of each type. `rule` is the way the ASPAs of an incident are chosen (2: the timeline) and `files_of_the_rule_before` how many files still wait to be read again with it. `periods` has the same aggregates as incidents.json for all the days (`all`) and for each calendar year, with the number of days read. The leaking networks (RLK-FP, RLK-PV) are judged within each day, and complete ASPAs use the CAIDA file of the month of the day. `days_covered` of `days_expected` days have been read so far. Aggregates only, no AS number.",
         "responses": {
           "200": {
             "description": "The days and the periods",
@@ -2543,6 +2547,18 @@
                     "aspas": {
                       "type": "string"
                     },
+                    "rule": {
+                      "type": "integer",
+                      "description": "how the ASPAs of an incident are chosen: 2, the ones known when it began (the timeline of the ASPAs)"
+                    },
+                    "files_of_the_rule_before": {
+                      "type": "integer",
+                      "description": "the incident files of this collector that still wait to be read again with the rule of now (their days are counted with the rule before, and have no soft and could)"
+                    },
+                    "timeline": {
+                      "type": "object",
+                      "description": "the timeline of the ASPAs that was used: the number of its steps and its horizon, the time of the newest record of the ASPAs"
+                    },
                     "relationships": {
                       "type": "string"
                     },
@@ -2570,7 +2586,7 @@
                             "items": {
                               "type": "integer"
                             },
-                            "description": "[valid, unknown, invalid] with the ASPAs of the day"
+                            "description": "[valid, unknown, invalid] with the ASPAs of the time: the ones known when each incident began (the newest state of the timeline of the ASPAs seen by then). Next to it, `soft` counts the incidents of each verdict that are not firm (an ASPA of their paths changed between the look before the incident and its end, and the verdict is not the same either way) and `could` the incidents that would have that verdict with the other state: the count of a verdict lies between real - soft and real + could."
                           },
                           "types": {
                             "type": "object",
@@ -2644,6 +2660,18 @@
                     "aspas": {
                       "type": "string"
                     },
+                    "rule": {
+                      "type": "integer",
+                      "description": "how the ASPAs of an incident are chosen: 2, the ones known when it began (the timeline of the ASPAs)"
+                    },
+                    "files_of_the_rule_before": {
+                      "type": "integer",
+                      "description": "the incident files of this collector that still wait to be read again with the rule of now (their days are counted with the rule before, and have no soft and could)"
+                    },
+                    "timeline": {
+                      "type": "object",
+                      "description": "the timeline of the ASPAs that was used: the number of its steps and its horizon, the time of the newest record of the ASPAs"
+                    },
                     "relationships": {
                       "type": "string"
                     },
@@ -2671,7 +2699,7 @@
                             "items": {
                               "type": "integer"
                             },
-                            "description": "[valid, unknown, invalid] with the ASPAs of the day"
+                            "description": "[valid, unknown, invalid] with the ASPAs of the time: the ones known when each incident began (the newest state of the timeline of the ASPAs seen by then). Next to it, `soft` counts the incidents of each verdict that are not firm (an ASPA of their paths changed between the look before the incident and its end, and the verdict is not the same either way) and `could` the incidents that would have that verdict with the other state: the count of a verdict lies between real - soft and real + could."
                           },
                           "types": {
                             "type": "object",

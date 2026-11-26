@@ -173,20 +173,22 @@ export class Timeline {
   }
 
   // The verdict of an event that began at t and ended at `end` (the same for a moment): verdictOf(state) is asked with the
-  // ASPAs known at t; `touches(customer)` says whether a customer is among the ASes the verdict reads. Returns {verdict, firm}:
-  // firm when the verdict is the same with every state that the ASPAs may have had from t to end. An event that ends after
-  // the horizon also has `late`: its verdict is the one that will stay, but whether it is firm is not known until a commit
-  // later than its end has been read.
+  // ASPAs known at t; `touches(customer)` says whether a customer is among the ASes the verdict reads. Returns
+  // {verdict, firm, others}: `others`, the other verdicts that the states the ASPAs may have had from t to end give (sorted, most
+  // often none), and firm when there is none. An event that ends after the horizon also has `late` and is not firm: its verdict
+  // is the one that will stay, but the changes around it are not all known until a commit later than its end has been read.
   at(t, verdictOf, touches, end = t) {
-    const n = this.indexAt(t);
+    const n = this.indexAt(t), last = Math.max(t, end);
     const verdict = verdictOf(this.state(n));
-    if (Math.max(t, end) > this.horizon) return { verdict, firm: false, late: true };    // not known yet: to be asked again
-    const k = this.open(t, n, Math.max(t, end));
+    const k = this.open(t, n, last);
+    const others = [];
     for (let j = 1; j <= k; j++) {
       if (!this.steps[n + j - 1][2].some(([c]) => touches(c))) continue;
-      if (verdictOf(this.state(n + j)) !== verdict) return { verdict, firm: false };
+      const v = verdictOf(this.state(n + j));
+      if (v !== verdict && !others.includes(v)) others.push(v);
     }
-    return { verdict, firm: true };
+    others.sort();
+    return last > this.horizon ? { verdict, firm: false, others, late: true } : { verdict, firm: !others.length, others };
   }
 }
 
