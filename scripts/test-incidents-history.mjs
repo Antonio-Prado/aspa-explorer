@@ -1,6 +1,6 @@
 // Unit tests for scripts/build-incidents-history.mjs (needs xz, as the builder). Run with: node scripts/test-incidents-history.mjs
 import assert from 'node:assert/strict';
-import { sources, readDay, caidaFor, sum, buildFile, dayOfIncident, rowOf, periods, FIRST_DAY } from './build-incidents-history.mjs';
+import { sources, readDay, caidaFor, sum, buildFile, dayOfIncident, rowOf, periods, pickFiles, FIRST_DAY } from './build-incidents-history.mjs';
 import { relationSets } from './build-incidents.mjs';
 import { mkdtemp, mkdir, writeFile, readFile, readdir, rm } from 'node:fs/promises';
 import { execFileSync } from 'node:child_process';
@@ -100,6 +100,17 @@ await test('a file: counts and verdicts for each day its incidents ended, and th
   day2 = block.get('2026-09-30');
   assert.equal(day2.total.incidents, 1);
   assert.deepEqual(day2.by_type.RLK.real, [0, 1, 0]);
+});
+
+await test('with a limit of files, the ones never read come before the ones that are only read again', () => {
+  // the newest first, as the builder lists them: two to read again, one that needs nothing, then two never read and one changed
+  const f = (name, read, unread) => ({ name, read, unread });
+  const todo = [f('again-1', true, false), f('again-2', true, false), f('good', false, false), f('new-1', true, true), f('changed', true, true), f('new-2', true, true)];
+  const names = (max) => [...pickFiles(todo, max)].map((t) => t.name);
+  assert.deepEqual(names(2), ['new-1', 'changed']);
+  assert.deepEqual(names(4), ['new-1', 'changed', 'new-2', 'again-1']);
+  assert.deepEqual(names(Infinity), ['new-1', 'changed', 'new-2', 'again-1', 'again-2']);
+  assert.deepEqual(names(0), []);
 });
 
 await test('the sum of results adds every count and keeps the whole time frame', () => {

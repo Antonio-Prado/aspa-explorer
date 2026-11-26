@@ -9,6 +9,13 @@ A few numbers were deployed and folded into the next release without a tag of th
 
 ## [Unreleased]
 
+## [1.113.3] - 2026-11-26
+
+### Changed
+
+- The history of the incidents: in a run that may read only so many files, the ones never read (a day that was just computed, a file that changed) come before the ones that are only read again with the rule of now. While the histories of the other collectors are read again with the timeline of the ASPAs, the days that their backfill had finished waited behind those files: a collector that was computed in full showed 777 of its 1,141 days.
+
+
 ## [1.113.2] - 2026-11-26
 
 ### Fixed

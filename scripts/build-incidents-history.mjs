@@ -94,6 +94,16 @@ export async function* readDay(list, only = null) {
 const LEAKS_ONLY = /"incident_type"\s*:\s*"RLK"/;
 
 // The relationships for a day: the newest file that is not of a later month, or the oldest one there is.
+// The files read in a run that may read at most `max` of them: first the ones whose content was never read (a file that
+// is new, or that changed), then the ones that are only read again (with the rule or the timeline of now), each group in
+// the order of the list. A day that was computed reaches the page at the next run, also while a whole history is being
+// read again: the files of that history are published with what is kept of them until their turn comes.
+export function pickFiles(todo, max) {
+  const now = new Set();
+  for (const first of [true, false]) for (const t of todo) if (now.size < max && t.read && t.unread === first) now.add(t);
+  return now;
+}
+
 export function caidaFor(files, day) {
   const month = day.slice(0, 7).replace('-', '');
   const ok = files.filter((f) => f.date.slice(0, 6) <= month);
@@ -236,7 +246,9 @@ async function main() {
   let rel = null;
   const perDay = new Map(), parts = new Map(), dirty = new Set(), used = new Set();      // day -> results, day -> part files
   let built = 0, waiting = 0, other = 0;
-  for (const x of [...src].reverse()) {          // the newest first: a first run shows the recent days soon
+  // what there is of each file, the newest first (a first run shows the recent days soon), and whether it is to be read
+  const todo = [];
+  for (const x of [...src].reverse()) {
     const key = keyOf(x), file = join(daysDir, `${x.name}.json`), partsDir = join(daysDir, x.name);
     let cached = null;
     try { cached = JSON.parse(await readFile(file, 'utf8')); } catch { /* not built yet */ }
@@ -245,8 +257,15 @@ async function main() {
     // on, and when it was read with a timeline of another version and is of the days of the job (a version changes the times
     // of the commits of the job, not the ones of the archive: the files of before stay as they are)
     const otherTimeline = cached && cached.rule === RULE && x.day >= JOB_FILES_FROM && cached.tl !== tl.version;
-    if (!cached || cached.key !== key || cached.rule !== RULE || otherTimeline || (cached.late && tl.horizon > cached.horizon)) {
-      if (built >= max) { waiting++; if (!cached) continue; }
+    const unread = !cached || cached.key !== key;
+    todo.push({ x, key, file, partsDir, cached, unread, read: unread || cached.rule !== RULE || otherTimeline || Boolean(cached.late && tl.horizon > cached.horizon) });
+  }
+  const now = pickFiles(todo, max);
+  for (const t of todo) {
+    const { x, key, file, partsDir } = t;
+    let cached = t.cached;
+    if (t.read) {
+      if (!now.has(t)) { waiting++; if (!cached) continue; }
       else {
         const c = caidaFor(caida, x.day);
         if (!rel || rel.date !== c.date) rel = { date: c.date, ...relationSets(await unbz(c.file)) };
