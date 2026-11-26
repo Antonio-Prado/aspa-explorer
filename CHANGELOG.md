@@ -9,6 +9,14 @@ A few numbers were deployed and folded into the next release without a tag of th
 
 ## [Unreleased]
 
+## [1.113.0] - 2026-11-26
+
+### Changed
+
+- Every part of the Adoption page says what moment its numbers are of. The page had one line, the time the numbers of adoption were built, and its other parts, built at other times from other files, said nothing. Now: the line under the title and the sources name the time of each source (the run of the validator that made the ASPAs and the ROAs, the time of the tables of the RIPE RIS collectors in which RIPEstat counted the networks, which is 00:00 UTC of the day for the build of the morning, the days of the delegation files, the day of the CAIDA file); *By country* repeats it; *From allocation to ASPA* and *By age* say theirs; *Networks with an ASPA over time* says that each point is the end of a month and the last one the time of the build; *Valid routes by address space* says between which times the table dumps were taken and with the ASPAs of which time they are checked; *ASPAs over time* says that a point is the end of a UTC day; the recent changes say which UTC days they cover and the day of the newest change; the quality checks and *The ASPAs by RIR and by provider* say the time of the run of the validator that the page read when it was opened. `/api/v1/adoption.json` and `/api/v1/resources.json` have `measured`, the moment of each source (`scripts/build-adoption.mjs`, `scripts/build-resources.mjs`).
+- Every AS that stands on a page as an element of its own (a chip, a link whose text is the number) has in front the flag of the country where its number is registered: in the tables of the invalid announcements, of the valleys, of the incidents and of the changes, in the lists of providers and customers, in the paths. `site/asnames.js`, which already knows where the ASes of a page are for their names, puts it once when the element comes into the page, from the file of the registries that it used for the box of the name. An AS written inside a sentence, the ASes of a chart or of the graph, AS0 and an AS that is in no registry have none, and a row of a table that shows the flag of a country already is left as it is.
+
+
 ## [1.112.0] - 2026-11-26
 
 ### Added

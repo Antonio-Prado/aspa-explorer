@@ -23,16 +23,16 @@
 <meta name="twitter:card" content="summary_large_image">
 <meta name="color-scheme" content="light dark">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
-<link rel="stylesheet" href="/style.css?v=1.112.0">
-<script src="/status-checks.js?v=1.112.0" defer></script>
-<script src="/asnames.js?v=1.112.0" defer></script>
-<script src="/footer.js?v=1.112.0" defer></script>
+<link rel="stylesheet" href="/style.css?v=1.113.0">
+<script src="/status-checks.js?v=1.113.0" defer></script>
+<script src="/asnames.js?v=1.113.0" defer></script>
+<script src="/footer.js?v=1.113.0" defer></script>
 </head>
 <body>
 <a class="skip" href="#main">Skip to main content</a>
 <header class="wrap masthead">
   <div class="top">
-    <p class="back"><a class="brandlink" href="/" title="Back to ASPA Explorer"><img class="brand" src="/img/logo-mark.svg?v=1.112.0" alt="" width="40" height="40"><span>ASPA Explorer</span></a></p>
+    <p class="back"><a class="brandlink" href="/" title="Back to ASPA Explorer"><img class="brand" src="/img/logo-mark.svg?v=1.113.0" alt="" width="40" height="40"><span>ASPA Explorer</span></a></p>
     <nav class="topnav" aria-label="Main"><a class="sect a-look" href="/network.html">Look up</a><a class="sect a-adopt" href="/statistics.html">Adoption</a><a class="sect a-now" href="/now.html">Right now</a><a class="sect a-inc" href="/incidents.html">Incidents</a><a class="minor" href="/guide.html" aria-current="page">Guide</a><a class="minor" href="/examples.html">Examples</a><a class="minor" href="/api.html">API</a><a class="minor" href="/status.html">Status</a></nav>
   </div>
   <h1>Guide</h1>
@@ -212,7 +212,7 @@
 
   <section aria-labelledby="statistics">
     <h2 id="statistics">The state of ASPA</h2>
-    <p>The <a href="/statistics.html">Adoption page</a> holds the numbers behind the ASPAs. First the chart of the ASPAs that this validator considers valid, <strong>ASPAs over time</strong> (daily since October 2023; stacked by RIR, or the total, the provider ASes, the median providers per ASPA, the no-provider ASPAs or the coverage, over the whole history, the last 12 months or the last 90 days, with a logarithmic scale and a download of the daily data as CSV or JSON). Then the latest changes and the quality checks, and who has an ASPA, by size and by RIR, in two tabs. The links under the title of the page go to each of these parts. The other charts and tables (the ASPAs by RIR and by provider, with <strong>ASPAs by RIR</strong>, <strong>providers per ASPA</strong> and the <strong>most-named providers</strong>, each of which opens its lookup; the largest transit networks, networks with an ASPA over time, by country, from allocation to ASPA, by age of the AS number, AS numbers that should not be there, valid routes by address space, IPv6 and IPv4) are under <em>Go deeper</em> at the end, each opened in place; a link to one of them opens it.</p>
+    <p>The <a href="/statistics.html">Adoption page</a> holds the numbers behind the ASPAs. Every part says what moment its numbers are of. The numbers of adoption (by size, registry and country, the largest networks) are built once a day, a little before 05:00 UTC: the networks seen in BGP are the ones in the tables of the RIPE RIS collectors at 00:00 UTC of that day, as RIPEstat counts them, and the ASPAs and the ROAs are the ones of the run of the validator at the time of the build; the registry is the one of the delegation files of the day before or of the same day. The charts over time have one point for each UTC day or for the end of each month. The changes are brought up to date every hour, and the quality checks and the ASPAs by RIR and by provider are computed on the ASPAs that the page reads from the validator when it is opened. First the chart of the ASPAs that this validator considers valid, <strong>ASPAs over time</strong> (daily since October 2023; stacked by RIR, or the total, the provider ASes, the median providers per ASPA, the no-provider ASPAs or the coverage, over the whole history, the last 12 months or the last 90 days, with a logarithmic scale and a download of the daily data as CSV or JSON). Then the latest changes and the quality checks, and who has an ASPA, by size and by RIR, in two tabs. The links under the title of the page go to each of these parts. The other charts and tables (the ASPAs by RIR and by provider, with <strong>ASPAs by RIR</strong>, <strong>providers per ASPA</strong> and the <strong>most-named providers</strong>, each of which opens its lookup; the largest transit networks, networks with an ASPA over time, by country, from allocation to ASPA, by age of the AS number, AS numbers that should not be there, valid routes by address space, IPv6 and IPv4) are under <em>Go deeper</em> at the end, each opened in place; a link to one of them opens it.</p>
     <h3 id="overview">The charts of the ASPAs</h3>
     <dl>
       <dt>ASPAs over time</dt>

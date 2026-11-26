@@ -50,6 +50,23 @@ export function parseDelegated(text, rir) {
   return out.sort((a, b) => a.start - b.start);
 }
 
+// The day a delegation file is of: the end date in its header ("2.3|apnic|20261126|191671||20261125|+1000": the sixth
+// field), as YYYY-MM-DD, or null.
+export function delegatedDay(text) {
+  for (const line of String(text).split('\n')) {
+    if (!line || line[0] === '#') continue;
+    const d = line.split('|')[5] || '';
+    return /^\d{8}$/.test(d) ? `${d.slice(0, 4)}-${d.slice(4, 6)}-${d.slice(6)}` : null;
+  }
+  return null;
+}
+// The time of a value of the sources, as ISO in UTC with no fraction, or null: an epoch in seconds, or a time as RIPEstat
+// writes it ("2026-11-26T08:00:00", UTC with no zone).
+export const isoOf = (v) => {
+  const t = typeof v === 'number' ? v * 1000 : (typeof v === 'string' ? Date.parse(/[zZ]|[+-]\d\d:?\d\d$/.test(v) ? v : `${v}Z`) : NaN);
+  return Number.isFinite(t) && t > 0 ? new Date(t).toISOString().replace(/\.\d+Z$/, 'Z') : null;
+};
+
 // a lookup AS number -> {cc, rir} over sorted ranges
 export function registry(ranges) {
   const sorted = [...ranges].sort((a, b) => a.start - b.start);
@@ -230,10 +247,16 @@ async function main() {
   if (!Array.isArray(data.aspas) || !data.aspas.length) throw new Error('the ASPA data is empty: not publishing');
   const aspa = new Map();
   for (const a of data.aspas) aspa.set(Number(a.customer.slice(2)), (aspa.get(Number(a.customer.slice(2))) || 0) + a.providers.filter((p) => p !== 'AS0').length);
-  const seen = new Set((await getJson('https://stat.ripe.net/data/ris-asns/data.json?list_asns=true')).data.asns.map(Number));
+  const ris = (await getJson('https://stat.ripe.net/data/ris-asns/data.json?list_asns=true')).data;
+  const seen = new Set(ris.asns.map(Number));
 
-  const ranges = [];
-  for (const [rir, url] of Object.entries(DELEGATED)) ranges.push(...parseDelegated(await readFile(await cached(url, join(cache, `delegated-${rir}`), 20 * 3600e3), 'utf8'), rir));
+  const ranges = [], regDays = new Set();
+  for (const [rir, url] of Object.entries(DELEGATED)) {
+    const text = await readFile(await cached(url, join(cache, `delegated-${rir}`), 20 * 3600e3), 'utf8');
+    ranges.push(...parseDelegated(text, rir));
+    const day = delegatedDay(text);
+    if (day) regDays.add(day);
+  }
   const caida = await latestCaida();
   const bz = await cached(caida.url, join(cache, `as-rel2-${caida.date}.bz2`), 30 * 86400e3);
   const relText = (await run('bunzip2', ['-c', bz], { maxBuffer: 512 * 1024 * 1024 })).stdout;
@@ -242,9 +265,11 @@ async function main() {
   const cones = coneSizes(rel);
 
   // the ROAs: which networks are named as an origin. When they cannot be read the rest is published without them
-  let roa = null;
+  let roa = null, roaAt = null;
   try {
-    roa = originAses(await (await fetchRetry(process.env.ROA_DATA || 'https://rpki.ping6.it/json', { Accept: 'application/json' })).text());
+    const text = await (await fetchRetry(process.env.ROA_DATA || 'https://rpki.ping6.it/json', { Accept: 'application/json' })).text();
+    roa = originAses(text);
+    roaAt = isoOf(Number((/"generated"\s*:\s*(\d+)/.exec(text.slice(0, 2000)) || [])[1]));
     if (roa.size < 1000) throw new Error(`only ${roa.size} origin ASes in the ROAs`);
   } catch (err) { roa = null; console.error(`the ROAs could not be read (${err.message}): the counts of the ROAs are left out`); }
 
@@ -252,6 +277,13 @@ async function main() {
   const doc = {
     generated: new Date().toISOString().replace(/\.\d+Z$/, 'Z'),
     sources: { aspas: 'Routinator, rpki.ping6.it', ...(roa ? { roas: 'Routinator, rpki.ping6.it' } : {}), bgp: 'RIPE RIS collectors, through RIPEstat (ris-asns)', registry: 'delegation files of the five RIRs', size: `CAIDA AS Relationships, serial-2, ${caida.date}` },
+    // what moment each source is of: the run of the validator that made the ASPAs and the ROAs, the time of the tables of the
+    // collectors that RIPEstat counted the networks in, the day of the delegation files (more than one when they are not all of
+    // the same day), the day of the CAIDA file
+    measured: {
+      aspas: isoOf(data.metadata && data.metadata.generated), ...(roa ? { roas: roaAt } : {}), bgp: isoOf(ris.query_time),
+      registry: [...regDays].sort(), size: `${caida.date.slice(0, 4)}-${caida.date.slice(4, 6)}-${caida.date.slice(6)}`,
+    },
     clique: header.clique,
     ixp: header.ixp,
     ...out,

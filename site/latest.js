@@ -93,6 +93,9 @@
       const cut = new Date(Date.now() - DAYS * 86400000).toISOString().slice(0, 10);
       const recent = all.filter((e) => e.date >= cut);
       anyDay(all);
+      // what the list covers: the days are UTC days, and the history is brought up to date every hour
+      const asOf = $('changes-asof');
+      if (asOf && all.length) asOf.textContent = `The days are UTC days, from ${day(cut)} to today; the list is brought up to date every hour, and its newest change is of ${day(all[all.length - 1].date)}.`;
       if (!recent.length) {
         const last = all[all.length - 1];
         body.replaceChildren(el('p', { class: 'hint', text: `No ASPA changed in the last ${DAYS} days${last ? ` (the last change was on ${day(last.date)})` : ''}.` }));
@@ -109,6 +112,9 @@
     const body = $('quality-body'), tiles = $('quality-tiles');
     try {
       const data = await getJson('/data/aspas.json');
+      // the ASPAs are read from the validator when the page opens: the time of the run that made them
+      const run = data.metadata && Number.isFinite(data.metadata.generated) ? new Date(data.metadata.generated * 1000) : null;
+      if ($('quality-asof') && run) $('quality-asof').textContent = `The ASPAs of the validator at ${run.toLocaleString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', timeZone: 'UTC' })} UTC, read when this page was opened. `;
       const list = (data.aspas || []).map((a) => ({ customer: a.customer, providers: [...a.providers].sort((x, y) => asNum(x) - asNum(y)), source: a.source || [] }));
       let unseen = null;
       try { unseen = new Set((await getJson('/api/v1/archive/visibility.json')).unseen); } catch { /* the checks that need BGP are skipped */ }

@@ -66,7 +66,9 @@
     s.append(svg('polyline', { points: pts, class: 'line s1' }));
     box.replaceChildren(s);
     const last = values[values.length - 1], first = values[0];
-    const text = `${labelOf(key)}: ${fmt.format(last)} network${last === 1 ? '' : 's'} with an ASPA in ${month(doc.points[values.length - 1])}, from ${fmt.format(first)} in ${month(doc.points[0])}.`;
+    // each point is the state at the end of its month, the last one the state when the file was built
+    const built = doc.generated ? ` Each point is the end of its month; the last one is ${new Date(doc.generated).toLocaleString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', timeZone: 'UTC' })} UTC, when these numbers were built (once a day).` : '';
+    const text = `${labelOf(key)}: ${fmt.format(last)} network${last === 1 ? '' : 's'} with an ASPA in ${month(doc.points[values.length - 1])}, from ${fmt.format(first)} in ${month(doc.points[0])}.${built}`;
     box.setAttribute('role', 'img');
     box.setAttribute('aria-label', text);
     return text;

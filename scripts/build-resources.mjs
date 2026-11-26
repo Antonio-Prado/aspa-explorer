@@ -12,7 +12,7 @@
 import { mkdir, readFile, writeFile, rename } from 'node:fs/promises';
 import { join } from 'node:path';
 import net from 'node:net';
-import { DELEGATED, cached } from './build-adoption.mjs';
+import { DELEGATED, cached, delegatedDay, isoOf } from './build-adoption.mjs';
 
 if (net.setDefaultAutoSelectFamilyAttemptTimeout) net.setDefaultAutoSelectFamilyAttemptTimeout(3000);
 const UA = 'aspa-explorer (https://aspa.ping6.it; antonio.prado@dei.unipd.it)';
@@ -155,15 +155,23 @@ async function main() {
   if (!Array.isArray(data.aspas) || !data.aspas.length) throw new Error('the ASPA data is empty: not publishing');
   const aspa = new Map();
   for (const a of data.aspas) { const c = Number(a.customer.slice(2)); aspa.set(c, (aspa.get(c) || []).concat(a.providers.map((p) => Number(p.slice(2))))); }
-  const seen = new Set((await getJson('https://stat.ripe.net/data/ris-asns/data.json?list_asns=true')).data.asns.map(Number));
-  const records = [];
-  for (const [rir, url] of Object.entries(DELEGATED)) records.push(...parseAsnRecords(await readFile(await cached(url, join(cache, `delegated-${rir}`), 20 * 3600e3), 'utf8'), rir));
+  const ris = (await getJson('https://stat.ripe.net/data/ris-asns/data.json?list_asns=true')).data;
+  const seen = new Set(ris.asns.map(Number));
+  const records = [], regDays = new Set();
+  for (const [rir, url] of Object.entries(DELEGATED)) {
+    const text = await readFile(await cached(url, join(cache, `delegated-${rir}`), 20 * 3600e3), 'utf8');
+    records.push(...parseAsnRecords(text, rir));
+    const day = delegatedDay(text);
+    if (day) regDays.add(day);
+  }
   let bank;
   try { bank = await worldBank(cache); } catch (err) { console.error(`the World Bank data is not available (${err.message}): the figures per user are left out`); bank = { users: new Map(), population: new Map(), region: new Map() }; }
   const out = aggregateResources({ records, seen, aspa, bank });
   const doc = {
     generated: new Date().toISOString().replace(/\.\d+Z$/, 'Z'),
     sources: { aspas: 'Routinator, rpki.ping6.it', advertised: 'RIPE RIS collectors, through RIPEstat (ris-asns)', registry: 'delegation files of the five RIRs', people: 'World Bank open data (population, Internet users, regions), most recent value of each economy' },
+    // what moment each source is of (as in adoption.json)
+    measured: { aspas: isoOf(data.metadata && data.metadata.generated), advertised: isoOf(ris.query_time), registry: [...regDays].sort() },
     ...out,
   };
   await writeFile(`${outFile}.${process.pid}.tmp`, JSON.stringify(doc) + '\n');

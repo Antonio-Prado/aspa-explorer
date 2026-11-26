@@ -87,7 +87,13 @@
       return;
     }
     funnel(d); economies(d);
-    $('res-note').textContent = `${d.sources.registry}; ${d.sources.advertised}; ${d.sources.people}. The economy is where the AS number was registered, not where it is used. Percentages: advertised of allocated, and with an ASPA of advertised.`;
+    // when these numbers were built and what moment their sources are of (a file of before 1.113 does not say)
+    const at = (iso) => `${new Date(iso).toLocaleString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', timeZone: 'UTC' })} UTC`;
+    const dayText = (x) => new Date(`${x}T00:00:00Z`).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' });
+    const m = d.measured || {};
+    const regDays = Array.isArray(m.registry) ? m.registry.filter((x) => /^\d{4}-\d{2}-\d{2}$/.test(x)) : [];
+    const asOf = `Built ${at(d.generated)}, once a day${regDays.length ? `: the delegation files of ${regDays.map(dayText).join(' and ')}` : ''}${m.advertised ? `, the networks advertised in the tables of the collectors at ${at(m.advertised)}` : ''}${m.aspas ? `, the ASPAs of the validator at ${at(m.aspas)}` : ''}. `;
+    $('res-note').textContent = `${asOf}${d.sources.registry}; ${d.sources.advertised}; ${d.sources.people}. The economy is where the AS number was registered, not where it is used. Percentages: advertised of allocated, and with an ASPA of advertised.`;
     bars($('age-years'), d.by_year.filter((y) => y.year >= 2005), (y) => String(y.year));
     bars($('age-width'), d.by_width, (w) => w.width);
     $('age-note').textContent = 'The year is the one of the allocation in the delegation files. A recent number is more likely to belong to a network that is run today, and the networks that started after the first ASPAs are more likely to publish one; the 16-bit numbers include the oldest networks.';

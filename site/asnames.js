@@ -126,6 +126,38 @@
   };
   const countries = new Map();     // asn -> code, once known
 
+  // The flag of the country where its number is registered, in front of every AS that is an element of its own: a chip, a
+  // link to the page of an AS whose text is the number, an element with data-asn. It is put once, when the element comes
+  // into the page, from the same file of the registries. No flag for an AS written inside a sentence (it is plain text),
+  // for the ASes of a chart or of the graph (SVG), for AS0 and for an AS that is in no registry, for an element marked
+  // data-noflag, and in a row of a table that shows the flag of a country already.
+  const AS_ALONE = /^\s*AS([1-9]\d{0,9})\s*$/;
+  function flagOn(e) {
+    if (e.dataset.flag || e.closest('svg, .as-tip, [data-noflag], [contenteditable]')) return;
+    const m = AS_ALONE.exec(e.textContent);
+    if (!m) return;
+    const chip = e.classList.contains('chip');
+    if (e.tagName === 'A' ? !(chip || asnOf(e.getAttribute('href'), '', null) === m[1]) : !(chip || e.hasAttribute('data-asn'))) return;
+    e.dataset.flag = '1';
+    countryOf(m[1]).then((cc) => {
+      if (!cc || !e.isConnected) return;
+      const row = e.closest('tr');
+      if (row && [...row.querySelectorAll('img.flag')].some((f) => !e.contains(f))) return;
+      const f = flagEl(cc);
+      if (f) e.prepend(f);
+    });
+  }
+  function flagsIn(node) {
+    if (!node || node.nodeType !== 1) return;
+    if (node.matches('a, .chip, [data-asn]')) flagOn(node);
+    for (const e of node.querySelectorAll('a, .chip, [data-asn]')) flagOn(e);
+  }
+  const startFlags = () => {
+    flagsIn(document.body);
+    new MutationObserver((list) => { for (const m of list) for (const n of m.addedNodes) flagsIn(n); }).observe(document.body, { childList: true, subtree: true });
+  };
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', startFlags); else startFlags();
+
   // For a page with a tooltip of its own (the charts of the statistics), which shows the name in it: the name when it
   // is known (undefined when it was not asked yet), and the promise of it.
   root.AspaNames = { ...api, known: (asn) => names.get(asn), nameOf, flagEl, countryName, countryOf };

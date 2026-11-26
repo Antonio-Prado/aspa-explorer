@@ -309,7 +309,7 @@ function describeHistory() {
     el('span', { class: 'lv', text: fmt.format(lastRow['aspas_' + rir] || 0) })))
     : [el('li', {}, el('span', { class: 'sw s1', 'aria-hidden': 'true' }), el('span', { class: 'lg', text: mt.label }),
       el('span', { class: 'lv', text: `${fmtMetric(mt, mt.value(last))}${mt.pct ? '' : ''}` }))]));
-  $('history-note').textContent = `${fmtDayLong(first.date)} to ${fmtDayLong(last.date)}. ` +
+  $('history-note').textContent = `${fmtDayLong(first.date)} to ${fmtDayLong(last.date)}, one point for each UTC day: the state at the end of the day, and for today the state of the last hour. ` +
     (mt.stacked && !lastRow.aspas_afrinic ? 'AFRINIC has published none so far: its line runs along zero. ' : '') + (mt.note ? mt.note + ' ' : '') +
     'Days before 16 October 2026 come from the RIPE NCC RPKI archive; since then, from this site\'s validator.' + skippedNote(mt, rows);
 }
@@ -398,6 +398,9 @@ function renderStats(aspas) {
 async function loadAspas() {
   try {
     const data = await getJson(DATA_ASPAS);
+    // these numbers are of the run of the validator that the page read when it was opened
+    const run = data.metadata && Number.isFinite(data.metadata.generated) ? new Date(data.metadata.generated * 1000) : null;
+    if ($('aspas-asof') && run) $('aspas-asof').textContent = `The ASPAs of the validator at ${run.toLocaleString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', timeZone: 'UTC' })} UTC, read when this page was opened: reload the page for newer ones (the validator makes a run about every quarter of an hour).`;
     renderStats((data.aspas || []).map((a) => ({
       customer: a.customer, providers: [...a.providers],
       tal: (a.source && a.source[0] && a.source[0].tal) || a.ta || '?',

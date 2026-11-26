@@ -4,6 +4,9 @@
 (function () {
   const $ = (id) => document.getElementById(id);
   const fmt = new Intl.NumberFormat('en-US');
+  // "26 Nov 2026, 04:50 UTC" for a time, "25 Nov 2026" for a day: every number of the page says what moment it is of
+  const when = (iso) => `${new Date(iso).toLocaleString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', timeZone: 'UTC' })} UTC`;
+  const dayText = (d) => new Date(`${d}T00:00:00Z`).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' });
   const RIRS = { ripe: 'RIPE NCC', apnic: 'APNIC', arin: 'ARIN', lacnic: 'LACNIC', afrinic: 'AFRINIC', unknown: 'Not in a delegation file' };
   let names = null;
   try { names = new Intl.DisplayNames(['en'], { type: 'region' }); } catch { /* the code is shown instead */ }
@@ -62,7 +65,11 @@
       $('tiles').replaceChildren(el('p', { class: 'error', text: `Could not load the adoption data (${err.message}). It is rebuilt once a day; try again later.` }));
       return;
     }
-    $('meta').textContent = `Built ${new Date(d.generated).toLocaleString('en-GB', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'UTC' })} UTC`;
+    // when the numbers of adoption were built and what moment each of their sources is of (the files of before 1.113 do not say)
+    const m = d.measured || {};
+    const of = (t, text) => (t ? ` (${text(t)})` : '');
+    const regDays = Array.isArray(m.registry) ? m.registry.filter((x) => /^\d{4}-\d{2}-\d{2}$/.test(x)) : [];
+    $('meta').textContent = `Built ${when(d.generated)}, once a day${m.bgp ? `: the networks seen in BGP are the ones in the tables of the collectors at ${when(m.bgp)}` : ''}${m.aspas ? `, the ASPAs the ones of the validator at ${when(m.aspas)}` : ''}. Each part below says the time of its own numbers.`;
     const tile = (label, value, note) => el('div', { class: 'tile card' }, el('div', { class: 'label', text: label }), el('div', { class: 'value', text: value }), el('div', { class: 'note', text: note }));
     const top = d.top_transit;
     $('tiles').replaceChildren(
@@ -112,7 +119,9 @@
     $('cc-sort').addEventListener('change', applyCc);
     applyCc();
 
-    $('sources').textContent = `Sources: ASPAs from ${d.sources.aspas};${d.sources.roas ? ` ROAs from ${d.sources.roas};` : ''} networks seen: ${d.sources.bgp}; country and registry: ${d.sources.registry}; size: ${d.sources.size} (The CAIDA AS Relationships Dataset, www.caida.org/catalog/datasets/as-relationships/). ${fmt.format(d.aspa_not_seen)} ASPA customers are not seen in BGP and are not counted.`;
+    $('sources').textContent = `Sources, and the moment each one is of: ASPAs from ${d.sources.aspas}${of(m.aspas, (t) => `its run of ${when(t)}`)};${d.sources.roas ? ` ROAs from ${d.sources.roas}${of(m.roas, (t) => `its run of ${when(t)}`)};` : ''} networks seen: ${d.sources.bgp}${of(m.bgp, (t) => `the tables of ${when(t)}`)}; country and registry: ${d.sources.registry}${regDays.length ? ` (of ${regDays.map(dayText).join(' and ')})` : ''}; size: ${d.sources.size} (The CAIDA AS Relationships Dataset, www.caida.org/catalog/datasets/as-relationships/). ${fmt.format(d.aspa_not_seen)} ASPA customers are not seen in BGP and are not counted. These numbers, the ones by size, by RIR and by country and the largest networks were built together, ${when(d.generated)}.`;
+    const ccAsOf = $('cc-asof');
+    if (ccAsOf) ccAsOf.textContent = `Numbers of ${when(d.generated)}${m.bgp ? `: the networks in the tables of the collectors at ${when(m.bgp)}` : ''}${m.aspas ? `, the ASPAs${m.roas ? ' and the ROAs' : ''} of the validator at ${when(m.aspas)}` : ''}.`;
   }
 
   // "Who has an ASPA": by size and by RIR are two tabs, with the arrow keys, Home and End; the old addresses of the two
