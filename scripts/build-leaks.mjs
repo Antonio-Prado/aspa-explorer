@@ -1,4 +1,4 @@
-// Valleys (possible route leaks, or gaps in ASPAs) in the routes of the RIPE RIS and RouteViews collectors, today: every route of 33 collectors is
+// Valleys (possible route leaks, or gaps in ASPAs) in the routes of the RIPE RIS and RouteViews collectors, today: every route of 50 collectors is
 // checked with the downstream ASPA verification, and the paths that the ASPAs prove to contain a valley are
 // grouped by the place of the valley. Written as one JSON file (served as /api/v1/leaks.json).
 //
@@ -13,7 +13,7 @@
 //
 // Inputs (environment, with defaults for the production host):
 //   ASPA_DATA        URL or file of Routinator's jsonext     http://127.0.0.1:8080/data/aspas.json
-//   LEAKS_COLLECTORS comma separated collectors              nineteen of RIPE RIS and fourteen of RouteViews (COLLECTORS below)
+//   LEAKS_COLLECTORS comma separated collectors              twenty-one of RIPE RIS and twenty-nine of RouteViews (COLLECTORS below)
 //   ASPA_TIMELINE    file of the timeline of the ASPAs       timeline.json next to OUT_FILE (only with --day: scripts/build-timeline.mjs)
 //   LEAKS_ADOPTION   file with the Tier-1 clique and the IXP ASes (adoption.json), next to OUT_FILE
 //
@@ -34,9 +34,13 @@ import { readRib, openDump, dumpTime } from './mrt.mjs';
 
 const { verify } = createRequire(import.meta.url)('../site/verify.js');
 if (net.setDefaultAutoSelectFamilyAttemptTimeout) net.setDefaultAutoSelectFamilyAttemptTimeout(3000);
-// RIPE RIS (16): Amsterdam, London, Amsterdam, Geneva, Vienna, Tokyo, Stockholm, Milan, New York, Frankfurt, Palo Alto, Sao Paulo, Miami, Johannesburg, Paris, Singapore.
-// RouteViews (14; University of Oregon, other peers than RIS): Oregon, route-views3 and 4, London, Palo Alto, Tokyo, New York, Perth, Atlanta, Singapore, Johannesburg, Sao Paulo, Sydney, Equinix.
-export const COLLECTORS = 'rrc00,rrc01,rrc03,rrc04,rrc05,rrc06,rrc07,rrc10,rrc11,rrc12,rrc13,rrc14,rrc15,rrc16,rrc19,rrc20,rrc21,rrc23,rrc25,route-views2,route-views3,route-views4,route-views.linx,route-views.isc,route-views.wide,route-views.ny,route-views.perth,route-views.telxatl,route-views.sg,route-views.napafrica,route-views2.saopaulo,route-views.sydney,route-views.eqix';
+// RIPE RIS (21): Amsterdam (three), London, Geneva, Vienna, Tokyo, Stockholm, Milan, New York, Frankfurt, Moscow, Palo Alto, Sao Paulo, Miami, Johannesburg,
+// Zurich, Paris, Singapore, Montevideo, Dubai.
+// RouteViews (29; University of Oregon, other peers than RIS): Oregon, route-views3, 4 and 8, London, Palo Alto, Tokyo, New York, Perth, Atlanta, Singapore,
+// Johannesburg, Sao Paulo, Sydney, Equinix; and since 1.111.0 Hong Kong, Seoul, Bangkok, Manila, Dubai, Nairobi, Lagos, Queretaro, Santiago, Fortaleza (the
+// zones that had no collector or one only), route-views8 and Rome (the ones that see most problems that the others do not), the two of Frankfurt and
+// Amsterdam (new feeders, more than new problems): chosen with a trial of one day, 25 November 2026, of every collector of the two projects not read.
+export const COLLECTORS = 'rrc00,rrc01,rrc03,rrc04,rrc05,rrc06,rrc07,rrc10,rrc11,rrc12,rrc13,rrc14,rrc15,rrc16,rrc19,rrc20,rrc21,rrc23,rrc24,rrc25,rrc26,route-views2,route-views3,route-views4,route-views.linx,route-views.isc,route-views.wide,route-views.ny,route-views.perth,route-views.telxatl,route-views.sg,route-views.napafrica,route-views2.saopaulo,route-views.sydney,route-views.eqix,hkix.hkg,kinx.icn,route-views.bknix,getafix.mnl,route-views.uaeix,route-views.kixp,ixpn.los,pitmx.qro,pit.scl,route-views.fortaleza,route-views8,locix.fra,decix.fra,namex.fco,amsix.ams';
 export const isRis = (collector) => /^rrc\d+$/.test(collector);
 // The table dump of a collector: the latest one, or the one of 00:00 UTC of a day (YYYYMMDD).
 // For RouteViews the latest one has to be found in the listing of the month (pickLatestRib).
@@ -169,7 +173,7 @@ export class Leaks {
     this.total = { routes: 0, valid: 0, unknown: 0, invalid: 0 };
     this.soft = { valid: 0, unknown: 0, invalid: 0 }; this.could = { valid: 0, unknown: 0, invalid: 0 };
     this.groups = new Map();
-    // the places of valley kept in memory: a day of 33 collectors has a few tens of thousands; peers that sent crafted paths could make far more,
+    // the places of valley kept in memory: a day of 50 collectors has a few tens of thousands; peers that sent crafted paths could make far more,
     // and the places past this many are only counted (omitted), so that the run of the day ends
     this.maxGroups = MAX_PLACES; this.omitted = 0;
     this.feederSet = new Set();                                       // the networks that feed the collectors, whichever collector
@@ -469,7 +473,8 @@ async function main() {
   const doc = { generated, aspas: count, collectors: used, ...(stale.length ? { stale } : {}), relationships: rel.source, ...res };
   const write = async (file, value) => { const tmp = `${file}.tmp`; await writeFile(tmp, JSON.stringify(value) + '\n'); await rename(tmp, file); };
   const dir = join(outFile, '..'), day = generated.slice(0, 10);
-  const perAs = { generated, min_feeders: MIN_FEEDERS, as: byAs(leaks.list) };
+  // the collectors that were read are named: a place that is there because a collector was added is not a new place (the notifier)
+  const perAs = { generated, min_feeders: MIN_FEEDERS, collectors: used.map((u) => u.collector), as: byAs(leaks.list) };
   if (!dayIso) {
     await write(outFile, doc);
     await write(join(dir, 'leaks-by-as.json'), perAs);

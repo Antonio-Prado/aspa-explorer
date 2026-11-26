@@ -9,6 +9,14 @@ A few numbers were deployed and folded into the next release without a tag of th
 
 ## [Unreleased]
 
+## [1.111.0] - 2026-11-26
+
+### Changed
+
+- The valleys, the coverage by address space and the comparison of the collectors read 50 collectors instead of 33: 21 of RIPE RIS and 29 of RouteViews. Twelve are for the zones that had no collector, or one alone: Hong Kong (hkix.hkg), Seoul (kinx.icn), Bangkok (route-views.bknix), Manila (getafix.mnl), Dubai (route-views.uaeix and rrc26), Nairobi (route-views.kixp), Lagos (ixpn.los), Montevideo (rrc24), Queretaro (pitmx.qro), Santiago (pit.scl) and Fortaleza (route-views.fortaleza); five are the ones that see most places of valley that the others do not: route-views8, Rome (namex.fco), the two of Frankfurt (locix.fra, decix.fra) and Amsterdam (amsix.ams). They were chosen with a trial of one day (25 November 2026) of every collector of the two projects that was not read, 46 of them, each one counted against the 32 read that day (669.6 M routes, 630 feeder networks, 14,230 places): the collectors of Asia, the Middle East and Africa bring feeder networks, from one to ten each, and almost no place that was not seen already (Hong Kong, Seoul, Dubai and Nairobi none); route-views8 brings 611, locix.fra 407, namex.fco 331. Not every new place is a new problem: a place is the AS where the climb stops, the first AS after it and the AS where the descent stops, and a feeder that has an ASPA of its own gives a new end to problems that were already seen. Counted by the first two alone (1,329 pairs in the collectors read that day), route-views8 brings 182 pairs that were not seen and Rome 75; the two of Frankfurt and Amsterdam bring 12 between them, and their other new places, some 1,100, are known pairs that end at a network they are fed by (most at AS24940). The seventeen together: 1,704 new places, 268 new pairs. The seventeen have a table dump of 00:00 UTC on every day since 1 September 2026. route-views.sg (Singapore) stays in the list and is left out while it writes no dump: its transit has been down since 7 November (a notice of RouteViews of 24 November), so 49 are read for now. The history of the valleys is being rebuilt with the same collectors for every day.
+- A place of valley that appears because a collector was added is not a new place. `/api/v1/leaks-by-as.json` names the collectors that were read (`collectors`), and the notifier, when they are not the ones of the build before (a collector added, one left out because it writes no table dump, one that came back), takes what it sees as known and announces nothing that day; before, the subscriptions that ask for the places of valley would have been told of every place that only the new collectors see.
+
+
 ## [1.110.0] - 2026-11-26
 
 ### Added

@@ -25,7 +25,7 @@ import http from 'node:http';
 import { readFileSync, existsSync, writeFileSync, chmodSync, rmSync } from 'node:fs';
 import { randomBytes } from 'node:crypto';
 import { openStore } from './store.mjs';
-import { stabilise, audience, describeEvent, stateOf, massRemoval, newPlaces, describePlace, changeBudget, CHANGES_A_DAY } from './changes.mjs';
+import { stabilise, audience, describeEvent, stateOf, massRemoval, newPlaces, collectorsKey, seenFor, describePlace, changeBudget, CHANGES_A_DAY } from './changes.mjs';
 import { compose, serialize, sendmail, mailDomainOk } from './mail.mjs';
 import { post } from './webhook.mjs';
 import { makeOutbox } from './outbox.mjs';
@@ -236,14 +236,17 @@ async function pollLeaks() {
   const saved = store.getState('leaks') || { generated: null, seen: {} };
   if (saved.generated === doc.generated) return at;
   const subs = store.allActive().filter((s) => s.leaks);
-  const out = newPlaces(doc.as, subs.map((s) => s.asn), saved.seen);
+  // a build made with other collectors than the one before: what it shows is taken as known, nothing is announced
+  const key = collectorsKey(doc), seen = seenFor(saved, key);
+  if (seen === null && saved.generated) log('the collectors of the valleys are not the ones of the build before: the places of now are taken as known');
+  const out = newPlaces(doc.as, subs.map((s) => s.asn), seen);
   if (out.events.length) log(`${out.events.length} new place(s) of valley for the subscriptions`);
   store.transaction(() => {
     for (const e of out.events) {
       const line = describePlace(e);
       for (const sub of subs.filter((s) => s.asn === e.asn)) outbox.enqueue(sub.id, { subject: `New place of valley that involves ${e.asn}`, line, type: 'aspa.leak', extra: { place: { role: e.role, kind: e.kind, from: e.from, to: e.to, between: e.between, feeders: e.feeders, routes: e.routes } } });
     }
-    store.setState('leaks', { generated: doc.generated, seen: out.seen });
+    store.setState('leaks', { generated: doc.generated, collectors: key, seen: out.seen });
   });
   return at;
 }

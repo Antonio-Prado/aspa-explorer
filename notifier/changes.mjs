@@ -68,6 +68,12 @@ const placeKey = (p) => `${p.role}|${p.from}|${p.to}|${p.between.join(' ')}`;
 // seen: {AS: [keys]} of the previous build, only for those ASes. An AS that was not in `seen` gets a baseline
 // (what is there now is not announced), so a new subscription does not start with a flood.
 // Returns the places that are new since the previous build and the new `seen`.
+// The collectors that a build of the valleys read, as one string to compare two builds with, or null when the file does not
+// name them. When they are not the ones of the build before (a collector added to the list, one left out because it writes no
+// table dump, one that came back) the places that appear are not news: every AS gets a new baseline, as if `seen` were empty.
+export const collectorsKey = (doc) => (doc && Array.isArray(doc.collectors) && doc.collectors.every((c) => typeof c === 'string') ? [...doc.collectors].sort().join(',') : null);
+export const seenFor = (saved, key) => (key !== null && saved && saved.collectors !== key ? null : (saved ? saved.seen : null));
+
 export function newPlaces(byAs, asns, seen) {
   const next = {}, events = [];
   for (const asn of new Set(asns)) {

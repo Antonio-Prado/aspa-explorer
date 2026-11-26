@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import http from 'node:http';
 import { generateKeyPairSync } from 'node:crypto';
 import { makeToken, readToken } from '../notifier/tokens.mjs';
-import { stabilise, audience, describeEvent, newPlaces, describePlace, changeBudget } from '../notifier/changes.mjs';
+import { stabilise, audience, describeEvent, newPlaces, collectorsKey, seenFor, describePlace, changeBudget } from '../notifier/changes.mjs';
 import { pool } from '../notifier/pool.mjs';
 import { makePulse } from '../notifier/pulse.mjs';
 import { makeOutbox, RETRY, MAX_FAILS } from '../notifier/outbox.mjs';
@@ -328,6 +328,17 @@ await test('places of valley: a baseline first, then only the new ones, only for
   assert.deepEqual(r.events.map((e) => [e.asn, e.from]), [['AS2', 'AS4'], ['AS3', 'AS1']]);
   assert.equal(newPlaces(doc2, ['AS2', 'AS3'], r.seen).events.length, 0);   // the same build again says nothing
   assert.equal(newPlaces(doc2, ['AS8'], r.seen).events.length, 0);          // an AS that is new to the list gets a baseline
+  // a build made with other collectors: what it shows is not news, every AS gets a baseline
+  const k1 = collectorsKey({ collectors: ['rrc01', 'rrc00'] }), k2 = collectorsKey({ collectors: ['rrc00', 'rrc01', 'hkix.hkg'] });
+  assert.equal(k1, 'rrc00,rrc01');
+  assert.equal(collectorsKey({ as: {} }), null);                             // a file that does not name its collectors
+  assert.equal(collectorsKey({ collectors: 'rrc00' }), null);
+  const saved = { generated: 'g', collectors: k1, seen: r.seen };
+  assert.equal(seenFor(saved, k1), r.seen);                                  // the same collectors: the places seen before count
+  assert.equal(seenFor(saved, k2), null);                                    // one more: a baseline
+  assert.equal(seenFor(saved, null), r.seen);                                // the file does not say: as before
+  assert.equal(seenFor({ generated: 'g', seen: r.seen }, k1), null);         // the first build that names them, after ones that did not
+  assert.equal(newPlaces(doc2, ['AS2', 'AS3'], seenFor(saved, k2)).events.length, 0);
 });
 
 await test('places of valley: the descriptions say leak or gap in plain words', () => {

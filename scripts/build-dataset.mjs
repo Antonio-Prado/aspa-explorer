@@ -29,7 +29,7 @@ export const FILES = (site) => [
   ['resources.json', `${site}/api/v1/resources.json`, 'AS numbers allocated, advertised and with an ASPA, by RIR, region, economy, year and width; ASPAs that name numbers that are not allocated'],
   ['invalid.json', `${site}/api/v1/invalid.json`, 'the invalid announcements of the last 14 days as the RIS Live stream gives them: by hour, origin and prefix'],
   ['trends.json', `${site}/api/v1/trends.json`, 'networks with an ASPA, month by month, for each RIR and country'],
-  ['leaks.json', `${site}/api/v1/leaks.json`, 'places of valley in the routes of the 33 collectors of RIPE RIS and RouteViews, today'],
+  ['leaks.json', `${site}/api/v1/leaks.json`, 'places of valley in the routes of the 50 collectors of RIPE RIS and RouteViews, today'],
   ['leaks-history.json', `${site}/api/v1/leaks-history.json`, 'one row a day of the totals of the leaks'],
   ['validators.json', `${site}/api/v1/validators.json`, 'the ASPAs of four validators compared'],
   ['rtr.json', `${site}/api/v1/rtr.json`, 'the RTR session with the validator of the site and with the reference caches, as independent RTR clients see them: the records held and changed by hour for 30 days, the anomalies'],

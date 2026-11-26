@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "ASPA Explorer API",
-    "version": "1.110.0",
+    "version": "1.111.0",
     "description": "ASPA objects validated by Routinator at rpki.ping6.it, their history and quality, for any AS. Open data, read-only, no key. Best effort, with no guarantee of any kind: the data can be late, incomplete or wrong, and whoever uses it is expected to check it on their own.",
     "contact": {
       "email": "antonio.prado@dei.unipd.it"
@@ -543,7 +543,7 @@
       "get": {
         "operationId": "getLeaksJson",
         "summary": "The places of valley of today in the routes of the collectors",
-        "description": "Built once a day from the latest table dumps of 33 collectors of RIPE RIS and RouteViews (the ones of 00:00 UTC for RIPE RIS, of some hours later for RouteViews; scripts/build-leaks.mjs): every route is checked with the downstream ASPA verification and the paths that the ASPAs prove to contain a valley are grouped by the place of the valley. A collector whose newest table dump is more than a day old is not read: it is named in `stale`, with the time of that dump.",
+        "description": "Built once a day from the latest table dumps of 50 collectors of RIPE RIS and RouteViews (the ones of 00:00 UTC for RIPE RIS, of some hours later for RouteViews; scripts/build-leaks.mjs): every route is checked with the downstream ASPA verification and the paths that the ASPAs prove to contain a valley are grouped by the place of the valley. A collector whose newest table dump is more than a day old is not read: it is named in `stale`, with the time of that dump.",
         "responses": {
           "200": {
             "description": "The file",
@@ -853,7 +853,7 @@
       "get": {
         "operationId": "getLeaksByAsJson",
         "summary": "The places of valley that involve each AS",
-        "description": "Places seen by at least min_feeders feeders, by AS, for the page of an AS and for the notifier.",
+        "description": "Places seen by at least min_feeders feeders, by AS, for the page of an AS and for the notifier. `collectors` names the collectors that were read (a place can be new only because a collector was added: the notifier takes a new baseline when they change).",
         "responses": {
           "200": {
             "description": "The file",
