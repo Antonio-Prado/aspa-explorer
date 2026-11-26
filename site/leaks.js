@@ -62,12 +62,23 @@
     if (!rows.length) return;
     $('leaks-history-note').textContent = rows.length < 2
       ? 'One point a day: the history starts on ' + dayLabel(rows[0].date) + ' and grows every day.'
-      : `Places of valley, one point a day, ${rows.length} days. The places that CAIDA cannot classify (unclear) are not drawn. A change can come from the routes, from the ASPAs published that day or from the relationships dataset.${softNote(rows)}`;
+      : `Places of valley, one point a day, ${rows.length} days. The places that CAIDA cannot classify (unclear) are not drawn. A change can come from the routes, from the ASPAs published that day or from the relationships dataset.${collectorsNote(rows)}${softNote(rows)}`;
     const legend = $('leaks-history-legend');
     legend.replaceChildren(...SERIES.map((s) => el('li', {}, el('span', { class: `sw ${s.cls}`, 'aria-hidden': 'true' }), el('span', { class: 'lg', text: s.label }), ' ', el('span', { class: 'lv', text: fmt.format(rows[rows.length - 1][s.key]) }))));
     drawHistory(box, rows);
     let t = 0;
     window.addEventListener('resize', () => { clearTimeout(t); t = setTimeout(() => drawHistory(box, rows), 150); });
+  }
+
+  // The collectors read are not the same number every day (one that stops writing table dumps is left out): the last change
+  // of that number, for the note of the chart.
+  function collectorsNote(rows) {
+    const known = rows.filter((r) => typeof r.collectors === 'number');
+    let i = known.length - 1;
+    while (i > 0 && known[i].collectors === known[i - 1].collectors) i--;
+    if (i <= 0) return '';
+    const now = known[i].collectors, before = known[i - 1].collectors;
+    return ` From ${dayLabel(known[i].date)} the days are read from ${now} collectors, ${before} before${now < before ? ' (a collector that stops writing table dumps is left out)' : ''}.`;
   }
 
   // The days rebuilt from the dumps of 00:00 UTC say how many of their places depend on the state the ASPAs had at that time
@@ -211,7 +222,10 @@
     compare(d);
     const t = d.total;
     const when = d.collectors.map((c) => c.built).sort()[0];
-    $('leaks-sub').textContent = `Every route of ${d.collectors.length} collectors, ${d.collectors.filter((c) => /^rrc/.test(c.collector)).length} of RIPE RIS and ${d.collectors.filter((c) => !/^rrc/.test(c.collector)).length} of RouteViews (${fmt.format(t.routes)} routes in the latest table dumps of the collectors, downloaded from ${new Date(when).toLocaleString('en-GB', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'UTC' })} UTC) checked with the downstream ASPA verification. A valley is a route that came down from a provider or a peer and went up again.`;
+    // a collector whose newest table dump is more than a day old is not read: the document names it
+    const stale = (Array.isArray(d.stale) ? d.stale : []).filter((s) => s && typeof s.collector === 'string');
+    const staleNote = stale.length ? ` Left out, because ${stale.length === 1 ? 'its' : 'their'} newest table dump is more than a day old: ${stale.map((s) => `${s.collector} (${s.dump ? new Date(s.dump).toLocaleDateString('en-GB', { dateStyle: 'medium', timeZone: 'UTC' }) : 'none in two months'})`).join(', ')}.` : '';
+    $('leaks-sub').textContent = `Every route of ${d.collectors.length} collectors, ${d.collectors.filter((c) => /^rrc/.test(c.collector)).length} of RIPE RIS and ${d.collectors.filter((c) => !/^rrc/.test(c.collector)).length} of RouteViews (${fmt.format(t.routes)} routes in the latest table dumps of the collectors, downloaded from ${new Date(when).toLocaleString('en-GB', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'UTC' })} UTC) checked with the downstream ASPA verification. A valley is a route that came down from a provider or a peer and went up again.${staleNote}`;
     const tile = (label, value, note, cls) => el('div', { class: 'tile card ' + (cls || '') }, el('div', { class: 'label', text: label }), el('div', { class: 'value', text: value }), el('div', { class: 'note', text: note }));
     $('leaks-tiles').replaceChildren(
       tile('Invalid routes', fmt.format(t.invalid), `${pct(t.invalid, t.routes)} of the routes`, 'v-invalid'),

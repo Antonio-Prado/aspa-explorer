@@ -23,16 +23,16 @@
 <meta name="twitter:card" content="summary_large_image">
 <meta name="color-scheme" content="light dark">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
-<link rel="stylesheet" href="/style.css?v=1.106.0">
-<script src="/status-checks.js?v=1.106.0" defer></script>
-<script src="/asnames.js?v=1.106.0" defer></script>
-<script src="/footer.js?v=1.106.0" defer></script>
+<link rel="stylesheet" href="/style.css?v=1.106.1">
+<script src="/status-checks.js?v=1.106.1" defer></script>
+<script src="/asnames.js?v=1.106.1" defer></script>
+<script src="/footer.js?v=1.106.1" defer></script>
 </head>
 <body>
 <a class="skip" href="#main">Skip to main content</a>
 <header class="wrap masthead">
   <div class="top">
-    <p class="back"><a class="brandlink" href="/" title="Back to ASPA Explorer"><img class="brand" src="/img/logo-mark.svg?v=1.106.0" alt="" width="40" height="40"><span>ASPA Explorer</span></a></p>
+    <p class="back"><a class="brandlink" href="/" title="Back to ASPA Explorer"><img class="brand" src="/img/logo-mark.svg?v=1.106.1" alt="" width="40" height="40"><span>ASPA Explorer</span></a></p>
     <nav class="topnav" aria-label="Main"><a class="sect a-look" href="/network.html">Look up</a><a class="sect a-adopt" href="/statistics.html">Adoption</a><a class="sect a-now" href="/now.html">Right now</a><a class="sect a-inc" href="/incidents.html">Incidents</a><a class="minor" href="/guide.html" aria-current="page">Guide</a><a class="minor" href="/examples.html">Examples</a><a class="minor" href="/api.html">API</a><a class="minor" href="/status.html">Status</a></nav>
   </div>
   <h1>Guide</h1>
@@ -253,7 +253,7 @@
 
     <h3 id="leaks">Valleys today</h3>
     <p>Under the title of the tab, two small lines give the numbers of the project: how many networks have an ASPA and how many changes to ASPAs have been recorded since 12 October 2023; and, for the routes of today, how many were checked and from how many collectors and feeder networks, the shares of valid, unknown and invalid ones, the places of valley and the routes checked in all the days of the history. A <em>feeder</em> is a network that sends its routes to a collector.</p>
-    <p>Every day the site checks <strong>every route of 33 collectors</strong> (nineteen of RIPE RIS, rrc00, rrc01, rrc03, rrc04, rrc05, rrc06, rrc07, rrc10, rrc11, rrc12, rrc13, rrc14, rrc15, rrc16, rrc19, rrc20, rrc21, rrc23 and rrc25, and fourteen of RouteViews, the other big collection project, with other peers: Oregon, route-views3 and 4, London, Palo Alto, Tokyo, New York, Perth, Atlanta, Singapore, Johannesburg, São Paulo, Sydney and Equinix; hundreds of millions of routes in their table dumps) with the downstream ASPA verification, once a day, and groups the ones that the ASPAs prove to contain a valley by the place of the valley. A valley is a route that came down from a provider or a peer and went up again. Two tables tell the places apart by what the CAIDA relationships say of the first AS after the climb, the AS right after the part of the path that the ASPAs show to go up from the origin:</p>
+    <p>Every day the site checks <strong>every route of 33 collectors</strong> (nineteen of RIPE RIS, rrc00, rrc01, rrc03, rrc04, rrc05, rrc06, rrc07, rrc10, rrc11, rrc12, rrc13, rrc14, rrc15, rrc16, rrc19, rrc20, rrc21, rrc23 and rrc25, and fourteen of RouteViews, the other big collection project, with other peers: Oregon, route-views3 and 4, London, Palo Alto, Tokyo, New York, Perth, Atlanta, Singapore, Johannesburg, São Paulo, Sydney and Equinix; hundreds of millions of routes in their table dumps) with the downstream ASPA verification, once a day, and groups the ones that the ASPAs prove to contain a valley by the place of the valley. A valley is a route that came down from a provider or a peer and went up again. A collector whose newest table dump is more than a day old is left out of the day, and the page names it (as happened to route-views.sg, Singapore, from 7 November 2026): its routes would be the ones of the day it stopped, not of today. Two tables tell the places apart by what the CAIDA relationships say of the first AS after the climb, the AS right after the part of the path that the ASPAs show to go up from the origin:</p>
     <ul>
       <li><strong>Valleys through a peer or a customer:</strong> that AS is a peer or a customer of the AS before it, and the route went on up. It can be a route that was passed on when it should not have been, or an ASPA or a relationship that is missing; the operators are the ones who know.</li>
       <li><strong>ASPAs that seem to miss a provider:</strong> that AS is a provider of the AS before it, which has an ASPA that does not list it: valid routes through it look like valleys. The owner of that ASPA is the one to tell. Most of the places are of this kind.</li>

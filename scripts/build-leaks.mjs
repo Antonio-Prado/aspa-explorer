@@ -30,7 +30,7 @@ import { pipeline } from 'node:stream/promises';
 import { Readable, Transform, Writable } from 'node:stream';
 import { join } from 'node:path';
 import net from 'node:net';
-import { readRib, openDump } from './mrt.mjs';
+import { readRib, openDump, dumpTime } from './mrt.mjs';
 
 const { verify } = createRequire(import.meta.url)('../site/verify.js');
 if (net.setDefaultAutoSelectFamilyAttemptTimeout) net.setDefaultAutoSelectFamilyAttemptTimeout(3000);
@@ -58,21 +58,32 @@ export const dayDumpUrls = (collector, day) => {
   const p = previousDay(day);
   return [dumpUrl(collector, day), `${RV}/${rvBase(collector)}/${p.slice(0, 4)}.${p.slice(4, 6)}/RIBS/rib.${p}.2359.bz2`];
 };
+// A collector can stop writing table dumps and stay in the archive (route-views.sg, 7 November 2026): its newest dump is
+// then days old, and its routes are not the ones of today. A dump taken more than MAX_DUMP_AGE seconds ago is left out of the
+// day, and the document names the collector (`stale`); with more than MAX_STALE of them the day is not published at all.
+export const MAX_DUMP_AGE = 24 * 3600, MAX_STALE = 3;
+export const tooOld = (taken, now, max = MAX_DUMP_AGE) => now - taken > max;
+// The time in the name of a RouteViews rib file (epoch seconds), or null.
+export const ribTime = (url) => { const m = /rib\.(\d{4})(\d{2})(\d{2})\.(\d{2})(\d{2})\.bz2$/.exec(String(url)); return m ? Date.UTC(+m[1], +m[2] - 1, +m[3], +m[4], +m[5]) / 1000 : null; };
+const isoOf = (epoch) => new Date(epoch * 1000).toISOString().replace(/\.\d+Z$/, 'Z');
 // The newest rib file named in the listing of a month (an HTML page), or null.
 export const pickLatestRib = (html) => {
   const names = [...String(html).matchAll(/rib\.(\d{8})\.(\d{4})\.bz2/g)].map((m) => m[0]);
   return names.length ? names.sort().at(-1) : null;
 };
-export async function latestDumpUrl(collector, now = new Date()) {
+// A month with no listing (404) or with no rib file has none; any other answer of the archive is an error, not "none". When
+// neither month has one the error has the code NO_RIB: the collector has written no table dump for a month or more.
+export async function latestDumpUrl(collector, now = new Date(), get = fetch) {
   if (isRis(collector)) return dumpUrl(collector);
   for (let back = 0; back < 2; back++) {            // this month, and the last one when this one has just begun
     const d = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - back, 1));
     const month = `${d.getUTCFullYear()}.${String(d.getUTCMonth() + 1).padStart(2, '0')}`;
-    const r = await fetch(rvListing(collector, month), { headers: { 'User-Agent': UA }, signal: AbortSignal.timeout(60000) });
+    const r = await get(rvListing(collector, month), { headers: { 'User-Agent': UA }, signal: AbortSignal.timeout(60000) });
+    if (!r.ok && r.status !== 404) throw new Error(`${rvListing(collector, month)}: HTTP ${r.status}`);
     const name = r.ok ? pickLatestRib(await r.text()) : null;
     if (name) return `${rvListing(collector, month)}${name}`;
   }
-  throw new Error(`no RIB file found for ${collector}`);
+  throw Object.assign(new Error(`no RIB file found for ${collector}`), { code: 'NO_RIB' });
 }
 export const EVENTS = 'https://gitlab.dei.unipd.it/api/v4/projects/5246/repository/files/events.json/raw?ref=history';
 const UA = 'aspa-explorer (https://aspa.ping6.it; antonio.prado@dei.unipd.it)';
@@ -154,7 +165,7 @@ export class Leaks {
   // them is counted in `soft` under its verdict, and in `could` under the others; a place has `soft`, its routes that are so.
   constructor(aspas, ixp = new Set(), relOf = () => 'unknown', open = null) {
     this.aspas = aspas; this.ixp = ixp; this.relOf = relOf;
-    this.open = open && open.states.length ? open : null;
+    this.open = open;                                                 // with no state in it too: a day of the past where no change was open
     this.total = { routes: 0, valid: 0, unknown: 0, invalid: 0 };
     this.soft = { valid: 0, unknown: 0, invalid: 0 }; this.could = { valid: 0, unknown: 0, invalid: 0 };
     this.groups = new Map();
@@ -307,6 +318,7 @@ export function byAs(list, minFeeders = MIN_FEEDERS, perAs = PER_AS) {
 export function addHistory(rows, date, doc) {
   const t = doc.total;
   const row = { date, routes: t.routes, invalid: t.invalid, unknown: t.unknown, feeders: t.feeders, places: doc.places, leak: doc.kinds.leak, gap: doc.kinds.gap, unclear: doc.kinds.unclear };
+  if (Array.isArray(doc.collectors)) row.collectors = doc.collectors.length;       // the collectors that were read: not the same number every day
   // a day of the past, judged with the timeline: `rule` 2, and how much of it depends on the state the ASPAs had at the time of
   // the dumps (invalid_soft: Invalid routes that are not so with another state; invalid_could: the ones that would be; *_soft:
   // places with no firm route)
@@ -415,14 +427,34 @@ async function main() {
   const collectors = (process.env.LEAKS_COLLECTORS || COLLECTORS).split(',').map((s) => s.trim()).filter(Boolean);
   const rel = await caidaRelations(cache);
   const leaks = new Leaks(state, ixp, rel.relOf, open);
-  const used = [];
+  const used = [], stale = [];
+  const leftOut = (c, taken) => {                                  // taken null: no table dump at all in this month and the last
+    stale.push({ collector: c, dump: taken === null ? null : isoOf(taken) });
+    console.error(`${c}: ${taken === null ? 'no table dump in this month and the last' : `its newest table dump is of ${isoOf(taken)}, more than a day old`}: left out`);
+    if (stale.length > MAX_STALE) throw new Error(`${stale.length} collectors with a table dump more than a day old: not publishing`);
+  };
   for (const c of collectors) {
     const ext = isRis(c) ? 'gz' : 'bz2';
     const file = join(cache, dayIso ? `dump-${c}-${dayFlag}.${ext}` : `dump-${c}.${ext}`);
-    if (dayIso || !(await fresh(file, 4 * 3600e3))) await (dayIso ? downloadDay(c, dayFlag, file) : download(await withRetry(() => latestDumpUrl(c)), file));
+    if (dayIso) await downloadDay(c, dayFlag, file);
+    else if (!(await fresh(file, 4 * 3600e3))) {
+      let url;
+      try { url = await withRetry(() => latestDumpUrl(c).catch((err) => { if (err.code === 'NO_RIB') return null; throw err; })); } catch (err) { throw new Error(`${c}: ${err.message}`); }
+      if (url === null) { leftOut(c, null); continue; }
+      const named = ribTime(url);                                  // RouteViews says the time in the name: an old one is not fetched
+      if (named !== null && tooOld(named, Date.now() / 1000)) { leftOut(c, named); continue; }
+      await download(url, file);
+    }
+    // the time the dump itself says: of today for the valleys of today, of 00:00 UTC of the day for a day of the past
+    const taken = await dumpTime(file);
+    if (taken === null) throw new Error(`${c}: the table dump has no record`);
+    if (dayIso) {
+      const want = Date.parse(`${dayIso}T00:00:00Z`) / 1000;
+      if (Math.abs(taken - want) > 3600) throw new Error(`${c}: the table dump is of ${isoOf(taken)}, not of 00:00 UTC of ${dayIso}`);
+    } else if (tooOld(taken, Date.now() / 1000)) { leftOut(c, taken); continue; }
     const t0 = Date.now();
     const stats = await readRib(openDump(file), (peerAs, path, n, plen, v6) => leaks.add(peerAs, c, Array.from(path.subarray(0, n)), plen, v6));
-    used.push({ collector: c, routes: stats.entries, built: new Date((await stat(file)).mtimeMs).toISOString().replace(/\.\d+Z$/, 'Z') });
+    used.push({ collector: c, routes: stats.entries, built: new Date((await stat(file)).mtimeMs).toISOString().replace(/\.\d+Z$/, 'Z'), dump: isoOf(taken) });
     console.error(`${c}: ${stats.entries} routes in ${Math.round((Date.now() - t0) / 1000)} s`);
     if (dayIso) await unlink(file);                  // a day of the past is read once
   }
@@ -430,7 +462,7 @@ async function main() {
   const res = leaks.result();
   for (const u of used) Object.assign(u, res.per_collector[u.collector]);
   delete res.per_collector;
-  const doc = { generated, aspas: count, collectors: used, relationships: rel.source, ...res };
+  const doc = { generated, aspas: count, collectors: used, ...(stale.length ? { stale } : {}), relationships: rel.source, ...res };
   const write = async (file, value) => { const tmp = `${file}.tmp`; await writeFile(tmp, JSON.stringify(value) + '\n'); await rename(tmp, file); };
   const dir = join(outFile, '..'), day = generated.slice(0, 10);
   const perAs = { generated, min_feeders: MIN_FEEDERS, as: byAs(leaks.list) };

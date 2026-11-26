@@ -59,7 +59,7 @@
     { id: 'leaks', name: 'Valleys of the day (table dumps)', expected: 'once a day', run: async (now) => {
       const l = await get('/api/v1/leaks.json');
       const t = Date.parse(l.generated);
-      return { state: byAge(now - t, 36 * HOUR, 3 * DAY), at: t, extra: `${l.places.toLocaleString('en-US')} places of valley in ${Math.round(l.total.routes / 1e6)} million routes` };
+      return { state: byAge(now - t, 36 * HOUR, 3 * DAY), at: t, extra: `${l.places.toLocaleString('en-US')} places of valley in ${Math.round(l.total.routes / 1e6)} million routes${Array.isArray(l.stale) && l.stale.length ? `; left out, with no table dump for more than a day: ${l.stale.map((s) => s.collector).join(', ')}` : ''}` };
     } },
     { id: 'validators', name: 'Validators compared', expected: 'every hour', run: async (now) => {
       const v = await get('/api/v1/validators.json');

@@ -1,9 +1,9 @@
 // Unit tests for scripts/mrt.mjs and scripts/build-leaks.mjs (no dependencies). Run with: node scripts/test-leaks.mjs
 import assert from 'node:assert/strict';
 import { Readable } from 'node:stream';
-import { readRib, readAsPath } from './mrt.mjs';
+import { readRib, readAsPath, dumpTime } from './mrt.mjs';
 import { createRequire as cr } from 'node:module';
-import { Leaks, classify, spanOf, aspaMap, relations, byAs, addHistory, withRetry, intact, dumpUrl, dayDumpUrls, previousDay, pickLatestRib, rvListing, isRis, COLLECTORS, MAX_PLACES } from './build-leaks.mjs';
+import { Leaks, classify, spanOf, aspaMap, relations, byAs, addHistory, withRetry, intact, dumpUrl, dayDumpUrls, previousDay, pickLatestRib, rvListing, isRis, COLLECTORS, MAX_PLACES, MAX_DUMP_AGE, tooOld, ribTime, latestDumpUrl } from './build-leaks.mjs';
 
 let passed = 0;
 const test = async (name, fn) => { await fn(); passed++; console.log('ok  ', name); };
@@ -259,6 +259,62 @@ await test('a dump that is cut is not whole', async () => {
   await intact(join(dir, 'whole.tmp'), 'dump-rrc00.gz');
   await assert.rejects(intact(join(dir, 'cut.tmp'), 'dump-rrc00.gz'));
   await rm(dir, { recursive: true });
+});
+
+await test('the time of a dump is the one of its first record, and a dump of more than a day ago is too old for today', async () => {
+  const { gzipSync } = await import('node:zlib');
+  const { writeFile, mkdtemp, rm } = await import('node:fs/promises');
+  const { tmpdir } = await import('node:os');
+  const { join } = await import('node:path');
+  const { execFileSync } = await import('node:child_process');
+  const dir = await mkdtemp(join(tmpdir(), 'dump-'));
+  await writeFile(join(dir, 'a.gz'), gzipSync(dump));
+  assert.equal(await dumpTime(join(dir, 'a.gz')), 1792200000);
+  // a file far longer than the part that is read, cut in the middle: the time is at its start
+  const long = gzipSync(Buffer.concat([dump, Buffer.alloc(3000000, 5)]));
+  await writeFile(join(dir, 'long.gz'), long.subarray(0, Math.floor(long.length / 2)));
+  assert.equal(await dumpTime(join(dir, 'long.gz')), 1792200000);
+  await writeFile(join(dir, 'not.gz'), Buffer.from('<html>not found</html>'));
+  assert.equal(await dumpTime(join(dir, 'not.gz')), null);
+  await writeFile(join(dir, 'empty.gz'), gzipSync(Buffer.alloc(0)));
+  assert.equal(await dumpTime(join(dir, 'empty.gz')), null);
+  await writeFile(join(dir, 'b'), dump);
+  execFileSync('bzip2', [join(dir, 'b')]);                         // writes b.bz2
+  assert.equal(await dumpTime(join(dir, 'b.bz2')), 1792200000);
+  await writeFile(join(dir, 'bad.bz2'), Buffer.from('not bzip2'));
+  assert.equal(await dumpTime(join(dir, 'bad.bz2')), null);
+  await rm(dir, { recursive: true });
+  // the name of a RouteViews file says its time; the RIS address of the latest dump does not
+  assert.equal(ribTime('https://archive.routeviews.org/route-views.sg/bgpdata/2026.11/RIBS/rib.20261107.0000.bz2'), Date.UTC(2026, 10, 7) / 1000);
+  assert.equal(ribTime('https://archive.routeviews.org/route-views.eqix/bgpdata/2026.09/RIBS/rib.20260905.2359.bz2'), Date.UTC(2026, 8, 5, 23, 59) / 1000);
+  assert.equal(ribTime(dumpUrl('rrc00')), null);
+  const now = Date.UTC(2026, 10, 26, 5, 10) / 1000;
+  assert.equal(tooOld(Date.UTC(2026, 10, 26, 4) / 1000, now), false);              // the dump of an hour ago
+  assert.equal(tooOld(Date.UTC(2026, 10, 25, 16) / 1000, now), false);             // a RIS dump missed: the one of eight hours before
+  assert.equal(tooOld(now - MAX_DUMP_AGE, now), false);
+  assert.equal(tooOld(Date.UTC(2026, 10, 7) / 1000, now), true);                   // route-views.sg, stopped on 7 November 2026
+});
+
+await test('the newest dump of a RouteViews collector: this month, the last one, none (not the same as an archive that does not answer)', async () => {
+  const page = (names) => ({ ok: true, status: 200, text: async () => names.map((n) => `<a href="${n}">${n}</a>`).join('') });
+  const none = { ok: false, status: 404, text: async () => '' };
+  const archive = (months) => async (url) => { const m = /\/(\d{4}\.\d{2})\/RIBS\/$/.exec(url); return months[m[1]] || none; };
+  const jan = new Date(Date.UTC(2027, 0, 1, 5, 10));
+  // the month has just begun and has no file yet: the newest of the last one
+  assert.equal(await latestDumpUrl('route-views.sg', jan, archive({ '2026.12': page(['rib.20261231.2200.bz2', 'rib.20261231.0000.bz2']) })), `${rvListing('route-views.sg', '2026.12')}rib.20261231.2200.bz2`);
+  assert.equal(await latestDumpUrl('route-views.sg', jan, archive({ '2027.01': page(['rib.20270101.0400.bz2']), '2026.12': page(['rib.20261231.2200.bz2']) })), `${rvListing('route-views.sg', '2027.01')}rib.20270101.0400.bz2`);
+  // a collector that stopped in November: no folder in December, none in January
+  await assert.rejects(latestDumpUrl('route-views.sg', jan, archive({ '2026.11': page(['rib.20261107.0000.bz2']) })), (err) => err.code === 'NO_RIB');
+  await assert.rejects(latestDumpUrl('route-views.sg', jan, archive({ '2027.01': page([]), '2026.12': page([]) })), (err) => err.code === 'NO_RIB');
+  // the archive answers with an error: not known, and not taken for "none"
+  await assert.rejects(latestDumpUrl('route-views.sg', jan, async () => ({ ok: false, status: 503, text: async () => '' })), (err) => err.code !== 'NO_RIB' && /HTTP 503/.test(err.message));
+  assert.equal(await latestDumpUrl('rrc00', jan, async () => { throw new Error('not asked'); }), dumpUrl('rrc00'));
+});
+
+await test('the row of a day says how many collectors were read', () => {
+  const doc = { total: { routes: 100, invalid: 7, unknown: 40 }, places: 5, kinds: { leak: 2, gap: 3, unclear: 0 }, collectors: [{ collector: 'rrc00' }, { collector: 'rrc01' }] };
+  assert.equal(addHistory([], '2026-11-26', doc)[0].collectors, 2);
+  assert.equal('collectors' in addHistory([], '2026-11-26', { ...doc, collectors: undefined })[0], false);
 });
 
 console.log(`${passed} tests passed`);

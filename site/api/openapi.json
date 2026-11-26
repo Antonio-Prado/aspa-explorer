@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "ASPA Explorer API",
-    "version": "1.106.0",
+    "version": "1.106.1",
     "description": "ASPA objects validated by Routinator at rpki.ping6.it, their history and quality, for any AS. Open data, read-only, no key. Best effort, with no guarantee of any kind: the data can be late, incomplete or wrong, and whoever uses it is expected to check it on their own.",
     "contact": {
       "email": "antonio.prado@dei.unipd.it"
@@ -543,7 +543,7 @@
       "get": {
         "operationId": "getLeaksJson",
         "summary": "The places of valley of today in the routes of the collectors",
-        "description": "Built once a day from the 00:00 UTC table dumps of 33 collectors of RIPE RIS and RouteViews (scripts/build-leaks.mjs): every route is checked with the downstream ASPA verification and the paths that the ASPAs prove to contain a valley are grouped by the place of the valley.",
+        "description": "Built once a day from the latest table dumps of 33 collectors of RIPE RIS and RouteViews (the ones of 00:00 UTC for RIPE RIS, of some hours later for RouteViews; scripts/build-leaks.mjs): every route is checked with the downstream ASPA verification and the paths that the ASPAs prove to contain a valley are grouped by the place of the valley. A collector whose newest table dump is more than a day old is not read: it is named in `stale`, with the time of that dump.",
         "responses": {
           "200": {
             "description": "The file",
@@ -577,7 +577,13 @@
                           },
                           "built": {
                             "type": "string",
-                            "format": "date-time"
+                            "format": "date-time",
+                            "description": "when the table dump was downloaded"
+                          },
+                          "dump": {
+                            "type": "string",
+                            "format": "date-time",
+                            "description": "the time the table dump itself says it was taken at"
                           },
                           "source": {
                             "type": "string"
@@ -594,6 +600,27 @@
                           "only": {
                             "type": "integer",
                             "description": "places that only this collector sees"
+                          }
+                        },
+                        "additionalProperties": true
+                      }
+                    },
+                    "stale": {
+                      "type": "array",
+                      "description": "only when there are any: the collectors left out of the day because their newest table dump is more than a day old",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "collector": {
+                            "type": "string"
+                          },
+                          "dump": {
+                            "type": [
+                              "string",
+                              "null"
+                            ],
+                            "format": "date-time",
+                            "description": "the time of its newest table dump, or null when it has none in this month and the last"
                           }
                         },
                         "additionalProperties": true
@@ -769,7 +796,7 @@
       "get": {
         "operationId": "getLeaksHistoryJson",
         "summary": "The daily totals of the places of valley",
-        "description": "One row a day since 1 September 2026, written by the valley job. A day rebuilt from the table dumps of 00:00 UTC with the timeline of the ASPAs has `rule` 2 and says how much of it depends on the state the ASPAs had at that time: `invalid_soft`, the Invalid routes that are not so with another state the ASPAs may have had; `invalid_could`, the routes that would be Invalid with it; `leak_soft`, `gap_soft` and `unclear_soft`, the places with no route that is Invalid either way.",
+        "description": "One row a day since 1 September 2026, written by the valley job. A day rebuilt from the table dumps of 00:00 UTC with the timeline of the ASPAs has `rule` 2 and says how much of it depends on the state the ASPAs had at that time: `invalid_soft`, the Invalid routes that are not so with another state the ASPAs may have had; `invalid_could`, the routes that would be Invalid with it; `leak_soft`, `gap_soft` and `unclear_soft`, the places with no route that is Invalid either way. `collectors` is the number of collectors read that day (in the rows written since version 1.106.1).",
         "responses": {
           "200": {
             "description": "The file",
@@ -804,6 +831,10 @@
                       },
                       "gap": {
                         "type": "integer"
+                      },
+                      "collectors": {
+                        "type": "integer",
+                        "description": "collectors read that day"
                       }
                     },
                     "additionalProperties": true

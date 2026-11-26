@@ -2,7 +2,8 @@
 // (https://data.ris.ripe.net/rrcNN/latest-bview.gz). It only reads what the leak job needs: for every
 // route of every peer, the AS path. No dependencies.
 import { createReadStream } from 'node:fs';
-import { createGunzip } from 'node:zlib';
+import { open } from 'node:fs/promises';
+import { createGunzip, gunzipSync, constants } from 'node:zlib';
 import { spawn } from 'node:child_process';
 
 const TABLE_DUMP_V2 = 13;
@@ -104,3 +105,21 @@ export function openBz2(file) {
 }
 
 export const openDump = (file) => (file.endsWith('.bz2') ? openBz2(file) : openGz(file));
+
+// The time a dump says it was taken at: the one of its first record (epoch seconds), or null when it has none. Only the
+// start of the file is read: the name of a file and the time it was downloaded at do not say how old its routes are.
+export async function dumpTime(file) {
+  let head = Buffer.alloc(0);
+  if (file.endsWith('.bz2')) {
+    const child = spawn('bzip2', ['-dc', file], { stdio: ['ignore', 'pipe', 'ignore'] });
+    child.on('error', () => {});                                     // no bzip2: the stream ends with nothing, and the answer is null
+    try { for await (const chunk of child.stdout) { head = Buffer.concat([head, chunk]); if (head.length >= 4) break; } } finally { child.kill(); }
+  } else {
+    const fh = await open(file);
+    try {
+      const { buffer, bytesRead } = await fh.read(Buffer.alloc(1 << 16), 0, 1 << 16, 0);
+      try { head = gunzipSync(buffer.subarray(0, bytesRead), { finishFlush: constants.Z_SYNC_FLUSH }); } catch { /* not a gzip file */ }
+    } finally { await fh.close(); }
+  }
+  return head.length >= 4 ? head.readUInt32BE(0) : null;
+}

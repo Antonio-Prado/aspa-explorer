@@ -9,6 +9,13 @@ A few numbers were deployed and folded into the next release without a tag of th
 
 ## [Unreleased]
 
+## [1.106.1] - 2026-11-26
+
+### Fixed
+
+- The valleys of the day counted the routes of a collector that had stopped. route-views.sg (Singapore) wrote its last table dump on 7 November 2026 at 00:00 UTC, and since then the job read that file again every day as the newest one: some 30 M of the 700 M routes of a day, and the places that only that collector saw, were the ones of 7 November. `scripts/build-leaks.mjs` now reads the time each dump says it was taken at (`dumpTime` in `scripts/mrt.mjs`: the name of a file and the time of its download do not say it) and leaves out of the day a collector whose newest dump is more than a day old; a RouteViews file whose name is that old is not fetched at all. `/api/v1/leaks.json` names the collectors left out in `stale` and gives for each collector read the time of its dump (`dump`, next to `built`, the time of the download); a row of `/api/v1/leaks-history.json` says how many collectors were read (`collectors`); the page and the status page name the collector left out, and the note of the chart says from which day the number of collectors is another. A collector with no table dump at all in this month and the last is left out in the same way (it ended the run of the day, and nothing would have been published); an archive that answers with an error is still an error, and the run is tried again. With more than three collectors left out the day is not published. A day of the past (`--day`) whose file is not of 00:00 UTC of that day, within the hour, is not written.
+- The valleys of a day of the past where no change of the ASPAs was open at 00:00 UTC are written as a row of the rule of the timeline too (`rule: 2`, with `invalid_soft` and `invalid_could` at 0): the row had none of those fields, as if the day had been judged with the rule before.
+
 ## [1.106.0] - 2026-11-26
 
 ### Changed

@@ -60,7 +60,14 @@ await test('valleys of a day of the past: the routes whose verdict depends on an
   assert.deepEqual(r.soft_places, { gap: 0, leak: 0, unclear: 2 });
   const row = addHistory([], '2026-10-06', r)[0];
   assert.deepEqual([row.rule, row.invalid, row.invalid_soft, row.invalid_could, row.unclear, row.unclear_soft], [2, 3, 2, 0, 3, 2]);
-  // today's valleys have no open state, and none of the new fields
+  // a day of the past where no change of the ASPAs was open at the time of the dumps: of the rule all the same, and nothing soft
+  const calm = new Leaks(known, new Set(), () => 'unknown', { states: [], delta: new Set() });
+  calm.add(30, 'rrc00', [30, 2, 10], 24, false);
+  const rc = calm.result();
+  assert.deepEqual(rc.total.soft, { valid: 0, unknown: 0, invalid: 0 });
+  const rowc = addHistory([], '2026-10-30', rc)[0];
+  assert.deepEqual([rowc.rule, rowc.invalid, rowc.invalid_soft, rowc.invalid_could, rowc.unclear_soft], [2, 1, 0, 0, 0]);
+  // today's valleys are not judged with the timeline, and have none of the new fields
   const now = new Leaks(known, new Set(), () => 'unknown');
   now.add(30, 'rrc00', [30, 2, 10], 24, false);
   const rn = now.result();
