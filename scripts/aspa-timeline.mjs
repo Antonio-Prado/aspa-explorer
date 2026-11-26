@@ -9,17 +9,34 @@
 //     `after` the time of the files of the day before that has them (the earliest of the five), less FETCH_MARGIN for the
 //     validation run;
 //   - after it, the commits of the hourly job on the history branch: a step for each commit that changes the state, `seen` the
-//     time of the commit and `after` the time of the commit before it.
+//     time of the commit and `after` the time until which the commit before it knew the ASPAs (asOf). A commit does not see
+//     the ASPAs of its own moment: it reads the last run of the validator, which began some minutes earlier, and a change
+//     takes some more minutes to reach a validator. Since 26 November 2026 each commit says the time of the data it read
+//     (look.json: the hourly job writes it also when nothing changed), and the ASPAs are known until that time less
+//     PUBLISH_MARGIN; an older commit does not say it, and the ASPAs are taken as known until LOOK_MARGIN before it. A
+//     look.json that has no time of the data (a validator that does not give it) says nothing: the time until which the
+//     ASPAs are known stays where it was.
 // The rule, for an event at time t (an incident, a table dump):
 //   - its ASPAs are the ones of the newest step with seen <= t: what was known at that time, never what came after;
 //   - the verdict is firm when no step whose interval (after, seen] contains t changes the ASPA of an AS of its paths, or when
 //     the verdict is the same with those changes: otherwise the ASPA changed around the event and the history cannot say on
 //     which side of it. For an event that lasts, the steps up to its end count too: an ASPA that changed while it went on.
-//     An event later than the last commit read (the horizon) is not firm yet.
+//     An event later than the time until which the newest commit knew the ASPAs (the horizon) is not firm yet.
 // Times are epoch seconds, AS numbers are numbers, a change is [customer, providers | null].
-export const VERSION = 1;
+export const VERSION = 2;                 // 2: `after` and the horizon are the time until which a commit knew the ASPAs, not the time of the commit
 export const ARCHIVE_TO = '2026-10-15';
 export const FETCH_MARGIN = 1800;
+// a commit of the job that does not say the time of its data. The validator begins a run ten minutes after the end of the one
+// before, and a run lasts four minutes (up to thirteen): in eight days of its log (770 runs, 18 to 26 November 2026) the data
+// read at the minute of the job was 12 minutes old at the median and 21 at most, and the oldest that the data of a run got
+// before the next one ended was 28 minutes. That, and PUBLISH_MARGIN
+export const LOOK_MARGIN = 2400;
+// the time a published change may take to be in the data of a run of the validator that began after it (the cache of a
+// repository in front of its notification file, the fetch of that repository inside the run)
+export const PUBLISH_MARGIN = 600;
+// The time until which a commit of the job knew the ASPAs: `data` is the time its data was generated at (epoch seconds), when
+// the commit says it.
+export const asOf = (commitTime, data = null) => (Number.isFinite(data) ? Math.min(data, commitTime) - PUBLISH_MARGIN : commitTime - LOOK_MARGIN);
 export const TAS = ['afrinic', 'apnic', 'arin', 'lacnic', 'ripencc'];
 // a file of the archive of a day is generated from 00:00 of that day to 06:00 of the next (the latest seen: 00:24 of the next)
 export const ARCHIVE_SPAN = [0, 30 * 3600];
@@ -130,6 +147,7 @@ const KEEP = 128;
 export class Timeline {
   constructor(doc) {
     this.steps = doc.steps;
+    this.version = doc.version;
     this.horizon = doc.horizon;
     this.seen = Float64Array.from(doc.steps, (s) => s[1]);
     this.cache = new Map();                        // n -> Map customer -> providers array, after the first n steps
@@ -176,7 +194,7 @@ export class Timeline {
   // ASPAs known at t; `touches(customer)` says whether a customer is among the ASes the verdict reads. Returns
   // {verdict, firm, others}: `others`, the other verdicts that the states the ASPAs may have had from t to end give (sorted, most
   // often none), and firm when there is none. An event that ends after the horizon also has `late` and is not firm: its verdict
-  // is the one that will stay, but the changes around it are not all known until a commit later than its end has been read.
+  // is the one that will stay, but the changes around it are not all known until a commit that knew the ASPAs at its end has been read.
   at(t, verdictOf, touches, end = t) {
     const n = this.indexAt(t), last = Math.max(t, end);
     const verdict = verdictOf(this.state(n));

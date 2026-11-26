@@ -8,7 +8,8 @@
 //   node scripts/log-snapshot.mjs --dry-run     print the metrics, send nothing
 //   node scripts/log-snapshot.mjs --history-only   only bring the history branch up to date (the hourly job):
 //                                               no model experiment run, no RIPEstat call; the coverage
-//                                               figures of the day's row are kept
+//                                               figures of the day's row are kept. A run that finds no change
+//                                               still writes the time of its look (look.json)
 //
 // In CI the address comes from CI_API_V4_URL and CI_PROJECT_ID, and MLFLOW_TOKEN must hold a
 // project access token: the model experiments API does not accept the job token (CI_JOB_TOKEN, tried
@@ -124,7 +125,13 @@ if (!HISTORY_ONLY) await detectAuth();
 
 // The same snapshot goes to the `history` branch, which scripts/fetch-archive.mjs copies for the pages
 // (see site/history.js for the events): the day's row in history.json, the day's changes in
-// events.json and the Atom feed of the recent changes, in one commit. Needs a token that can write to
+// events.json and the Atom feed of the recent changes, in one commit. Every commit also writes look.json: the
+// time of this look at the ASPAs and the time the data it read was generated at by the validator (`data`), and a
+// run that finds nothing new commits that file alone. The timeline of the ASPAs (scripts/aspa-timeline.mjs) takes
+// each commit as a look: what a commit knows of the ASPAs is as old as its data, and a look with no change says
+// that they were the same until then (without it, the time before a change is known only as far back as the
+// change before). A validator that stands still gives the same `data` at every look: nothing is claimed for the
+// time after it. Needs a token that can write to
 // the repository: the project access token (MLFLOW_TOKEN) can, the job token cannot. A failure here
 // must not hide the model experiment run below, so it is reported at the end.
 const HISTORY_BRANCH = process.env.ASPA_HISTORY_BRANCH || 'history';
@@ -139,7 +146,19 @@ try {
     if (!r.ok) throw new Error(`reading ${name}: HTTP ${r.status}`);
     return r.text();
   };
-  const [historyText, eventsText, feedText] = await Promise.all([read('history.json'), read('events.json'), read('changes.atom')]);
+  const [historyText, eventsText, feedText, lookText] = await Promise.all([read('history.json'), read('events.json'), read('changes.atom'), read('look.json')]);
+  const commit = async (commit_message, actions) => {
+    const put = await fetch(`${project}/repository/commits`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({ branch: HISTORY_BRANCH, commit_message, author_name: 'Antonio Prado', author_email: 'antonio.prado@dei.unipd.it', actions }),
+    });
+    if (!put.ok) throw new Error(`committing: HTTP ${put.status} ${(await put.text()).slice(0, 200)}`);
+  };
+  const looked = new Date(now).toISOString().replace(/\.\d+Z$/, 'Z');
+  // the time the validator says the data was generated at (Routinator: the start of the run that made it), or null
+  const generated = data.metadata && Number.isFinite(data.metadata.generated) && data.metadata.generated > 0 ? new Date(data.metadata.generated * 1000).toISOString().replace(/\.\d+Z$/, 'Z') : null;
+  const look = { action: lookText === null ? 'create' : 'update', file_path: 'look.json', content: JSON.stringify({ looked, data: generated, aspas: metrics.aspas }) };
   if (!historyText) throw new Error('history.json not found on the history branch');
   const oldRows = JSON.parse(historyText);
   const rows = oldRows.filter((r) => r.date !== day);
@@ -159,10 +178,11 @@ try {
   const eventsChanged = eventsJson !== JSON.stringify(oldEvents);
   const rowsJson = JSON.stringify(rows);
   if (HISTORY_ONLY && rowsJson === historyText.trim() && !eventsChanged && eventsText !== null) {
-    console.log(`history: nothing changed on ${day}`);
+    await commit(`Look ${day} ${looked.slice(11, 16)}Z: ${metrics.aspas} ASPAs, no change`, [look]);
+    console.log(`history: nothing changed on ${day}, the look of ${looked} written (data of ${generated})`);
     process.exit(0);
   }
-  const actions = [{ action: 'update', file_path: 'history.json', content: rowsJson }];
+  const actions = [{ action: 'update', file_path: 'history.json', content: rowsJson }, look];
   if (eventsChanged || eventsText === null) actions.push({ action: eventsText === null ? 'create' : 'update', file_path: 'events.json', content: eventsJson });
   if (eventsChanged || feedText === null) actions.push({ action: feedText === null ? 'create' : 'update', file_path: 'changes.atom', content: atomFeed(events, { site: SITE, classify, old: feedText }) });
   if (visibility) {
@@ -170,18 +190,7 @@ try {
     actions.push({ action: visText === null ? 'create' : 'update', file_path: 'visibility.json', content: JSON.stringify({ date: day, ...visibility }) });
   }
   const todays = events.filter((e) => e[0] === day).length;
-  const put = await fetch(`${project}/repository/commits`, {
-    method: 'POST',
-    headers,
-    body: JSON.stringify({
-      branch: HISTORY_BRANCH,
-      commit_message: `Snapshot ${day}: ${metrics.aspas} ASPAs, ${todays} change${todays === 1 ? '' : 's'}`,
-      author_name: 'Antonio Prado',
-      author_email: 'antonio.prado@dei.unipd.it',
-      actions,
-    }),
-  });
-  if (!put.ok) throw new Error(`committing: HTTP ${put.status} ${(await put.text()).slice(0, 200)}`);
+  await commit(`Snapshot ${day}: ${metrics.aspas} ASPAs, ${todays} change${todays === 1 ? '' : 's'}`, actions);
   console.log(`history: ${rows.length} rows, ${todays} changes on ${day}, ${actions.length} files`);
 } catch (e) {
   historyError = e;

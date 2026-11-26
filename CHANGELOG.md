@@ -9,6 +9,16 @@ A few numbers were deployed and folded into the next release without a tag of th
 
 ## [Unreleased]
 
+## [1.108.0] - 2026-11-26
+
+### Changed
+
+- The timeline of the ASPAs counts a look for what it knows, not for the time it was written at. A commit of the hourly job reads the last run of the validator, which began some minutes before it (twelve at the median, twenty-one at most, in eight days of the log of the validator), and a published change takes some more minutes to be in a run: the ASPAs were taken as known until the time of the commit, and an incident in those minutes before a look could be told firm when the change that the next look found was already there. A step of the timeline now begins at the time until which the commit before it knew the ASPAs, and the horizon is that time for the newest commit (`scripts/aspa-timeline.mjs`, version 2 of the document: `asOf`). The verdicts do not change, only which of them are firm. Measured on rrc00 (12 October 2023 to 24 November 2026, 235,458,620 incidents with a path): the 196,194 Invalid are the same on every day; the ones that are not firm are 14,890, they were 14,773, and the incidents with another verdict that could be Invalid 3,204, they were 3,148, on 35 days from 19 October 2026 on; the count of the Invalid lies between 181,304 and 199,398 (it was between 181,421 and 199,342).
+- The hourly job records every look, also the ones that find no change, with the time of the data it read: the file `look.json` of the `history` branch (`looked`, `data`, `aspas`), committed alone when nothing changed and with the other files when something did (`scripts/log-snapshot.mjs`). Until now a run that found nothing new wrote nothing, about one hour in five: the time before a change was known only as far back as the change before it, and the incidents that ended after the last change waited, sometimes for hours, to be told firm or not (22,587 of them on the morning of 26 November 2026, three hours after the last change). With the time of the data in each look the ASPAs are known until ten minutes before it; a validator that stands still gives the same time at every look, so nothing is said of the time after it. The commits of before do not say it: for them the ASPAs are taken as known until forty minutes before each commit. A look whose validator does not give the time of its data says nothing new.
+- `scripts/build-incidents-history.mjs` reads again, once, the files of the days of the job (since 13 October 2026) that were read with the timeline of the version before; the files of the days of the RIPE NCC archive are not touched, their times did not change. `scripts/build-timeline.mjs` refuses a commit that is not later than the one before it.
+- The false positives counted again with the timeline of version 2 (the dumps of 20 to 25 October 2026 have one more change that may or may not have been there at 00:00 UTC): the same 5,137 places, the same 505 fixed by 93 networks with 122 providers, the same times; one place passes from the probable false positives to the ones where an ASPA of the path was withdrawn.
+
+
 ## [1.107.0] - 2026-11-26
 
 ### Changed

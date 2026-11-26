@@ -30,7 +30,9 @@ import { createRequire } from 'node:module';
 import { execFile, spawn } from 'node:child_process';
 import { promisify } from 'node:util';
 import { relationSets, analyser, leakTracker, byTimeline, RULE, LEVELS } from './build-incidents.mjs';
-import { loadTimeline } from './aspa-timeline.mjs';
+import { loadTimeline, ARCHIVE_TO } from './aspa-timeline.mjs';
+// the files that can hold an incident of the days of the job (two days of margin for the ones written late)
+const JOB_FILES_FROM = new Date(Date.parse(`${ARCHIVE_TO}T00:00:00Z`) - 2 * 864e5).toISOString().slice(0, 10);
 
 const UA = 'aspa-explorer (https://aspa.ping6.it; antonio.prado@dei.unipd.it)';
 export const FIRST_DAY = '2023-10-12';
@@ -238,9 +240,12 @@ async function main() {
     const key = keyOf(x), file = join(daysDir, `${x.name}.json`), partsDir = join(daysDir, x.name);
     let cached = null;
     try { cached = JSON.parse(await readFile(file, 'utf8')); } catch { /* not built yet */ }
-    // a file is read again when it changed, when what is kept of it was made with another rule, and when some of its incidents
-    // ended after the horizon the timeline had then (whether their verdicts are firm was not known) and the timeline has moved on
-    if (!cached || cached.key !== key || cached.rule !== RULE || (cached.late && tl.horizon > cached.horizon)) {
+    // a file is read again when it changed, when what is kept of it was made with another rule, when some of its incidents
+    // ended after the horizon the timeline had then (whether their verdicts are firm was not known) and the timeline has moved
+    // on, and when it was read with a timeline of another version and is of the days of the job (a version changes the times
+    // of the commits of the job, not the ones of the archive: the files of before stay as they are)
+    const otherTimeline = cached && cached.rule === RULE && x.day >= JOB_FILES_FROM && cached.tl !== tl.version;
+    if (!cached || cached.key !== key || cached.rule !== RULE || otherTimeline || (cached.late && tl.horizon > cached.horizon)) {
       if (built >= max) { waiting++; if (!cached) continue; }
       else {
         const c = caidaFor(caida, x.day);
@@ -248,7 +253,7 @@ async function main() {
         aspasOf.late = 0;
         const days = await buildFile(x, aspasOf, rel, partsDir);
         for (const d of Object.keys((cached || {}).days || {})) dirty.add(d);
-        cached = { key, rule: RULE, horizon: tl.horizon, late: aspasOf.late, caida: c.date, days: Object.fromEntries(days) };
+        cached = { key, rule: RULE, tl: tl.version, horizon: tl.horizon, late: aspasOf.late, caida: c.date, days: Object.fromEntries(days) };
         await write(file, JSON.stringify(cached) + '\n');
         for (const d of days.keys()) dirty.add(d);
         built++;

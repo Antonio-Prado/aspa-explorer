@@ -15,21 +15,28 @@ import { promisify } from 'node:util';
 import { createHash } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 import { join, dirname } from 'node:path';
-import { VERSION, ARCHIVE_TO, FETCH_MARGIN, archiveSteps, archiveTime, commitStep, validate, Timeline } from './aspa-timeline.mjs';
+import { VERSION, ARCHIVE_TO, FETCH_MARGIN, asOf, archiveSteps, archiveTime, commitStep, validate, Timeline } from './aspa-timeline.mjs';
 
 const run = promisify(execFile);
 const UA = 'aspa-explorer (https://aspa.ping6.it; antonio.prado@dei.unipd.it)';
 export const API = 'https://gitlab.dei.unipd.it/api/v4/projects/5246';
 const sha256 = (text) => createHash('sha256').update(text).digest('hex');
 const archiveText = (events) => JSON.stringify(events.filter((e) => e[0] <= ARCHIVE_TO));
+// The commits say the time of their data since this day (look.json, written by log-snapshot.mjs): the ones before are not asked.
+export const LOOKS_FROM = Date.UTC(2026, 10, 26) / 1000;
+// The time of the data of a commit, from its look.json ({data: ISO time}): epoch seconds, or null when it does not say it.
+export const dataTime = (look) => { const t = look && typeof look.data === 'string' ? Date.parse(look.data) / 1000 : NaN; return Number.isFinite(t) ? t : null; };
 
 // The commits of the history branch after `after` (epoch), oldest first: {sha, parent, time, events(): the parsed events.json
-// or null}. `parent` is the commit before it on the branch: extend() checks that none is skipped.
+// or null, look(): the parsed look.json or null}. `parent` is the commit before it on the branch: extend() checks that none is skipped.
 export async function gitCommits(dir, after) {
   const git = async (...a) => (await run('git', ['-C', dir, ...a], { maxBuffer: 1 << 28 })).stdout;
   const lines = (await git('log', '--reverse', '--first-parent', '--format=%H %ct %P', 'origin/history')).trim().split('\n');
   return lines.map((l) => l.split(' ')).map(([sha, ct, parent]) => ({ sha, time: Number(ct), parent: parent || null })).filter((c) => c.time > after)
-    .map((c) => ({ ...c, events: async () => { try { return JSON.parse(await git('show', `${c.sha}:events.json`)); } catch (err) { if (/exists on disk, but not in|does not exist in/.test(err.stderr || '')) return null; throw err; } } }));
+    .map((c) => {
+      const show = async (name) => { try { return JSON.parse(await git('show', `${c.sha}:${name}`)); } catch (err) { if (/exists on disk, but not in|does not exist in/.test(err.stderr || '')) return null; throw err; } };
+      return { ...c, events: () => show('events.json'), look: () => show('look.json') };
+    });
 }
 // From the GitLab API: the list comes newest first, a page at a time, and is read until a commit that is not after `after`
 // (the `since` parameter is not used: with it the server gave back a part of the commits only).
@@ -46,7 +53,7 @@ export async function apiCommits(base, after, get = getJson) {
     }
     if (list.length < 100) break;
   }
-  return out.reverse().map((c) => ({ ...c, events: async () => get(`${base}/repository/files/events.json/raw?ref=${c.sha}`, true) }));
+  return out.reverse().map((c) => ({ ...c, events: async () => get(`${base}/repository/files/events.json/raw?ref=${c.sha}`, true), look: async () => get(`${base}/repository/files/look.json/raw?ref=${c.sha}`, true) }));
 }
 async function getJson(url, missingIsNull = false) {
   for (let i = 1; ; i++) {
@@ -68,6 +75,7 @@ export async function extend(doc, commits, times, max = Infinity) {
   for (const c of commits) {
     if (added >= max) break;
     if (last && c.parent !== last) throw new Error(`${c.sha}: its parent is ${c.parent}, not ${last}, the commit read before it`);
+    if (doc && doc.head && !(c.time > doc.head.time)) throw new Error(`${c.sha}: a commit at ${c.time} that is not after ${doc.head.time}, the time of the one before it`);
     last = c.sha;
     const events = await c.events();
     if (!events) continue;                                             // a commit from before the history had events
@@ -85,10 +93,17 @@ export async function extend(doc, commits, times, max = Infinity) {
     added++;
     // a commit with no event after the archive period is the archive itself, written again: not a look of the job
     if (events[events.length - 1][0] <= ARCHIVE_TO) { doc.head = { sha: c.sha, time: c.time }; continue; }
+    // the time until which this commit knew the ASPAs: from the time of its data when it says it (a failure to read it ends
+    // the run: the same commits have to give the same timeline at every run)
+    const look = c.time >= LOOKS_FROM && c.look ? await c.look() : null;
+    // no look.json: a commit of before the looks, known until LOOK_MARGIN before it. A look.json with no time of its data
+    // knows nothing more than the commit before it
+    const known = look === null ? asOf(c.time) : (dataTime(look) === null ? -Infinity : asOf(c.time, dataTime(look)));
     const r = commitStep(state, events, c.time, doc.look);
     if (r.step) doc.steps.push(r.step);
     state = r.state;
-    doc.look = c.time; doc.horizon = c.time; doc.head = { sha: c.sha, time: c.time };
+    // never back: a commit whose data is older than the one before it (a validator that stands still, the spare one) adds nothing
+    doc.look = Math.max(doc.look, known); doc.horizon = doc.look; doc.head = { sha: c.sha, time: c.time };
   }
   return { doc, added };
 }

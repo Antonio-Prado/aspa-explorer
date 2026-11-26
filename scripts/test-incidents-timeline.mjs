@@ -32,7 +32,7 @@ await test('incidents: the verdict with the ASPAs known when each began, soft wh
     leak('2026-10-10 12:00:00', '2026-10-10 12:05:00'),   // the look before the step is the 10th at 04:00: open here too
     leak('2026-10-09 12:00:00'),                          // before any ASPA is seen, but within the day before the first step: unknown, soft
     leak('2026-10-08 12:00:00'),                          // earlier than that: unknown, firm
-    leak('2026-10-16 21:00:00'),                          // after the newest record of the ASPAs: valid, not firm yet, and not among the soft
+    leak('2026-10-16 21:00:00'),                          // after the time until which the ASPAs are known: valid, not firm yet, and not among the soft
   ], by, providers, degree, detail);
   assert.deepEqual(detail.map((r) => [r.real, r.firm, r.or]), [['invalid', false, ['valid']], ['invalid', false, ['valid']], ['valid', undefined, undefined], ['invalid', false, ['valid']], ['unknown', false, ['invalid']], ['unknown', undefined, undefined], ['valid', false, undefined]]);
   assert.deepEqual(detail.map((r) => r.late), [undefined, undefined, undefined, undefined, undefined, undefined, true]);

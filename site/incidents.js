@@ -131,7 +131,7 @@
     const t = d.total, soft = t.soft ? t.soft[0] + t.soft[1] + t.soft[2] : 0, inv = range(t, 2);
     $('inc-note').textContent = 'Percentages are of the incidents with a path (flapping and mass withdrawals mostly have none: a dash). The lines under a class are the types of the survey that the detector tells apart; an incident is in one of them at most, and the ones that fit none are only in the line of the class. ASM is made of candidates: a link that CAIDA does not know may be a real one.'
       + (soft ? ` For ${fmt.format(soft)} of the incidents with a path (${fine(soft, t.with_path)}) an ASPA of their paths changed around the incident or while it lasted, in a way that changes the verdict: they are counted with the ASPAs known when they began${inv ? `, and the Invalid ones are between ${fmt.format(inv[0])} and ${fmt.format(inv[1])}` : ''}.` : '')
-      + (d.timeline && d.timeline.late ? ` ${fmt.format(d.timeline.late)} ${soft ? 'more ' : 'incidents '}ended after the newest record of the ASPAs (${new Date(d.timeline.horizon).toLocaleString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit', timeZone: 'UTC' })} UTC): whether an ASPA changed around them is known when the next one is written.` : '');
+      + (d.timeline && d.timeline.late ? ` ${fmt.format(d.timeline.late)} ${soft ? 'more ' : 'incidents '}ended after the time until which the ASPAs are known (${new Date(d.timeline.horizon).toLocaleString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit', timeZone: 'UTC' })} UTC): whether an ASPA changed around them is known at one of the next runs.` : '');
   }
 
   // The route objects of the origins of the hijacks and of the more specifics of another network (`irr` of incidents.json,

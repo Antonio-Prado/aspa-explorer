@@ -382,7 +382,7 @@ async function main() {
     generated: new Date().toISOString().replace(/\.\d+Z$/, 'Z'),
     files: list.length,
     aspas: 'timeline',
-    // `late`: the incidents that ended after the horizon, the newest record of the ASPAs: whether their verdicts are firm is not known yet
+    // `late`: the incidents that ended after the horizon, the time until which the ASPAs are known: whether their verdicts are firm is not known yet
     timeline: { steps: tl.steps.length, horizon: new Date(tl.horizon * 1000).toISOString().replace(/\.\d+Z$/, 'Z'), late: aspasOf.late },
     relationships: rel.source,
     irr: { sources: IRR_SOURCES, types: ['PRH', 'DEG-MA'], snapshots: snapshots.length,
