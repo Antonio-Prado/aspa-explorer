@@ -125,31 +125,45 @@ export function coneSizes(customers) {
 
 const pct = (a, b) => (b ? Math.round((a / b) * 10000) / 100 : 0);
 
+// The ASes that a ROA names as the origin of a prefix, from the list of the validated ROAs of Routinator (its /json: one
+// {"asn": "AS64496", "prefix": ...} for each), as a Set of numbers. AS0, which a ROA names to say that nobody may originate a
+// prefix, is not a network. The text is some 90 MB: it is searched, not parsed.
+export function originAses(text) {
+  const out = new Set();
+  for (const m of String(text).matchAll(/"asn"\s*:\s*"?(?:AS)?(\d{1,10})"?/g)) { const n = Number(m[1]); if (n > 0) out.add(n); }
+  return out;
+}
+
 // seen: Set of AS numbers in BGP; aspa: Map AS number -> number of providers; where: AS -> {cc, rir} | null;
-// cones: Map AS -> cone size (1 when missing)
-export function aggregate({ seen, aspa, where, cones, topN = 100 }) {
+// cones: Map AS -> cone size (1 when missing); roa: Set of the ASes that a ROA names as an origin, or null when the ROAs
+// could not be read (the counts of the ROAs are then left out)
+export function aggregate({ seen, aspa, where, cones, roa = null, topN = 100 }) {
   const group = (keyOf) => {
     const m = new Map();
     for (const asn of seen) {
       const k = keyOf(asn);
-      const e = m.get(k) || { seen: 0, aspa: 0 };
+      const e = m.get(k) || { seen: 0, aspa: 0, roa: 0 };
       e.seen++;
       if (aspa.has(asn)) e.aspa++;
+      if (roa && roa.has(asn)) e.roa++;
       m.set(k, e);
     }
     return m;
   };
-  const rows = (m, name) => [...m].map(([k, e]) => ({ [name]: k, seen: e.seen, aspa: e.aspa, pct: pct(e.aspa, e.seen) }));
+  const withRoa = (e) => (roa ? { roa: e.roa, roa_pct: pct(e.roa, e.seen) } : {});
+  const rows = (m, name) => [...m].map(([k, e]) => ({ [name]: k, seen: e.seen, aspa: e.aspa, pct: pct(e.aspa, e.seen), ...withRoa(e) }));
   const cone = (asn) => cones.get(asn) || 1;
   const by_rir = rows(group((a) => (where(a) || {}).rir || 'unknown'), 'rir').sort((a, b) => b.seen - a.seen);
   const by_country = rows(group((a) => (where(a) || {}).cc || 'ZZ'), 'cc').sort((a, b) => b.seen - a.seen || (a.cc < b.cc ? -1 : 1));
   const tiers = group((a) => tierOf(cone(a)));
-  const by_size = TIERS.map((t) => ({ tier: t.key, label: t.label, seen: (tiers.get(t.key) || {}).seen || 0, aspa: (tiers.get(t.key) || {}).aspa || 0, pct: pct((tiers.get(t.key) || {}).aspa || 0, (tiers.get(t.key) || {}).seen || 0) }));
+  const by_size = TIERS.map((t) => { const e = tiers.get(t.key) || { seen: 0, aspa: 0, roa: 0 }; return { tier: t.key, label: t.label, seen: e.seen, aspa: e.aspa, pct: pct(e.aspa, e.seen), ...withRoa(e) }; });
   const top_transit = [...seen].map((asn) => ({ asn: `AS${asn}`, cone: cone(asn), cc: (where(asn) || {}).cc || null, rir: (where(asn) || {}).rir || null, aspa: aspa.has(asn), providers: aspa.has(asn) ? aspa.get(asn) : null }))
     .sort((a, b) => b.cone - a.cone || (Number(a.asn.slice(2)) - Number(b.asn.slice(2)))).slice(0, topN);
   const withAspa = [...seen].filter((a) => aspa.has(a)).length;
+  const seenWithRoa = roa ? [...seen].filter((a) => roa.has(a)).length : 0;
   return {
     seen: seen.size, aspa: withAspa, pct: pct(withAspa, seen.size),
+    ...(roa ? { roa: seenWithRoa, roa_pct: pct(seenWithRoa, seen.size) } : {}),
     aspa_not_seen: [...aspa.keys()].filter((a) => !seen.has(a)).length,
     by_rir, by_country, by_size, top_transit,
     top_transit_with_aspa: top_transit.filter((t) => t.aspa).length,
@@ -227,10 +241,17 @@ async function main() {
   const header = parseCaidaHeader(relText);
   const cones = coneSizes(rel);
 
-  const out = aggregate({ seen, aspa, where: registry(ranges), cones });
+  // the ROAs: which networks are named as an origin. When they cannot be read the rest is published without them
+  let roa = null;
+  try {
+    roa = originAses(await (await fetchRetry(process.env.ROA_DATA || 'https://rpki.ping6.it/json', { Accept: 'application/json' })).text());
+    if (roa.size < 1000) throw new Error(`only ${roa.size} origin ASes in the ROAs`);
+  } catch (err) { roa = null; console.error(`the ROAs could not be read (${err.message}): the counts of the ROAs are left out`); }
+
+  const out = aggregate({ seen, aspa, where: registry(ranges), cones, roa });
   const doc = {
     generated: new Date().toISOString().replace(/\.\d+Z$/, 'Z'),
-    sources: { aspas: 'Routinator, rpki.ping6.it', bgp: 'RIPE RIS collectors, through RIPEstat (ris-asns)', registry: 'delegation files of the five RIRs', size: `CAIDA AS Relationships, serial-2, ${caida.date}` },
+    sources: { aspas: 'Routinator, rpki.ping6.it', ...(roa ? { roas: 'Routinator, rpki.ping6.it' } : {}), bgp: 'RIPE RIS collectors, through RIPEstat (ris-asns)', registry: 'delegation files of the five RIRs', size: `CAIDA AS Relationships, serial-2, ${caida.date}` },
     clique: header.clique,
     ixp: header.ixp,
     ...out,
@@ -244,7 +265,7 @@ async function main() {
   const relFile = join(outFile, '..', 'relations.json');
   await writeFile(`${relFile}.tmp`, JSON.stringify({ generated: doc.generated, source: `CAIDA AS Relationships, serial-2, ${caida.date}`, serial: caida.date, providers: providersOf(rel) }) + '\n');
   await rename(`${relFile}.tmp`, relFile);
-  console.log(`${doc.generated}: ${doc.seen} ASes seen, ${doc.aspa} with an ASPA (${doc.pct}%), ${doc.by_country.length} countries, CAIDA ${caida.date}`);
+  console.log(`${doc.generated}: ${doc.seen} ASes seen, ${doc.aspa} with an ASPA (${doc.pct}%), ${roa ? `${doc.roa} named in a ROA (${doc.roa_pct}%), ` : ''}${doc.by_country.length} countries, CAIDA ${caida.date}`);
 }
 
 if (import.meta.url === `file://${process.argv[1]}`) main().catch((err) => { console.error(err.message); process.exit(1); });

@@ -96,20 +96,23 @@
       fill.style.width = `${Math.min(100, c.pct * 2)}%`;
       return el('tr', {},
         el('th', { scope: 'row' }, flag(c.cc), country(c.cc)),
-        el('td', { class: 'num', text: fmt.format(c.seen) }), el('td', { class: 'num', text: fmt.format(c.aspa) }),
+        el('td', { class: 'num', text: fmt.format(c.seen) }),
+        // the networks that a ROA names as an origin (a file built before the ROAs were read has none: a dash)
+        el('td', { class: 'num', text: typeof c.roa === 'number' ? fmt.format(c.roa) : '–' }), el('td', { class: 'num', text: typeof c.roa_pct === 'number' ? pct(c.roa_pct) : '–' }),
+        el('td', { class: 'num', text: fmt.format(c.aspa) }),
         el('td', { class: 'cov-col' }, el('span', { class: 'mini' }, fill), ' ', pct(c.pct)));
     };
     const drawCc = paged(ccRow, $('cc-rows'), $('cc-more'), 25);
     const applyCc = () => {
       const min = Number($('cc-min').value);
       const by = $('cc-sort').value;
-      drawCc(d.by_country.filter((c) => c.seen >= min && c.cc !== 'ZZ').sort((a, b) => b[by] - a[by] || b.seen - a.seen));
+      drawCc(d.by_country.filter((c) => c.seen >= min && c.cc !== 'ZZ').sort((a, b) => (b[by] || 0) - (a[by] || 0) || b.seen - a.seen));
     };
     $('cc-min').addEventListener('change', applyCc);
     $('cc-sort').addEventListener('change', applyCc);
     applyCc();
 
-    $('sources').textContent = `Sources: ASPAs from ${d.sources.aspas}; networks seen: ${d.sources.bgp}; country and registry: ${d.sources.registry}; size: ${d.sources.size} (The CAIDA AS Relationships Dataset, www.caida.org/catalog/datasets/as-relationships/). ${fmt.format(d.aspa_not_seen)} ASPA customers are not seen in BGP and are not counted.`;
+    $('sources').textContent = `Sources: ASPAs from ${d.sources.aspas};${d.sources.roas ? ` ROAs from ${d.sources.roas};` : ''} networks seen: ${d.sources.bgp}; country and registry: ${d.sources.registry}; size: ${d.sources.size} (The CAIDA AS Relationships Dataset, www.caida.org/catalog/datasets/as-relationships/). ${fmt.format(d.aspa_not_seen)} ASPA customers are not seen in BGP and are not counted.`;
   }
 
   // "Who has an ASPA": by size and by RIR are two tabs, with the arrow keys, Home and End; the old addresses of the two

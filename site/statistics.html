@@ -23,26 +23,26 @@
 <meta name="twitter:card" content="summary_large_image">
 <meta name="color-scheme" content="light dark">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
-<link rel="stylesheet" href="/style.css?v=1.111.0">
-<script src="/asnames.js?v=1.111.0" defer></script>
-<script src="/history.js?v=1.111.0" defer></script>
-<script src="/quality.js?v=1.111.0" defer></script>
-<script src="/latest.js?v=1.111.0" defer></script>
-<script src="/stats.js?v=1.111.0" defer></script>
-<script src="/adoption.js?v=1.111.0" defer></script>
-<script src="/trends.js?v=1.111.0" defer></script>
-<script src="/ui.js?v=1.111.0" defer></script>
-<script src="/resources.js?v=1.111.0" defer></script>
-<script src="/coverage.js?v=1.111.0" defer></script>
-<script src="/status-checks.js?v=1.111.0" defer></script>
-<script src="/peek.js?v=1.111.0" defer></script>
-<script src="/footer.js?v=1.111.0" defer></script>
+<link rel="stylesheet" href="/style.css?v=1.112.0">
+<script src="/asnames.js?v=1.112.0" defer></script>
+<script src="/history.js?v=1.112.0" defer></script>
+<script src="/quality.js?v=1.112.0" defer></script>
+<script src="/latest.js?v=1.112.0" defer></script>
+<script src="/stats.js?v=1.112.0" defer></script>
+<script src="/adoption.js?v=1.112.0" defer></script>
+<script src="/trends.js?v=1.112.0" defer></script>
+<script src="/ui.js?v=1.112.0" defer></script>
+<script src="/resources.js?v=1.112.0" defer></script>
+<script src="/coverage.js?v=1.112.0" defer></script>
+<script src="/status-checks.js?v=1.112.0" defer></script>
+<script src="/peek.js?v=1.112.0" defer></script>
+<script src="/footer.js?v=1.112.0" defer></script>
 </head>
 <body class="area-adopt">
 <a class="skip" href="#main">Skip to main content</a>
 <header class="wrap masthead">
   <div class="top">
-    <p class="back"><a class="brandlink" href="/" title="Back to ASPA Explorer"><img class="brand" src="/img/logo-mark.svg?v=1.111.0" alt="" width="40" height="40"><span>ASPA Explorer</span></a></p>
+    <p class="back"><a class="brandlink" href="/" title="Back to ASPA Explorer"><img class="brand" src="/img/logo-mark.svg?v=1.112.0" alt="" width="40" height="40"><span>ASPA Explorer</span></a></p>
     <nav class="topnav" aria-label="Main"><a class="sect a-look" href="/network.html">Look up</a><a class="sect a-adopt" href="/statistics.html" aria-current="page">Adoption</a><a class="sect a-now" href="/now.html">Right now</a><a class="sect a-inc" href="/incidents.html">Incidents</a><a class="minor" href="/guide.html">Guide</a><a class="minor" href="/examples.html">Examples</a><a class="minor" href="/api.html">API</a><a class="minor" href="/status.html">Status</a></nav>
   </div>
   <div class="pagetop">
@@ -196,15 +196,15 @@
   <details class="deeper" id="cc-box">
     <summary><h2 id="cc-title">By country</h2> <span class="q">Which countries lead?</span></summary>
   <section aria-labelledby="cc-title">
-    <p class="hint">The country where the AS number was registered, not necessarily where the network operates. The bar of the coverage is full at 50%.</p>
+    <p class="hint">The country where the AS number was registered, not necessarily where the network operates. A network has a ROA when at least one ROA names it as the origin of a prefix: it says how many networks of the country use the RPKI at all, next to how many have gone on to an ASPA. The bar of the ASPA coverage is full at 50%.</p>
     <p class="opts">
-      <label>Sort by <select id="cc-sort"><option value="seen">networks</option><option value="pct">coverage</option></select></label>
+      <label>Sort by <select id="cc-sort"><option value="seen">networks</option><option value="roa_pct">share with a ROA</option><option value="pct">ASPA coverage</option></select></label>
       <label>Countries with at least <select id="cc-min"><option value="1">1 network</option><option value="10">10 networks</option><option value="30" selected>30 networks</option><option value="100">100 networks</option></select></label>
     </p>
     <section class="card table-wrap" tabindex="0" aria-label="Table of adoption by country">
       <table class="checks live">
-        <caption class="sr-only">Networks seen in BGP, and how many have an ASPA, by country</caption>
-        <thead><tr><th scope="col">Country</th><th scope="col" class="num">Networks</th><th scope="col" class="num">With an ASPA</th><th scope="col" class="cov-col">Coverage</th></tr></thead>
+        <caption class="sr-only">Networks seen in BGP, how many are named in a ROA and how many have an ASPA, by country</caption>
+        <thead><tr><th scope="col">Country</th><th scope="col" class="num">Networks</th><th scope="col" class="num">With a ROA</th><th scope="col" class="num">Share</th><th scope="col" class="num">With an ASPA</th><th scope="col" class="cov-col">ASPA coverage</th></tr></thead>
         <tbody id="cc-rows"></tbody>
       </table>
     </section>

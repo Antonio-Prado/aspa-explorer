@@ -9,6 +9,13 @@ A few numbers were deployed and folded into the next release without a tag of th
 
 ## [Unreleased]
 
+## [1.112.0] - 2026-11-26
+
+### Added
+
+- *By country* on the Adoption page has the networks with a ROA next to the ones with an ASPA: how many of the networks of a country seen in BGP are named by at least one ROA as the origin of a prefix, and their share, so that the ASPAs can be read against the use of the RPKI in that country; the table can be sorted by that share. `scripts/build-adoption.mjs` reads the validated ROAs of the validator once a day (`ROA_DATA`, default the `/json` of Routinator: some 90 MB, searched for the origin ASes and not parsed; AS0 is not a network) and `/api/v1/adoption.json` has `roa` and `roa_pct` in its totals and in every row by RIR, country and size. On a day the ROAs cannot be read the rest is published without them, and the page shows a dash.
+
+
 ## [1.111.0] - 2026-11-26
 
 ### Changed

@@ -23,16 +23,16 @@
 <meta name="twitter:card" content="summary_large_image">
 <meta name="color-scheme" content="light dark">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
-<link rel="stylesheet" href="/style.css?v=1.111.0">
-<script src="/status-checks.js?v=1.111.0" defer></script>
-<script src="/asnames.js?v=1.111.0" defer></script>
-<script src="/footer.js?v=1.111.0" defer></script>
+<link rel="stylesheet" href="/style.css?v=1.112.0">
+<script src="/status-checks.js?v=1.112.0" defer></script>
+<script src="/asnames.js?v=1.112.0" defer></script>
+<script src="/footer.js?v=1.112.0" defer></script>
 </head>
 <body>
 <a class="skip" href="#main">Skip to main content</a>
 <header class="wrap masthead">
   <div class="top">
-    <p class="back"><a class="brandlink" href="/" title="Back to ASPA Explorer"><img class="brand" src="/img/logo-mark.svg?v=1.111.0" alt="" width="40" height="40"><span>ASPA Explorer</span></a></p>
+    <p class="back"><a class="brandlink" href="/" title="Back to ASPA Explorer"><img class="brand" src="/img/logo-mark.svg?v=1.112.0" alt="" width="40" height="40"><span>ASPA Explorer</span></a></p>
     <nav class="topnav" aria-label="Main"><a class="sect a-look" href="/network.html">Look up</a><a class="sect a-adopt" href="/statistics.html">Adoption</a><a class="sect a-now" href="/now.html">Right now</a><a class="sect a-inc" href="/incidents.html">Incidents</a><a class="minor" href="/guide.html" aria-current="page">Guide</a><a class="minor" href="/examples.html">Examples</a><a class="minor" href="/api.html">API</a><a class="minor" href="/status.html">Status</a></nav>
   </div>
   <h1>Guide</h1>
@@ -233,7 +233,7 @@
     <ul>
       <li><strong>by size of the network</strong>, from the <em>customer cone</em>: the networks that one reaches through its customers, counting those of its customers' customers and so on, taken from the <a href="https://www.caida.org/catalog/datasets/as-relationships/" target="_blank" rel="noopener">CAIDA AS Relationships dataset<span class="sr-only"> (opens in a new tab)</span></a>. A network with no customers is a <em>stub</em>. The cone is inferred from observed routes, so it is an estimate and tends to be generous for large networks;</li>
       <li><strong>by RIR</strong>, the registry where the AS number was registered (from the delegation files of the five RIRs), which is not always the trust anchor that holds the ASPA;</li>
-      <li><strong>by country</strong>, the country recorded in those files: where the number was registered, not necessarily where the network operates. Only countries with a minimum number of networks are listed by default, because a percentage of a handful of networks says little;</li>
+      <li><strong>by country</strong>, the country recorded in those files: where the number was registered, not necessarily where the network operates. Only countries with a minimum number of networks are listed by default, because a percentage of a handful of networks says little. Next to the networks with an ASPA the table has the ones <em>with a ROA</em>: the networks that at least one ROA of the validator names as the origin of a prefix (AS0 is not one), which says how many networks of a country use the RPKI at all and how many of those have gone on to an ASPA;</li>
       <li><strong>the 100 largest networks</strong> by cone, each with its ASPA state, and a switch to show only those without one.</li>
     </ul>
     <p>The adoption numbers are rebuilt once a day and available as <a href="/api/v1/adoption.json">JSON</a>. ASPAs of networks that the collectors do not see are not counted. The page used to be called <em>Adoption</em>.</p>

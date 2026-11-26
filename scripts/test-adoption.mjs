@@ -1,6 +1,6 @@
 // Unit tests for scripts/build-adoption.mjs (no dependencies). Run with: node scripts/test-adoption.mjs
 import assert from 'node:assert/strict';
-import { providersOf, parseDelegated, registry, parseRelationships, coneSizes, aggregate, tierOf, parseCaidaHeader, registryDoc } from './build-adoption.mjs';
+import { providersOf, parseDelegated, registry, parseRelationships, coneSizes, aggregate, tierOf, parseCaidaHeader, registryDoc, originAses } from './build-adoption.mjs';
 
 let passed = 0;
 const test = (name, fn) => { fn(); passed++; console.log('ok  ', name); };
@@ -65,6 +65,21 @@ test('aggregation: by RIR, country, size; the largest networks', () => {
   assert.deepEqual(a.top_transit.map((t) => [t.asn, t.cone, t.aspa]), [['AS1', 5, true], ['AS2', 3, false], ['AS4', 3, true]]);
   assert.equal(a.top_transit_with_aspa, 2);
   assert.equal(a.top_transit[0].providers, 0);
+});
+test('the networks that a ROA names as an origin: counted next to the ones with an ASPA, and left out when the ROAs are not read', () => {
+  const text = '{"metadata":{"generated":1},"roas":[{ "asn": "AS1", "prefix": "192.0.2.0/24", "maxLength": 24, "ta": "ripe" },{"asn":"AS1","prefix":"2001:db8::/32","maxLength":32,"ta":"ripe"},\n{ "asn": "AS4", "prefix": "198.51.100.0/24", "maxLength": 24, "ta": "arin" },{ "asn": "AS0", "prefix": "203.0.113.0/24", "maxLength": 24, "ta": "apnic" },{ "asn": 77, "prefix": "10.0.0.0/8", "maxLength": 8 }]}';
+  const roa = originAses(text);
+  assert.deepEqual([...roa].sort((a, b) => a - b), [1, 4, 77]);         // AS0 is not a network; a number without "AS" is read too
+  assert.equal(originAses('').size, 0);
+  const where = registry([{ start: 1, end: 3, cc: 'IT', rir: 'ripe' }, { start: 4, end: 5, cc: 'US', rir: 'arin' }]);
+  const seen = new Set([1, 2, 3, 4, 5, 99]);
+  const a = aggregate({ seen, aspa: new Map([[1, 0]]), where, cones: new Map(), roa });
+  assert.deepEqual([a.roa, a.roa_pct], [2, 33.33]);                      // 77 has a ROA but is not seen in BGP
+  assert.deepEqual(a.by_country.map((r) => [r.cc, r.seen, r.roa, r.roa_pct]), [['IT', 3, 1, 33.33], ['US', 2, 1, 50], ['ZZ', 1, 0, 0]]);
+  assert.deepEqual(a.by_rir.map((r) => [r.rir, r.roa]), [['ripe', 1], ['arin', 1], ['unknown', 0]]);
+  assert.equal(a.by_size.reduce((n, t) => n + t.roa, 0), 2);
+  const b = aggregate({ seen, aspa: new Map([[1, 0]]), where, cones: new Map() });
+  assert.equal('roa' in b, false); assert.equal('roa' in b.by_country[0], false); assert.equal('roa' in b.by_size[0], false);
 });
 test('the clique and the exchange points come from the header of the CAIDA file', () => {
   const h = parseCaidaHeader('# source:topology|BGP|20261001\n# input clique: 174 209 3356\n# IXP ASes: 1200 4635\n1|2|-1|bgp\n');
