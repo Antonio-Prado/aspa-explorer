@@ -23,18 +23,18 @@
 <meta name="twitter:card" content="summary_large_image">
 <meta name="color-scheme" content="light dark">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
-<link rel="stylesheet" href="/style.css?v=1.109.0">
-<script src="/download.js?v=1.109.0" defer></script>
-<script src="/datasets.js?v=1.109.0" defer></script>
-<script src="/status-checks.js?v=1.109.0" defer></script>
-<script src="/asnames.js?v=1.109.0" defer></script>
-<script src="/footer.js?v=1.109.0" defer></script>
+<link rel="stylesheet" href="/style.css?v=1.110.0">
+<script src="/download.js?v=1.110.0" defer></script>
+<script src="/datasets.js?v=1.110.0" defer></script>
+<script src="/status-checks.js?v=1.110.0" defer></script>
+<script src="/asnames.js?v=1.110.0" defer></script>
+<script src="/footer.js?v=1.110.0" defer></script>
 </head>
 <body>
 <a class="skip" href="#main">Skip to main content</a>
 <header class="wrap masthead">
   <div class="top">
-    <p class="back"><a class="brandlink" href="/" title="Back to ASPA Explorer"><img class="brand" src="/img/logo-mark.svg?v=1.109.0" alt="" width="40" height="40"><span>ASPA Explorer</span></a></p>
+    <p class="back"><a class="brandlink" href="/" title="Back to ASPA Explorer"><img class="brand" src="/img/logo-mark.svg?v=1.110.0" alt="" width="40" height="40"><span>ASPA Explorer</span></a></p>
     <nav class="topnav" aria-label="Main"><a class="sect a-look" href="/network.html">Look up</a><a class="sect a-adopt" href="/statistics.html">Adoption</a><a class="sect a-now" href="/now.html">Right now</a><a class="sect a-inc" href="/incidents.html">Incidents</a><a class="minor" href="/guide.html">Guide</a><a class="minor" href="/examples.html">Examples</a><a class="minor" href="/api.html" aria-current="page">API</a><a class="minor" href="/status.html">Status</a></nav>
   </div>
   <h1>API</h1>
@@ -221,7 +221,7 @@ X-ASPA-Signature: sha256=…      HMAC-SHA256(secret, timestamp + "." + body), h
 
   <section aria-labelledby="rules">
     <h2 id="rules">Freshness and fair use</h2>
-    <p>The ASPAs come from the validator at <a href="https://rpki.ping6.it/" target="_blank" rel="noopener">rpki.ping6.it<span class="sr-only"> (opens in a new tab)</span></a>, which refreshes about every 10 minutes; when it fails or does not answer, <code>/data/aspas.json</code>, <code>/data/status.json</code> and <code>/data/validity/</code> are answered by a second Routinator, the one of AS59715 (the response then has the header <code>X-ASPA-Validator: rpki.as59715.net</code>, and its ASPAs can differ by a few from the ones of the first). The per-AS files are rebuilt every 15 minutes and may be cached for a few minutes more, so allow up to half an hour for a change to show. Please do not poll one AS more than once every 15 minutes, and prefer <code>/data/aspas.json</code> when you need many ASes. A few addresses serve the pages of the site and are not part of the API: <code>/client-ip</code>, which tells the home page the network of the visitor, and <code>/api/v1/atlas/</code>, which starts the RIPE Atlas measurements of the tromboning test with the credits of this site and accepts only a few requests. They can change without notice. The service is a research testbed with no guarantee of availability. Questions and requests: <a href="mailto:antonio.prado@dei.unipd.it">antonio.prado@dei.unipd.it</a>.</p>
+    <p>The ASPAs come from the validator at <a href="https://rpki.ping6.it/" target="_blank" rel="noopener">rpki.ping6.it<span class="sr-only"> (opens in a new tab)</span></a>, which refreshes about every quarter of an hour (a run begins ten minutes after the end of the one before and lasts some four minutes), and the site keeps its answers for two minutes; when it fails or does not answer, <code>/data/aspas.json</code>, <code>/data/status.json</code> and <code>/data/validity/</code> are answered by a second Routinator, the one of AS59715 (the response then has the header <code>X-ASPA-Validator: rpki.as59715.net</code>, and its ASPAs can differ by a few from the ones of the first). No other source is mixed into these data: the other validators that the site follows (Fort, rpki-client, the one of Cloudflare) and the RTR caches are compared with them on the <a href="/now.html#val-title">Right now</a> page, and the history of the ASPAs before 16 October 2026 comes from the daily archive of the RIPE NCC. The per-AS files are rebuilt every 15 minutes and may be cached for a few minutes more, so allow up to half an hour for a change to show. Please do not poll one AS more than once every 15 minutes, and prefer <code>/data/aspas.json</code> when you need many ASes. A few addresses serve the pages of the site and are not part of the API: <code>/client-ip</code>, which tells the home page the network of the visitor, and <code>/api/v1/atlas/</code>, which starts the RIPE Atlas measurements of the tromboning test with the credits of this site and accepts only a few requests. They can change without notice. The service is a research testbed with no guarantee of availability. Questions and requests: <a href="mailto:antonio.prado@dei.unipd.it">antonio.prado@dei.unipd.it</a>.</p>
     <p id="no-guarantee">The data and the messages are offered as they are, on a best-effort basis and with no guarantee of any kind: they can be late, incomplete or wrong, and whoever uses them is expected to check the data on their own.</p>
   </section>
 </main>

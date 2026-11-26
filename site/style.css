@@ -253,6 +253,11 @@ figcaption .s { display: block; color: var(--muted); font-size: 0.8125rem; }
 .changes { padding: 0.5rem 1.1rem; }
 .changes details { padding: 0.5rem 0; border-top: 1px solid var(--grid); }
 .changes details:first-child { border-top: 0; }
+/* the changes of a day chosen by its date, under the ones of the last days */
+.changes-day { margin: 0.25rem 1.1rem 0; padding-top: 0.75rem; border-top: 1px solid var(--grid); }
+.changes-day .hint { margin: 0; }
+.changes .daysteps { display: flex; flex-wrap: wrap; gap: 0.25rem 1.5rem; margin: 0.4rem 0 0.2rem; }
+#changes-day-body:empty { display: none; }
 .changes summary { cursor: pointer; padding: 0.15rem 0; }
 .changelist, .timeline { list-style: none; margin: 0.4rem 0 0.2rem; padding: 0; display: grid; gap: 0.3rem; font-size: 0.875rem; }
 .changelist li, .timeline li { display: flex; flex-wrap: wrap; gap: 0.2rem 0.5rem; align-items: baseline; }

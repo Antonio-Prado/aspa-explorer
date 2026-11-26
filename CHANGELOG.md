@@ -9,6 +9,17 @@ A few numbers were deployed and folded into the next release without a tag of th
 
 ## [Unreleased]
 
+## [1.110.0] - 2026-11-26
+
+### Added
+
+- *Recent changes* on the Adoption page lists the last 14 days; under it, *The changes of another day* takes a date and shows the ASPAs that appeared, changed their providers or disappeared on that day, in the same form, for any day since 12 October 2023 (the first ASPA). A day with no change says so, and in both cases the days with changes right before and right after it are one press away. Nothing new is fetched: the page already has the whole history of the changes.
+
+### Fixed
+
+- The pages said that the validator refreshes about every 10 minutes: it begins a run ten minutes after the end of the one before, and a run lasts some four minutes, so new data comes about every quarter of an hour (measured on 770 runs of its log, 18 to 26 November 2026). The API page, the examples, the page of a network and the status page say so; the API page also says that the site keeps the answers of the validator for two minutes, and that no other source is mixed into the ASPAs it serves: the other validators and the RTR caches are compared with them, and the history before 16 October 2026 comes from the daily archive of the RIPE NCC.
+
+
 ## [1.109.0] - 2026-11-26
 
 ### Added

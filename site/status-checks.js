@@ -28,7 +28,7 @@
   }
 
   const makeChecks = (get) => [
-    { id: 'validator', name: 'Validator (Routinator)', expected: 'every 10 minutes', run: async (now) => {
+    { id: 'validator', name: 'Validator (Routinator)', expected: 'every quarter of an hour', run: async (now) => {
       const s = await get('/data/status.json');
       const t = Date.parse(s.lastUpdateDone);
       // the second validator answered in the place of the one of the site (nginx says so, X-ASPA-Validator): the data is fresh, but

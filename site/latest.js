@@ -1,7 +1,8 @@
 'use strict';
 
 // "Latest changes and quality" on the Adoption page: the ASPAs that appeared, changed or disappeared in the last
-// 14 days (events.json of the history, classified by history.js) and the checks of quality.js on the ASPAs listed now.
+// 14 days (events.json of the history, classified by history.js), the same for any day of the history chosen by its
+// date, and the checks of quality.js on the ASPAs listed now.
 // They were tabs of the home page until 1.64; #changes and #quality open them here.
 (function () {
   // the sections that moved to the Right now page in 1.68: an old link (from a message, a bookmark) follows them there
@@ -51,25 +52,54 @@
     return `providers ${[list(e.added, '+'), list(e.dropped, '−')].filter(Boolean).join(' ')}`;
   }
 
+  // the changes of one day, as a box that opens: its date, how many of each kind, the list
+  function dayBox(d, ev, open) {
+    const count = (k) => ev.filter((e) => e.kind === k).length;
+    const summary = ['new', 'changed', 'removed'].filter(count).map((k) => `${fmt.format(count(k))} ${KIND_TEXT[k]}`).join(', ');
+    return el('details', { open }, el('summary', {}, el('strong', { text: day(d) }), ` · ${summary}`),
+      longList(ev, 25, (e) => el('li', { class: 'k-' + e.kind }, chip(e.customer), ' ', el('span', { text: changeText(e) }))));
+  }
+
+  // Any day of the history, chosen by its date under the list of the last days: the same box for that day, with the days
+  // that had changes before and after it one press away. A day with no change says so, and names the nearest ones that had.
+  function anyDay(all) {
+    const input = $('changes-day'), out = $('changes-day-body'), ctl = $('changes-day-ctl');
+    if (!input || !out || !ctl || !all.length) return;
+    const byDay = new Map();
+    for (const e of all) { const list = byDay.get(e.date); if (list) list.push(e); else byDay.set(e.date, [e]); }
+    const days = [...byDay.keys()].sort();
+    input.min = days[0]; input.max = days[days.length - 1];
+    const go = (d) => { input.value = d; show(); };
+    const near = (label, d) => (d ? el('button', { type: 'button', class: 'linkish', text: `${label}: ${day(d)}`, onclick: () => go(d) }) : null);
+    const show = () => {
+      const d = input.value;
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(d)) { out.replaceChildren(); return; }
+      if (d < days[0] || d > days[days.length - 1]) { out.replaceChildren(el('p', { class: 'hint', text: `The history goes from ${day(days[0])} to ${day(days[days.length - 1])}.` })); return; }
+      // the days with changes right before and right after the one chosen (the list is in order)
+      let lo = 0, hi = days.length;
+      while (lo < hi) { const m = (lo + hi) >> 1; if (days[m] < d) lo = m + 1; else hi = m; }
+      const has = days[lo] === d, before = days[lo - 1], after = days[has ? lo + 1 : lo];
+      const steps = el('p', { class: 'hint daysteps' }, near('The day with changes before', before), near('The day with changes after', after));
+      out.replaceChildren(has ? dayBox(d, byDay.get(d), true) : el('p', { class: 'hint', text: `No ASPA changed on ${day(d)}.` }), steps);
+    };
+    input.addEventListener('change', show);
+    ctl.hidden = false;
+  }
+
   async function changes() {
     const body = $('changes-body');
     try {
       const all = AspaHistory.classify(await getJson('/api/v1/archive/events.json'));
       const cut = new Date(Date.now() - DAYS * 86400000).toISOString().slice(0, 10);
       const recent = all.filter((e) => e.date >= cut);
+      anyDay(all);
       if (!recent.length) {
         const last = all[all.length - 1];
         body.replaceChildren(el('p', { class: 'hint', text: `No ASPA changed in the last ${DAYS} days${last ? ` (the last change was on ${day(last.date)})` : ''}.` }));
         return;
       }
       const days = [...new Set(recent.map((e) => e.date))].sort().reverse();
-      body.replaceChildren(...days.map((d, i) => {
-        const ev = recent.filter((e) => e.date === d);
-        const count = (k) => ev.filter((e) => e.kind === k).length;
-        const summary = ['new', 'changed', 'removed'].filter(count).map((k) => `${fmt.format(count(k))} ${KIND_TEXT[k]}`).join(', ');
-        return el('details', { open: i === 0 }, el('summary', {}, el('strong', { text: day(d) }), ` · ${summary}`),
-          longList(ev, 25, (e) => el('li', { class: 'k-' + e.kind }, chip(e.customer), ' ', el('span', { text: changeText(e) }))));
-      }));
+      body.replaceChildren(...days.map((d, i) => dayBox(d, recent.filter((e) => e.date === d), i === 0)));
     } catch (err) {
       body.replaceChildren(el('p', { class: 'error', text: `The changes are not available (${err.message}).` }));
     }
