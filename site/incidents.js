@@ -301,7 +301,7 @@
     const show = () => {
       const cnt = b - a + 1, inside = h.days.filter((r) => { const i = Math.round((Date.parse(r.day) - t0) / DAY); return i >= a && i <= b; });
       from.value = iso(a); to.value = iso(b);
-      $('inc-days-note').textContent = `${fmt.format(inside.length)} of the ${fmt.format(cnt)} days from ${day(iso(a))} to ${day(iso(b))} have been read${cnt > inside.length ? `; ${fmt.format(cnt - inside.length)} are still to come` : ''}. Move the pointer over the chart for the numbers of a day; a click chooses its file below.`;
+      $('inc-days-note').textContent = `${fmt.format(inside.length)} of the ${fmt.format(cnt)} days from ${day(iso(a))} to ${day(iso(b))} have been read${cnt > inside.length ? `; ${fmt.format(cnt - inside.length)} are still to come` : ''}. Move the pointer over the chart for the numbers of a day; a click chooses its file below, and a drag from one day to another shows only those days (two clicks: all of them again).`;
       const [, title, yTitle, value, fmtY] = metrics.find((x) => x[0] === select.value) || metrics[0];
       const W = Math.max(280, box.clientWidth || 640), H = 240, m = { l: 68, r: 10, t: 10, b: 24 };
       const iw = W - m.l - m.r, ih = H - m.t - m.b;
@@ -329,16 +329,26 @@
       for (const [i, r] of at) { if (i < a || i > b) continue; const v = value(r); if (v > 0) d += `M${(x(i) + (w - bw) / 2).toFixed(2)},${y(0)}v${(y(v) - y(0)).toFixed(2)}h${bw.toFixed(2)}V${y(0)}z`; }
       g.append(svg('path', { class: 'daybars', d }));
       const cross = svg('line', { class: 'crossline', y1: m.t, y2: m.t + ih, visibility: 'hidden' });
-      g.append(cross);
+      // the days that the pointer is dragged over, from the day it was pressed on: they become the time window when it is let go
+      const band = svg('rect', { class: 'zoomband', y: m.t, height: ih, visibility: 'hidden' });
+      g.append(band, cross);
       const tip = el('div', { class: 'ctip', hidden: '' }, el('strong', {}), el('span', {}), el('span', {}));
       box.replaceChildren(g, tip);
       const [tValue, tWhen, tMore] = tip.children;
       const hide = () => { tip.hidden = true; cross.setAttribute('visibility', 'hidden'); };
-      const point = (e) => {
+      const dayAt = (e) => {
         const r = g.getBoundingClientRect();
         if (!r.width) return -1;
-        const px = ((e.clientX - r.left) / r.width) * W;
-        const i = Math.max(a, Math.min(b, a + Math.floor(((px - m.l) / iw) * cnt)));
+        return Math.max(a, Math.min(b, a + Math.floor(((((e.clientX - r.left) / r.width) * W - m.l) / iw) * cnt)));
+      };
+      const place = (cx) => {
+        const r = g.getBoundingClientRect(), left = (cx / W) * r.width, tw = tip.offsetWidth;
+        tip.style.left = `${Math.max(0, Math.min(r.width - tw, left + 12 + tw > r.width ? left - 12 - tw : left + 12))}px`;
+        tip.style.top = '8px';
+      };
+      const point = (e) => {
+        const i = dayAt(e);
+        if (i < 0) return -1;
         const row = at.get(i), cx = x(i) + w / 2;
         cross.setAttribute('x1', cx); cross.setAttribute('x2', cx); cross.setAttribute('visibility', 'visible');
         tValue.textContent = row ? fmtY(value(row)) : 'Not read yet';
@@ -346,15 +356,51 @@
         tMore.textContent = row ? `${plural(row.incidents, 'incident')}, ${pct(row.real[2], row.with_path)} Invalid` : '';
         tMore.hidden = !row;
         tip.hidden = false;
-        const left = (cx / W) * r.width, tw = tip.offsetWidth;
-        tip.style.left = `${Math.max(0, Math.min(r.width - tw, left + 12 + tw > r.width ? left - 12 - tw : left + 12))}px`;
-        tip.style.top = '8px';
+        place(cx);
         return i;
       };
-      box.onpointermove = point;
-      // a click on a day that was read also chooses its file below
-      box.onpointerdown = (e) => { const i = point(e); if (at.has(i)) { pick.selectedIndex = listed.findIndex((r) => r.day === iso(i)); href(); } };
-      box.onpointerleave = hide;
+      // A press and a drag over the days choose them as the time window (the same as the two dates); a press let go on the
+      // same day is a click, and chooses the file of that day below. A drag that the browser takes for itself (the page
+      // scrolled with a finger) is dropped.
+      let drag = null;
+      const over = (i) => {
+        const lo = Math.min(drag.i, i), hi = Math.max(drag.i, i);
+        band.setAttribute('x', x(lo)); band.setAttribute('width', x(hi) + w - x(lo)); band.setAttribute('visibility', 'visible');
+        cross.setAttribute('visibility', 'hidden');
+        tValue.textContent = plural(hi - lo + 1, 'day');
+        tWhen.textContent = `${day(iso(lo))} to ${day(iso(hi))}`;
+        tMore.textContent = 'Let go to look at these days';
+        tMore.hidden = false; tip.hidden = false;
+        place(x(hi) + w);
+      };
+      const drop = () => { drag = null; band.setAttribute('visibility', 'hidden'); };
+      box.onpointerdown = (e) => {
+        if (e.button) return;                                       // the first button only
+        const i = point(e);
+        if (i < 0) return;
+        drag = { i, x: e.clientX, moved: false, id: e.pointerId };
+        try { box.setPointerCapture(e.pointerId); } catch { /* a pointer that cannot be kept: the drag ends at the edge */ }
+      };
+      box.onpointermove = (e) => {
+        if (!drag) { point(e); return; }
+        const i = dayAt(e);
+        if (i < 0) return;
+        if (Math.abs(e.clientX - drag.x) > 4) drag.moved = true;
+        if (drag.moved) over(i); else point(e);
+      };
+      box.onpointerup = (e) => {
+        if (!drag) return;
+        const from0 = drag.i, moved = drag.moved, i = dayAt(e);
+        drop();
+        if (moved && i >= 0 && i !== from0) { a = Math.min(from0, i); b = Math.max(from0, i); press(null); show(); return; }
+        // a click on a day that was read chooses its file below
+        if (at.has(from0)) { pick.selectedIndex = listed.findIndex((r) => r.day === iso(from0)); href(); }
+        point(e);
+      };
+      box.onpointercancel = () => { drop(); hide(); };
+      box.onpointerleave = () => { if (!drag) hide(); };
+      // two clicks: every day again
+      box.ondblclick = () => { if (a === 0 && b === n - 1) return; a = 0; b = n - 1; press('0'); show(); };
     };
     select.addEventListener('change', show);
     $('inc-days').hidden = false;                 // before the first drawing: a hidden box has no width to draw for

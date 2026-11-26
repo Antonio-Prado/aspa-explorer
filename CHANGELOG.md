@@ -9,6 +9,13 @@ A few numbers were deployed and folded into the next release without a tag of th
 
 ## [Unreleased]
 
+## [1.109.0] - 2026-11-26
+
+### Added
+
+- *Day by day* on the Incidents page: the time window can be chosen on the chart itself. A press and a drag of the pointer from one day to another show only those days, as the two dates do (they take the days chosen, and no button of the last days stays pressed); while the pointer is dragged the days under it are marked and a box says how many they are and from which day to which. A press let go on the same day is still a click, which chooses the file of that day, and two clicks show every day again. With a finger the drag works sideways; a drag up or down scrolls the page as before.
+
+
 ## [1.108.0] - 2026-11-26
 
 ### Changed

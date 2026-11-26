@@ -229,6 +229,9 @@ figcaption .s { display: block; color: var(--muted); font-size: 0.8125rem; }
 .linechart .tick { fill: var(--muted); font-size: 11px; font-variant-numeric: tabular-nums; }
 .linechart .area { stroke: var(--surface); stroke-width: 1.5; stroke-linejoin: round; }
 .linechart .crossline { stroke: var(--ink-2); stroke-width: 1; stroke-dasharray: 3 3; }
+/* the days chosen by dragging the pointer over the chart of the days */
+.linechart .zoomband { fill: var(--accent); fill-opacity: 0.18; stroke: var(--accent); stroke-width: 1; pointer-events: none; }
+#inc-days-chart { cursor: crosshair; user-select: none; -webkit-user-select: none; }
 .s1 { fill: var(--s1); background: var(--s1); }
 .s2 { fill: var(--s2); background: var(--s2); }
 .s3 { fill: var(--s3); background: var(--s3); }
